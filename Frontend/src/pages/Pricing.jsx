@@ -168,10 +168,19 @@ const Pricing = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[1.2vw] items-stretch">
           
           {/* CARD 1: FREE */}
-          <div className="bg-white border border-gray-200 rounded-[1vw] p-[1.5vw] shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+          <div 
+            onClick={() => setSelectedCol('free')}
+            className={`border rounded-[1vw] p-[1.5vw] shadow-sm hover:shadow-md transition-all flex flex-col justify-between cursor-pointer ${
+              selectedCol === 'free'
+                ? 'bg-gradient-to-b from-[#fffaf8] to-white border-2 border-[#ec5137] ring-2 ring-[#ec5137]/10'
+                : 'bg-white border-gray-200'
+            }`}
+          >
             <div>
               {/* Top Icon */}
-              <div className="w-[2.6vw] h-[2.6vw] rounded-[0.6vw] bg-gray-100 border border-gray-200 flex items-center justify-center mb-[0.9vw] text-gray-700">
+              <div className={`w-[2.6vw] h-[2.6vw] rounded-[0.6vw] border flex items-center justify-center mb-[0.9vw] ${
+                selectedCol === 'free' ? 'bg-[#fff1ee] border-[#fecaca] text-[#ec5137]' : 'bg-gray-100 border-gray-200 text-gray-700'
+              }`}>
                 <Icon icon="carbon:cube" className="w-[1.3vw] h-[1.3vw]" />
               </div>
 
@@ -192,13 +201,16 @@ const Pricing = () => {
               {/* Action Button */}
               <div className="space-y-[0.35vw] mb-[1.3vw]">
                 <button type="button"
-                  className="w-full py-[0.5vw] px-[0.8vw] rounded-[0.5vw] border border-gray-300 hover:bg-gray-50 active:scale-[0.98] text-gray-700 font-medium text-[0.8vw] text-center block shadow-xs transition-all"
+                  onClick={() => setSelectedCol('free')}
+                  className={`w-full py-[0.5vw] px-[0.8vw] rounded-[0.5vw] font-medium text-[0.8vw] text-center block shadow-xs transition-all ${
+                    selectedCol === 'free' ? 'bg-[#ec5137] hover:bg-[#d94229] text-white' : 'border border-gray-300 hover:bg-gray-50 text-gray-700'
+                  }`}
                 >
                   Get Started Free
                 </button>
                 <button
                   type="button"
-                  onClick={() => openInvoiceForPlan('free')}
+                  onClick={(e) => { e.stopPropagation(); openInvoiceForPlan('free'); }}
                   className="w-full py-[0.25vw] px-[0.6vw] text-gray-400 hover:text-gray-700 font-medium text-[0.7vw] flex items-center justify-center gap-[0.3vw] transition-colors cursor-pointer"
                 >
                   <Receipt className="w-[0.7vw] h-[0.7vw]" />
@@ -211,35 +223,35 @@ const Pricing = () => {
                 <p className="text-[0.74vw] font-semibold text-gray-900">Everything you need to get started</p>
                 <ul className="space-y-[0.5vw] text-[0.72vw] text-gray-600 font-normal">
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-500 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'free' ? 'text-[#ec5137]' : 'text-gray-500'}`} />
                     <span>3 hosted flipbooks</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-500 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'free' ? 'text-[#ec5137]' : 'text-gray-500'}`} />
                     <span>500 MB shared storage</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-500 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'free' ? 'text-[#ec5137]' : 'text-gray-500'}`} />
                     <span>30 pages per flipbook</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-500 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'free' ? 'text-[#ec5137]' : 'text-gray-500'}`} />
                     <span>Starter templates &amp; page editing</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-500 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'free' ? 'text-[#ec5137]' : 'text-gray-500'}`} />
                     <span>Clickable links &amp; QR sharing</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-500 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'free' ? 'text-[#ec5137]' : 'text-gray-500'}`} />
                     <span>Branded website embedding</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-500 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'free' ? 'text-[#ec5137]' : 'text-gray-500'}`} />
                     <span>Basic view statistics</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-500 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'free' ? 'text-[#ec5137]' : 'text-gray-500'}`} />
                     <span>Explore a 3D / AR demo</span>
                   </li>
                 </ul>
@@ -247,11 +259,20 @@ const Pricing = () => {
             </div>
           </div>
 
-          {/* CARD 2: BASIC (MOST POPULAR) */}
-          <div className="bg-white border border-gray-200 rounded-[1vw] p-[1.5vw] shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+          {/* CARD 2: BASIC */}
+          <div 
+            onClick={() => setSelectedCol('basic')}
+            className={`border rounded-[1vw] p-[1.5vw] shadow-sm hover:shadow-md transition-all flex flex-col justify-between cursor-pointer ${
+              selectedCol === 'basic'
+                ? 'bg-gradient-to-b from-[#fffaf8] to-white border-2 border-[#ec5137] ring-2 ring-[#ec5137]/10'
+                : 'bg-white border-gray-200'
+            }`}
+          >
             <div>
               {/* Top Icon */}
-              <div className="w-[2.6vw] h-[2.6vw] rounded-[0.6vw] bg-[#fff1ee] border border-[#fecaca] flex items-center justify-center mb-[0.9vw] text-[#ec5137]">
+              <div className={`w-[2.6vw] h-[2.6vw] rounded-[0.6vw] border flex items-center justify-center mb-[0.9vw] ${
+                selectedCol === 'basic' ? 'bg-[#fff1ee] border-[#fecaca] text-[#ec5137]' : 'bg-gray-100 border-gray-200 text-gray-700'
+              }`}>
                 <Icon icon="bi:people" className="w-[1.3vw] h-[1.3vw]" />
               </div>
 
@@ -279,14 +300,17 @@ const Pricing = () => {
               {/* Action Button */}
               <div className="space-y-[0.35vw] mb-[1.3vw]">
                 <button type="button"
-                  className="w-full py-[0.5vw] px-[0.8vw] rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.8vw] text-center block shadow-xs transition-all"
+                  onClick={() => setSelectedCol('basic')}
+                  className={`w-full py-[0.5vw] px-[0.8vw] rounded-[0.5vw] font-medium text-[0.8vw] text-center block shadow-xs transition-all ${
+                    selectedCol === 'basic' ? 'bg-[#ec5137] hover:bg-[#d94229] text-white' : 'border border-gray-300 hover:bg-gray-50 text-gray-700'
+                  }`}
                 >
                   Choose Basic
                 </button>
                 <button
                   type="button"
-                  onClick={() => openInvoiceForPlan('standard')}
-                  className="w-full py-[0.25vw] px-[0.6vw] text-[#ec5137] hover:underline font-medium text-[0.7vw] flex items-center justify-center gap-[0.3vw] transition-colors cursor-pointer"
+                  onClick={(e) => { e.stopPropagation(); openInvoiceForPlan('standard'); }}
+                  className="w-full py-[0.25vw] px-[0.6vw] text-gray-400 hover:text-gray-700 font-medium text-[0.7vw] flex items-center justify-center gap-[0.3vw] transition-colors cursor-pointer"
                 >
                   <Receipt className="w-[0.7vw] h-[0.7vw]" />
                   <span>View Sample Invoice</span>
@@ -298,35 +322,35 @@ const Pricing = () => {
                 <p className="text-[0.74vw] font-semibold text-gray-900">Your brand, front and centre</p>
                 <ul className="space-y-[0.5vw] text-[0.72vw] text-gray-700 font-normal">
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'basic' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>15 hosted flipbooks</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'basic' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>5 GB storage · 150 pages / book</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'basic' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>Remove FlipiBook branding</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'basic' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>Your logo &amp; custom backgrounds</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'basic' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>Video embeds, audio &amp; CTA buttons</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'basic' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>Password-protected publications</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'basic' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>Basic analytics · 1 user</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'basic' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>5 interactive 3D models</span>
                   </li>
                 </ul>
@@ -334,17 +358,28 @@ const Pricing = () => {
             </div>
           </div>
 
-          {/* CARD 3: PREMIUM (HIGHLIGHTED BORDER) */}
-          <div className="relative bg-gradient-to-b from-[#fffaf8] to-white border-2 border-[#ec5137] rounded-[1vw] p-[1.5vw] shadow-md hover:shadow-lg transition-all flex flex-col justify-between ring-2 ring-[#ec5137]/10">
+          {/* CARD 3: PREMIUM */}
+          <div 
+            onClick={() => setSelectedCol('premium')}
+            className={`border rounded-[1vw] p-[1.5vw] shadow-sm hover:shadow-md transition-all flex flex-col justify-between cursor-pointer ${
+              selectedCol === 'premium'
+                ? 'bg-gradient-to-b from-[#fffaf8] to-white border-2 border-[#ec5137] ring-2 ring-[#ec5137]/10'
+                : 'bg-white border-gray-200'
+            }`}
+          >
             {/* Most Popular Badge */}
-            <div className="absolute top-[0.9vw] right-[0.9vw] bg-[#ec5137] text-white px-[0.55vw] py-[0.16vw] rounded-full flex items-center gap-[0.25vw] shadow-xs">
-              <Icon icon="fa6-solid:crown" className="w-[0.65vw] h-[0.65vw]" />
-              <span className="text-[0.62vw] font-medium tracking-wide">Most Popular</span>
-            </div>
+            {selectedCol === 'premium' && (
+              <div className="absolute top-[0.9vw] right-[0.9vw] bg-[#ec5137] text-white px-[0.55vw] py-[0.16vw] rounded-full flex items-center gap-[0.25vw] shadow-xs">
+                <Icon icon="fa6-solid:crown" className="w-[0.65vw] h-[0.65vw]" />
+                <span className="text-[0.62vw] font-medium tracking-wide">Most Popular</span>
+              </div>
+            )}
 
             <div>
               {/* Top Icon */}
-              <div className="w-[2.6vw] h-[2.6vw] rounded-[0.6vw] bg-[#fff1ee] border border-[#fecaca] flex items-center justify-center mb-[0.9vw] text-[#ec5137]">
+              <div className={`w-[2.6vw] h-[2.6vw] rounded-[0.6vw] border flex items-center justify-center mb-[0.9vw] ${
+                selectedCol === 'premium' ? 'bg-[#fff1ee] border-[#fecaca] text-[#ec5137]' : 'bg-gray-100 border-gray-200 text-gray-700'
+              }`}>
                 <Icon icon="bi:building" className="w-[1.3vw] h-[1.3vw]" />
               </div>
 
@@ -372,14 +407,17 @@ const Pricing = () => {
               {/* Action Button */}
               <div className="space-y-[0.35vw] mb-[1.3vw]">
                 <button type="button"
-                  className="w-full py-[0.5vw] px-[0.8vw] rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.8vw] text-center block shadow-xs transition-all flex items-center justify-center gap-[0.3vw]"
+                  onClick={() => setSelectedCol('premium')}
+                  className={`w-full py-[0.5vw] px-[0.8vw] rounded-[0.5vw] font-medium text-[0.8vw] text-center block shadow-xs transition-all flex items-center justify-center gap-[0.3vw] ${
+                    selectedCol === 'premium' ? 'bg-[#ec5137] hover:bg-[#d94229] text-white' : 'border border-gray-300 hover:bg-gray-50 text-gray-700'
+                  }`}
                 >
                   <span>Choose Premium</span>
                   <ArrowRight className="w-[0.75vw] h-[0.75vw]" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => openInvoiceForPlan('premium')}
+                  onClick={(e) => { e.stopPropagation(); openInvoiceForPlan('premium'); }}
                   className="w-full py-[0.25vw] px-[0.6vw] text-gray-400 hover:text-gray-700 font-medium text-[0.7vw] flex items-center justify-center gap-[0.3vw] transition-colors cursor-pointer"
                 >
                   <Receipt className="w-[0.7vw] h-[0.7vw]" />
@@ -392,35 +430,35 @@ const Pricing = () => {
                 <p className="text-[0.74vw] font-semibold text-gray-900">Everything in Basic, plus</p>
                 <ul className="space-y-[0.5vw] text-[0.72vw] text-gray-700 font-normal">
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-[#ec5137] shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'premium' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>75 hosted flipbooks</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-[#ec5137] shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'premium' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>25 GB storage · 500 pages / book</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-[#ec5137] shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'premium' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>5 users &amp; shared team folders</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-[#ec5137] shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'premium' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>1 custom domain</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-[#ec5137] shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'premium' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>Direct video uploads</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-[#ec5137] shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'premium' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>Forms, quizzes &amp; lead capture</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-[#ec5137] shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'premium' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>Advanced engagement analytics</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-[#ec5137] shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'premium' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>25 models with 3D + AR</span>
                   </li>
                 </ul>
@@ -429,10 +467,19 @@ const Pricing = () => {
           </div>
 
           {/* CARD 4: PRO */}
-          <div className="bg-white border border-gray-200 rounded-[1vw] p-[1.5vw] shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+          <div 
+            onClick={() => setSelectedCol('pro')}
+            className={`border rounded-[1vw] p-[1.5vw] shadow-sm hover:shadow-md transition-all flex flex-col justify-between cursor-pointer ${
+              selectedCol === 'pro'
+                ? 'bg-gradient-to-b from-[#fffaf8] to-white border-2 border-[#ec5137] ring-2 ring-[#ec5137]/10'
+                : 'bg-white border-gray-200'
+            }`}
+          >
             <div>
               {/* Top Icon */}
-              <div className="w-[2.6vw] h-[2.6vw] rounded-[0.6vw] bg-gray-900 border border-gray-800 flex items-center justify-center mb-[0.9vw] text-white">
+              <div className={`w-[2.6vw] h-[2.6vw] rounded-[0.6vw] border flex items-center justify-center mb-[0.9vw] ${
+                selectedCol === 'pro' ? 'bg-[#fff1ee] border-[#fecaca] text-[#ec5137]' : 'bg-gray-900 border-gray-800 text-white'
+              }`}>
                 <Icon icon="carbon:enterprise" className="w-[1.3vw] h-[1.3vw]" />
               </div>
 
@@ -460,14 +507,17 @@ const Pricing = () => {
               {/* Action Button */}
               <div className="space-y-[0.35vw] mb-[1.3vw]">
                 <button type="button"
-                  className="w-full py-[0.5vw] px-[0.8vw] rounded-[0.5vw] bg-gray-900 hover:bg-black active:scale-[0.98] text-white font-medium text-[0.8vw] text-center block shadow-xs transition-all flex items-center justify-center gap-[0.3vw]"
+                  onClick={() => setSelectedCol('pro')}
+                  className={`w-full py-[0.5vw] px-[0.8vw] rounded-[0.5vw] font-medium text-[0.8vw] text-center block shadow-xs transition-all flex items-center justify-center gap-[0.3vw] ${
+                    selectedCol === 'pro' ? 'bg-[#ec5137] hover:bg-[#d94229] text-white' : 'bg-gray-900 hover:bg-black text-white'
+                  }`}
                 >
                   <span>Choose Pro</span>
                   <ArrowRight className="w-[0.75vw] h-[0.75vw]" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => openInvoiceForPlan('pro')}
+                  onClick={(e) => { e.stopPropagation(); openInvoiceForPlan('pro'); }}
                   className="w-full py-[0.25vw] px-[0.6vw] text-gray-400 hover:text-gray-700 font-medium text-[0.7vw] flex items-center justify-center gap-[0.3vw] transition-colors cursor-pointer"
                 >
                   <Receipt className="w-[0.7vw] h-[0.7vw]" />
@@ -480,35 +530,35 @@ const Pricing = () => {
                 <p className="text-[0.74vw] font-semibold text-gray-900">Everything in Premium, plus</p>
                 <ul className="space-y-[0.5vw] text-[0.72vw] text-gray-600 font-normal">
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'pro' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>250 hosted flipbooks</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'pro' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>100 GB storage · 1,000 pages / book</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'pro' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>15 users included</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'pro' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>5 custom domains</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'pro' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>Account &amp; viewer SSO</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'pro' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>Developer API access</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'pro' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>24-month analytics history</span>
                   </li>
                   <li className="flex items-start gap-[0.45vw]">
-                    <Icon icon="teenyicons:tick-circle-solid" className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0 mt-[0.1vw]" />
+                    <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'pro' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
                     <span>100 models with 3D + AR</span>
                   </li>
                 </ul>

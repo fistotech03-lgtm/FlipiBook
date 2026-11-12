@@ -406,7 +406,7 @@ export const useCanvasAssetInsertion = ({
   // Handle external asset insertion events
   useEffect(() => {
     const handleAddIcon = (e) => {
-      const { icon, pageIndex, dropPoint } = e.detail || {};
+      const { icon, pageIndex, dropPoint, dropSize } = e.detail || {};
       if (!icon) return;
       const targetPageIndex = pageIndex !== undefined ? pageIndex : activePageIndex;
       const page = pages[targetPageIndex];
@@ -445,7 +445,7 @@ export const useCanvasAssetInsertion = ({
         if (!isNaN(hAttr) && hAttr > 0) svgH = hAttr;
       }
 
-      const size = 42;
+      const size = (dropSize && dropSize.width) ? Math.round(dropSize.width) : 42;
       let cx = dropPoint ? dropPoint.x : (vbMinX + svgW / 2);
       let cy = dropPoint ? dropPoint.y : (vbMinY + svgH / 2);
 

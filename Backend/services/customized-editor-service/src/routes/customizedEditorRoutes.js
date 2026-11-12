@@ -6,6 +6,7 @@ const os = require('os');
 
 const { authenticateUser, optionalAuth } = require('../middlewares/authMiddleware');
 const controller = require('../controllers/customizedEditorController');
+const resumableController = require('../controllers/resumableController');
 
 // Multer upload config for memory buffer or temp upload
 const upload = multer({
@@ -16,14 +17,20 @@ const upload = multer({
     const allowed = [
       '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.avif',
       '.mp4', '.webm', '.ogv', '.mov', '.avi',
-      '.mp3', '.wav', '.aac', '.ogg', '.flac', '.m4a'
+      '.mp3', '.wav', '.aac', '.ogg', '.flac', '.m4a',
+      '.pdf', '.pptx', '.ppt', '.docx', '.doc'
     ];
-    if (allowed.includes(ext)) {
+    if (allowed.includes(ext) || !ext) {
       cb(null, true);
     } else {
       cb(new Error(`Invalid file type (${ext}). Allowed types: ${allowed.join(', ')}`));
     }
   }
+});
+
+const chunkUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 } // 25MB chunk ceiling
 });
 
 // Middleware to handle multer file upload error gracefully
@@ -35,6 +42,14 @@ const handleUpload = (req, res, next) => {
     next();
   });
 };
+
+// ==========================================
+// 0. Resumable Chunked Ingestion & Redis Extraction Pipeline (10,000+ Pages)
+// ==========================================
+router.post('/upload-chunk', optionalAuth, chunkUpload.single('chunk'), resumableController.uploadChunk);
+router.get('/extract-stream/:jobId', optionalAuth, resumableController.extractStream);
+router.get('/job-status/:jobId', optionalAuth, resumableController.getJobStatus);
+router.get('/manifest/:userId/:bookId', optionalAuth, resumableController.getBookManifest);
 
 // ==========================================
 // 1. Health & Auth Status

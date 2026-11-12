@@ -541,6 +541,8 @@ export default function MyFlipbooks() {
                 allImages.totalPages = images.totalPages || detectedCount;
                 allImages.isPartial = !!images.isPartial;
                 allImages.arrayBuffer = images.arrayBuffer;
+                allImages.bookId = images.bookId;
+                allImages.userId = images.userId;
             }
 
             if (isUploadCancelledRef.current) return;
@@ -636,13 +638,14 @@ export default function MyFlipbooks() {
             if (isProgressive && totalDocPages > extractedCount) {
                 const placeholderPages = [];
                 for (let pIdx = extractedCount + 1; pIdx <= totalDocPages; pIdx++) {
-                    const skeletonSvg = generateSkeletonPageSvg(pIdx, maxWidth, maxHeight);
+                    const pageSvg = generateSkeletonPageSvg(pIdx, maxWidth, maxHeight);
                     placeholderPages.push({
                         pageName: `Page ${pIdx}`,
-                        content: skeletonSvg,
-                        html: skeletonSvg,
+                        content: pageSvg,
+                        html: pageSvg,
                         pageNumber: pIdx,
-                        isPlaceholder: true
+                        isPlaceholder: true,
+                        imageUrl: null
                     });
                 }
                 allPages = [...extractedPages, ...placeholderPages];
@@ -650,10 +653,10 @@ export default function MyFlipbooks() {
 
             if (isUploadCancelledRef.current) return;
 
-            // Generate unique book ID immediately for pre-caching
-            const cryptoVId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            // Use backend generated book ID if available, or generate a fresh crypto ID
+            const cryptoVId = allImages.bookId || ((typeof crypto !== 'undefined' && crypto.randomUUID)
                 ? crypto.randomUUID().replace(/-/g, '').slice(0, 16)
-                : Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+                : Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10));
 
             const orientation = maxWidth > maxHeight ? 'landscape' : (Math.abs(maxWidth - maxHeight) < 2 ? 'square' : 'portrait');
 

@@ -5,6 +5,7 @@ import {
   getPageEditorState,
   cleanupLegacyEditorKeys
 } from '../../../utils/dbUtils';
+import { saveAllPagesToIDB } from '../../../utils/pageWindowStore';
 import { getSupabaseBaseUrl, rewriteHtmlUploads } from '../../../utils/assetUtils';
 import { createDefaultPageData } from '../utils/defaultPageData';
 
@@ -129,22 +130,7 @@ export const useCustomizedEditorData = ({
             setBookName(cached.bookName);
           }
           if (cached.pages && Array.isArray(cached.pages) && cached.pages.length > 0) {
-            setPages(prevPages => {
-              if (prevPages && prevPages.length >= cached.pages.length) {
-                return prevPages.map((p, idx) => {
-                  const cp = cached.pages[idx];
-                  if (!cp) return p;
-                  if (p.html && !p.isPlaceholder) return p;
-                  return {
-                    ...p,
-                    html: cp.html || cp.content || '',
-                    content: cp.content || cp.html || '',
-                    isPlaceholder: false
-                  };
-                });
-              }
-              return cached.pages;
-            });
+            setPages(cached.pages);
             setIsLoading(false);
             setIsDataLoadingComplete(true);
             setLoadingProgress(100);
@@ -308,17 +294,19 @@ export const useCustomizedEditorData = ({
 
               setPages(prevPages => {
                 const maxPageNumFromRes = Math.max(0, ...res.data.pages.map(p => Number(p.pageNumber) || 0));
+                const isDifferentBook = fetchedBookVIdRef.current && fetchedBookVIdRef.current !== v_id;
+                const basePages = isDifferentBook ? [] : (prevPages || []);
                 const targetLen = Math.max(
                   Number(location?.state?.pageCount) || 0,
                   Number(res.data.meta?.pageCount) || 0,
                   Number(res.data.pageCount) || 0,
-                  prevPages?.length || 0,
+                  basePages.length,
                   maxPageNumFromRes,
                   res.data.pages.length
                 );
 
                 const next = Array.from({ length: targetLen }, (_, idx) => {
-                  const existing = prevPages?.[idx];
+                  const existing = basePages[idx];
                   if (existing) return { ...existing };
                   return {
                     id: idx,
@@ -634,6 +622,88 @@ export const useCustomizedEditorData = ({
     };
     fetchBook();
   }, [v_id, folder, user?.userId || user?._id || user?.id || user?.email]);
+
+  // Real-time page hydration poller: If Fast-Launch loaded initial pages (1-10) with placeholders,
+  // stream newly extracted balance pages (11..10,000) from server into IndexedDB & state
+  useEffect(() => {
+    if (!v_id) return;
+    let pollCount = 0;
+    const maxPolls = 35; // 35 * 2.5s = ~88 seconds
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+
+    const interval = setInterval(async () => {
+      pollCount++;
+      if (pollCount > maxPolls) {
+        clearInterval(interval);
+        return;
+      }
+
+      let hasPlaceholders = false;
+      setPages(currentPages => {
+        if (!currentPages || currentPages.length === 0) return currentPages;
+        hasPlaceholders = currentPages.some(p => 
+          p.isPlaceholder || 
+          !p.content || 
+          p.content.includes('generateSkeletonPageSvg') || 
+          p.content.includes('fbe-skeleton') || 
+          p.content.includes('createDefaultPageData')
+        );
+        return currentPages;
+      });
+
+      if (!hasPlaceholders && pollCount > 1) {
+        clearInterval(interval);
+        return;
+      }
+
+      try {
+        const res = await axios.get(`${backendUrl}/api/flipbook/get`, {
+          params: { v_id, bookName: decodeURIComponent(v_id) },
+          withCredentials: true
+        });
+
+        if (res.data && Array.isArray(res.data.pages) && res.data.pages.length > 0) {
+          const freshPages = res.data.pages;
+          let newlyHydrated = 0;
+
+          setPages(prevPages => {
+            if (!prevPages || prevPages.length === 0) return prevPages;
+            const updated = [...prevPages];
+
+            freshPages.forEach(fp => {
+              const pNum = Number(fp.pageNumber);
+              const idx = pNum - 1;
+              if (idx >= 0 && idx < updated.length) {
+                const current = updated[idx];
+                const fpContent = fp.content || fp.html || '';
+                const isFpReal = fpContent && !fpContent.includes('generateSkeletonPageSvg') && !fpContent.includes('createDefaultPageData');
+
+                if (isFpReal && (current.isPlaceholder || !current.content || current.content.includes('generateSkeletonPageSvg') || current.content.includes('createDefaultPageData'))) {
+                  updated[idx] = {
+                    ...current,
+                    ...fp,
+                    content: fpContent,
+                    html: fpContent,
+                    isPlaceholder: false
+                  };
+                  newlyHydrated++;
+                }
+              }
+            });
+
+            if (newlyHydrated > 0) {
+              saveAllPagesToIDB(v_id, updated).catch(() => {});
+              window.dispatchEvent(new CustomEvent('flipbook-pages-updated', { detail: { v_id } }));
+            }
+
+            return updated;
+          });
+        }
+      } catch (_) {}
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [v_id, setPages]);
 
   return {
     isLoading,

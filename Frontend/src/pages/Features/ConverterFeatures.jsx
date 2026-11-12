@@ -1,18 +1,17 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
-import Footer from './Footer';
 
 // Asset imports
-import heroBg from '../assets/Features/Feature.webp';
-import imgMock from '../assets/Features/img.webp';
-import imgBgLeaves from '../assets/Features/imgbg.webp';
-import vdoMock from '../assets/Features/vdo.webp';
-import vdoBgReel from '../assets/Features/vdobg.webp';
-import threeDMock from '../assets/Features/3d.webp';
-import threeDBgGeom from '../assets/Features/3dbg.webp';
+import heroBg from '../../assets/Features/Converter/Feature.webp';
+import imgMock from '../../assets/Features/Converter/img.webp';
+import imgBgLeaves from '../../assets/Features/Converter/imgbg.webp';
+import vdoMock from '../../assets/Features/Converter/vdo.webp';
+import vdoBgReel from '../../assets/Features/Converter/vdobg.webp';
+import threeDMock from '../../assets/Features/Converter/3d.webp';
+import threeDBgGeom from '../../assets/Features/Converter/3dbg.webp';
 
-export default function Features() {
+export default function ConverterFeatures() {
   const navigate = useNavigate();
 
   const handleStartConverting = () => {
@@ -450,11 +449,7 @@ export default function Features() {
           </div>
         </section>
       </main>
-
-      {/* =========================================
-          GLOBAL FOOTER
-      ========================================= */}
-      <Footer />
     </div>
   );
 }
+

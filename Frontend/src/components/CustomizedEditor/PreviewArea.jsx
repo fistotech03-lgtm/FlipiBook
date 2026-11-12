@@ -73,6 +73,14 @@ const PreviewArea = React.memo(({
     const watermarkSettings = watermarkSettingsProp || customizerRedux.watermarkSettings;
 
     const [processedLogoSrc, setProcessedLogoSrc] = useState(incomingLogoSettings?.src || '');
+    const [isInitialPreparing, setIsInitialPreparing] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsInitialPreparing(false);
+        }, 1800);
+        return () => clearTimeout(timer);
+    }, []);
 
     useEffect(() => {
         if (!incomingLogoSettings?.src) {
@@ -151,7 +159,10 @@ const PreviewArea = React.memo(({
     }, [incomingOtherSetupSettings, incomingSettings, currentBook]);
 
     const leadFormSettings = React.useMemo(() => {
-        return incomingLeadFormSettings || incomingSettings?.leadForm || incomingSettings?.leadform || incomingSettings?.Customized_Settings?.leadForm || currentBook?.Customized_Settings?.leadForm || null;
+        const candidate = incomingLeadFormSettings || incomingSettings?.leadForm || incomingSettings?.leadform || incomingSettings?.Customized_Settings?.leadForm || currentBook?.Customized_Settings?.leadForm || null;
+        if (candidate && candidate.enabled !== undefined) return candidate;
+        const fallback = incomingSettings?.leadForm || incomingSettings?.leadform || incomingSettings?.Customized_Settings?.leadForm || currentBook?.Customized_Settings?.leadForm || null;
+        return fallback || candidate;
     }, [incomingLeadFormSettings, incomingSettings, currentBook]);
 
     const resolvedVId = React.useMemo(() => {
@@ -729,6 +740,8 @@ const PreviewArea = React.memo(({
     // Guard to prevent circular flip: when we programmatically jump via targetPage,
     // onFlip would echo back to setTargetPage → targetPage → flip again.
     const isExternalJumpRef = useRef(false);
+    const prevTargetPageRef = useRef(targetPage);
+    const externalJumpTimerRef = useRef(null);
     const [offset, setOffset] = useState(() => {
         // Compute the correct initial offset so first page is centered from the very first render
         if (targetPage === 0) return -(400 / 2); // WIDTH = 400, half-page shift left for cover
@@ -876,30 +889,27 @@ const PreviewArea = React.memo(({
         }
     }, [otherSetupSettings?.gallery?.previewOpen, isPublishedPreview, disableAutoGallery]);
 
-    // Sync current page with targetPage prop (from PageEditor's activePageIndex)
+    // Sync current page with targetPage prop (from PageEditor's activePageIndex or direct URL)
     useEffect(() => {
+        if (prevTargetPageRef.current === targetPage) return;
+        prevTargetPageRef.current = targetPage;
+
         if (targetPage !== undefined && targetPage !== currentPage) {
             isExternalJumpRef.current = true;
             setCurrentPage(targetPage);
-            // Ensure the flipbook engine also jumps to the new page
+            if (externalJumpTimerRef.current) clearTimeout(externalJumpTimerRef.current);
+
             if (bookRef.current) {
-                // Determine if we need to call turnToPage or similar
                 const flip = bookRef.current?.pageFlip();
                 if (flip) {
-                    // Use a small delay to ensure the turn engine is fully initialized
-                    setTimeout(() => {
-                        try { flip.turnToPage(targetPage); } catch (e) { console.warn('Flip failed', e); }
-                        // Clear the guard shortly after so normal user drags are not blocked
-                        setTimeout(() => { isExternalJumpRef.current = false; }, 200);
-                    }, 50);
-                } else {
-                    setTimeout(() => { isExternalJumpRef.current = false; }, 300);
+                    try { flip.turnToPage(targetPage); } catch (e) { console.warn('Flip failed', e); }
                 }
-            } else {
-                setTimeout(() => { isExternalJumpRef.current = false; }, 300);
             }
+            externalJumpTimerRef.current = setTimeout(() => {
+                isExternalJumpRef.current = false;
+            }, 120);
         }
-    }, [targetPage]);
+    }, [targetPage, currentPage]);
 
     const handleToggleAudio = useCallback(() => {
         setIsMuted(prev => !prev);
@@ -1554,6 +1564,7 @@ const PreviewArea = React.memo(({
         // — prevents the circular: targetPage → flip → onFlip → setTargetPage → targetPage loop
         if (isExternalJumpRef.current) return;
         const logicalIndex = e.data;
+        prevTargetPageRef.current = logicalIndex;
         setCurrentPage(logicalIndex);
 
         if (externalOnFlip) {
@@ -1800,7 +1811,7 @@ const PreviewArea = React.memo(({
         }
 
         const isLeadFormTabActive = (activeSubView || '').toLowerCase() === 'leadform';
-        if (isLeadFormTabActive) {
+        if (isLeadFormTabActive && !leadFormSubmitted) {
             setShowLeadForm(true);
             return;
         }
@@ -2380,6 +2391,8 @@ const PreviewArea = React.memo(({
             bookmarks={bookmarks}
             notes={notes}
             isMobileLandscape={isMobileLandscape}
+            leadFormSettings={leadFormSettings}
+            onOpenLeadForm={() => setShowLeadForm(true)}
         />
     );
 
@@ -2522,6 +2535,13 @@ const PreviewArea = React.memo(({
 
             {(!['Tablet', 'Mobile'].includes(activeDevice) || (activeDevice === 'Tablet' && isPhysicalTablet) || (activeDevice === 'Mobile' && isPhysicalMobile)) && backgroundLayers}
 
+            {isInitialPreparing && (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 99999, backgroundColor: '#1E1F24', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', transition: 'opacity 0.4s ease' }}>
+                    <div className="w-9 h-9 border-2 border-white/20 border-t-[#ea543a] rounded-full animate-spin" />
+                    <span style={{ color: '#fff', fontSize: '13px', fontWeight: 500, letterSpacing: '0.03em' }}>Preparing Flipbook…</span>
+                </div>
+            )}
+
             <DeviceLayoutRenderer
                 activeDevice={activeDevice}
                 isPublishedPreview={isPublishedPreview}
@@ -2607,15 +2627,7 @@ const PreviewArea = React.memo(({
                 />
             )}
 
-            {/* Centered Screen Lead Form Modal Overlay */}
-            {showLeadForm && (
-                <LeadFormPopup
-                    leadFormSettings={leadFormSettings}
-                    isTablet={isTablet}
-                    isMobile={activeDevice === 'Mobile'}
-                    onClose={() => setLeadFormSubmitted(true)}
-                />
-            )}
+
         </div>
     );
 });

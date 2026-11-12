@@ -38,8 +38,16 @@ export const saveAllPagesToIDB = async (v_id, pages) => {
   for (let i = 0; i < pages.length; i += BATCH) {
     const slice = pages.slice(i, i + BATCH);
     await Promise.all(
-      slice.map((page, j) => {
+      slice.map(async (page, j) => {
         const idx = i + j;
+        const pageContent = page?.html || page?.content || '';
+        if (!pageContent || page.isPlaceholder) {
+          // Never overwrite an existing non-empty page in IDB with an empty placeholder
+          const existing = await getFromDB(`page_${v_id}_${idx}`);
+          if (existing && (existing.html || existing.content) && !existing.isPlaceholder) {
+            return;
+          }
+        }
         return saveToDB(`page_${v_id}_${idx}`, page);
       })
     );
@@ -56,6 +64,13 @@ export const saveAllPagesToIDB = async (v_id, pages) => {
  */
 export const savePageToIDB = async (v_id, index, page) => {
   if (!v_id || index < 0 || !page) return;
+  const pageContent = page?.html || page?.content || '';
+  if (!pageContent || page.isPlaceholder) {
+    const existing = await getFromDB(`page_${v_id}_${index}`);
+    if (existing && (existing.html || existing.content) && !existing.isPlaceholder) {
+      return;
+    }
+  }
   return saveToDB(`page_${v_id}_${index}`, page);
 };
 

@@ -32,7 +32,7 @@ import { TableMatrix } from '../helpers/TableMatrix';
 import { normalizeForeignObjectNamespaces } from '../utils/tableElementUtils';
 import Color from '../../../properties/Color';
 import ColorPicker from '../../../properties/ColorPicker';
-import { PropertySlider } from '../../../properties/propertiesShared';
+import { PropertySlider, handleScrubHelper } from '../../../properties/propertiesShared';
 import {
   fontFamilies,
   fontWeights,
@@ -203,6 +203,90 @@ const SectionHeader = ({ title }) => (
     <div className="flex-1 h-[1px] bg-gray-200" />
   </div>
 );
+
+// Exact ColorBox matching user screenshot and Color.jsx
+const ColorBoxRow = ({
+  title,
+  color,
+  opacity = 100,
+  onOpenPicker,
+  onChange,
+  onOpacityChange,
+  isActive = false,
+  titleRight,
+}) => {
+  const isTransparent = !color || color === 'none' || color === 'transparent';
+  const displayColor = (() => {
+    if (isTransparent) return '#';
+    if (typeof color === 'string' && color.includes('gradient')) return 'Gradient';
+    return typeof color === 'string' ? (color.startsWith('#') ? color.toUpperCase() : '#' + color.toUpperCase()) : '#000000';
+  })();
+
+  return (
+    <div className="flex flex-col gap-[0.5vw]">
+      {title && (
+        <div className="flex items-center gap-[0.8vw] mb-[0.1vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+          {titleRight}
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+      )}
+      <div className="flex items-center gap-[0.6vw]">
+        {/* Swatch (3.6vw x 2.1vw rounded rectangle matching user screenshot) */}
+        <div
+          onClick={onOpenPicker}
+          className={`w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105 ${
+            isActive ? 'border-indigo-500 ring-2 ring-indigo-500/20' : ''
+          }`}
+          title={`Change ${title || 'color'}`}
+        >
+          <div
+            className="w-full h-full"
+            style={{ background: isTransparent ? '#ffffff' : color }}
+          />
+          {isTransparent && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45 pointer-events-none" />
+          )}
+        </div>
+
+        {/* Input box */}
+        <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 focus-within:border-indigo-400 transition-colors shadow-2xs">
+          <input
+            type="text"
+            value={displayColor}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || val === '#') {
+                onChange('none');
+              } else {
+                const finalVal = val.startsWith('#') ? val : '#' + val;
+                onChange(finalVal);
+              }
+            }}
+            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            maxLength={9}
+          />
+          <div
+            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+            onPointerDown={(e) => {
+              const currentPct = Math.round(parseFloat(opacity !== undefined ? opacity : 100));
+              handleScrubHelper(e, currentPct, (val) => {
+                const num = parseInt(val);
+                const clamped = Math.min(Math.max(num, 0), 100);
+                onOpacityChange(clamped);
+              });
+            }}
+            title="Drag horizontally to adjust opacity"
+          >
+            <span className="text-[0.8vw] font-medium text-gray-700">
+              {Math.round(parseFloat(opacity !== undefined ? opacity : 100))}%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ElementTableProperties = ({
   selectedElementProps,
@@ -638,15 +722,15 @@ const ElementTableProperties = ({
 
         const minColWidthsPx = [];
         for (let idx = 0; idx < totalCols; idx++) {
-          minColWidthsPx[idx] = 28;
+          minColWidthsPx[idx] = 10;
         }
 
         const initialColPcts = startColWidthsPx.map(w => (w / tableRect.width) * 100);
 
         const onColMouseMove = (moveEvt) => {
           const deltaX = moveEvt.clientX - e.clientX;
-          const minLeftPx = minColWidthsPx?.[dividerCol] || 28;
-          const minRightPx = minColWidthsPx?.[dividerCol + 1] || 28;
+          const minLeftPx = minColWidthsPx?.[dividerCol] || 10;
+          const minRightPx = minColWidthsPx?.[dividerCol + 1] || 10;
           const leftStart = startColWidthsPx[dividerCol];
           const rightStart = startColWidthsPx[dividerCol + 1];
 
@@ -748,7 +832,7 @@ const ElementTableProperties = ({
           tr.style.height = `${initialPcts[i].toFixed(3)}%`;
         });
 
-        const minRowHeightsPx = Array.from(trs).map(() => 24);
+        const minRowHeightsPx = Array.from(trs).map(() => 8);
 
         const onRowMouseMove = (moveEvt) => {
           const deltaY = moveEvt.clientY - e.clientY;
@@ -756,8 +840,8 @@ const ElementTableProperties = ({
           const bottomTr = trs[dividerRow + 1];
           if (!topTr || !bottomTr) return;
 
-          const minTopPx = minRowHeightsPx?.[dividerRow] || 26;
-          const minBottomPx = minRowHeightsPx?.[dividerRow + 1] || 26;
+          const minTopPx = minRowHeightsPx?.[dividerRow] || 8;
+          const minBottomPx = minRowHeightsPx?.[dividerRow + 1] || 8;
           const topStart = rowHeightsPx[dividerRow];
           const bottomStart = rowHeightsPx[dividerRow + 1];
 
@@ -934,9 +1018,36 @@ const ElementTableProperties = ({
 
     const bWidth = parseFloat(el?.getAttribute('data-border-width') || borderWidth || '1') || 1;
 
-    // Measure exact sub-pixel boundaries relative to wrapper using getBoundingClientRect
-    const wrapperRect = wrapper.getBoundingClientRect();
-    const zoomScale = (wrapperRect.width > 0 && wrapper.offsetWidth > 0) ? (wrapperRect.width / wrapper.offsetWidth) : 1;
+    // Helper to calculate exact local coordinates of a cell relative to wrapper
+    const getCellLocalRect = (cell) => {
+      if (cell && wrapper) {
+        let l = 0;
+        let t = 0;
+        let curr = cell;
+        while (curr && curr !== wrapper && curr !== document.body && curr !== document.documentElement) {
+          l += curr.offsetLeft || 0;
+          t += curr.offsetTop || 0;
+          if (curr.offsetParent === wrapper) {
+            break;
+          }
+          curr = curr.offsetParent;
+        }
+        const w = cell.offsetWidth || cell.clientWidth || 0;
+        const h = cell.offsetHeight || cell.clientHeight || 0;
+        if (w > 0 && h > 0) {
+          return { left: l, top: t, right: l + w, bottom: t + h, width: w, height: h };
+        }
+      }
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const cRect = cell.getBoundingClientRect();
+      const sX = (wrapperRect.width > 0 && wrapper.offsetWidth > 0) ? (wrapperRect.width / wrapper.offsetWidth) : 1;
+      const sY = (wrapperRect.height > 0 && wrapper.offsetHeight > 0) ? (wrapperRect.height / wrapper.offsetHeight) : sX;
+      const l = (cRect.left - wrapperRect.left) / sX;
+      const t = (cRect.top - wrapperRect.top) / sY;
+      const w = cRect.width / sX;
+      const h = cRect.height / sY;
+      return { left: l, top: t, right: l + w, bottom: t + h, width: w, height: h };
+    };
 
     if (isSingleRect || entries.length === 1) {
       let minLeft = Infinity;
@@ -945,59 +1056,30 @@ const ElementTableProperties = ({
       let maxBottom = -Infinity;
 
       selectedCells.forEach(cell => {
-        const cRect = cell.getBoundingClientRect();
-        let l, t, r, b;
-        if (wrapperRect.width > 0 && zoomScale > 0) {
-          l = (cRect.left - wrapperRect.left) / zoomScale;
-          t = (cRect.top - wrapperRect.top) / zoomScale;
-          r = (cRect.right - wrapperRect.left) / zoomScale;
-          b = (cRect.bottom - wrapperRect.top) / zoomScale;
-        } else {
-          const baseLeft = table.offsetLeft || 0;
-          const baseTop = table.offsetTop || 0;
-          l = baseLeft + cell.offsetLeft;
-          t = baseTop + cell.offsetTop;
-          r = l + cell.offsetWidth;
-          b = t + cell.offsetHeight;
-        }
-        if (l < minLeft) minLeft = l;
-        if (t < minTop) minTop = t;
-        if (r > maxRight) maxRight = r;
-        if (b > maxBottom) maxBottom = b;
+        const rect = getCellLocalRect(cell);
+        if (rect.left < minLeft) minLeft = rect.left;
+        if (rect.top < minTop) minTop = rect.top;
+        if (rect.right > maxRight) maxRight = rect.right;
+        if (rect.bottom > maxBottom) maxBottom = rect.bottom;
       });
 
       const overlay = document.createElement('div');
       overlay.className = 'table-cell-selection-overlay';
       overlay.setAttribute(
         'style',
-        `position:absolute;left:${minLeft}px;top:${minTop}px;width:${maxRight - minLeft}px;height:${maxBottom - minTop}px;border:${bWidth}px solid ${highlightColor};box-sizing:border-box;pointer-events:none;z-index:9999;border-radius:0px;`
+        `position:absolute;left:${minLeft}px;top:${minTop}px;width:${Math.max(1, maxRight - minLeft)}px;height:${Math.max(1, maxBottom - minTop)}px;border:${bWidth}px solid ${highlightColor};box-sizing:border-box;pointer-events:none;z-index:9999;border-radius:0px;`
       );
       wrapper.appendChild(overlay);
     } else {
       // Disjoint multi-cell selection: create an individual overlay box for each selected cell
       selectedCells.forEach(cell => {
         const cellBWidth = parseFloat(cell.getAttribute('data-cell-border-width') || bWidth) || bWidth;
-        const cRect = cell.getBoundingClientRect();
-        let l, t, w, h;
-        if (wrapperRect.width > 0 && zoomScale > 0) {
-          l = (cRect.left - wrapperRect.left) / zoomScale;
-          t = (cRect.top - wrapperRect.top) / zoomScale;
-          w = cRect.width / zoomScale;
-          h = cRect.height / zoomScale;
-        } else {
-          const baseLeft = table.offsetLeft || 0;
-          const baseTop = table.offsetTop || 0;
-          l = baseLeft + cell.offsetLeft;
-          t = baseTop + cell.offsetTop;
-          w = cell.offsetWidth;
-          h = cell.offsetHeight;
-        }
-
+        const rect = getCellLocalRect(cell);
         const overlay = document.createElement('div');
         overlay.className = 'table-cell-selection-overlay';
         overlay.setAttribute(
           'style',
-          `position:absolute;left:${l}px;top:${t}px;width:${w}px;height:${h}px;border:${cellBWidth}px solid ${highlightColor};box-sizing:border-box;pointer-events:none;z-index:9999;border-radius:0px;`
+          `position:absolute;left:${rect.left}px;top:${rect.top}px;width:${Math.max(1, rect.width)}px;height:${Math.max(1, rect.height)}px;border:${cellBWidth}px solid ${highlightColor};box-sizing:border-box;pointer-events:none;z-index:9999;border-radius:0px;`
         );
         wrapper.appendChild(overlay);
       });
@@ -1069,6 +1151,47 @@ const ElementTableProperties = ({
     window.addEventListener('clear-table-cell-selection', handleClearCells);
     return () => window.removeEventListener('clear-table-cell-selection', handleClearCells);
   }, [selectedLayerId]);
+
+  // Synchronize table cell selection on external event (e.g., table resized or transformed)
+  useEffect(() => {
+    const handleSyncCells = (e) => {
+      const targetId = e?.detail?.elementId;
+      if (targetId && targetId !== selectedLayerIdRef.current && targetId !== selectedLayerId) return;
+      const el = getTargetElement();
+      const table = el?.querySelector('table');
+      if (table && selectedCellKeysRef.current && selectedCellKeysRef.current.size > 0 && applyBorderHighlightRef.current) {
+        applyBorderHighlightRef.current(table, selectedCellKeysRef.current);
+      }
+    };
+    window.addEventListener('sync-table-cell-selection', handleSyncCells);
+    return () => window.removeEventListener('sync-table-cell-selection', handleSyncCells);
+  }, [selectedLayerId, getTargetElement]);
+
+  // Synchronize table font-size and padding states when dynamically scaled during resize
+  useEffect(() => {
+    const handlePropsSync = (e) => {
+      const detail = e?.detail;
+      if (!detail) return;
+      const targetId = detail.elementId;
+      if (targetId && targetId !== selectedLayerIdRef.current && targetId !== selectedLayerId) return;
+      if (detail.fontSize !== undefined) {
+        setFontSize(detail.fontSize);
+      }
+      if (detail.paddingY !== undefined) {
+        setPaddingY(detail.paddingY);
+      }
+      if (detail.paddingX !== undefined) {
+        setPaddingX(detail.paddingX);
+      }
+      const el = getTargetElement();
+      const table = el?.querySelector('table');
+      if (table && selectedCellKeysRef.current && selectedCellKeysRef.current.size > 0 && applyBorderHighlightRef.current) {
+        applyBorderHighlightRef.current(table, selectedCellKeysRef.current);
+      }
+    };
+    window.addEventListener('table-properties-sync', handlePropsSync);
+    return () => window.removeEventListener('table-properties-sync', handlePropsSync);
+  }, [selectedLayerId, getTargetElement]);
 
   // Clean up all cell selection highlights when table is unselected (properties panel unmounts or layer changes)
   useEffect(() => {
@@ -1837,6 +1960,27 @@ const ElementTableProperties = ({
     if (hasSelectedCells && applyBorderHighlightRef.current) {
       applyBorderHighlightRef.current(table, selectedCellKeysRef.current);
     }
+    syncChanges(el);
+  }, [getTargetElement, getTargetCells, syncChanges]);
+
+  // Text Opacity handler for cells
+  const handleSetCellTextOpacity = useCallback((newOpacity) => {
+    const op = Math.min(Math.max(parseInt(newOpacity, 10) || 0, 0), 100);
+    setCellOpacity(op);
+    const el = getTargetElement();
+    if (!el) return;
+    const table = el.querySelector('table');
+    if (!table) return;
+
+    el.setAttribute('data-font-opacity', op.toString());
+
+    const hasSelectedCells = Boolean(selectedCellKeysRef.current && selectedCellKeysRef.current.size > 0);
+    const cellsToUpdate = hasSelectedCells ? getTargetCells(el) : Array.from(table.querySelectorAll('td, th'));
+
+    cellsToUpdate.forEach(cell => {
+      cell.style.setProperty('opacity', (op / 100).toString());
+    });
+
     syncChanges(el);
   }, [getTargetElement, getTargetCells, syncChanges]);
 
@@ -3105,65 +3249,53 @@ const ElementTableProperties = ({
           </div>
         </div>
 
-        {/* Row 2: Weight & Text Color */}
-        <div className="flex items-center gap-[0.6vw]">
-          {/* Font Weight */}
-          <div className="relative flex-1">
-            <button
-              type="button"
-              onClick={() => setShowWeightDropdown(!showWeightDropdown)}
-              className="w-full h-[2.1vw] px-[0.6vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 shadow-2xs transition-colors cursor-pointer"
-            >
-              <span className="text-[0.8vw] truncate text-gray-800 font-medium">
-                {fontWeights.find(w => w.value === fontWeight)?.name || (isBold ? 'Bold' : 'Regular')}
-              </span>
-              <ChevronDown size="0.8vw" className={`text-gray-400 transition-transform ${showWeightDropdown ? 'rotate-180' : ''}`} />
-            </button>
-            {showWeightDropdown && (
-              <>
-                <div className="fixed inset-0 z-[90]" onClick={() => setShowWeightDropdown(false)} />
-                <div className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
-                  {fontWeights.map(w => (
-                    <div
-                      key={w.value}
-                      onClick={() => {
-                        handleFontWeightChange(w.value);
-                        setShowWeightDropdown(false);
-                      }}
-                      className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] transition-colors ${fontWeight === w.value ? 'bg-gray-50 font-semibold text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
-                    >
-                      {w.name}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Text Color */}
-          <div
-            onClick={() => {
-              setActiveColorPicker(null);
-              setIsTextColorPickerOpen(prev => !prev);
-            }}
-            className="flex-1 h-[2.1vw] px-[0.55vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 shadow-2xs transition-colors cursor-pointer color-picker-trigger"
-            data-color-picker-trigger="true"
-            title="Click to change Text Color"
+        {/* Row 2: Font Weight (Full Width) */}
+        <div className="relative w-full">
+          <button
+            type="button"
+            onClick={() => setShowWeightDropdown(!showWeightDropdown)}
+            className="w-full h-[2.1vw] px-[0.7vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 shadow-2xs transition-colors cursor-pointer"
           >
-            <div className="flex items-center gap-[0.45vw] min-w-0">
-              <div
-                className="w-[1.2vw] h-[1.2vw] rounded-[0.25vw] border border-gray-200 shadow-2xs flex-shrink-0"
-                style={{ backgroundColor: cellColor }}
-              />
-              <span className="text-[0.78vw] font-mono font-medium text-gray-700 uppercase truncate">
-                {cellColor}
-              </span>
-            </div>
-            <span className="text-[0.68vw] text-gray-400 font-medium select-none">Color</span>
-          </div>
+            <span className="text-[0.8vw] truncate text-gray-800 font-medium">
+              {fontWeights.find(w => w.value === fontWeight)?.name || (isBold ? 'Bold' : 'Regular')}
+            </span>
+            <ChevronDown size="0.75vw" className={`text-gray-400 transition-transform ${showWeightDropdown ? 'rotate-180' : ''}`} />
+          </button>
+          {showWeightDropdown && (
+            <>
+              <div className="fixed inset-0 z-[90]" onClick={() => setShowWeightDropdown(false)} />
+              <div className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                {fontWeights.map(w => (
+                  <div
+                    key={w.value}
+                    onClick={() => {
+                      handleFontWeightChange(w.value);
+                      setShowWeightDropdown(false);
+                    }}
+                    className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] transition-colors ${fontWeight === w.value ? 'bg-gray-50 font-semibold text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+                  >
+                    {w.name}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Row 3: Toolbar Buttons: Alignment, Style, Vertical Alignment */}
+        {/* Row 3: Text Color (Inside Typography, full width, without separate heading) */}
+        <ColorBoxRow
+          color={cellColor}
+          opacity={cellOpacity}
+          onOpenPicker={() => {
+            setActiveColorPicker(null);
+            setIsTextColorPickerOpen(prev => !prev);
+          }}
+          onChange={handleSetCellTextColor}
+          onOpacityChange={handleSetCellTextOpacity}
+          isActive={isTextColorPickerOpen}
+        />
+
+        {/* Row 4: Toolbar Buttons: Alignment, Style, Vertical Alignment */}
         <div className="flex items-center gap-[0.6vw] relative">
           {/* Alignment */}
           <div className="relative flex-1">
@@ -3366,8 +3498,8 @@ const ElementTableProperties = ({
           <div className="animate-in fade-in zoom-in-95 duration-200">
             <ColorPicker
               color={cellColor}
-              opacity={100}
-              onOpacityChange={() => {}}
+              opacity={cellOpacity}
+              onOpacityChange={handleSetCellTextOpacity}
               onChange={(newColor) => {
                 handleSetCellTextColor(newColor);
               }}
@@ -3378,6 +3510,34 @@ const ElementTableProperties = ({
         </div>,
         document.body
       )}
+
+      {/* CUSTOM CSS matching ShapeProperties */}
+      <style>{`
+        .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        body.is-scrubbing, body.is-scrubbing * {
+          cursor: none !important;
+          user-select: none !important;
+        }
+        .hide-cursor, .hide-cursor * {
+          cursor: none !important;
+        }
+        .virtual-scrub-cursor {
+          position: fixed;
+          pointer-events: none;
+          z-index: 100000;
+          width: 2vw;
+          height: 2vw;
+          margin-left: -1vw;
+          margin-top: -1vw;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          filter: drop-shadow(0 0.1vw 0.2vw rgba(0,0,0,0.3));
+        }
+      `}</style>
     </div>
   );
 };

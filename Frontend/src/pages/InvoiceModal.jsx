@@ -22,50 +22,93 @@ const PLAN_DETAILS = {
     badge: 'Starter',
     monthlyPrice: 0.00,
     annualPrice: 0.00,
-    description: 'Perfect for individuals and small creators getting started with digital publications.',
+    description: 'Everything you need to get started with digital publications.',
     buttonText: 'Get Started Free',
     features: [
-      'Create up to 5 flipbooks',
-      'Basic templates gallery',
-      'Add images, videos & interactive links',
-      'Share via direct URL or iframe embed',
-      'Standard reader analytics',
-      'Community & email support'
+      '3 hosted flipbooks',
+      '500 MB shared storage',
+      '30 pages per flipbook',
+      'Starter templates & page editing',
+      'Clickable links & QR sharing',
+      'Branded website embedding',
+      'Basic view statistics',
+      'Explore a 3D / AR demo'
+    ]
+  },
+  basic: {
+    name: 'Basic Creator Plan',
+    code: 'BAS',
+    badge: 'Basic',
+    monthlyPrice: 39.99,
+    annualPrice: 31.99,
+    description: 'Your brand, front and centre with custom logo and backgrounds.',
+    buttonText: 'Subscribe to Basic',
+    features: [
+      '15 hosted flipbooks',
+      '5 GB storage · 150 pages / book',
+      'Remove FlipiBook branding',
+      'Your logo & custom backgrounds',
+      'Video embeds, audio & CTA buttons',
+      'Password-protected publications',
+      'Basic analytics · 1 user',
+      '5 interactive 3D models'
     ]
   },
   standard: {
     name: 'Standard Pro Plan',
     code: 'STA',
-    badge: 'Most Popular',
+    badge: 'Basic',
     monthlyPrice: 39.99,
     annualPrice: 31.99,
-    description: 'Ideal for growing teams and businesses with advanced branding and 3D requirements.',
-    buttonText: 'Subscribe to Standard',
+    description: 'Your brand, front and centre with custom logo and backgrounds.',
+    buttonText: 'Subscribe to Basic',
     features: [
-      'Up to 25 flipbooks / month',
-      'Premium templates & 3D realistic flip effect',
-      'Custom branding & watermark removal',
-      'Advanced reader analytics & heatmaps',
-      'Team collaboration (up to 5 users)',
-      'Password protection & domain restriction',
-      'Priority email & live support'
+      '15 hosted flipbooks',
+      '5 GB storage · 150 pages / book',
+      'Remove FlipiBook branding',
+      'Your logo & custom backgrounds',
+      'Video embeds, audio & CTA buttons',
+      'Password-protected publications',
+      'Basic analytics · 1 user',
+      '5 interactive 3D models'
     ]
   },
   premium: {
     name: 'Enterprise Premium Plan',
     code: 'PRE',
-    badge: 'Enterprise',
+    badge: 'Premium',
     monthlyPrice: 99.99,
     annualPrice: 79.99,
-    description: 'For organizations with custom requirements, high publication volume, and dedicated SLA.',
+    description: 'Engage customers, capture leads, and scale your interactive content effortlessly.',
     buttonText: 'Subscribe to Premium',
     features: [
-      'Unlimited flipbooks & unlimited views',
-      'All premium & 3D interactive features',
-      'Team collaboration (unlimited users)',
-      'Advanced analytics, custom reports & API access',
-      'Custom domain & white-label publishing',
-      'Dedicated account manager & 24/7 SLA support'
+      '75 hosted flipbooks',
+      '25 GB storage · 500 pages / book',
+      '5 users & shared team folders',
+      '1 custom domain (CNAME)',
+      'Direct video & audio uploads',
+      'Forms, quizzes & lead capture',
+      'Advanced engagement analytics',
+      '25 models with 3D + AR inspection'
+    ]
+  },
+  pro: {
+    name: 'Pro Enterprise Plan',
+    code: 'PRO',
+    badge: 'Pro Tier',
+    monthlyPrice: 199.99,
+    annualPrice: 159.99,
+    description: 'Scale your team and integrations with enterprise-grade security and capabilities.',
+    buttonText: 'Subscribe to Pro',
+    features: [
+      '250 hosted flipbooks',
+      '100 GB storage · 1,000 pages / book',
+      '15 users included',
+      '5 custom domains',
+      'Account & viewer SSO (SAML)',
+      'Developer API & webhooks',
+      '24-month analytics history',
+      '100 models with 3D + AR'
     ]
   }
 };
@@ -162,7 +205,7 @@ export default function InvoiceModal({ isOpen, onClose, defaultPlan = 'standard'
           <div className="flex items-center gap-2.5">
             {/* Plan Selector */}
             <div className="bg-slate-800/90 p-1 rounded-lg border border-slate-700 flex items-center gap-1">
-              {['free', 'standard', 'premium'].map((planKey) => {
+              {['free', 'standard', 'premium', 'pro'].map((planKey) => {
                 const isSelected = selectedPlan === planKey;
                 return (
                   <button

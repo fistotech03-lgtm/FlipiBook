@@ -23,6 +23,105 @@ import { convertTextToForeignObject } from '../utils/textConversionUtils';
 import { isPageRootElement as fallbackIsPageRootElement } from '../utils/frameHierarchyUtils';
 
 /**
+ * Synchronizes the visual cell selection overlay box (.table-cell-selection-overlay)
+ * with the actual DOM positions of the selected cells inside a table element.
+ */
+export const syncTableCellSelectionOverlay = (tableEl) => {
+  if (!tableEl) return;
+  const table = tableEl.querySelector ? tableEl.querySelector('table') : null;
+  const wrapper = tableEl.querySelector ? tableEl.querySelector('.table-card-wrapper') : table?.parentElement;
+  if (!table || !wrapper) return;
+
+  const selectedCells = Array.from(table.querySelectorAll('td[data-cell-selected="true"], th[data-cell-selected="true"]'));
+  const overlays = wrapper.querySelectorAll('.table-cell-selection-overlay');
+
+  if (selectedCells.length === 0) {
+    overlays.forEach(n => n.remove());
+    return;
+  }
+
+  if (wrapper.style.position !== 'relative') {
+    wrapper.style.position = 'relative';
+  }
+
+  const bWidth = parseFloat(tableEl.getAttribute('data-border-width') || '1') || 1;
+  const highlightColor = '#EA543A';
+
+  const getCellLocalRect = (cell) => {
+    if (cell && wrapper) {
+      let l = 0;
+      let t = 0;
+      let curr = cell;
+      while (curr && curr !== wrapper && curr !== document.body && curr !== document.documentElement) {
+        l += curr.offsetLeft || 0;
+        t += curr.offsetTop || 0;
+        if (curr.offsetParent === wrapper) {
+          break;
+        }
+        curr = curr.offsetParent;
+      }
+      const w = cell.offsetWidth || cell.clientWidth || 0;
+      const h = cell.offsetHeight || cell.clientHeight || 0;
+      if (w > 0 && h > 0) {
+        return { left: l, top: t, right: l + w, bottom: t + h, width: w, height: h };
+      }
+    }
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const cRect = cell.getBoundingClientRect();
+    const sX = (wrapperRect.width > 0 && wrapper.offsetWidth > 0) ? (wrapperRect.width / wrapper.offsetWidth) : 1;
+    const sY = (wrapperRect.height > 0 && wrapper.offsetHeight > 0) ? (wrapperRect.height / wrapper.offsetHeight) : sX;
+    const l = (cRect.left - wrapperRect.left) / sX;
+    const t = (cRect.top - wrapperRect.top) / sY;
+    const w = cRect.width / sX;
+    const h = cRect.height / sY;
+    return { left: l, top: t, right: l + w, bottom: t + h, width: w, height: h };
+  };
+
+  const entries = selectedCells.map(cell => ({
+    r: parseInt(cell.getAttribute('data-row') || '0', 10),
+    c: parseInt(cell.getAttribute('data-col') || '0', 10),
+    cell
+  }));
+  const minR = Math.min(...entries.map(e => e.r));
+  const maxR = Math.max(...entries.map(e => e.r));
+  const minC = Math.min(...entries.map(e => e.c));
+  const maxC = Math.max(...entries.map(e => e.c));
+  const isSingleRect = (maxR - minR + 1) * (maxC - minC + 1) === entries.length;
+
+  if (isSingleRect || entries.length === 1) {
+    let minLeft = Infinity, minTop = Infinity, maxRight = -Infinity, maxBottom = -Infinity;
+    selectedCells.forEach(cell => {
+      const rect = getCellLocalRect(cell);
+      if (rect.left < minLeft) minLeft = rect.left;
+      if (rect.top < minTop) minTop = rect.top;
+      if (rect.right > maxRight) maxRight = rect.right;
+      if (rect.bottom > maxBottom) maxBottom = rect.bottom;
+    });
+
+    overlays.forEach((o, idx) => { if (idx > 0) o.remove(); });
+    let overlay = wrapper.querySelector('.table-cell-selection-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'table-cell-selection-overlay';
+      wrapper.appendChild(overlay);
+    }
+    const oWidth = Math.max(1, maxRight - minLeft);
+    const oHeight = Math.max(1, maxBottom - minTop);
+    overlay.style.cssText = `position:absolute;left:${minLeft}px;top:${minTop}px;width:${oWidth}px;height:${oHeight}px;border:${bWidth}px solid ${highlightColor};box-sizing:border-box;pointer-events:none;z-index:9999;border-radius:0px;`;
+  } else {
+    overlays.forEach(n => n.remove());
+    selectedCells.forEach(cell => {
+      const cellBWidth = parseFloat(cell.getAttribute('data-cell-border-width') || bWidth) || bWidth;
+      const rect = getCellLocalRect(cell);
+      const overlay = document.createElement('div');
+      overlay.className = 'table-cell-selection-overlay';
+      overlay.style.cssText = `position:absolute;left:${rect.left}px;top:${rect.top}px;width:${Math.max(1, rect.width)}px;height:${Math.max(1, rect.height)}px;border:${cellBWidth}px solid ${highlightColor};box-sizing:border-box;pointer-events:none;z-index:9999;border-radius:0px;`;
+      wrapper.appendChild(overlay);
+    });
+  }
+};
+
+/**
  * Custom hook encapsulating the Interact.js pointer drag and resize engine
  * for SVG canvas elements, handles, aspect ratio locking, multi-selection bounds, and snapping.
  */
@@ -1657,6 +1756,11 @@ export const useInteractEngine = ({
             const isEmbed = el.getAttribute?.('data-type') === 'embed-frame' ||
                             (el.id && el.id.startsWith('embed-'));
 
+            const isTable = el.getAttribute?.('data-type') === 'table-frame' ||
+                            el.getAttribute?.('data-type') === 'table' ||
+                            (el.id && el.id.startsWith('table-')) ||
+                            Boolean(el.querySelector?.('table'));
+
             if (isButton || isSlideshow || isQRCode || isMap || isAudio || isEmbed) {
               if (isCorner) {
                 const dot = vCurrentLocal.x * vOriginalLocal.x + vCurrentLocal.y * vOriginalLocal.y;
@@ -1737,7 +1841,7 @@ export const useInteractEngine = ({
                   }
                 }
               }
-            } else if (!isInteractiveButton && ((isCorner && (isScaledImage || isShape || isHotspotPreset || (isText && !isForeignObject))) || (!isCorner && ((isText && !isForeignObject) || isHotspotPreset)))) {
+            } else if (!isInteractiveButton && !isTable && ((isCorner && (isScaledImage || isShape || isHotspotPreset || (isText && !isForeignObject))) || (!isCorner && ((isText && !isForeignObject) || isHotspotPreset)))) {
               const s = Math.max(Math.abs(scaleX), Math.abs(scaleY)) * (Math.sign(scaleX) || 1);
               if (!isCorner && ((isText && !isForeignObject) || isHotspotPreset)) {
                 const sSide = (dir === 'n' || dir === 's') ? scaleY : scaleX;
@@ -2258,9 +2362,12 @@ export const useInteractEngine = ({
                             const rowCount = trs.length || 1;
                             const colCount = trs[0]?.children?.length || 1;
 
-                            // Ensure cells never have inline heights so rows scale cleanly
+                            // Ensure cells never have inline heights so rows scale cleanly, and allow text clipping for small tables
                             tableInside.querySelectorAll('td, th').forEach(cell => {
                               cell.style.removeProperty('height');
+                              cell.style.overflow = 'hidden';
+                              cell.style.textOverflow = 'ellipsis';
+                              cell.style.boxSizing = 'border-box';
                             });
 
                             // Self-heal: if row 0 became blown up (>= 70% with multiple rows), reset all rows to equal percentages
@@ -2273,84 +2380,73 @@ export const useInteractEngine = ({
                               });
                             }
 
-                            // Corner resize: scale font-size and padding proportionally
+                            // If side handles: strictly keep the orthogonal axis fixed!
                             const isCorner = ['nw', 'ne', 'sw', 'se'].includes(dir);
-                            if (isCorner) {
-                              const origW = state.bbox?.width || 300;
-                              const origH = state.bbox?.height || 150;
-                              const scale = Math.max(0.4, Math.min(imgW / origW, imgH / origH));
-                              if (!state.initialTableFontSize) {
-                                state.initialTableFontSize = parseFloat(el.getAttribute('data-font-size') || tableInside.style.fontSize) || 13;
-                              }
-                              const newFs = Math.max(8, Math.round(state.initialTableFontSize * scale));
-                              tableInside.style.fontSize = `${newFs}pt`;
-                              el.setAttribute('data-font-size', String(newFs));
-
-                              if (!state.initialTablePadY) {
-                                state.initialTablePadY = parseFloat(el.getAttribute('data-padding-y')) || 6;
-                              }
-                              const newPadY = Math.max(2, Math.round(state.initialTablePadY * scale));
-                              trs.forEach(r => {
-                                Array.from(r.children).forEach(c => {
-                                  c.style.paddingTop = `${newPadY}px`;
-                                  c.style.paddingBottom = `${newPadY}px`;
-                                });
-                              });
-
-                              // Real-time dispatch to update properties panel
-                              window.dispatchEvent(new CustomEvent('table-properties-sync', {
-                                detail: { elementId: el.id, fontSize: newFs, paddingY: newPadY }
-                              }));
+                            if (dir === 'e' || dir === 'w') {
+                              imgH = bound.height;
+                              imgY = bound.y;
+                            } else if (dir === 'n' || dir === 's') {
+                              imgW = bound.width;
+                              imgX = bound.x;
                             }
 
-                            // Measure per-row minimum content height so no row can compress below its cell content
-                            const currentFs = parseFloat(tableInside.style.fontSize) || parseFloat(el.getAttribute('data-font-size')) || 13;
-                            const fsPx = Math.round(currentFs * 1.333);
-                            const padY = parseFloat(el.getAttribute('data-padding-y')) || 6;
-                            const bWidth = parseFloat(el.getAttribute('data-border-width')) || 1;
-                            const baseRowMinH = Math.max(24, fsPx + (padY * 2) + Math.ceil(bWidth * 2));
-
-                            let minTotalTableHeight = 0;
-                            trs.forEach(tr => {
-                              let rowMinH = baseRowMinH;
-                              Array.from(tr.children).forEach(cell => {
-                                const text = (cell.textContent || '').trim();
-                                if (text) {
-                                  const sH = cell.scrollHeight || 0;
-                                  if (sH > rowMinH) rowMinH = sH;
-                                }
-                              });
-                              minTotalTableHeight += rowMinH;
+                            // Keep table and rows strictly fitted to 100% of foreignObject
+                            tableInside.style.width = '100%';
+                            tableInside.style.height = '100%';
+                            tableInside.style.tableLayout = 'fixed';
+                            const eqPct = (100 / rowCount).toFixed(3);
+                            trs.forEach(r => {
+                              r.style.height = `${eqPct}%`;
+                              r.style.boxSizing = 'border-box';
                             });
-                            const minTableH = Math.max(minTotalTableHeight, rowCount * baseRowMinH);
 
-                            // Measure per-column minimum content width so no column can compress below its cell content
-                            const padX = parseFloat(el.getAttribute('data-padding-x')) || 8;
-                            const baseColMinW = Math.max(28, (padX * 2) + 12);
-                            let minTotalTableWidth = 0;
-                            for (let c = 0; c < colCount; c++) {
-                              let colMinW = baseColMinW;
-                              trs.forEach(tr => {
-                                const cell = tr.children[c];
-                                if (cell) {
-                                  const textLen = (cell.textContent || '').trim().length;
-                                  if (textLen > 0) {
-                                    colMinW = Math.max(colMinW, Math.min(cell.scrollWidth || 0, 300), (padX * 2) + Math.min(textLen * 8, 80));
-                                  }
-                                }
-                              });
-                              minTotalTableWidth += colMinW;
+                            if (!state.initialTableFontSize) {
+                              state.initialTableFontSize = parseFloat(el.getAttribute('data-font-size') || tableInside.style.fontSize) || 9;
                             }
-                            const minTableW = Math.max(minTotalTableWidth, colCount * baseColMinW, 80);
+                            if (state.initialTablePadY === undefined) {
+                              state.initialTablePadY = parseFloat(el.getAttribute('data-padding-y')) || 4;
+                            }
+                            if (state.initialTablePadX === undefined) {
+                              state.initialTablePadX = parseFloat(el.getAttribute('data-padding-x')) || 6;
+                            }
 
-                            if (imgH < minTableH) {
+                            // Do NOT blow up font-size or padding when expanding width/height.
+                            // Only scale down gracefully if the user shrinks the table very small.
+                            const maxRowH = Math.max(1, imgH / rowCount);
+                            const maxColW = Math.max(1, imgW / colCount);
+                            const newPadY = Math.min(state.initialTablePadY, Math.max(0, Math.floor((maxRowH - 12) / 2)));
+                            const newPadX = Math.min(state.initialTablePadX, Math.max(0, Math.floor(maxColW / 6)));
+                            const newFs = Math.min(state.initialTableFontSize, Math.max(4, Math.floor(maxRowH - (newPadY * 2))));
+
+                            tableInside.style.fontSize = `${newFs}pt`;
+                            el.setAttribute('data-font-size', String(newFs));
+
+                            trs.forEach(r => {
+                              Array.from(r.children).forEach(c => {
+                                c.style.paddingTop = `${newPadY}px`;
+                                c.style.paddingBottom = `${newPadY}px`;
+                                c.style.paddingLeft = `${newPadX}px`;
+                                c.style.paddingRight = `${newPadX}px`;
+                              });
+                            });
+
+                            // Real-time dispatch to update properties panel
+                            window.dispatchEvent(new CustomEvent('table-properties-sync', {
+                              detail: { elementId: el.id, fontSize: newFs, paddingY: newPadY, paddingX: newPadX }
+                            }));
+
+                            // Allow table to resize even very small without artificial blocking
+                            const minTableH = Math.max(12, rowCount * 4);
+                            const minTableW = Math.max(16, colCount * 6);
+
+                            if ((dir === 'n' || dir === 's' || isCorner) && imgH < minTableH) {
                               if (dir === 'n' || dir === 'nw' || dir === 'ne') {
                                 imgY = imgY + (imgH - minTableH);
                               }
                               imgH = minTableH;
                             }
 
-                            if (imgW < minTableW) {
+                            if ((dir === 'e' || dir === 'w' || isCorner) && imgW < minTableW) {
                               if (dir === 'w' || dir === 'nw' || dir === 'sw') {
                                 imgX = imgX + (imgW - minTableW);
                               }
@@ -2370,6 +2466,10 @@ export const useInteractEngine = ({
                         child.setAttribute('y', imgY);
                         child.setAttribute('width', imgW);
                         child.setAttribute('height', imgH);
+
+                        if (tag === 'foreignobject' && ((el.getAttribute?.('data-type') === 'table-frame') || (el.id && el.id.startsWith('table-')) || Boolean(child.querySelector('table')))) {
+                          syncTableCellSelectionOverlay(el);
+                        }
 
                         if (isRectPath) {
                           const defR = parseFloat(child.getAttribute('rx') || 0);
@@ -2896,16 +2996,17 @@ export const useInteractEngine = ({
                   const fo = state.el.querySelector ? state.el.querySelector('foreignObject') : null;
                   const tbl = fo ? fo.querySelector('table') : null;
                   if (fo && tbl) {
-                    const scrollH = tbl.scrollHeight;
-                    const curH = parseFloat(fo.getAttribute('height') || '0');
-                    if (scrollH > curH) {
-                      fo.setAttribute('height', String(scrollH));
-                    }
                     const curFs = parseInt(state.el.getAttribute('data-font-size') || '13', 10);
+                    const curPadY = parseInt(state.el.getAttribute('data-padding-y') || '6', 10);
+                    const curPadX = parseInt(state.el.getAttribute('data-padding-x') || '8', 10);
                     window.dispatchEvent(new CustomEvent('table-properties-sync', {
-                      detail: { elementId: state.el.id, fontSize: curFs }
+                      detail: { elementId: state.el.id, fontSize: curFs, paddingY: curPadY, paddingX: curPadX }
                     }));
                   }
+                  syncTableCellSelectionOverlay(state.el);
+                  window.dispatchEvent(new CustomEvent('sync-table-cell-selection', {
+                    detail: { elementId: state.el.id }
+                  }));
                 }
               }
               if (updatePageHtmlRef.current) {

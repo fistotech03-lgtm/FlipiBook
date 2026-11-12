@@ -13,6 +13,7 @@ import StorageLimitModal from '../components/StorageLimitModal';
 import LegacyFormatModal from '../components/LegacyFormatModal';
 import { validateStorageBeforeUpload } from '../utils/storageValidation';
 import { saveCustomizedEditorState, savePageEditorState, deleteBookEditorState } from '../utils/dbUtils';
+import { saveAllPagesToIDB } from '../utils/pageWindowStore';
 import { backgroundSyncManager } from '../utils/backgroundSyncManager';
 import { backgroundExtractionManager } from '../utils/backgroundExtractionManager';
 import { preloadEditorComponents } from '../utils/preloadUtils';
@@ -186,14 +187,14 @@ export default function MyFlipbooks() {
             try {
                 const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books`, {
                     withCredentials: true,
-                    params: { t: Date.now() }
+                    params: { t: Date.now(), emailId }
                 });
-                const actualMyShelf = res.data?.myShelf;
+                const actualMyShelf = res.data?.shelfCustomizations || res.data?.myShelf;
                 if (actualMyShelf && actualMyShelf.folders && actualMyShelf.folders.length > 0) {
                     const previewFolders = actualMyShelf.folders.map(f => ({
                         name: f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : (f.folderName || 'My Flipbooks'),
                         books: f.books || [],
-                        shelf_design: f.shelf_design || 4
+                        shelf_design: f.shelf_design || 'customize4'
                     }));
                     setShelfFolders(prev => prev.length === 0 ? previewFolders : prev);
                 }
@@ -564,7 +565,8 @@ export default function MyFlipbooks() {
 
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
             const matchedFolder = folders.find(f => (f.name || '').trim().toLowerCase() === targetFolder.trim().toLowerCase() || (targetFolder === 'My Flipbooks' && f.isDefault));
-            const targetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'default';
+            const rawTargetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'default';
+            const targetFolderVId = String(rawTargetFolderVId).replace(/^fol_/, '');
 
             const now = new Date();
             const timeString = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
@@ -726,6 +728,7 @@ export default function MyFlipbooks() {
             });
             const v_id = createRes.data?.v_id || cryptoVId;
             createdFlipbookVIdRef.current = v_id;
+            saveAllPagesToIDB(v_id, allPages).catch(e => console.warn('[MyFlipbooks] saveAllPagesToIDB error:', e));
 
             if (isUploadCancelledRef.current) {
                 flipbookApi.deleteBook(v_id).catch(() => {});

@@ -1,105 +1,75 @@
 // Frontend/src/pages/Forum/PostDetailView.jsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   ArrowLeft, 
-  ThumbsUp, 
-  Send,
-  BookOpen,
-  HelpCircle,
-  Lightbulb,
-  Share2,
-  Trash2,
-  MessageSquare,
-  Clock,
-  CornerDownRight
+  Bookmark, 
+  Send 
 } from 'lucide-react';
 import { formatForumDate } from './utils';
 import { useToast } from '../../components/CustomToast';
 
 export default function PostDetailView({ 
   post, 
+  allPosts = [],
   onBack, 
   onAddUserComment,
-  onToggleSameQuestion,
-  onDeletePost,
   currentUserId, 
   currentUser
 }) {
   const toast = useToast();
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   if (!post) return null;
 
-  const isOwner = post.author?.email === currentUserId || 
-                  post.author?.name === currentUser?.name;
+  // Group all questions by user so same user's questions appear in one single box
+  const userGroups = useMemo(() => {
+    // Collect all posts for the conversation context (or current user's posts)
+    const authorKey = post.author?.email || post.author?.name || 'author';
 
-  const isSuggestion = post.postType === 'suggestion';
-  const authorInitials = post.author?.initials || (post.author?.name ? post.author.name.slice(0, 2).toUpperCase() : 'U');
-  const avatarColor = post.author?.avatarColor || '#ec5137';
-
-  const sameQuestionUsers = post.sameQuestionUsers || [];
-  const hasSameQuestion = sameQuestionUsers.includes(currentUserId);
-  const sameQuestionCount = sameQuestionUsers.length;
-
-  // Unify all conversation items/comments into a single clean replies stream
-  const replies = [];
-
-  // Historical admin reply if present
-  if (post.adminReply) {
-    replies.push({
-      id: post.adminReply.id || 'admin-initial',
-      author: post.adminReply.author || { name: 'Support Team', initials: 'ST', avatarColor: '#ec5137' },
-      content: post.adminReply.content,
-      createdAt: post.adminReply.createdAt
+    // Same author's posts
+    const sameUserPosts = allPosts.filter(p => {
+      const pKey = p.author?.email || p.author?.name;
+      return pKey === authorKey;
     });
-  }
 
-  // Follow-ups if present
-  if (Array.isArray(post.authorFollowUps)) {
-    post.authorFollowUps.forEach((fu, idx) => {
-      replies.push({
-        id: fu.id || `fu-${idx}`,
-        author: fu.author || { name: post.author?.name || 'Author', initials: authorInitials, avatarColor },
-        content: fu.question,
-        createdAt: fu.createdAt,
-        isAuthor: true
-      });
-      if (fu.adminReply) {
-        replies.push({
-          id: fu.adminReply.id || `fu-reply-${idx}`,
-          author: fu.adminReply.author || { name: 'Support Team', initials: 'ST', avatarColor: '#ec5137' },
-          content: fu.adminReply.content,
-          createdAt: fu.adminReply.createdAt
+    const primaryList = sameUserPosts.length > 0 ? sameUserPosts : [post];
+
+    // Other users' posts
+    const otherUserPosts = allPosts.filter(p => {
+      const pKey = p.author?.email || p.author?.name;
+      return pKey && pKey !== authorKey;
+    });
+
+    // Group other users
+    const otherGroups = [];
+    otherUserPosts.forEach(p => {
+      const k = p.author?.email || p.author?.name;
+      const last = otherGroups[otherGroups.length - 1];
+      if (last && last.authorKey === k) {
+        last.posts.push(p);
+      } else {
+        otherGroups.push({
+          authorKey: k,
+          author: p.author,
+          createdAt: p.createdAt,
+          posts: [p]
         });
       }
     });
-  }
 
-  // Community comments
-  if (Array.isArray(post.comments)) {
-    post.comments.forEach((c, idx) => {
-      replies.push({
-        id: c.id || c._id || `comment-${idx}`,
-        author: c.author || { name: 'Community Member', initials: 'U', avatarColor: '#6366f1' },
-        content: c.content,
-        createdAt: c.createdAt
-      });
-    });
-  }
-
-  const handleCopyLink = () => {
-    try {
-      const url = `${window.location.origin}/forum?post=${post.id}`;
-      navigator.clipboard?.writeText(url);
-      setCopiedLink(true);
-      if (toast?.showToast) toast.showToast('Discussion link copied!', 'success');
-      setTimeout(() => setCopiedLink(false), 2000);
-    } catch {
-      if (toast?.showToast) toast.showToast('Link copied!', 'success');
-    }
-  };
+    return [
+      {
+        authorKey,
+        author: post.author,
+        createdAt: post.createdAt,
+        posts: primaryList,
+        isPrimary: true
+      },
+      ...otherGroups
+    ];
+  }, [post, allPosts]);
 
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
@@ -113,7 +83,7 @@ export default function PostDetailView({
           name: currentUser?.name || currentUser?.email?.split('@')[0] || 'Community Member',
           email: currentUserId,
           initials: currentUser?.name ? currentUser.name.slice(0, 2).toUpperCase() : 'ME',
-          avatarColor: currentUser?.avatarBgColor || '#4f46e5'
+          avatarColor: '#0a6674'
         }
       };
 
@@ -131,217 +101,171 @@ export default function PostDetailView({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto bg-[#fbfbfb]">
-      {/* Top Header Bar */}
-      <div className="px-[1.5vw] py-[0.8vw] flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 border-b border-stone-200 bg-[#fbfbfb] sticky top-0 z-10 shadow-2xs">
-        <button
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs sm:text-[clamp(12px,0.82vw,14px)] font-semibold text-stone-700 hover:text-[#ec5137] transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4 sm:w-[clamp(14px,0.9vw,17px)] sm:h-[clamp(14px,0.9vw,17px)]" />
-          <span>Back to Forum</span>
-        </button>
-
-        <div className="flex items-center gap-2 sm:gap-[clamp(8px,0.6vw,14px)] flex-wrap">
-          {/* Share Link */}
+    <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto bg-white font-sans">
+      {/* Top Header: "← Back to Flipbook" */}
+      <header className="px-4 sm:px-6 pt-4 pb-3 border-b border-stone-100 flex-shrink-0">
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleCopyLink}
-            className="px-2.5 sm:px-[clamp(8px,0.6vw,13px)] py-1 sm:py-[clamp(4px,0.3vh,7px)] rounded-[0.6vw] border border-stone-300 hover:border-orange-200 hover:bg-orange-50/50 text-xs sm:text-[clamp(11px,0.72vw,13px)] font-medium text-stone-700 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            onClick={onBack}
+            className="text-stone-700 hover:text-[#ec5137] p-1 -ml-1 transition-colors cursor-pointer"
+            title="Go back"
           >
-            <Share2 className="w-3.5 h-3.5 text-stone-500" />
-            <span>{copiedLink ? 'Copied' : 'Share'}</span>
+            <ArrowLeft size={17} />
           </button>
-
-          {/* Owner Deletion when no replies */}
-          {isOwner && replies.length === 0 && (
-            <button
-              onClick={() => onDeletePost(post.id)}
-              className="p-1 sm:p-[clamp(4px,0.3vw,7px)] rounded-[0.6vw] text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
-              title="Delete discussion"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* Module Badge */}
-          <div className="flex items-center gap-1.5 px-2.5 sm:px-[clamp(8px,0.6vw,13px)] py-1 sm:py-[clamp(4px,0.3vh,7px)] rounded-[0.6vw] border border-orange-200 text-xs sm:text-[clamp(11px,0.72vw,13px)] font-semibold text-[#c23d26] bg-orange-50/70 shadow-2xs">
-            <BookOpen className="w-3.5 h-3.5 text-[#ec5137]" />
-            <span className="truncate max-w-[140px] sm:max-w-none">{post.moduleName}</span>
+          <div>
+            <h1 className="text-base sm:text-base font-semibold text-stone-900 tracking-tight">
+              Back to Flipbook
+            </h1>
+            <p className="text-[11px] text-stone-400 mt-0.5">
+              Share ideas, solve problems, and improve your workflow.
+            </p>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Main Discussion Container */}
-      <div className="w-full px-[1.5vw] py-[1.2vw] space-y-[1vw]">
-        {/* 1. Original Post Card - Rounded like Ticket */}
-        <div className="bg-white rounded-[0.8vw] border border-stone-300 p-[1.5vw] shadow-2xs space-y-[0.9vw]">
-          {/* Top Meta Header */}
-          <div className="flex items-center gap-2 sm:gap-[clamp(8px,0.6vw,14px)] flex-wrap text-xs sm:text-[clamp(11px,0.75vw,13px)]">
-            {/* Post Type Tag */}
-            <span className={`px-2.5 py-0.5 sm:px-[clamp(8px,0.55vw,12px)] sm:py-[clamp(3px,0.25vh,6px)] rounded-md sm:rounded-[clamp(4px,0.35vw,7px)] font-medium text-xs sm:text-[clamp(11px,0.72vw,13px)] border flex items-center gap-1.5 ${
-              isSuggestion 
-                ? 'bg-amber-50 text-amber-800 border-amber-200' 
-                : 'bg-orange-50 text-[#c23d26] border-orange-200'
-            }`}>
-              {isSuggestion ? <Lightbulb className="w-3 h-3 text-amber-600" /> : <HelpCircle className="w-3 h-3 text-[#ec5137]" />}
-              <span>{isSuggestion ? 'Suggestion' : 'Question'}</span>
-            </span>
+      {/* Main Content Area */}
+      <div className="flex-1 px-4 sm:px-6 py-4 space-y-4 w-full">
+        {userGroups.map((group, gIdx) => {
+          const author = group.author;
+          const authorInitials = author?.initials || (author?.name ? author.name.slice(0, 2).toUpperCase() : 'U');
 
-            <span className="text-stone-500 font-normal">
-              Posted by <strong className="text-stone-800 font-semibold">{post.author?.name}</strong> • {formatForumDate(post.createdAt)}
-            </span>
-          </div>
-
-          {/* Post Header & Content */}
-          <div className="flex items-start gap-3 sm:gap-[clamp(12px,0.9vw,18px)] pt-0.5">
+          return (
             <div 
-              className="w-9 h-9 sm:w-[clamp(36px,2.4vw,44px)] sm:h-[clamp(36px,2.4vw,44px)] rounded-full flex items-center justify-center text-white text-xs sm:text-[clamp(11px,0.75vw,13px)] font-semibold flex-shrink-0 shadow-xs ring-2 ring-orange-50"
-              style={{ backgroundColor: avatarColor }}
+              key={group.authorKey || gIdx}
+              className="bg-white border border-stone-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4"
             >
-              {authorInitials}
-            </div>
+              {/* Author Header Row - Rendered only ONCE per user box */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-full bg-[#7a1215] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0 shadow-xs">
+                    {authorInitials}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-stone-900 text-xs sm:text-sm">
+                      {author?.name || 'Creator'}
+                    </div>
+                    <div className="text-[11px] text-stone-400 mt-0.5">
+                      {formatForumDate(group.createdAt)}
+                    </div>
+                  </div>
+                </div>
 
-            <div className="flex-1 min-w-0">
-              <h1 className="text-base sm:text-[clamp(18px,1.35vw,24px)] font-bold text-stone-900 leading-snug">
-                {post.title}
-              </h1>
-
-              {/* Description directly follows Title */}
-              <div className="pt-2 sm:pt-[clamp(8px,0.6vh,14px)] text-xs sm:text-[clamp(13px,0.88vw,16px)] text-stone-700 leading-relaxed font-normal whitespace-pre-line">
-                {post.description}
+                {/* Save Button on primary user card */}
+                {group.isPrimary && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSaved(!isSaved)}
+                    className="px-3 py-1 rounded-lg border border-[#ec5137] text-[#ec5137] hover:bg-orange-50/50 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Bookmark size={13} className={isSaved ? "fill-[#ec5137]" : ""} />
+                    <span>{isSaved ? 'Saved' : 'Save'}</span>
+                  </button>
+                )}
               </div>
-            </div>
-          </div>
 
-          {/* Action Row: "I have this question too" */}
-          <div className="flex items-center justify-between pt-3 sm:pt-[clamp(10px,0.8vh,16px)] border-t border-stone-100 flex-wrap gap-2">
-            <button
-              onClick={() => onToggleSameQuestion(post.id)}
-              className={`px-3 sm:px-[clamp(12px,0.9vw,18px)] py-1.5 sm:py-[clamp(6px,0.45vh,10px)] rounded-lg sm:rounded-[clamp(6px,0.45vw,10px)] border text-xs sm:text-[clamp(12px,0.82vw,14px)] font-semibold transition-all flex items-center gap-2 cursor-pointer ${
-                hasSameQuestion 
-                  ? 'bg-[#ec5137] text-white border-[#ec5137] shadow-xs' 
-                  : 'bg-white border-stone-200 text-stone-700 hover:bg-orange-50/50 hover:border-orange-200'
-              }`}
-              title="Click to indicate this is relevant to you as well"
-            >
-              <ThumbsUp className={`w-3.5 h-3.5 sm:w-[clamp(14px,0.9vw,17px)] sm:h-[clamp(14px,0.9vw,17px)] ${hasSameQuestion ? 'fill-current' : 'text-[#ec5137]'}`} />
-              <span>{isSuggestion ? 'I want this too' : 'I have this question too'}</span>
-              <span className={`px-1.5 py-0.5 rounded-md text-xs sm:text-[clamp(11px,0.72vw,13px)] font-mono font-medium ${
-                hasSameQuestion ? 'bg-[#d9442b] text-white' : 'bg-stone-100 text-stone-800'
-              }`}>
-                {sameQuestionCount}
-              </span>
-            </button>
-
-            <span className="text-xs sm:text-[clamp(11px,0.7vw,13px)] text-stone-500 font-normal">
-              Updated {formatForumDate(post.updatedAt || post.createdAt)}
-            </span>
-          </div>
-        </div>
-
-        {/* 2. Replies & Discussion Section - Rounded like Ticket */}
-        <div className="bg-white rounded-[0.8vw] border border-stone-300 overflow-hidden shadow-2xs">
-          <div className="bg-stone-50/80 px-3.5 sm:px-[clamp(14px,1.1vw,20px)] py-2.5 sm:py-[clamp(10px,0.65vh,14px)] border-b border-stone-200 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-[#ec5137]" />
-              <h3 className="text-xs sm:text-[clamp(13px,0.85vw,15px)] font-bold text-stone-900">
-                Discussion & Community Replies
-              </h3>
-            </div>
-            <span className="text-xs sm:text-[clamp(11px,0.72vw,13px)] text-stone-500 font-medium">
-              {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
-            </span>
-          </div>
-
-          <div className="p-3.5 sm:p-[clamp(16px,1.3vw,24px)] space-y-4 sm:space-y-[clamp(14px,1.1vh,20px)]">
-            {/* List of Replies */}
-            {replies.length > 0 ? (
-              <div className="space-y-3 sm:space-y-[clamp(10px,0.7vh,16px)]">
-                {replies.map((reply, idx) => {
-                  const replyAuthorName = reply.author?.name || 'Community Member';
-                  const replyInitials = reply.author?.initials || (replyAuthorName ? replyAuthorName.slice(0, 2).toUpperCase() : 'U');
-                  const replyColor = reply.author?.avatarColor || '#ec5137';
-                  const isPostAuthor = reply.author?.email === post.author?.email || replyAuthorName === post.author?.name;
+              {/* Stack of all questions submitted by this same user */}
+              <div className="space-y-3">
+                {group.posts.map((postItem, pIdx) => {
+                  const hasAdminReply = postItem.adminReply && postItem.adminReply.content;
+                  const isSecondary = pIdx > 0;
 
                   return (
                     <div 
-                      key={reply.id || idx}
-                      className="p-3 sm:p-[clamp(12px,0.9vw,18px)] rounded-xl sm:rounded-[clamp(8px,0.6vw,12px)] border border-stone-200/90 bg-[#faf9f8] space-y-2 transition-colors hover:border-orange-200"
+                      key={postItem.id || pIdx} 
+                      className={isSecondary ? "bg-[#FBFBFB] rounded-xl p-3 sm:p-3.5" : "pt-1"}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-7 h-7 sm:w-[clamp(28px,1.8vw,34px)] sm:h-[clamp(28px,1.8vw,34px)] rounded-full flex items-center justify-center text-white text-[10px] sm:text-[clamp(10px,0.68vw,12px)] font-semibold shadow-xs"
-                            style={{ backgroundColor: replyColor }}
-                          >
-                            {replyInitials}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs sm:text-[clamp(12px,0.82vw,14px)] font-semibold text-stone-900">
-                                {replyAuthorName}
-                              </span>
-                              {isPostAuthor && (
-                                <span className="text-[10px] font-medium px-1.5 py-0.2 rounded-md bg-orange-100 text-[#c23d26] border border-orange-200">
-                                  Author
-                                </span>
-                              )}
+                      {/* Question Title */}
+                      <h2 className="text-sm sm:text-[15px] font-semibold text-stone-900">
+                        {postItem.title}
+                      </h2>
+
+                      {/* Question Description */}
+                      <p className="mt-1.5 text-xs text-stone-500 leading-relaxed font-normal">
+                        {postItem.description}
+                      </p>
+
+                      {/* Admin reply with L-shaped arrow */}
+                      {hasAdminReply && (
+                        <div className="mt-3 pl-3.5 sm:pl-5">
+                          <div className="flex items-center gap-2.5">
+                            {/* L-shaped Arrow SVG */}
+                            <div className="w-7 h-8 -mt-4 flex-shrink-0 relative">
+                              <svg
+                                className="w-full h-full overflow-visible"
+                                viewBox="0 0 32 40"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M 2 0 V 26 H 26"
+                                  stroke="#d1d5db"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                <path
+                                  d="M 21 21.5 L 26.5 26 L 21 30.5"
+                                  stroke="#d1d5db"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
                             </div>
-                            <span className="text-[10px] sm:text-[clamp(10px,0.65vw,12px)] text-stone-500">
-                              {formatForumDate(reply.createdAt)}
-                            </span>
+
+                            <div className="w-7 h-7 rounded-full bg-[#0a6674] text-white flex items-center justify-center text-[10px] font-bold uppercase shrink-0 shadow-xs">
+                              {postItem.adminReply.author?.initials || 'AD'}
+                            </div>
+
+                            <div>
+                              <div className="text-xs font-semibold text-stone-900 leading-tight">
+                                {postItem.adminReply.author?.name || 'Admin'}
+                              </div>
+                              <div className="text-[10px] text-stone-400 font-normal">
+                                {formatForumDate(postItem.adminReply.createdAt || postItem.updatedAt)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="pl-[38px] mt-1.5">
+                            <p className="text-xs text-stone-500 leading-relaxed font-normal">
+                              {postItem.adminReply.content}
+                            </p>
                           </div>
                         </div>
-                      </div>
-
-                      <div className="text-xs sm:text-[clamp(12px,0.82vw,14px)] text-stone-800 leading-relaxed whitespace-pre-line pl-1 sm:pl-[clamp(30px,2vw,38px)] font-normal">
-                        {reply.content}
-                      </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
-            ) : (
-              <div className="py-6 sm:py-[clamp(24px,2.5vh,40px)] text-center text-stone-500">
-                <MessageSquare className="w-6 h-6 mx-auto text-stone-400 mb-2" />
-                <h4 className="text-xs sm:text-[clamp(13px,0.85vw,15px)] font-semibold text-stone-800">No replies yet</h4>
-                <p className="text-xs sm:text-[clamp(11px,0.72vw,13px)] text-stone-500 mt-1 max-w-md mx-auto font-normal">
-                  Be the first to share your thoughts, answer this question, or suggest a workaround.
-                </p>
-              </div>
-            )}
+            </div>
+          );
+        })}
 
-            {/* Reply Composer Form */}
-            <form onSubmit={handleCommentSubmit} className="pt-4 sm:pt-[clamp(12px,1vh,18px)] border-t border-stone-200 space-y-2.5">
-              <div className="flex items-center gap-1.5 text-xs sm:text-[clamp(11px,0.75vw,13px)] font-semibold text-stone-800">
-                <CornerDownRight className="w-3.5 h-3.5 text-[#ec5137]" />
-                <span>Join the conversation:</span>
-              </div>
-
-              <textarea
-                rows={3}
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Share your experience, solution, or thoughts..."
-                className="w-full p-3 sm:p-[clamp(10px,0.8vw,16px)] text-xs sm:text-[clamp(12px,0.82vw,14px)] border border-stone-300 rounded-xl sm:rounded-[clamp(8px,0.6vw,12px)] focus:outline-none focus:ring-2 focus:ring-[#ec5137]/20 focus:border-[#ec5137] text-stone-800 placeholder-stone-400"
-              />
-
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="text-[11px] sm:text-[clamp(10px,0.68vw,12px)] text-stone-500">
-                  Please be respectful and helpful to other community members.
-                </span>
-
-                <button
-                  type="submit"
-                  disabled={!commentText.trim() || isSubmittingComment}
-                  className="px-4 sm:px-[clamp(14px,1.1vw,20px)] py-1.5 sm:py-[clamp(6px,0.45vh,10px)] rounded-lg sm:rounded-[clamp(6px,0.45vw,10px)] text-xs sm:text-[clamp(12px,0.82vw,14px)] font-semibold text-white bg-[#ec5137] hover:bg-[#d9442b] transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>{isSubmittingComment ? 'Posting...' : 'Post Reply'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
+        {/* 3. Reply Input Box */}
+        <div className="bg-white border border-stone-200/90 rounded-2xl p-5 shadow-xs">
+          <form onSubmit={handleCommentSubmit} className="space-y-3">
+            <label className="block text-xs font-semibold text-stone-800">
+              Add a Comment or Follow-up Question
+            </label>
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Write your reply or question here..."
+              rows={3}
+              className="w-full px-3.5 py-2.5 bg-stone-50/70 border border-stone-200 rounded-xl text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#ec5137] focus:bg-white transition-all resize-none"
+            />
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={!commentText.trim() || isSubmittingComment}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-[#ec5137] hover:bg-[#d9442b] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 cursor-pointer shadow-xs"
+              >
+                <Send size={14} />
+                <span>{isSubmittingComment ? 'Posting...' : 'Post Reply'}</span>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

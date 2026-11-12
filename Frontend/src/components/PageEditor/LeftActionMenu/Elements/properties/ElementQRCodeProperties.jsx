@@ -1384,7 +1384,7 @@ const ElementQRCodeProperties = ({
       onChange: (val) => handleChange('frameBgColor', val)
     },
     arrowColor: {
-      label: 'Arrow Color',
+      label: 'Frame Stroke',
       value: arrowColor,
       onChange: (val) => handleChange('arrowColor', val)
     }
@@ -2004,9 +2004,9 @@ const ElementQRCodeProperties = ({
             isPickerActive={activeColorPicker === 'frameBgColor'}
           />
 
-          {/* Arrow / Accent Color (Fill Color card style matching Color.jsx) */}
+          {/* Frame Stroke / Accent Color (Fill Color card style matching Color.jsx) */}
           <FillColorCard
-            label="Arrow Color"
+            label="Frame Stroke"
             color={arrowColor}
             onColorChange={(val) => handleChange('arrowColor', val)}
             onPickerToggle={() => handleToggleColorPicker('arrowColor')}

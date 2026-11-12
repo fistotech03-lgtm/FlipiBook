@@ -265,7 +265,7 @@ const MyShelf = ({
             console.error("Error fetching flipbook list:", err);
             return { data: {} };
           }),
-          axios.get(`${backendUrl}/api/profile/my-shelf-books`, { withCredentials: true, params: { t: timestamp } }).catch(() => ({ data: {} }))
+          axios.get(`${backendUrl}/api/profile/my-shelf-books`, { withCredentials: true, params: { t: timestamp, emailId: currentUserEmail } }).catch(() => ({ data: {} }))
         ]);
 
         if (creatorRes.data?.profile) {
@@ -274,7 +274,7 @@ const MyShelf = ({
 
         const rawBooks = listRes.data?.books || [];
         const shelfBooks = shelfRes.data?.books || [];
-        const actualMyShelf = shelfRes.data?.myShelf || (creatorRes.data?.profile?.myShelf) || (profileData?.myShelf);
+        const actualMyShelf = shelfRes.data?.shelfCustomizations || shelfRes.data?.myShelf || (creatorRes.data?.profile?.myShelf) || (profileData?.myShelf);
         const removedFromShelfSet = new Set(actualMyShelf?.removedFromShelf || []);
 
         const actualCreatedBooks = rawBooks.filter(b => b.folder !== 'Recent Book' && !removedFromShelfSet.has(b.v_id));
@@ -347,7 +347,7 @@ const MyShelf = ({
           actualMyShelf.folders.forEach(f => {
             const fName = f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : (f.folderName || 'My Flipbooks');
             if (!folderMap[fName]) folderMap[fName] = [];
-            folderDesignMap[fName] = f.shelf_design || 4;
+            folderDesignMap[fName] = f.shelf_design || 'customize4';
 
             if (f.books && Array.isArray(f.books)) {
               f.books.forEach(b => {
@@ -397,11 +397,19 @@ const MyShelf = ({
         const newFolders = Object.keys(folderMap).map(folderName => {
           const saved = loadSavedShelfSettings(folderName);
           const rawDesign = folderDesignMap[folderName];
+          const backendFolder = actualMyShelf?.folders?.find(f => (f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : f.folderName) === folderName);
           return {
             name: folderName,
             books: folderMap[folderName],
-            shelf_design: saved?.shelf_design || ((rawDesign === 1 || !rawDesign) ? 4 : rawDesign),
-            defaultLightType: saved?.defaultLightType || 'Turn on',
+            shelf_design: backendFolder?.shelf_design || saved?.shelf_design || ((rawDesign === 1 || !rawDesign || rawDesign === 4) ? 'customize4' : rawDesign),
+            defaultLightType: backendFolder?.defaultLightType || saved?.defaultLightType || 'Turn on',
+            lights: backendFolder?.lights !== undefined ? backendFolder.lights : (saved?.lights !== undefined ? saved.lights : true),
+            selectedWallTheme: backendFolder?.selectedWallTheme || saved?.selectedWallTheme || null,
+            selectedLightTheme: backendFolder?.selectedLightTheme || saved?.selectedLightTheme || null,
+            showLightSwitch: backendFolder?.showLightSwitch !== undefined ? backendFolder.showLightSwitch : (saved?.showLightSwitch !== undefined ? saved.showLightSwitch : true),
+            lightOpacity: backendFolder?.lightOpacity !== undefined ? backendFolder.lightOpacity : (saved?.lightOpacity !== undefined ? saved.lightOpacity : 1),
+            decors: backendFolder?.decors || saved?.decors || {},
+            logo: backendFolder?.logo || saved?.logo || '',
             ...saved
           };
         });
@@ -667,16 +675,21 @@ const MyShelf = ({
 
     if (currentUserEmail) {
       try {
-        const shelfDesignValue = targetStyle.startsWith('customize')
-          ? (parseInt(targetStyle.replace('customize', '')) || targetStyle)
-          : targetStyle;
-
         await axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
           emailId: currentUserEmail,
           folderName: selectedFolder,
-          shelf_design: shelfDesignValue,
+          shelf_design: targetStyle,
           defaultLightType: defaultLightType,
-          lights: isLightOn
+          lights: isLightOn,
+          selectedWallTheme: selectedWallTheme,
+          selectedLightTheme: selectedLightTheme,
+          showLightSwitch: showLightSwitch,
+          lightOpacity: lightOpacity,
+          decors: {
+            ...decors,
+            lights: isLightOn
+          },
+          logo: shelfLogo
         }).catch(err => console.warn("Backend update-shelf-design notice:", err));
       } catch (err) {
         console.error("Failed to update shelf design:", err);
@@ -1125,7 +1138,7 @@ const MyShelf = ({
         onAddShelf={async () => {
           if (newShelfName.trim()) {
             const createdName = newShelfName.trim();
-            setFolders(prev => [{ name: createdName, books: [], shelf_design: 4 }, ...prev]);
+            setFolders(prev => [{ name: createdName, books: [], shelf_design: 'customize4' }, ...prev]);
             setSelectedFolder(createdName);
             setActiveShelfStyle('customize4');
             setSelectedWallTheme(null);
@@ -1133,6 +1146,11 @@ const MyShelf = ({
 
             if (currentUserEmail) {
               try {
+                await axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
+                  emailId: currentUserEmail,
+                  folderName: createdName,
+                  shelf_design: 'customize4'
+                });
                 await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
                   emailId: currentUserEmail,
                   folderName: createdName,

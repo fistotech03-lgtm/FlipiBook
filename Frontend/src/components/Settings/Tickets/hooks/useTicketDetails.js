@@ -50,10 +50,7 @@ export function useTicketDetails() {
     setIsLoadingTicket(true);
     try {
       const email = currentUser?.email || currentUser?.emailId || '';
-      const res = await fetchTicketById(ticketId, {
-        isAdmin: isAdminUser,
-        email: isAdminUser ? undefined : email
-      });
+      const res = await fetchTicketById(ticketId, currentUser);
 
       if (res && res.success && res.data) {
         setCurrentTicket(res.data);
@@ -94,10 +91,7 @@ export function useTicketDetails() {
     const interval = setInterval(async () => {
       try {
         const email = currentUser?.email || currentUser?.emailId || '';
-        const res = await fetchTicketById(ticketId, {
-          isAdmin: isAdminUser,
-          email: isAdminUser ? undefined : email
-        });
+        const res = await fetchTicketById(ticketId, currentUser);
         if (res && res.success && res.data) {
           setCurrentTicket(res.data);
           if (Array.isArray(res.data.cc)) {
@@ -151,13 +145,17 @@ export function useTicketDetails() {
       const senderName = currentUser?.name || (senderRole === 'agent' ? 'Flipibook Support' : 'You');
       const senderEmail = currentUser?.email || currentUser?.emailId || '';
 
-      const res = await addTicketMessageApi(currentTicket.id, {
-        message: replyText.trim(),
-        sender: senderRole,
-        senderName,
-        senderEmail,
-        attachments: replyAttachments
-      });
+      const res = await addTicketMessageApi(
+        currentTicket.id,
+        {
+          message: replyText.trim(),
+          sender: senderRole,
+          senderName,
+          senderEmail,
+          attachments: replyAttachments
+        },
+        currentUser
+      );
 
       if (res && res.success && res.data) {
         const updatedTicket = res.data;
@@ -188,7 +186,7 @@ export function useTicketDetails() {
 
     setIsSubmitting(true);
     try {
-      const res = await updateTicketStatusApi(currentTicket.id, newStatus);
+      const res = await updateTicketStatusApi(currentTicket.id, newStatus, currentUser);
       if (res && res.success && res.data) {
         const updatedTicket = res.data;
         setCurrentTicket(updatedTicket);

@@ -15,55 +15,121 @@ import {
   getMotionGraphicProperties,
   updateMotionGraphicAttributes
 } from '../utils/motionGraphicUtils';
+import { handleScrubHelper } from '../../../properties/propertiesShared';
 
-const SectionHeader = ({ title }) => (
-  <div className="flex items-center gap-[0.4vw] my-[0.4vw]">
-    <span className="text-[0.9vw] font-bold text-gray-900 whitespace-nowrap">{title}</span>
-    <div className="h-[1px] bg-gray-200 flex-1 ml-[0.3vw]" />
+const SectionHeader = ({ title, rightElement }) => (
+  <div className="flex items-center gap-[0.8vw]">
+    <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+    {rightElement}
+    <div className="flex-1 h-[1px] bg-gray-200" />
   </div>
 );
 
-// Color swatch + hex & opacity box with ColorPicker connectivity
-const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => {
-  const isGradient = Boolean(color && typeof color === 'string' && color.includes('gradient'));
-  const isNone = color === 'none' || color === 'transparent';
-  const displayColor = isGradient
-    ? 'GRADIENT'
-    : isNone
-      ? 'NONE'
-      : color && color.startsWith('#')
-        ? color.toUpperCase()
-        : color || '#000000';
+// Exact ColorBox matching user screenshot and Color.jsx
+const ColorBoxRow = ({
+  title,
+  color,
+  opacity = 100,
+  onOpenPicker,
+  onChange,
+  onOpacityChange,
+  isActive = false,
+  titleRight,
+}) => {
+  const isTransparent = !color || color === 'none' || color === 'transparent';
+  const displayColor = (() => {
+    if (isTransparent) return '#';
+    if (typeof color === 'string' && color.includes('gradient')) return 'Gradient';
+    return typeof color === 'string' ? (color.startsWith('#') ? color.toUpperCase() : '#' + color.toUpperCase()) : '#000000';
+  })();
 
   return (
-    <div className="flex items-center gap-[0.4vw] w-full">
-      <div
-        onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${isActive
-            ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs'
-            : 'border-gray-200 hover:border-gray-300'
+    <div className="flex flex-col gap-[0.5vw]">
+      {title && (
+        <div className="flex items-center gap-[0.8vw] mb-[0.1vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+          {titleRight}
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+      )}
+      <div className="flex items-center gap-[0.6vw]">
+        {/* Swatch (3.6vw x 2.1vw rounded rectangle matching user screenshot) */}
+        <div
+          onClick={onOpenPicker}
+          className={`w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105 ${
+            isActive ? 'border-indigo-500 ring-2 ring-indigo-500/20' : ''
           }`}
-        style={{ background: isNone ? '#ffffff' : color || '#000000' }}
-        title="Click to open color palette"
-      >
-        {isNone && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
-        )}
+          title={`Change ${title || 'color'}`}
+        >
+          <div
+            className="w-full h-full"
+            style={{ background: isTransparent ? '#ffffff' : color }}
+          />
+          {isTransparent && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45 pointer-events-none" />
+          )}
+        </div>
+
+        {/* Input box */}
+        <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 focus-within:border-indigo-400 transition-colors shadow-2xs">
+          <input
+            type="text"
+            value={displayColor}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || val === '#') {
+                onChange('none');
+              } else {
+                const finalVal = val.startsWith('#') ? val : '#' + val;
+                onChange(finalVal);
+              }
+            }}
+            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            maxLength={9}
+          />
+          <div
+            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+            onPointerDown={(e) => {
+              const currentPct = Math.round(parseFloat(opacity !== undefined ? opacity : 100));
+              handleScrubHelper(e, currentPct, (val) => {
+                const num = parseInt(val);
+                const clamped = Math.min(Math.max(num, 0), 100);
+                if (onOpacityChange) onOpacityChange(clamped);
+              });
+            }}
+            title="Drag horizontally to adjust opacity"
+          >
+            <span className="text-[0.8vw] font-medium text-gray-700">
+              {Math.round(parseFloat(opacity !== undefined ? opacity : 100))}%
+            </span>
+          </div>
+        </div>
       </div>
-      <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-        <input
-          type="text"
-          value={displayColor}
-          onChange={(e) => {
-            let val = e.target.value;
-            if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
-            onChange(val);
-          }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-600 bg-transparent focus:outline-none uppercase font-normal"
-          maxLength={isGradient ? 10 : 7}
-        />
-        <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
-      </div>
+      {/* Scrubbing & Input styling */}
+      <style>{`
+        .no-spin::-webkit-inner-spin-button,
+        .no-spin::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .no-spin {
+          -moz-appearance: textfield;
+        }
+        body.is-scrubbing,
+        body.is-scrubbing * {
+          cursor: ew-resize !important;
+          user-select: none !important;
+        }
+        .virtual-scrub-cursor {
+          position: fixed;
+          pointer-events: none;
+          z-index: 999999;
+          transform: translate(-50%, -50%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      `}</style>
     </div>
   );
 };
@@ -109,16 +175,16 @@ const TextPropertyInlinePopup = ({
   const [openDropdown, setOpenDropdown] = useState(null); // 'family' | 'size' | 'weight' | null
 
   return (
-    <div className="w-full bg-white border border-gray-200/90 rounded-[0.8vw] p-[0.9vw] shadow-md flex flex-col gap-[0.7vw] animate-in fade-in zoom-in-95 duration-150 relative z-20">
+    <div className="w-full bg-white border border-gray-300 rounded-[0.6vw] p-[0.8vw] shadow-md flex flex-col gap-[0.6vw] animate-in fade-in zoom-in-95 duration-150 relative z-20">
       {/* Title + Close */}
       <div className="flex items-center justify-between pb-[0.1vw]">
-        <span className="text-[0.95vw] font-bold text-gray-900 tracking-tight">Text Property</span>
+        <span className="text-[0.85vw] font-bold text-gray-900 tracking-tight">Text Property</span>
         <button
           type="button"
           onClick={onClose}
           className="text-gray-400 hover:text-gray-700 transition-colors p-[0.1vw] cursor-pointer"
         >
-          <X size="0.95vw" strokeWidth={2.2} />
+          <X size="0.85vw" strokeWidth={2.2} />
         </button>
       </div>
 
@@ -129,15 +195,15 @@ const TextPropertyInlinePopup = ({
           <button
             type="button"
             onClick={() => setOpenDropdown(openDropdown === 'family' ? null : 'family')}
-            className="w-full h-[2.3vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] px-[0.7vw] bg-white hover:border-gray-300 transition-all text-gray-800 shadow-2xs"
+            className="w-full h-[2.1vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] px-[0.7vw] bg-white hover:border-gray-400 transition-all text-gray-800 shadow-2xs"
           >
-            <span className="text-[0.78vw] font-medium truncate" style={{ fontFamily }}>
+            <span className="text-[0.8vw] font-medium truncate" style={{ fontFamily }}>
               {fontFamily}
             </span>
-            <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0 ml-[0.3vw]" />
+            <ChevronDown size="0.75vw" className="text-gray-400 flex-shrink-0 ml-[0.3vw]" />
           </button>
           {openDropdown === 'family' && (
-            <div className="absolute top-[2.5vw] left-0 right-0 bg-white border border-gray-200 rounded-[0.45vw] shadow-xl z-50 py-[0.3vw] max-h-[11vw] overflow-y-auto">
+            <div className="absolute top-[2.4vw] left-0 right-0 bg-white border border-gray-200 rounded-[0.45vw] shadow-xl z-50 py-[0.3vw] max-h-[11vw] overflow-y-auto custom-scrollbar">
               {FONT_FAMILIES.map((ff) => (
                 <div
                   key={ff}
@@ -145,7 +211,7 @@ const TextPropertyInlinePopup = ({
                     onUpdate({ fontFamily: ff });
                     setOpenDropdown(null);
                   }}
-                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontFamily === ff ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
+                  className={`px-[0.7vw] py-[0.35vw] text-[0.78vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontFamily === ff ? 'bg-indigo-50 font-bold text-indigo-600' : 'text-gray-700'
                     }`}
                   style={{ fontFamily: ff }}
                 >
@@ -164,13 +230,13 @@ const TextPropertyInlinePopup = ({
           <button
             type="button"
             onClick={() => setOpenDropdown(openDropdown === 'weight' ? null : 'weight')}
-            className="w-full h-[2.3vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] px-[0.7vw] bg-white hover:border-gray-300 transition-all text-gray-800 shadow-2xs"
+            className="w-full h-[2.1vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] px-[0.7vw] bg-white hover:border-gray-400 transition-all text-gray-800 shadow-2xs"
           >
-            <span className="text-[0.78vw] font-medium truncate">{fontWeight}</span>
-            <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0 ml-[0.3vw]" />
+            <span className="text-[0.8vw] font-medium truncate">{fontWeight}</span>
+            <ChevronDown size="0.75vw" className="text-gray-400 flex-shrink-0 ml-[0.3vw]" />
           </button>
           {openDropdown === 'weight' && (
-            <div className="absolute top-[2.5vw] left-0 right-0 bg-white border border-gray-200 rounded-[0.45vw] shadow-xl z-50 py-[0.3vw] max-h-[10vw] overflow-y-auto">
+            <div className="absolute top-[2.4vw] left-0 right-0 bg-white border border-gray-200 rounded-[0.45vw] shadow-xl z-50 py-[0.3vw] max-h-[10vw] overflow-y-auto custom-scrollbar">
               {FONT_WEIGHTS.map((fw) => (
                 <div
                   key={fw}
@@ -178,7 +244,7 @@ const TextPropertyInlinePopup = ({
                     onUpdate({ fontWeight: fw, isBold: fw.toLowerCase().includes('bold') });
                     setOpenDropdown(null);
                   }}
-                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontWeight === fw ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
+                  className={`px-[0.7vw] py-[0.35vw] text-[0.78vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontWeight === fw ? 'bg-indigo-50 font-bold text-indigo-600' : 'text-gray-700'
                     }`}
                 >
                   {fw}
@@ -193,13 +259,13 @@ const TextPropertyInlinePopup = ({
           <button
             type="button"
             onClick={() => setOpenDropdown(openDropdown === 'size' ? null : 'size')}
-            className="w-full h-[2.3vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] px-[0.7vw] bg-white hover:border-gray-300 transition-all text-gray-800 shadow-2xs"
+            className="w-full h-[2.1vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] px-[0.7vw] bg-white hover:border-gray-400 transition-all text-gray-800 shadow-2xs"
           >
-            <span className="text-[0.78vw] font-medium">{fontSize} pt</span>
-            <ChevronDown size="0.85vw" className="text-gray-500 flex-shrink-0 ml-[0.3vw]" />
+            <span className="text-[0.8vw] font-medium">{fontSize} pt</span>
+            <ChevronDown size="0.75vw" className="text-gray-400 flex-shrink-0 ml-[0.3vw]" />
           </button>
           {openDropdown === 'size' && (
-            <div className="absolute top-[2.5vw] left-0 right-0 bg-white border border-gray-200 rounded-[0.45vw] shadow-xl z-50 py-[0.3vw] max-h-[11vw] overflow-y-auto">
+            <div className="absolute top-[2.4vw] left-0 right-0 bg-white border border-gray-200 rounded-[0.45vw] shadow-xl z-50 py-[0.3vw] max-h-[11vw] overflow-y-auto custom-scrollbar">
               {FONT_SIZES.map((sz) => (
                 <div
                   key={sz}
@@ -207,7 +273,7 @@ const TextPropertyInlinePopup = ({
                     onUpdate({ fontSize: sz });
                     setOpenDropdown(null);
                   }}
-                  className={`px-[0.7vw] py-[0.35vw] text-[0.75vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontSize === sz ? 'bg-[#E05638]/10 font-bold text-[#E05638]' : 'text-gray-700'
+                  className={`px-[0.7vw] py-[0.35vw] text-[0.78vw] cursor-pointer hover:bg-gray-50 transition-colors ${fontSize === sz ? 'bg-indigo-50 font-bold text-indigo-600' : 'text-gray-700'
                     }`}
                 >
                   {sz} pt
@@ -629,7 +695,7 @@ const ElementTitlesProperties = ({
   };
 
   return (
-    <div className="flex flex-col gap-[1vw] w-full text-left select-none pb-[2vw]">
+    <div className="relative flex flex-col gap-[1.7vw] w-full max-w-[25vw] pb-[2vw] font-sans select-none">
       {/* ── Titles Property Section ── */}
       <div className="flex flex-col gap-[0.7vw]">
         <SectionHeader title="Titles Property" />
@@ -638,108 +704,104 @@ const ElementTitlesProperties = ({
         <button
           type="button"
           onClick={triggerPreviewAnimation}
-          className="w-full flex items-center gap-[0.8vw] bg-[#F3F4F6] hover:bg-[#E5E7EB] border border-gray-200/80 rounded-[0.7vw] px-[1vw] py-[0.8vw] shadow-xs cursor-pointer transition-all active:scale-[0.99] group text-left"
+          className="w-full flex items-center gap-[0.8vw] bg-gray-100 hover:bg-gray-200/80 border border-gray-200 rounded-[0.45vw] px-[1vw] py-[0.7vw] shadow-2xs cursor-pointer transition-all active:scale-[0.99] group text-left"
         >
-          <span className="text-[1.3vw] leading-none select-none filter drop-shadow-xs">⭐</span>
-          <span className="text-[0.82vw] font-semibold text-gray-800 tracking-tight">
+          <span className="text-[1.2vw] leading-none select-none">⭐</span>
+          <span className="text-[0.82vw] font-medium text-gray-800 tracking-tight">
             Click to preview Animations
           </span>
         </button>
 
         {/* Animation Row */}
-        <div className="flex items-center gap-[0.5vw]">
-          <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-            <span>Animation</span>
-            <span>:</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div ref={animationDropdownRef} className={`relative w-full ${isAnimationDropdownOpen ? 'z-[105]' : ''}`}>
-              <button
-                type="button"
-                onClick={() => setIsAnimationDropdownOpen((prev) => !prev)}
-                className={`w-full h-[2.4vw] min-h-[32px] flex items-center justify-between bg-white px-[0.75vw] rounded-[0.55vw] text-[0.82vw] font-semibold transition-all cursor-pointer shadow-2xs select-none ${isAnimationDropdownOpen
-                    ? 'border-2 border-[#E05638] shadow-xs'
-                    : 'border border-gray-200 hover:border-gray-300'
-                  }`}
-              >
-                <span className="truncate text-gray-800 font-medium">
-                  {animation === 'Custom' ? `Custom (${customAnimationCount}x)` : animation}
-                </span>
-                {isAnimationDropdownOpen ? (
-                  <ChevronUp className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
-                ) : (
-                  <ChevronDown className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
-                )}
-              </button>
-
-              {isAnimationDropdownOpen && (
-                <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-lg overflow-hidden z-[110] flex flex-col py-[0.3vw] animate-in fade-in zoom-in-95 duration-150">
-                  {animationOptions.map((opt) => {
-                    const isSelected = animation === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => {
-                          handleAnimationChange(opt.value);
-                          setIsAnimationDropdownOpen(false);
-                        }}
-                        className={`px-[0.9vw] py-[0.5vw] text-[0.82vw] font-medium transition-colors text-left flex items-center cursor-pointer ${isSelected
-                            ? 'text-[#FF4500] font-semibold bg-[#FF4500]/10'
-                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                          }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-
-                  <div className="h-[1px] bg-gray-100 my-[0.2vw]" />
-
-                  {/* Custom Option with Input Box and "times" label */}
-                  <div
-                    className={`px-[0.7vw] py-[0.45vw] flex items-center gap-[0.5vw] cursor-pointer ${animation === 'Custom' ? 'bg-[#FF4500]/10' : 'hover:bg-gray-50'
-                      }`}
-                    onClick={() => {
-                      handleAnimationChange('Custom', customAnimationCount || '4');
-                    }}
-                  >
-                    <input
-                      type="number"
-                      min="1"
-                      max="999"
-                      value={customAnimationCount}
-                      placeholder="Custom"
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        handleCustomCountChange(val);
-                      }}
-                      onFocus={() => {
-                        if (animation !== 'Custom') {
-                          handleAnimationChange('Custom', customAnimationCount || '4');
-                        }
-                      }}
-                      className={`w-[4.8vw] h-[2vw] px-[0.5vw] border rounded-[0.4vw] text-[0.78vw] font-medium text-gray-800 bg-white outline-none placeholder:text-gray-400 focus:border-[#5B50E5] focus:ring-1 focus:ring-[#5B50E5]/30 ${animation === 'Custom' ? 'border-[#5B50E5]' : 'border-gray-200'
-                        }`}
-                    />
-                    <span className="text-[0.78vw] font-semibold text-gray-600 select-none">
-                      times
-                    </span>
-                  </div>
-                </div>
+        <div className="flex flex-col gap-[0.45vw] mt-[0.2vw]">
+          <span className="text-[0.78vw] font-medium text-gray-700">Animation</span>
+          <div ref={animationDropdownRef} className={`relative w-full ${isAnimationDropdownOpen ? 'z-[105]' : ''}`}>
+            <button
+              type="button"
+              onClick={() => setIsAnimationDropdownOpen((prev) => !prev)}
+              className={`w-full h-[2.1vw] flex items-center justify-between bg-white px-[0.75vw] rounded-[0.45vw] text-[0.82vw] font-medium transition-all cursor-pointer shadow-2xs select-none ${
+                isAnimationDropdownOpen
+                  ? 'border-2 border-indigo-500 shadow-xs'
+                  : 'border border-gray-300 hover:border-gray-400'
+              }`}
+            >
+              <span className="truncate text-gray-800 font-medium">
+                {animation === 'Custom' ? `Custom (${customAnimationCount}x)` : animation}
+              </span>
+              {isAnimationDropdownOpen ? (
+                <ChevronUp className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
+              ) : (
+                <ChevronDown className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px] text-gray-500 flex-shrink-0" />
               )}
-            </div>
+            </button>
+
+            {isAnimationDropdownOpen && (
+              <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-200 rounded-[0.5vw] shadow-lg overflow-hidden z-[110] flex flex-col py-[0.3vw] animate-in fade-in zoom-in-95 duration-150">
+                {animationOptions.map((opt) => {
+                  const isSelected = animation === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        handleAnimationChange(opt.value);
+                        setIsAnimationDropdownOpen(false);
+                      }}
+                      className={`px-[0.9vw] py-[0.45vw] text-[0.82vw] font-medium transition-colors text-left flex items-center cursor-pointer ${
+                        isSelected
+                          ? 'text-indigo-600 font-semibold bg-indigo-50'
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+
+                <div className="h-[1px] bg-gray-100 my-[0.2vw]" />
+
+                {/* Custom Option with Input Box and "times" label */}
+                <div
+                  className={`px-[0.7vw] py-[0.45vw] flex items-center gap-[0.5vw] cursor-pointer ${
+                    animation === 'Custom' ? 'bg-indigo-50' : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => {
+                    handleAnimationChange('Custom', customAnimationCount || '4');
+                  }}
+                >
+                  <input
+                    type="number"
+                    min="1"
+                    max="999"
+                    value={customAnimationCount}
+                    placeholder="Custom"
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      handleCustomCountChange(val);
+                    }}
+                    onFocus={() => {
+                      if (animation !== 'Custom') {
+                        handleAnimationChange('Custom', customAnimationCount || '4');
+                      }
+                    }}
+                    className={`w-[4.8vw] h-[2vw] px-[0.5vw] border rounded-[0.4vw] text-[0.78vw] font-medium text-gray-800 bg-white outline-none placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 ${
+                      animation === 'Custom' ? 'border-indigo-500' : 'border-gray-200'
+                    }`}
+                  />
+                  <span className="text-[0.78vw] font-semibold text-gray-600 select-none">
+                    times
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Speed Row */}
-        <div className="flex items-center gap-[0.5vw]">
-          <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-            <span>Speed</span>
-            <span>:</span>
-          </div>
-          <div className="flex-1 min-w-0 flex items-center gap-[0.7vw]">
+        <div className="flex flex-col gap-[0.45vw]">
+          <span className="text-[0.78vw] font-medium text-gray-700">Speed</span>
+          <div className="flex items-center gap-[0.7vw]">
             <ElementSlider
               min={10}
               max={200}
@@ -748,21 +810,21 @@ const ElementTitlesProperties = ({
               onChange={handleSpeedChange}
               className="flex-1"
             />
-            <div className="w-[3.4vw] h-[2vw] flex items-center justify-center bg-white border border-gray-200 rounded-[0.45vw] shadow-2xs shrink-0">
-              <span className="text-[0.78vw] font-bold text-gray-800">{speed} %</span>
+            <div className="w-[3.6vw] h-[2.1vw] flex items-center justify-center bg-white border border-gray-300 rounded-[0.45vw] shadow-2xs shrink-0">
+              <span className="text-[0.78vw] font-semibold text-gray-800">{speed}%</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* ── Text Appearance Section ── */}
-      <div className="flex flex-col gap-[0.7vw] mt-[0.3vw]">
+      <div className="flex flex-col gap-[0.7vw]">
         <SectionHeader title="Text Appearance" />
 
         {/* Primary Text */}
-        <div className="flex flex-col gap-[0.4vw]">
+        <div className="flex flex-col gap-[0.45vw]">
           <div className="flex items-center justify-between">
-            <label className="text-[0.8vw] font-semibold text-gray-900">Primary Text</label>
+            <label className="text-[0.78vw] font-medium text-gray-700">Primary Text</label>
             <span className="text-[0.68vw] text-gray-400 font-medium">
               {(primaryText || '').length}/30
             </span>
@@ -774,15 +836,16 @@ const ElementTitlesProperties = ({
               value={primaryText}
               onChange={(e) => handlePrimaryTextChange(e.target.value.slice(0, 30))}
               placeholder="Animation"
-              className="flex-1 h-[2.4vw] px-[0.75vw] text-[0.82vw] font-normal text-gray-700 bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs outline-none focus:border-[#E05638]"
+              className="flex-1 h-[2.1vw] px-[0.75vw] text-[0.82vw] text-gray-800 bg-white border border-gray-300 rounded-[0.45vw] shadow-2xs outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
             />
             {/* Color Swatch */}
             <div
               onClick={() => setActiveColorPicker((prev) => (prev === 'textColor1' ? null : 'textColor1'))}
-              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${activeColorPicker === 'textColor1' || activeColorPicker === 'primaryText'
-                  ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105'
-                  : 'border-gray-200 hover:border-gray-300'
-                }`}
+              className={`w-[2.1vw] h-[2.1vw] rounded-[0.45vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${
+                activeColorPicker === 'textColor1' || activeColorPicker === 'primaryText'
+                  ? 'border-indigo-500 ring-2 ring-indigo-500/30'
+                  : 'border-gray-300 hover:border-gray-400'
+              }`}
               style={{ background: textColor1 }}
               title="Click to pick Text Color 1"
             />
@@ -790,13 +853,14 @@ const ElementTitlesProperties = ({
             <button
               type="button"
               onClick={() => setActiveTextSettings((prev) => (prev === 'primary' ? null : 'primary'))}
-              className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${activeTextSettings === 'primary'
-                  ? 'bg-gray-100 border-[#E05638] text-[#E05638]'
-                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                }`}
-              title="Text Property"
+              className={`w-[2.1vw] h-[2.1vw] rounded-[0.45vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${
+                activeTextSettings === 'primary'
+                  ? 'bg-indigo-50 border-indigo-400 text-indigo-600'
+                  : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50'
+              }`}
+              title="Text Typography Settings"
             >
-              <Sliders className="w-[1vw] h-[1vw]" />
+              <Sliders className="w-[0.95vw] h-[0.95vw]" />
             </button>
           </div>
 
@@ -844,9 +908,9 @@ const ElementTitlesProperties = ({
 
         {/* Secondary Text (only shown if title has secondary text) */}
         {hasSecondaryText && (
-          <div className="flex flex-col gap-[0.4vw]">
+          <div className="flex flex-col gap-[0.45vw]">
             <div className="flex items-center justify-between">
-              <label className="text-[0.8vw] font-semibold text-gray-900">Secondary Text</label>
+              <label className="text-[0.78vw] font-medium text-gray-700">Secondary Text</label>
               <span className="text-[0.68vw] text-gray-400 font-medium">
                 {(secondaryText || '').length}/30
               </span>
@@ -858,15 +922,16 @@ const ElementTitlesProperties = ({
                 value={secondaryText}
                 onChange={(e) => handleSecondaryTextChange(e.target.value.slice(0, 30))}
                 placeholder="Animation"
-                className="flex-1 h-[2.4vw] px-[0.75vw] text-[0.82vw] font-normal text-gray-700 bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs outline-none focus:border-[#E05638]"
+                className="flex-1 h-[2.1vw] px-[0.75vw] text-[0.82vw] text-gray-800 bg-white border border-gray-300 rounded-[0.45vw] shadow-2xs outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
               />
               {/* Color Swatch */}
               <div
                 onClick={() => setActiveColorPicker((prev) => (prev === 'textColor2' ? null : 'textColor2'))}
-                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${activeColorPicker === 'textColor2' || activeColorPicker === 'secondaryText'
-                    ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105'
-                    : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                className={`w-[2.1vw] h-[2.1vw] rounded-[0.45vw] border flex-shrink-0 cursor-pointer shadow-2xs hover:scale-105 transition-all flex items-center justify-center ${
+                  activeColorPicker === 'textColor2' || activeColorPicker === 'secondaryText'
+                    ? 'border-indigo-500 ring-2 ring-indigo-500/30'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
                 style={{ background: textColor2 }}
                 title="Click to pick Text Color 2"
               />
@@ -874,13 +939,14 @@ const ElementTitlesProperties = ({
               <button
                 type="button"
                 onClick={() => setActiveTextSettings((prev) => (prev === 'secondary' ? null : 'secondary'))}
-                className={`w-[2.4vw] h-[2.4vw] rounded-[0.5vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${activeTextSettings === 'secondary'
-                    ? 'bg-gray-100 border-[#E05638] text-[#E05638]'
-                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                  }`}
-                title="Text Property"
+                className={`w-[2.1vw] h-[2.1vw] rounded-[0.45vw] border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-2xs ${
+                  activeTextSettings === 'secondary'
+                    ? 'bg-indigo-50 border-indigo-400 text-indigo-600'
+                    : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50'
+                }`}
+                title="Text Typography Settings"
               >
-                <Sliders className="w-[1vw] h-[1vw]" />
+                <Sliders className="w-[0.95vw] h-[0.95vw]" />
               </button>
             </div>
 
@@ -930,114 +996,69 @@ const ElementTitlesProperties = ({
 
       {/* ── Logo Section (Shown only for templates with icon/logo feature) ── */}
       {hasLogoFeature && (
-        <div className="flex flex-col gap-[0.7vw] mt-[0.3vw]">
+        <div className="flex flex-col gap-[0.7vw]">
           <SectionHeader title="Logo" />
-          <div className="flex items-center gap-[0.5vw]">
-            <div className="w-[5.8vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-              <span>Icon</span>
-              <span>:</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div
-                onClick={() => setIsIconGalleryOpen(true)}
-                className="w-full h-[5vw] border border-gray-200 hover:border-gray-300 rounded-[0.5vw] bg-[#f8fafc] p-[0.4vw] relative flex items-center justify-center cursor-pointer group transition-all shadow-2xs hover:shadow-sm"
-                title="Click to change icon"
-              >
-                {/* Swap Icon button in top-right */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsIconGalleryOpen(true);
-                  }}
-                  className="absolute top-[0.35vw] right-[0.35vw] text-gray-400 group-hover:text-gray-700 transition-colors p-[0.2vw] rounded-[0.2vw] hover:bg-gray-50 cursor-pointer"
-                  title="Change icon"
-                >
-                  <ArrowLeftRight className="w-[0.9vw] h-[0.9vw]" />
-                </button>
+          <div
+            onClick={() => setIsIconGalleryOpen(true)}
+            className="w-full h-[4.8vw] border border-gray-300 hover:border-gray-400 rounded-[0.45vw] bg-[#f8fafc] p-[0.4vw] relative flex items-center justify-center cursor-pointer group transition-all shadow-2xs hover:shadow-sm"
+            title="Click to change icon"
+          >
+            {/* Swap Icon button in top-right */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsIconGalleryOpen(true);
+              }}
+              className="absolute top-[0.4vw] right-[0.4vw] text-gray-400 group-hover:text-gray-700 transition-colors p-[0.2vw] rounded-[0.3vw] hover:bg-gray-100 cursor-pointer"
+              title="Change icon"
+            >
+              <ArrowLeftRight className="w-[0.9vw] h-[0.9vw]" />
+            </button>
 
-                {/* Centered preview of icon */}
-                <div className="w-[4.5vw] h-[4.5vw] flex items-center justify-center group-hover:scale-105 transition-transform">
-                  {renderIconPreview()}
-                </div>
-              </div>
+            {/* Centered preview of icon */}
+            <div className="w-[3.5vw] h-[3.5vw] flex items-center justify-center group-hover:scale-105 transition-transform">
+              {renderIconPreview()}
             </div>
           </div>
         </div>
       )}
 
       {/* ── Object Color Section ── */}
-      <div className="flex flex-col gap-[0.6vw] mt-[0.3vw]">
-        <SectionHeader title="Object Color" />
-
-        {/* If Title template has Logo/Icon, show Icon Color and Icon BG Color */}
+      <div className="flex flex-col gap-[0.8vw]">
         {hasLogoFeature ? (
           <>
-            {/* Icon Color */}
-            <div className="flex items-center gap-[0.5vw]">
-              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-                <span>Icon Color</span>
-                <span>:</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <ColorInput
-                  color={iconColor}
-                  onChange={handleIconColorChange}
-                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'iconColor' ? null : 'iconColor'))}
-                  isActive={activeColorPicker === 'iconColor'}
-                />
-              </div>
-            </div>
-
-            {/* Icon BG Color */}
-            <div className="flex items-center gap-[0.5vw]">
-              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-                <span>Icon BG Color</span>
-                <span>:</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <ColorInput
-                  color={iconBgColor}
-                  onChange={handleIconBgColorChange}
-                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'iconBgColor' ? null : 'iconBgColor'))}
-                  isActive={activeColorPicker === 'iconBgColor'}
-                />
-              </div>
-            </div>
+            <ColorBoxRow
+              title="Icon Color"
+              color={iconColor}
+              onChange={handleIconColorChange}
+              onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'iconColor' ? null : 'iconColor'))}
+              isActive={activeColorPicker === 'iconColor'}
+            />
+            <ColorBoxRow
+              title="Icon BG Color"
+              color={iconBgColor}
+              onChange={handleIconBgColorChange}
+              onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'iconBgColor' ? null : 'iconBgColor'))}
+              isActive={activeColorPicker === 'iconBgColor'}
+            />
           </>
         ) : (
           <>
-            {/* Stroke Color */}
-            <div className="flex items-center gap-[0.5vw]">
-              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-                <span>Stroke Color</span>
-                <span>:</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <ColorInput
-                  color={strokeColor}
-                  onChange={handleStrokeColorChange}
-                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'strokeColor' ? null : 'strokeColor'))}
-                  isActive={activeColorPicker === 'strokeColor'}
-                />
-              </div>
-            </div>
-
-            {/* Background Color */}
-            <div className="flex items-center gap-[0.5vw]">
-              <div className="w-[7.2vw] shrink-0 flex items-center justify-between text-gray-800 font-semibold text-[0.8vw]">
-                <span>Background Color</span>
-                <span>:</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <ColorInput
-                  color={backgroundColor}
-                  onChange={handleBackgroundColorChange}
-                  onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'backgroundColor' ? null : 'backgroundColor'))}
-                  isActive={activeColorPicker === 'backgroundColor'}
-                />
-              </div>
-            </div>
+            <ColorBoxRow
+              title="Stroke Color"
+              color={strokeColor}
+              onChange={handleStrokeColorChange}
+              onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'strokeColor' ? null : 'strokeColor'))}
+              isActive={activeColorPicker === 'strokeColor'}
+            />
+            <ColorBoxRow
+              title="Background Color"
+              color={backgroundColor}
+              onChange={handleBackgroundColorChange}
+              onOpenPicker={() => setActiveColorPicker((prev) => (prev === 'backgroundColor' ? null : 'backgroundColor'))}
+              isActive={activeColorPicker === 'backgroundColor'}
+            />
           </>
         )}
       </div>

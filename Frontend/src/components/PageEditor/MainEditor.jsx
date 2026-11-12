@@ -232,6 +232,9 @@ const MainEditor = ({
   useEffect(() => {
     activeTopToolRef.current = activeTopTool;
     if (activeTopTool === 'interaction' || activeTopTool === 'animation') {
+      setIsElementsModalOpen(false);
+      setIsStylesModalOpen(false);
+      setIsIconsModalOpen(false);
       if (marqueeOverlayRef1.current) {
         marqueeOverlayRef1.current.style.display = 'none';
         const rect = marqueeOverlayRef1.current.querySelector?.('rect');
@@ -1684,8 +1687,9 @@ const getDraggableElement = (target, canvasRoot) => {
           }}
         >
           {/* Left Action Menu (Elements, Templets, Styles, Icons) */}
-          {!isPopupEditor && !isPdfMode && (
+          {!isPopupEditor && !isPdfMode && activeTopTool !== 'interaction' && activeTopTool !== 'animation' && (
             <LeftActionMenu
+              activeTopTool={activeTopTool}
               isRulerEnabled={localRulerEnabled}
               activePageIndex={activePageIndex}
               pages={pages}

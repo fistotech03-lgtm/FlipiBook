@@ -16,6 +16,15 @@ export function ElementGridCard({ item, onInsert }) {
       })
     );
     e.dataTransfer.effectAllowed = 'copy';
+
+    // Dispatch in next animation frame so the browser can initialize native drag session & ghost image first
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent('element-drag-start', { detail: { item } }));
+    });
+  };
+
+  const handleDragEnd = () => {
+    window.dispatchEvent(new CustomEvent('element-drag-end', { detail: { item } }));
   };
 
   return (
@@ -29,6 +38,7 @@ export function ElementGridCard({ item, onInsert }) {
       onMouseDown={(e) => e.stopPropagation()}
       draggable={true}
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       title={`Click to add or drag to place ${item.name}`}
       className="w-full flex flex-col items-center group cursor-grab active:cursor-grabbing select-none focus:outline-none"
     >
@@ -40,7 +50,7 @@ export function ElementGridCard({ item, onInsert }) {
       </div>
 
       {/* Label outside below card */}
-      <span className="text-[0.72vw] font-medium text-gray-700 group-hover:text-[#ea543a] truncate w-full text-center mt-[0.5vh] px-[0.1vw] flex-shrink-0 pointer-events-none transition-colors">
+      <span className="text-[0.66vw] font-medium text-gray-700 group-hover:text-[#ea543a] truncate w-full text-center mt-[0.4vh] px-[0.1vw] flex-shrink-0 pointer-events-none transition-colors">
         {item.name}
       </span>
     </button>

@@ -52,7 +52,8 @@ exports.getFolders = async (req, res) => {
         const low = trimmedName.toLowerCase();
         if (!seenNames.has(low)) {
           seenNames.add(low);
-          const fol_v_id = item.fol_v_id || (item._id ? item._id.toString() : crypto.randomBytes(6).toString('hex'));
+          const rawFolId = item.fol_v_id || (item._id ? item._id.toString() : crypto.randomBytes(6).toString('hex'));
+          const fol_v_id = String(rawFolId).replace(/^fol_/, '');
           customItems.push({
             id: fol_v_id,
             fol_v_id,
@@ -64,9 +65,11 @@ exports.getFolders = async (req, res) => {
     }
 
     // Ensure default folder item exists with a generated unique fol_v_id
-    const defaultFolId = (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== 'fol_default' && defaultItem.fol_v_id !== 'default')
-      ? defaultItem.fol_v_id
-      : crypto.randomBytes(6).toString('hex');
+    const defaultFolId = String(
+      (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== 'fol_default' && defaultItem.fol_v_id !== 'default')
+        ? defaultItem.fol_v_id
+        : crypto.randomBytes(6).toString('hex')
+    ).replace(/^fol_/, '');
     if (!defaultItem) {
       defaultItem = {
         fol_v_id: defaultFolId,

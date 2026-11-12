@@ -572,7 +572,7 @@ export const getShapeById = (idOrName) => {
  * Automatically injects shape parameters (star ratio, polygon sides, corner radius)
  * and centers the element at (cx, cy).
  */
-export const createShapeSvgNode = (shapeData, cx, cy) => {
+export const createShapeSvgNode = (shapeData, cx, cy, customSize) => {
   if (!shapeData) return null;
   const svgContent = shapeData.svgContent || generateShapeSvg(shapeData);
   if (!svgContent) return null;
@@ -599,11 +599,17 @@ export const createShapeSvgNode = (shapeData, cx, cy) => {
     if (!isNaN(hAttr) && hAttr > 0) elH = hAttr;
   }
 
-  // Desired on-canvas size (~50x50 mm/units or scaled down if large)
+  // When customSize is provided (from drag-drop), match the exact visual size of the drag preview
   let scale = 1;
-  const maxInitialSize = 60;
-  if (elW > maxInitialSize || elH > maxInitialSize) {
-    scale = maxInitialSize / Math.max(elW, elH);
+  if (customSize && customSize.width && customSize.height) {
+    const desiredW = customSize.width;
+    const desiredH = customSize.height;
+    scale = Math.min(desiredW / elW, desiredH / elH);
+  } else {
+    const maxInitialSize = 60;
+    if (elW > maxInitialSize || elH > maxInitialSize) {
+      scale = maxInitialSize / Math.max(elW, elH);
+    }
   }
 
   const renderW = elW * scale;

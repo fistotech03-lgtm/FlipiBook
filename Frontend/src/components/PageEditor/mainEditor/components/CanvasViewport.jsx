@@ -400,11 +400,23 @@ export const CanvasViewport = ({
                                       }));
                                       setShowHotspotPopup(false);
                                     } else if (data.type === 'icon' || data.type === 'lucide-icon') {
+                                      let dropSize = null;
+                                      const scaleX = ctm ? ctm.a : 1;
+                                      const scaleY = ctm ? ctm.d : 1;
+                                      if ((data.dragSize || (data.dragWidth && data.dragHeight)) && scaleX && scaleY) {
+                                        const w = data.dragWidth || data.dragSize;
+                                        const h = data.dragHeight || data.dragSize;
+                                        dropSize = {
+                                          width: w / scaleX,
+                                          height: h / scaleY,
+                                        };
+                                      }
                                       window.dispatchEvent(new CustomEvent('add-icon-to-editor', {
                                         detail: {
                                           pageIndex: displayIndex,
                                           icon: data.icon || { name: data.name, html: data.html },
-                                          dropPoint
+                                          dropPoint,
+                                          dropSize
                                         }
                                       }));
                                     } else if (data.type === 'image' || data.type === 'upload' || data.url) {
@@ -431,11 +443,21 @@ export const CanvasViewport = ({
                                         }
                                       }));
                                     } else if (data.type === 'element' || data.type === 'element-item' || data.elementId) {
+                                      const ctm = svg.getScreenCTM();
+                                      const scaleX = (ctm && ctm.a) ? Math.abs(ctm.a) : 1;
+                                      const scaleY = (ctm && ctm.d) ? Math.abs(ctm.d) : 1;
+                                      const dropSize = (data.dragWidth && data.dragHeight)
+                                        ? {
+                                            width: data.dragWidth / scaleX,
+                                            height: data.dragHeight / scaleY
+                                          }
+                                        : undefined;
                                       window.dispatchEvent(new CustomEvent('add-element-to-editor', {
                                         detail: {
                                           pageIndex: displayIndex,
                                           elementId: data.elementId,
-                                          dropPoint
+                                          dropPoint,
+                                          dropSize
                                         }
                                       }));
                                     } else if (data.type === 'video') {

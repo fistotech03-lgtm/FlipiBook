@@ -24,18 +24,97 @@ export const initDB = () => {
 };
 
 /**
- * Saves a value to IndexedDB
+ * Compresses an object/string into binary gzip Uint8Array.
+ * If data is smaller than 128 bytes or CompressionStream is not available, leaves as-is.
+ */
+export const compressData = async (value) => {
+  if (value === undefined || value === null) return value;
+  if (typeof CompressionStream === 'undefined' || typeof Response === 'undefined' || typeof Blob === 'undefined') {
+    return value;
+  }
+
+  try {
+    const jsonString = JSON.stringify(value);
+    if (jsonString.length < 128) {
+      return value;
+    }
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const stream = blob.stream().pipeThrough(new CompressionStream('gzip'));
+    const compressedBuffer = await new Response(stream).arrayBuffer();
+    // Return pure raw Uint8Array directly - zero wrapper object or metadata
+    return new Uint8Array(compressedBuffer);
+  } catch (err) {
+    console.warn('[dbUtils] Compression fallback, saving raw:', err);
+    return value;
+  }
+};
+
+/**
+ * Decompresses binary gzip payload back into the original JavaScript object.
+ * Transparently falls back if data was stored uncompressed (backward compatibility).
+ */
+export const decompressData = async (value) => {
+  if (!value) return value;
+
+  // 1. Raw binary Uint8Array or ArrayBuffer directly stored
+  if (
+    (value instanceof Uint8Array || value instanceof ArrayBuffer) &&
+    typeof DecompressionStream !== 'undefined' &&
+    typeof Response !== 'undefined' &&
+    typeof Blob !== 'undefined'
+  ) {
+    const uint8 = value instanceof ArrayBuffer ? new Uint8Array(value) : value;
+    // Verify standard Gzip magic bytes: 0x1F (31), 0x8B (139)
+    if (uint8.length >= 2 && uint8[0] === 0x1f && uint8[1] === 0x8b) {
+      try {
+        const stream = new Blob([uint8]).stream().pipeThrough(new DecompressionStream('gzip'));
+        const text = await new Response(stream).text();
+        return JSON.parse(text);
+      } catch (err) {
+        console.warn('[dbUtils] Binary decompress error, returning raw:', err);
+        return value;
+      }
+    }
+  }
+
+  // 2. Backward compatibility: if previously stored with { __compressed, data } wrapper
+  if (
+    value &&
+    typeof value === 'object' &&
+    value.__compressed &&
+    value.data &&
+    typeof DecompressionStream !== 'undefined' &&
+    typeof Response !== 'undefined' &&
+    typeof Blob !== 'undefined'
+  ) {
+    try {
+      const stream = new Blob([value.data]).stream().pipeThrough(new DecompressionStream(value.format || 'gzip'));
+      const text = await new Response(stream).text();
+      return JSON.parse(text);
+    } catch (err) {
+      console.warn('[dbUtils] Decompression error, returning raw:', err);
+      return value;
+    }
+  }
+
+  // 3. Plain uncompressed object
+  return value;
+};
+
+/**
+ * Saves a value to IndexedDB (with transparent binary compression)
  * @param {string} key 
  * @param {any} value 
  * @returns {Promise<void>}
  */
 export const saveToDB = async (key, value) => {
   try {
+    const payloadToSave = await compressData(value);
     const db = await initDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
-      store.put(value, key);
+      store.put(payloadToSave, key);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -45,20 +124,21 @@ export const saveToDB = async (key, value) => {
 };
 
 /**
- * Retrieves a value from IndexedDB
+ * Retrieves a value from IndexedDB (with transparent binary decompression)
  * @param {string} key 
  * @returns {Promise<any>}
  */
 export const getFromDB = async (key) => {
   try {
     const db = await initDB();
-    return new Promise((resolve, reject) => {
+    const rawResult = await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const store = tx.objectStore(STORE_NAME);
       const req = store.get(key);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
+    return await decompressData(rawResult);
   } catch (err) {
     console.error("IndexedDB Load Error:", err);
     return null;
@@ -107,26 +187,20 @@ export const getCustomizedEditorKey = (v_id) => v_id ? `customized_editor_${v_id
 export const getPageEditorKey = (v_id) => v_id ? `page_editor_${v_id}` : PAGE_EDITOR_KEY;
 
 /**
- * Cleans the active pointer if the currently stored book is different
- * from the newly opened book's v_id, while safely preserving book-specific state.
- * @param {string} activeVId
+ * Cleans up legacy un-namespaced editor pointers (customized_editor, page_editor, editor_autosave)
+ * to ensure all editor caches strictly adhere to book-specific keys (e.g. customized_editor_<v_id>).
+ * @param {string} [activeVId]
  */
 export const ensureCleanBook = async (activeVId) => {
-  if (!activeVId) return;
   try {
     const db = await initDB();
     return new Promise((resolve) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
-      const custReq = store.get(CUSTOMIZED_EDITOR_KEY);
-      custReq.onsuccess = () => {
-        const val = custReq.result;
-        // If the legacy single-key pointer belongs to a different book, clear just the pointer
-        // while book-specific keys (customized_editor_${val.v_id}) remain intact
-        if (val && val.v_id && val.v_id !== activeVId) {
-          store.delete(CUSTOMIZED_EDITOR_KEY);
-        }
-      };
+      // Delete legacy un-namespaced keys to keep IndexedDB clean and collision-free
+      store.delete(CUSTOMIZED_EDITOR_KEY);
+      store.delete(PAGE_EDITOR_KEY);
+      store.delete('editor_autosave');
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
     });
@@ -192,8 +266,8 @@ const safeClone = (obj) => {
 };
 
 /**
- * Clears old legacy temporary editor keys from IndexedDB.
- * Preserves book-specific states (e.g. customized_editor_<v_id>).
+ * Clears old legacy un-namespaced editor keys from IndexedDB.
+ * Strictly preserves book-specific states (e.g. customized_editor_<v_id>, page_editor_<v_id>).
  */
 export const cleanupLegacyEditorKeys = async () => {
   try {
@@ -201,14 +275,17 @@ export const cleanupLegacyEditorKeys = async () => {
     return new Promise((resolve) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
+      // Explicitly delete legacy un-namespaced single-pointer keys
+      store.delete(PAGE_EDITOR_KEY);
+      store.delete(CUSTOMIZED_EDITOR_KEY);
+      store.delete('editor_autosave');
+
       const req = store.getAllKeys();
       req.onsuccess = () => {
         const keys = req.result || [];
         keys.forEach((k) => {
           if (typeof k === 'string') {
-            const isKnown = k === PAGE_EDITOR_KEY || 
-              k === CUSTOMIZED_EDITOR_KEY || 
-              k.startsWith('customized_editor_') || 
+            const isKnown = k.startsWith('customized_editor_') || 
               k.startsWith('page_editor_');
             if (!isKnown) {
               store.delete(k);
@@ -225,7 +302,7 @@ export const cleanupLegacyEditorKeys = async () => {
 };
 
 /**
- * Saves the latest Page Editor state for the active book.
+ * Saves the latest Page Editor state strictly under the book's unique v_id.
  */
 export const savePageEditorState = async (data) => {
   try {
@@ -242,33 +319,57 @@ export const savePageEditorState = async (data) => {
     const payload = safeClone(rawPayload);
     const bookKey = getPageEditorKey(data.v_id);
     await saveToDB(bookKey, payload);
-    await saveToDB(PAGE_EDITOR_KEY, payload);
   } catch (err) {
     console.error("[dbUtils] Save Page Editor Error:", err);
   }
 };
 
 /**
- * Retrieves the latest Page Editor state for a given book or the active fallback
+ * Retrieves the latest Page Editor state for a given book.
  */
 export const getPageEditorState = async (v_id) => {
   if (v_id) {
     const bookData = await getFromDB(getPageEditorKey(v_id));
     if (bookData && bookData.v_id === v_id) return bookData;
   }
+  // Legacy fallback if un-namespaced cache exists
   const data = await getFromDB(PAGE_EDITOR_KEY);
   if (data && (!v_id || data.v_id === v_id)) return data;
   return await getFromDB('editor_autosave');
 };
 
+// Cache maps to prevent redundant 100-page deep-cloning and duplicate writes on auto-save
+const lastSavedPagesSigMap = new Map();
+const cachedSanitizedPagesMap = new Map();
+
+const getPagesSignature = (pages) => {
+  if (!Array.isArray(pages) || pages.length === 0) return 'empty';
+  const len = pages.length;
+  const first = pages[0]?.html?.length || pages[0]?.content?.length || 0;
+  const mid = pages[Math.floor(len / 2)]?.html?.length || pages[Math.floor(len / 2)]?.content?.length || 0;
+  const last = pages[len - 1]?.html?.length || pages[len - 1]?.content?.length || 0;
+  return `${len}_${first}_${mid}_${last}`;
+};
+
 /**
- * Saves the latest Customized Editor state for instant quick-load caching.
- * Saves both to the book-specific key and the active book pointer.
+ * Saves the latest Customized Editor state strictly under the book's unique v_id.
  */
 export const saveCustomizedEditorState = async (data) => {
   try {
     if (!data || !data.v_id) return;
-    const sanitizedPages = sanitizePages(data?.pages);
+
+    // Detect if pages changed to avoid expensive deep-cloning and re-compressing 100MB+ on setting tweaks
+    const incomingSig = getPagesSignature(data?.pages);
+    const prevSig = lastSavedPagesSigMap.get(data.v_id);
+    let sanitizedPages;
+
+    if (incomingSig === prevSig && cachedSanitizedPagesMap.has(data.v_id)) {
+      sanitizedPages = cachedSanitizedPagesMap.get(data.v_id);
+    } else {
+      sanitizedPages = sanitizePages(data?.pages);
+      cachedSanitizedPagesMap.set(data.v_id, sanitizedPages);
+    }
+
     const rawPayload = {
       v_id: data.v_id,
       bookName: data.bookName || 'Untitled Flipbook',
@@ -293,10 +394,10 @@ export const saveCustomizedEditorState = async (data) => {
     const bookKey = getCustomizedEditorKey(data.v_id);
 
     await saveToDB(bookKey, payload);
-    await saveToDB(CUSTOMIZED_EDITOR_KEY, payload);
 
-    // Keep page_editor synchronized for this book
-    if (payload.v_id && sanitizedPages.length > 0) {
+    // Keep page_editor synchronized strictly when pages have actually changed
+    if (payload.v_id && sanitizedPages.length > 0 && incomingSig !== prevSig) {
+      lastSavedPagesSigMap.set(payload.v_id, incomingSig);
       const pagePayload = {
         v_id: payload.v_id,
         pageName: payload.bookName,
@@ -306,7 +407,8 @@ export const saveCustomizedEditorState = async (data) => {
         timestamp: payload.timestamp
       };
       await saveToDB(getPageEditorKey(payload.v_id), pagePayload);
-      await saveToDB(PAGE_EDITOR_KEY, pagePayload);
+    } else if (incomingSig !== prevSig) {
+      lastSavedPagesSigMap.set(payload.v_id, incomingSig);
     }
   } catch (err) {
     console.error("[dbUtils] Save Customized Editor Error:", err);
@@ -314,14 +416,28 @@ export const saveCustomizedEditorState = async (data) => {
 };
 
 /**
- * Retrieves the latest Customized Editor state for a given book or the active fallback
+ * Retrieves the latest Customized Editor state for a given book.
  */
 export const getCustomizedEditorState = async (v_id) => {
   if (v_id) {
     const bookData = await getFromDB(getCustomizedEditorKey(v_id));
     if (bookData && bookData.v_id === v_id) return bookData;
   }
+  // Legacy fallback if un-namespaced cache exists
   const data = await getFromDB(CUSTOMIZED_EDITOR_KEY);
   if (data && (!v_id || data.v_id === v_id)) return data;
   return null;
+};
+
+/**
+ * Removes cached state for a deleted or discarded book from IndexedDB.
+ */
+export const deleteBookEditorState = async (v_id) => {
+  if (!v_id) return;
+  try {
+    await deleteFromDB(getCustomizedEditorKey(v_id));
+    await deleteFromDB(getPageEditorKey(v_id));
+  } catch (err) {
+    console.warn("[dbUtils] Delete Book Editor State Error:", err);
+  }
 };

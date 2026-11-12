@@ -231,15 +231,15 @@ function FlipbookCard({
     const isBookEditing = editingBookId === book.id || editingBookId === bookKey;
 
     // Resolve Physical Folder for Recent books
-    const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
-    let actualFolder = book.folder || activeFolder;
+    const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'all flipbook', 'favorites', 'trash', 'default']);
+    let actualFolder = book.actualFolder || book.folder || activeFolder;
     if (!actualFolder || VIRTUAL_FOLDERS.has(String(actualFolder).trim().toLowerCase())) {
         const physical = books?.find(
             (b) => b.realName === book.realName && b.folder && !VIRTUAL_FOLDERS.has(String(b.folder).trim().toLowerCase())
         );
         actualFolder = (physical && physical.folder && !VIRTUAL_FOLDERS.has(String(physical.folder).trim().toLowerCase()))
             ? physical.folder
-            : 'My_Flipbooks';
+            : (book.folderName || 'default');
     }
 
     // Check if entered rename title already exists in the current folder
@@ -329,7 +329,9 @@ function FlipbookCard({
                 : typeof book.pages === 'number'
                 ? book.pages
                 : book.pagesCount || (Array.isArray(book.pagesList) ? book.pagesList.length : 1)) || 1;
-        const folderVId = book.folder_v_id || (book.folder_id && String(book.folder_id).startsWith('fol_') ? book.folder_id : null) || 'fol_default';
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
+        const rawFolderVId = book.folder_v_id || (book.folder_id && isFolId(String(book.folder_id)) ? book.folder_id : null) || 'default';
+        const folderVId = String(rawFolderVId).replace(/^fol_/, '');
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(
             `/editor/customized_editor/${encodeURIComponent(folderVId)}/${identifier}`,
@@ -360,7 +362,9 @@ function FlipbookCard({
             ? book.pages
             : undefined;
 
-        const folderVId = book.folder_v_id || (book.folder_id && String(book.folder_id).startsWith('fol_') ? book.folder_id : null) || 'fol_default';
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
+        const rawFolderVId = book.folder_v_id || (book.folder_id && isFolId(String(book.folder_id)) ? book.folder_id : null) || 'default';
+        const folderVId = String(rawFolderVId).replace(/^fol_/, '');
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(`/editor/${encodeURIComponent(folderVId)}/${identifier}`, {
             state: {

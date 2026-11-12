@@ -26,7 +26,7 @@ export default function TicketCard({ ticket, onSelectTicket, onDeleteTicket }) {
   return (
     <article 
       onClick={() => onSelectTicket(ticket)}
-      className="group relative bg-white hover:bg-gray-50/70 p-[1.2vw] rounded-[1vw] border border-gray-200 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
+      className="group relative bg-white hover:bg-gray-50/70 p-[1.2vw] rounded-[0.9vw] border border-gray-100 hover:border-gray-200 transition-all duration-200 cursor-pointer shadow-xs"
     >
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-[1vw]">
         
@@ -57,13 +57,13 @@ export default function TicketCard({ ticket, onSelectTicket, onDeleteTicket }) {
           </div>
 
           {/* Ticket Subject */}
-          <h3 className="text-[0.92vw] font-medium text-gray-800 group-hover:text-[#EC5137] transition-colors leading-snug">
+          <h3 className="text-[0.92vw] font-bold text-gray-900 group-hover:text-[#EC5137] transition-colors leading-snug">
             {ticket.subject}
           </h3>
 
           {/* Description Preview */}
           {ticket.description && (
-            <p className="text-[0.74vw] text-gray-500 line-clamp-2 leading-relaxed font-normal">
+            <p className="text-[0.76vw] text-gray-500 line-clamp-2 leading-relaxed font-normal">
               {ticket.description}
             </p>
           )}
@@ -102,11 +102,11 @@ export default function TicketCard({ ticket, onSelectTicket, onDeleteTicket }) {
         <div className="flex items-center gap-[0.6vw] sm:flex-col sm:items-end sm:justify-between shrink-0">
           <div>
             {isClosed ? (
-              <span className="bg-gray-100 text-gray-600 text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-block">
+              <span className="bg-gray-100 text-gray-600 text-[0.68vw] font-medium px-[0.65vw] py-[0.18vw] rounded-full inline-block">
                 Closed
               </span>
             ) : (
-              <span className="bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.75vw] py-[0.18vw] rounded-full inline-block">
+              <span className="bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.65vw] py-[0.18vw] rounded-full inline-block">
                 Open
               </span>
             )}

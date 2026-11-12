@@ -489,19 +489,52 @@ export const useCanvasAssetInsertion = ({
       }
       g.appendChild(iconGroup);
 
-      const targetContainer = targetSvg.querySelector('[data-type="frame"]') ||
-                              targetSvg.querySelector('[data-name="Overlay"]')?.parentElement ||
-                              targetSvg.querySelector('g[id^="g-"]') ||
-                              targetSvg.querySelector('g') ||
-                              targetSvg;
+      const isElementContainer = (node) => {
+        if (!node || typeof node.getAttribute !== 'function') return false;
+        const dt = (node.getAttribute('data-type') || '').toLowerCase();
+        const elementTypes = [
+          'embed-frame', 'audio-frame', 'table-frame', 'image-frame', 'shape',
+          'button', 'qrcode', 'qr-code', 'map', 'slideshow', 'video', 'image',
+          'group', 'text', 'decorator', 'animated-decorator', 'hotspot'
+        ];
+        return elementTypes.includes(dt) ||
+          node.getAttribute('data-is-image-group') === 'true' ||
+          node.getAttribute('data-is-video-group') === 'true' ||
+          node.getAttribute('data-is-gif-group') === 'true' ||
+          node.getAttribute('data-is-element-shape') === 'true' ||
+          node.getAttribute('data-is-element-button') === 'true' ||
+          node.getAttribute('data-is-element-typography') === 'true' ||
+          node.getAttribute('data-is-slideshow') === 'true';
+      };
+
+      const directSvgChildren = Array.from(targetSvg.children || []);
+      let targetContainer = directSvgChildren.find(
+        (child) =>
+          child.tagName?.toLowerCase() === 'g' &&
+          (child.getAttribute('data-type') === 'frame' || /^Page\s*\d+$/i.test(child.getAttribute('data-name') || '')) &&
+          !isElementContainer(child)
+      );
+
+      if (!targetContainer) {
+        const overlayParent = targetSvg.querySelector('[data-name="Overlay"]')?.parentElement;
+        if (overlayParent && !isElementContainer(overlayParent)) {
+          targetContainer = overlayParent;
+        }
+      }
+
+      if (!targetContainer) {
+        targetContainer = targetSvg;
+      }
 
       // Migrate orphaned elements
-      if (targetContainer !== targetSvg) {
+      if (targetContainer !== targetSvg && targetContainer.getAttribute('data-type') === 'frame') {
         Array.from(targetSvg.children).forEach(child => {
           if (child === targetContainer) return;
           if (['defs', 'metadata', 'style', 'title', 'desc'].includes(child.tagName.toLowerCase())) return;
           if (child.getAttribute('data-name') === 'Document Shield' || child.getAttribute('data-type') === 'shield') return;
-          targetContainer.appendChild(child);
+          if (child.getAttribute('data-type') !== 'frame') {
+            targetContainer.appendChild(child);
+          }
         });
       }
 

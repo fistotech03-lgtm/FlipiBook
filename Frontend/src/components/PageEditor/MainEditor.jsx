@@ -23,7 +23,7 @@ import {
   clearOverlayType
 } from './mainEditor/utils/geometryUtils';
 import { isElementHidden, purgeElementOverlays } from './mainEditor/selectionOverlays/overlayDomUtils';
-import { useSlideshowManager } from './mainEditor/hooks/useSlideshowManager';
+import { useSlideshowManager } from './LeftActionMenu/Elements/hooks/useSlideshowManager';
 import { useVideoControls } from './mainEditor/hooks/useVideoControls';
 import { useSelectionOverlays } from './mainEditor/hooks/useSelectionOverlays';
 import { useInteractEngine } from './mainEditor/hooks/useInteractEngine';
@@ -46,9 +46,11 @@ import {
   IconsModal
 } from './LeftActionMenu';
 import { getTopLevelFrames, hitTest as hitTestExt, isPageRootElement } from './mainEditor/utils/frameHierarchyUtils';
+import { parseLayersFromSVG, sanitizeSvgXml } from './utils/editorUtils';
 import { PageNavigationControls } from './mainEditor/components/PageNavigationControls';
 import { applyTrimViewToSvg, cleanTrimViewFromHtml, isElementCompletelyOutside } from './mainEditor/utils/trimViewUtils';
 import { drawShapeImageAdjustOverlay } from './penTool/penOverlayEngine';
+import { normalizeForeignObjectNamespaces } from './LeftActionMenu/Elements/utils/tableElementUtils';
 
 // Re-export geometry utilities for backward compatibility with external components
 
@@ -387,7 +389,7 @@ const MainEditor = ({
     };
   }, [activeTopTool]);
 
-  const saveModifiedPageHtml = (targetPageIndex, targetSvg) => {
+  const saveModifiedPageHtml = (targetPageIndex, targetSvg, explicitLayers = null) => {
     if (!updatePageHtmlRef.current) return;
     window.__skipCanvasUpdateForPage = targetPageIndex;
     const tempDiv = document.createElement('div');
@@ -406,6 +408,33 @@ const MainEditor = ({
         el.setAttribute('style', st.replace(/"/g, "'"));
       }
     });
+
+    // Auto-heal any image frame where pattern IDs were lost
+    const healImageFrames = (root) => {
+      if (!root) return;
+      const frames = root.querySelectorAll('[data-type="image-frame"], [data-is-image-frame="true"], g[id^="image-frame-"]');
+      frames.forEach((frame) => {
+        const shapes = frame.querySelectorAll('[fill*="url(#"]');
+        const patterns = Array.from(frame.querySelectorAll('pattern'));
+        if (patterns.length > 0) {
+          shapes.forEach((shape, idx) => {
+            const fill = shape.getAttribute('fill') || '';
+            const match = fill.match(/url\(#([^)]+)\)/);
+            if (match && match[1]) {
+              const patId = match[1];
+              if (!frame.querySelector(`pattern[id="${patId}"]`)) {
+                const unassigned = patterns.find((p) => !p.id) || patterns[idx];
+                if (unassigned) {
+                  unassigned.setAttribute('id', patId);
+                }
+              }
+            }
+          });
+        }
+      });
+    };
+    healImageFrames(tempDiv);
+    healImageFrames(targetSvg);
 
     let finalHtml = tempDiv.innerHTML;
     // Auto-heal any broken unescaped span style attributes
@@ -427,10 +456,17 @@ const MainEditor = ({
     finalHtml = finalHtml
       .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
       .replace(/<\/\s*br\s*>/gi, '');
+    finalHtml = sanitizeSvgXml(finalHtml);
+
+    // Normalize any foreignObject so XHTML namespace is explicitly preserved
+    finalHtml = normalizeForeignObjectNamespaces(finalHtml);
+
+    const resolvedLayers = explicitLayers || (targetSvg && typeof parseLayersFromSVG === 'function' ? parseLayersFromSVG(targetSvg) : null);
+
     if (updatePageHtmlRef.current) {
-      updatePageHtmlRef.current(targetPageIndex, finalHtml);
+      updatePageHtmlRef.current(targetPageIndex, finalHtml, resolvedLayers);
     } else if (typeof updatePageHtml === 'function') {
-      updatePageHtml(targetPageIndex, finalHtml);
+      updatePageHtml(targetPageIndex, finalHtml, resolvedLayers);
     }
   };
 
@@ -800,6 +836,10 @@ const MainEditor = ({
 
       document.querySelectorAll('[data-selected="true"]').forEach(el => el.removeAttribute('data-selected'));
       document.querySelectorAll('[data-child-selected="true"]').forEach(el => el.removeAttribute('data-child-selected'));
+      document.querySelectorAll('[data-table-selected="true"]').forEach(el => {
+        el.removeAttribute('data-table-selected');
+        el.removeAttribute('data-table-mode');
+      });
     }
   }, [activeMainTool, selectedSelectTool, selectedPenTool, selectedShapeTool, setSelectedLayerId, setMultiSelectedIds]);
 
@@ -1027,13 +1067,14 @@ const getDraggableElement = (target, canvasRoot) => {
       return audioGroup;
     }
 
-    // Typography elements are single compound elements; if clicking anywhere inside a typography group, drag/select the whole typography element!
-    const typographyGroup = current && typeof current.closest === 'function' ? current.closest('[data-is-element-typography="true"], [data-typography-type], g[id^="typography-"]') : null;
-    if (typographyGroup) {
-      if (!typographyGroup.id) {
-        typographyGroup.id = `typography-${Date.now()}`;
+    // Titles (motion graphic) elements are single compound elements; if clicking anywhere inside, drag/select the whole title element!
+    // SVG Typography groups (group-typography-...) are user groups containing editable text elements!
+    const titleGroup = current && typeof current.closest === 'function' ? current.closest('[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template]') : null;
+    if (titleGroup) {
+      if (!titleGroup.id) {
+        titleGroup.id = `title-${Date.now()}`;
       }
-      return typographyGroup;
+      return titleGroup;
     }
 
     // Decorator elements are single compound elements; always drag/select the whole decorator group
@@ -1223,6 +1264,7 @@ const getDraggableElement = (target, canvasRoot) => {
     saveModifiedPageHtml,
     getDraggableElement,
     getTopLevelFrames,
+    isPageRootElement,
     hitTest,
     selectedLayerIdRef,
     multiSelectedIdsRef,

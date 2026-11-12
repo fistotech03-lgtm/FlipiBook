@@ -7,6 +7,7 @@ import TooltipOverlay from './TooltipOverlay';
 
 const TurnJsBookRenderer = React.memo(({
     augmentedPages,
+    v_id,
     WIDTH,
     HEIGHT,
     flipTime,
@@ -88,6 +89,7 @@ const TurnJsBookRenderer = React.memo(({
             <FlipBookEngine
                 ref={bookRef}
                 pages={augmentedPages}
+                v_id={v_id}
                 width={WIDTH}
                 height={HEIGHT}
                 flipTime={flipTime}

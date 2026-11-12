@@ -7,6 +7,7 @@
 import { useState, useCallback } from 'react';
 import { parseLayersFromSVG } from './svgFilterUtils';
 import pageCacheManager from '../utils/PageCacheManager';
+import { sanitizeSvgXml, safeSerializeSvg } from '../utils/editorUtils';
 
 const MAX_HISTORY = 30;
 
@@ -174,13 +175,13 @@ export const usePageManager = ({
   };
 
   const updatePageHtml = (pageIndex, html, explicitLayers = null) => {
-    let sanitizedHtml = html;
+    let sanitizedHtml = sanitizeSvgXml(html);
     if (typeof sanitizedHtml === 'string' && sanitizedHtml.includes('custom-video-overlay')) {
       const parser = new DOMParser();
       const doc = parser.parseFromString(sanitizedHtml, 'image/svg+xml');
       doc.querySelectorAll('.custom-video-overlay').forEach(el => el.remove());
       const svg = doc.querySelector('svg');
-      if (svg) sanitizedHtml = svg.outerHTML;
+      if (svg) sanitizedHtml = safeSerializeSvg(svg) || svg.outerHTML;
     }
 
     saveToHistory(pages, selectedLayerId, pageIndex);
@@ -198,8 +199,12 @@ export const usePageManager = ({
         } else {
           try {
             const parser = new DOMParser();
-            const doc = parser.parseFromString(sanitizedHtml, 'image/svg+xml');
-            const svgEl = doc.querySelector('svg');
+            let doc = parser.parseFromString(sanitizedHtml, 'image/svg+xml');
+            let svgEl = doc.querySelector('svg');
+            if (!svgEl || doc.querySelector('parsererror')) {
+              doc = parser.parseFromString(sanitizedHtml, 'text/html');
+              svgEl = doc.querySelector('svg');
+            }
             if (svgEl) {
               const pageGroup = svgEl.querySelector('[data-type="frame"]') ||
                                 svgEl.querySelector('[data-name="Overlay"]')?.parentElement;
@@ -213,7 +218,7 @@ export const usePageManager = ({
                   movedAny = true;
                 });
                 if (movedAny) {
-                  sanitizedHtml = svgEl.outerHTML;
+                  sanitizedHtml = safeSerializeSvg(svgEl) || svgEl.outerHTML;
                 }
               }
             }
@@ -261,7 +266,7 @@ export const usePageManager = ({
 
         updated[index] = {
           ...updated[index],
-          html: new XMLSerializer().serializeToString(newDoc),
+          html: safeSerializeSvg(newDoc) || html,
           layers
         };
       }
@@ -339,7 +344,7 @@ export const usePageManager = ({
         if (rootGroup) {
           rootGroup.setAttribute('data-name', copyName);
           rootGroup.setAttribute('id', `g-frame-${Math.random().toString(36).substr(2, 7)}`);
-          newHtml = new XMLSerializer().serializeToString(doc);
+          newHtml = safeSerializeSvg(doc) || newHtml;
         }
       }
 
@@ -377,7 +382,7 @@ export const usePageManager = ({
           const rootGroup = doc.querySelector('g[data-type="frame"]');
           if (rootGroup) {
             rootGroup.setAttribute('data-name', trimmedName);
-            updatedPage.html = new XMLSerializer().serializeToString(doc);
+            updatedPage.html = safeSerializeSvg(doc) || updatedPage.html;
             // Re-parse layers to keep the layer panel header in sync
             updatedPage.layers = parseLayersFromSVG(doc.documentElement);
           }

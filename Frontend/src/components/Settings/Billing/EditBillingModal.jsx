@@ -125,7 +125,7 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-[1vw]"
     >
       <div
-        className="w-full max-w-[34vw] bg-white rounded-[1vw] shadow-xl border border-gray-200 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col"
+        className="w-full max-w-[34vw] bg-white rounded-[0.9vw] shadow-xl border border-gray-100 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -136,10 +136,10 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
                 <Icon icon="lucide:file-edit" className="w-[1.15vw] h-[1.15vw]" strokeWidth="2.2" />
               </div>
               <div className="flex flex-col">
-                <h2 className="text-[1.15vw] font-semibold text-gray-800 leading-tight">
+                <h2 className="text-[1.2vw] font-bold text-gray-900 leading-tight">
                   Edit Billing Information
                 </h2>
-                <p className="text-[0.72vw] text-gray-500 mt-[0.2vw] font-normal">
+                <p className="text-[0.74vw] text-gray-500 mt-[0.2vw] font-normal">
                   These details will be used for billing and invoices.
                 </p>
               </div>
@@ -169,7 +169,7 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
                 value={billingName}
                 onChange={(e) => setBillingName(e.target.value)}
                 placeholder="Luffy"
-                className="w-full px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                className="w-full h-[2.15vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
               />
             </div>
 
@@ -183,7 +183,7 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
                 value={billingCompany}
                 onChange={(e) => setBillingCompany(e.target.value)}
                 placeholder="EduVision Creatives"
-                className="w-full px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                className="w-full h-[2.15vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
               />
             </div>
 
@@ -197,7 +197,7 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
                 value={billingEmail}
                 onChange={(e) => setBillingEmail(e.target.value)}
                 placeholder="luffyonepiece@gmail.com"
-                className="w-full px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                className="w-full h-[2.15vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
               />
             </div>
 
@@ -211,7 +211,7 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
                 value={billingAddress}
                 onChange={(e) => setBillingAddress(e.target.value)}
                 placeholder="123, Anna Nagar"
-                className="w-full px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                className="w-full h-[2.15vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
               />
             </div>
 
@@ -229,8 +229,8 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
                       setIsCountryOpen(!isCountryOpen);
                       setIsStateOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border bg-white text-[0.76vw] transition-colors cursor-pointer ${
-                      isCountryOpen ? 'border-[#4c5add] ring-1 ring-[#4c5add]' : 'border-gray-200 hover:border-gray-300'
+                    className={`w-full h-[2.15vw] flex items-center justify-between px-[0.85vw] rounded-[0.55vw] border bg-white text-[0.78vw] transition-colors cursor-pointer ${
+                      isCountryOpen ? 'border-[#EC5137] ring-1 ring-[#EC5137]' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <span className="truncate text-gray-800 font-medium">{selectedCountryName}</span>
@@ -316,8 +316,8 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
                           setIsStateOpen(!isStateOpen);
                           setIsCountryOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border bg-white text-[0.76vw] transition-colors cursor-pointer ${
-                          isStateOpen ? 'border-[#4c5add] ring-1 ring-[#4c5add]' : 'border-gray-200 hover:border-gray-300'
+                        className={`w-full h-[2.15vw] flex items-center justify-between px-[0.85vw] rounded-[0.55vw] border bg-white text-[0.78vw] transition-colors cursor-pointer ${
+                          isStateOpen ? 'border-[#EC5137] ring-1 ring-[#EC5137]' : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
                         <span className="truncate text-gray-800 font-medium">
@@ -397,7 +397,7 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
                       value={billingState}
                       onChange={(e) => setBillingState(e.target.value)}
                       placeholder="Enter state"
-                      className="w-full px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 transition-colors"
+                      className="w-full h-[2.15vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 bg-white transition-colors"
                     />
                   )}
                 </div>
@@ -415,7 +415,7 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
                   value={billingCity}
                   onChange={(e) => setBillingCity(e.target.value)}
                   placeholder="Madurai"
-                  className="w-full px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                  className="w-full h-[2.15vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
                 />
               </div>
 
@@ -428,7 +428,7 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
                   value={billingPostalCode}
                   onChange={(e) => setBillingPostalCode(e.target.value)}
                   placeholder="625020"
-                  className="w-full px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                  className="w-full h-[2.15vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
                 />
               </div>
             </div>
@@ -443,7 +443,7 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
                 value={billingGstin}
                 onChange={(e) => setBillingGstin(e.target.value)}
                 placeholder="luffy@okaxis"
-                className="w-full px-[0.85vw] py-[0.52vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 focus:border-[#4c5add] focus:ring-1 focus:ring-[#4c5add] outline-none text-[0.76vw] text-gray-800 placeholder-gray-400 transition-colors"
+                className="w-full h-[2.15vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 focus:outline-none focus:border-[#EC5137] text-[0.78vw] text-gray-800 placeholder-gray-400 bg-white transition-colors"
               />
               <p className="text-[0.66vw] text-gray-400 mt-[0.1vw] font-normal">
                 For applicable Indian business tax invoices.
@@ -456,7 +456,7 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex items-center gap-[0.35vw] px-[1.05vw] py-[0.48vw] rounded-[0.5vw] border border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 text-[0.76vw] font-medium text-gray-700 transition-all cursor-pointer active:scale-[0.98]"
+              className="h-[2.15vw] flex items-center gap-[0.35vw] px-[1.1vw] rounded-[0.55vw] border border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 text-[0.78vw] font-medium text-gray-700 transition-all cursor-pointer active:scale-[0.98]"
             >
               <Icon icon="lucide:x" className="w-[0.8vw] h-[0.8vw] text-gray-500" strokeWidth="2.2" />
               <span>Cancel</span>
@@ -464,7 +464,7 @@ const EditBillingModal = ({ isOpen, onClose, onSave, initialData = {} }) => {
 
             <button
               type="submit"
-              className="flex items-center gap-[0.38vw] px-[1.25vw] py-[0.48vw] rounded-[0.5vw] bg-[#EC5137] hover:bg-[#d94229] active:scale-[0.98] text-white text-[0.76vw] font-medium shadow-xs transition-all cursor-pointer"
+              className="h-[2.15vw] flex items-center gap-[0.38vw] px-[1.25vw] rounded-[0.55vw] bg-[#EC5137] hover:bg-[#d9442b] active:scale-[0.98] text-white text-[0.78vw] font-semibold shadow-xs transition-all cursor-pointer"
             >
               <Icon icon="lucide:check" className="w-[0.8vw] h-[0.8vw]" strokeWidth="2.8" />
               <span>Save changes</span>

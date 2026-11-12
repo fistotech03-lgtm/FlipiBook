@@ -161,10 +161,19 @@ const LayerItem = ({
 
     // Check compound parent in live DOM (e.g. clicking internal child of a compound shape/button)
     const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+    const pageContainer = document.querySelector(`.page-svg-container[data-page-index="${pageIndex}"]`);
     if (selectedLayerId) {
-      const selEl = doc.getElementById(selectedLayerId);
+      const selEl = pageContainer?.querySelector(`[id="${selectedLayerId}"]`) || doc.getElementById(selectedLayerId);
       if (selEl) {
-        const compound = selEl.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
+        const isInternalText = ['text', 'tspan', 'foreignobject'].includes(selEl.tagName?.toLowerCase());
+        const compound = selEl.closest?.(
+          (isInternalText
+            ? '[data-typography-type="motion-graphic"], [data-motion-template], '
+            : '[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template], ') +
+          '[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], ' +
+          '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], ' +
+          '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]'
+        );
         if (compound && compound.id === layer.id) return true;
       }
     }
@@ -172,7 +181,7 @@ const LayerItem = ({
     // Check if any multi-selected ID is an internal child of this compound layer
     if (multiSelectedIds && multiSelectedIds.size > 0) {
       for (const id of multiSelectedIds) {
-        const el = doc.getElementById(id);
+        const el = pageContainer?.querySelector(`[id="${id}"]`) || doc.getElementById(id);
         if (el) {
           const comp = el.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], g[id^="audio-"], [data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
           if (comp && comp.id === layer.id) return true;
@@ -640,7 +649,7 @@ const Layer = ({
 }) => {
   const navigate = useNavigate();
   const { folder, v_id } = useParams();
-  const { hasUnsavedChanges } = useOutletContext() || {};
+  const { hasUnsavedChanges, isAutoSaveEnabled } = useOutletContext() || {};
   const [activeLayerMenu, setActiveLayerMenu] = useState(null); // { layerId, x, y }
   const layerMenuRef = useRef(null);
   const [isVisible, setIsVisible] = useState(true);
@@ -692,18 +701,29 @@ const Layer = ({
 
   const handleGoToCustomize = async () => {
     if (hasUnsavedChanges) {
-      const ok = await confirm({
-        title: "Leave Site?",
-        message: "Changes you made may not be saved.",
-        confirmText: "Leave",
-        cancelText: "Stay",
-        type: "danger"
-      });
-      if (!ok) {
-        return;
+      if (!isAutoSaveEnabled) {
+        const ok = await confirm({
+          title: "Leave Site?",
+          message: "Changes you made may not be saved.",
+          confirmText: "Leave",
+          cancelText: "Stay",
+          type: "danger"
+        });
+        if (!ok) {
+          return;
+        }
+      } else {
+        if (onSave) {
+          try {
+            await onSave(true);
+          } catch (e) {
+            console.warn("Auto-save before navigating to customize failed:", e);
+          }
+        }
       }
     }
-    const folderVId = currentBook?.folder_v_id || currentBook?.folder_id || (folder && folder.startsWith('fol_') ? folder : 'fol_default');
+    const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
+    const folderVId = currentBook?.folder_v_id || currentBook?.folder_id || (folder && isFolId(folder) ? folder : 'default');
     const path = folderVId
       ? `/editor/customized_editor/${encodeURIComponent(folderVId)}/${v_id}`
       : `/editor/customized_editor/${v_id}`;
@@ -1523,13 +1543,30 @@ const Layer = ({
                                     Page is hidden
                                   </div>
                                 ) : (() => {
-                                  let effectiveLayers = (page.layers && page.layers.length > 0)
-                                    ? page.layers
-                                    : (pageCacheManager.getCachedLayers(page.id, page.html) || []);
+                                  let effectiveLayers = [];
+                                  if (index === activePageIndex && typeof document !== 'undefined') {
+                                    const liveSvg = document.querySelector(`.page-svg-container[data-page-index="${index}"] svg`);
+                                    if (liveSvg) {
+                                      try {
+                                        const parsed = parseLayersFromSVG(liveSvg);
+                                        if (parsed && parsed.length > 0) effectiveLayers = parsed;
+                                      } catch (e) {}
+                                    }
+                                  }
+                                  if (!effectiveLayers || effectiveLayers.length === 0) {
+                                    effectiveLayers = (page.layers && page.layers.length > 0)
+                                      ? page.layers
+                                      : (pageCacheManager.getCachedLayers(page.id, page.html) || []);
+                                  }
                                   if ((!effectiveLayers || effectiveLayers.length === 0) && page.html) {
                                     try {
-                                      const doc = new DOMParser().parseFromString(page.html, 'image/svg+xml');
-                                      const svgEl = doc.querySelector('svg');
+                                      const parser = new DOMParser();
+                                      let doc = parser.parseFromString(page.html, 'image/svg+xml');
+                                      let svgEl = doc.querySelector('svg');
+                                      if (!svgEl || doc.querySelector('parsererror')) {
+                                        doc = parser.parseFromString(page.html, 'text/html');
+                                        svgEl = doc.querySelector('svg');
+                                      }
                                       if (svgEl) {
                                         effectiveLayers = parseLayersFromSVG(svgEl);
                                         pageCacheManager.setCachedLayers(page.id, page.html, effectiveLayers);

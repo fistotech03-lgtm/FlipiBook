@@ -16,6 +16,7 @@ export default function Signup({ onSwitchToSignin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
 
   // OTP Verification States
@@ -55,7 +56,7 @@ export default function Signup({ onSwitchToSignin }) {
   try {
     googleSignupFn = useGoogleLogin({
       onSuccess: async (tokenResponse) => {
-        setIsLoading(true);
+        setIsGoogleLoading(true);
         try {
           const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
           const deviceInfo = getClientDeviceInfo();
@@ -96,7 +97,7 @@ export default function Signup({ onSwitchToSignin }) {
             }, 800);
           }
         } finally {
-          setIsLoading(false);
+          setIsGoogleLoading(false);
         }
       },
       onError: () => toast.error('Google Registration Cancelled')
@@ -318,7 +319,7 @@ export default function Signup({ onSwitchToSignin }) {
               type="text"
               name="name"
               autoComplete="name"
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading}
               value={formData.name}
               onChange={handleChange}
               placeholder="Full Name"
@@ -335,7 +336,7 @@ export default function Signup({ onSwitchToSignin }) {
               type="email"
               name="email"
               autoComplete="email"
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading}
               value={formData.email}
               onChange={handleChange}
               placeholder="Email Address"
@@ -353,7 +354,7 @@ export default function Signup({ onSwitchToSignin }) {
               type={showPassword ? 'text' : 'password'}
               name="password"
               autoComplete="new-password"
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading}
               value={formData.password}
               onChange={handleChange}
               placeholder="Password"
@@ -378,7 +379,7 @@ export default function Signup({ onSwitchToSignin }) {
               type={showConfirmPassword ? 'text' : 'password'}
               name="confirmPassword"
               autoComplete="new-password"
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading}
               value={formData.confirmPassword}
               onChange={handleChange}
               placeholder="Confirm Password"
@@ -399,6 +400,7 @@ export default function Signup({ onSwitchToSignin }) {
             <input
               type="checkbox"
               checked={agreedToTerms}
+              disabled={isLoading || isGoogleLoading}
               onChange={(e) => setAgreedToTerms(e.target.checked)}
               className="mt-[0.1vw] h-[0.9vw] w-[0.9vw] rounded-[0.2vw] border-gray-300 text-[#EC5137] focus:ring-orange-200 cursor-pointer accent-[#EC5137]"
             />
@@ -414,7 +416,7 @@ export default function Signup({ onSwitchToSignin }) {
           <div>
             <button
               type="submit"
-              disabled={isLoading || !formData.email || !formData.password || !formData.confirmPassword}
+              disabled={isLoading || isGoogleLoading || !formData.email || !formData.password || !formData.confirmPassword}
               className="w-full py-[0.65vw] px-[0.8vw] bg-gradient-to-r from-[#FF725B] to-[#EC5137] hover:from-[#ff644c] hover:to-[#e14328] active:opacity-95 text-white font-poppins font-semibold text-[0.85vw] rounded-[0.65vw] shadow-[0_0.2vw_0.8vw_rgba(236,81,55,0.35)] transition-all flex items-center justify-center gap-[0.4vw] disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? (
@@ -446,28 +448,37 @@ export default function Signup({ onSwitchToSignin }) {
             <button
               type="button"
               onClick={handleGoogleClick}
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading}
               className="w-full py-[0.6vw] px-[0.8vw] bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-[0.78vw] font-inter font-medium rounded-[0.65vw] transition-colors flex items-center justify-center gap-[0.5vw] shadow-xs disabled:opacity-50 cursor-pointer"
             >
-              <svg className="w-[1.1vw] h-[1.1vw]" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.6 14.8c-.3-.8-.4-1.8-.4-2.8s.1-2 .4-2.8L1.9 6.3C.7 8.7 0 10.3 0 12s.7 3.3 1.9 5.7l3.7-2.9z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              <span>Sign-up with Google</span>
+              {isGoogleLoading ? (
+                <>
+                  <Loader2 className="w-[0.9vw] h-[0.9vw] animate-spin text-[#EC5137]" />
+                  <span>Signing up...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-[1.1vw] h-[1.1vw]" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.6 14.8c-.3-.8-.4-1.8-.4-2.8s.1-2 .4-2.8L1.9 6.3C.7 8.7 0 10.3 0 12s.7 3.3 1.9 5.7l3.7-2.9z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                  </svg>
+                  <span>Sign-up with Google</span>
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -539,8 +550,9 @@ export default function Signup({ onSwitchToSignin }) {
           <div className="text-center">
             <button
               type="button"
+              disabled={isLoading || isGoogleLoading}
               onClick={() => setIsOtpSent(false)}
-              className="inline-flex items-center gap-[0.3vw] text-[0.75vw] font-inter text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-[0.3vw] text-[0.75vw] font-inter text-gray-500 hover:text-gray-800 transition-colors cursor-pointer disabled:opacity-50"
             >
               <ArrowLeft className="w-[0.8vw] h-[0.8vw]" />
               <span>Edit Details / Change Email</span>
@@ -554,8 +566,9 @@ export default function Signup({ onSwitchToSignin }) {
         Already have an Account ?{' '}
         <button
           type="button"
+          disabled={isLoading || isGoogleLoading}
           onClick={onSwitchToSignin}
-          className="font-semibold text-[#EC5137] hover:underline cursor-pointer"
+          className="font-semibold text-[#EC5137] hover:underline cursor-pointer disabled:opacity-50"
         >
           Sign in
         </button>

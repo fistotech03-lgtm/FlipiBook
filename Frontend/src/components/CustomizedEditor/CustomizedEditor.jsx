@@ -11,6 +11,7 @@ import { useDynamicLayoutColors } from './hooks/useDynamicLayoutColors';
 import { useCustomizedAutoSave } from './hooks/useCustomizedAutoSave';
 import { useCustomizedActions } from './hooks/useCustomizedActions';
 import { useCustomizedEditorData } from './hooks/useCustomizedEditorData';
+import { loadWindowFromIDB } from '../../utils/pageWindowStore';
 import { queryClient } from '../../queryClient';
 import {
   createDefaultLogoSettings,
@@ -78,6 +79,8 @@ const CustomizedEditor = () => {
     hasUnsavedChanges,
     triggerSaveSuccess,
     isAutoSaveEnabled,
+    isSaving,
+    setIsSaving,
     currentBook,
     setCurrentBook,
     activeDevice
@@ -90,15 +93,33 @@ const CustomizedEditor = () => {
   const [otherSetupTarget, setOtherSetupTarget] = useState(null);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [pages, setPages] = useState(() => {
-    if (location.state?.pages && Array.isArray(location.state.pages) && location.state.pages.length > 0) {
-      return location.state.pages.map((p, i) => {
-        const normalized = normalizeSvgMarkup(p.content || p.html || '');
+    const rawPages = location.state?.pages;
+    const totalCount = Number(location.state?.pageCount) || (Array.isArray(rawPages) ? rawPages.length : 0);
+    
+    if (totalCount > 0) {
+      const initialPages = Array.isArray(rawPages) ? rawPages : [];
+      return Array.from({ length: totalCount }, (_, i) => {
+        const p = initialPages[i];
+        if (p) {
+          const normalized = normalizeSvgMarkup(p.content || p.html || '');
+          return {
+            id: p.id !== undefined ? p.id : i,
+            pageNumber: p.pageNumber || i + 1,
+            name: p.pageName || p.name || `Page ${i + 1}`,
+            html: normalized,
+            content: normalized,
+            isHidden: Boolean(p.isHidden || p.hide === 1),
+            isPlaceholder: false
+          };
+        }
         return {
-          id: p.id !== undefined ? p.id : i,
-          name: p.pageName || p.name || `Page ${i + 1}`,
-          html: normalized,
-          content: normalized,
-          isHidden: Boolean(p.isHidden || p.hide === 1)
+          id: i,
+          pageNumber: i + 1,
+          name: `Page ${i + 1}`,
+          html: '',
+          content: '',
+          isHidden: false,
+          isPlaceholder: true
         };
       });
     }
@@ -174,6 +195,118 @@ const CustomizedEditor = () => {
     }
   }, [v_id]);
 
+  // Live listener for background-extracted pages streamed by backgroundExtractionManager (batched to prevent render storms)
+  useEffect(() => {
+    let pendingUpdates = [];
+    let batchTimer = null;
+
+    const flushPending = () => {
+      if (pendingUpdates.length === 0) return;
+
+      // Postpone React state update if user is in the middle of flipping a page to keep 60fps
+      if (typeof document !== 'undefined' && document.querySelector('.fbe-is-flipping')) {
+        if (batchTimer) clearTimeout(batchTimer);
+        batchTimer = setTimeout(flushPending, 250);
+        return;
+      }
+
+      const updates = [...pendingUpdates];
+      pendingUpdates = [];
+
+      setPages(prevPages => {
+        if (!Array.isArray(prevPages) || prevPages.length === 0) return prevPages;
+        let changed = false;
+        let next = [...prevPages];
+
+        for (const update of updates) {
+          const { pageNumber, rawHtml } = update;
+          if (typeof pageNumber !== 'number' || pageNumber < 1) continue;
+          const targetIdx = pageNumber - 1;
+
+          // Extend array if targetIdx exceeds current length to ensure pages are never lost or skipped
+          while (next.length <= targetIdx) {
+            next.push({
+              id: next.length,
+              pageNumber: next.length + 1,
+              name: `Page ${next.length + 1}`,
+              html: '',
+              content: '',
+              isHidden: false,
+              isPlaceholder: true
+            });
+            changed = true;
+          }
+
+          const current = next[targetIdx];
+          if (current.html === rawHtml && !current.isPlaceholder) continue;
+          next[targetIdx] = {
+            ...current,
+            html: rawHtml,
+            content: rawHtml,
+            isPlaceholder: false
+          };
+          changed = true;
+        }
+
+        return changed ? next : prevPages;
+      });
+    };
+
+    const handlePageExtracted = (e) => {
+      const { v_id: eventVId, pageNumber, content, html } = e.detail || {};
+      if (!eventVId || (v_id && eventVId !== v_id)) return;
+      const rawHtml = html || content || '';
+      if (!rawHtml) return;
+
+      pendingUpdates.push({ pageNumber, rawHtml });
+      if (batchTimer) clearTimeout(batchTimer);
+      batchTimer = setTimeout(flushPending, 500);
+    };
+
+    window.addEventListener('flipbook-page-extracted', handlePageExtracted);
+    return () => {
+      if (batchTimer) clearTimeout(batchTimer);
+      window.removeEventListener('flipbook-page-extracted', handlePageExtracted);
+    };
+  }, [v_id]);
+
+  // Virtual Sliding Window: dynamically hydrates active spread ± 2 buffer pages from IndexedDB
+  useEffect(() => {
+    if (!v_id || !pages || pages.length === 0) return;
+    const centerIdx = Math.max(0, targetPage);
+    const totalCount = pages.length;
+
+    let isMounted = true;
+    loadWindowFromIDB(v_id, centerIdx, totalCount).then(({ pages: windowPages }) => {
+      if (!isMounted || !windowPages || Object.keys(windowPages).length === 0) return;
+
+      setPages(prevPages => {
+        if (!Array.isArray(prevPages) || prevPages.length === 0) return prevPages;
+        let changed = false;
+        const next = [...prevPages];
+
+        for (const [strIdx, pageData] of Object.entries(windowPages)) {
+          const idx = Number(strIdx);
+          if (idx < 0 || idx >= next.length) continue;
+          const current = next[idx];
+          const freshHtml = pageData.html || pageData.content || '';
+          if (freshHtml && current.html !== freshHtml) {
+            next[idx] = {
+              ...current,
+              html: freshHtml,
+              content: freshHtml,
+              isPlaceholder: false
+            };
+            changed = true;
+          }
+        }
+        return changed ? next : prevPages;
+      });
+    }).catch(() => {});
+
+    return () => { isMounted = false; };
+  }, [v_id, targetPage, pages.length]);
+
   const profilePreviewForcedRef = useRef(false);
   const hasFetchedRef = useRef(null);
 
@@ -200,22 +333,31 @@ const CustomizedEditor = () => {
 
   useEffect(() => {
     if (folder && v_id) {
-      const activeFolderVId =
-        currentBook?.folder_v_id ||
-        currentBook?.folder_id ||
-        location.state?.folder_v_id ||
-        (folder.startsWith('fol_') ? folder : null);
+      const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
+      // Debounce URL updates — avoids re-serialising location.state (SVG data) on every flip
+      const timer = setTimeout(() => {
+        const activeFolderVId =
+          currentBook?.folder_v_id ||
+          currentBook?.folder_id ||
+          location.state?.folder_v_id ||
+          (isFolId(folder) ? folder : null);
 
-      const targetFolderParam = activeFolderVId || folder;
-      const targetPath = targetPage > 0
-        ? `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}/${targetPage}`
-        : `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}`;
+        const rawTargetFolder = activeFolderVId || folder;
+        const targetFolderParam = (typeof rawTargetFolder === 'string' ? rawTargetFolder.replace(/^fol_/, '') : rawTargetFolder) || 'default';
+        const targetPath = targetPage > 0
+          ? `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}/${targetPage}`
+          : `/editor/customized_editor/${encodeURIComponent(targetFolderParam)}/${v_id}`;
 
-      if (location.pathname !== targetPath) {
-        navigate(targetPath, { replace: true, state: location.state });
-      }
+        if (window.location.pathname !== targetPath) {
+          window.history.replaceState(window.history.state, '', targetPath);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [targetPage, folder, v_id, currentBook?.folder_v_id, currentBook?.folder_id, navigate, location.pathname, location.state]);
+    // navigate and location are stable refs — intentionally excluded to prevent
+    // re-serialising location.state (SVG data) on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetPage, folder, v_id, currentBook?.folder_v_id, currentBook?.folder_id]);
 
   // Global flipbook name sync
   useEffect(() => {
@@ -358,7 +500,9 @@ const CustomizedEditor = () => {
     isAutoSaveEnabled,
     isLoading,
     initialLoadRef,
-    handleSaveRef
+    handleSaveRef,
+    setIsSaving,
+    triggerSaveSuccess
   });
 
   // Real-time synchronization of current book to Navbar and ShareModal
@@ -640,6 +784,7 @@ const CustomizedEditor = () => {
             isLoading={isLoading}
             externalShowTOC={tocOpenTrigger}
             currentBook={currentBook}
+            v_id={v_id}
           />
         </div>
       </div>

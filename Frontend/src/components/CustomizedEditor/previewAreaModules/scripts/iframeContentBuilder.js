@@ -1,5 +1,6 @@
 import sanitizeHtmlForPreview from './sanitizeHtml';
 import { rewriteHtmlUploads } from '../../../../utils/assetUtils';
+import { getCachedRaster } from '../../../../utils/pageRasterCache';
 import getSlideshowScript from './slideshowScript';
 import getAnimationScript from './animationScript';
 import getInteractionScript from './interactionScript';
@@ -24,7 +25,8 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
     } else {
         rawCleanHtml = rawCleanHtml.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, '$1=$2/assets/');
     }
-    const cleanHtml = rewriteHtmlUploads(rawCleanHtml);
+    let cleanHtml = rewriteHtmlUploads(rawCleanHtml);
+
     // Extract and dynamically load Google Fonts found in the SVG
     const fontsToLoad = new Set();
     if (cleanHtml) {
@@ -268,12 +270,10 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                         margin: 0 !important;
                         padding: 0 !important;
                         display: block !important;
+                        pointer-events: none !important;
                     }
 
-                    /* Enable pointer events on map controls & embeds in preview */
-                    .map-root-container,
-                    .map-root-container iframe,
-                    .map-overlay-wrapper,
+                    /* Enable pointer events only on interactive action buttons and overlay cards */
                     .map-open-maps-btn,
                     .map-action-btn-circle,
                     .map-card-overlay,

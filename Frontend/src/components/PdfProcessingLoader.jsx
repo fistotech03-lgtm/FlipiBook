@@ -100,24 +100,24 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
             return 15;
         }
 
-        // Step 2: Extracting Pages -> 20% to 85% (Accurately scaled by extractedPages / totalPages)
+        // Step 2: Extracting Pages -> 15% to 90% (Gradually maps to full progress within batch extraction time)
         if (stage === 'converting') {
+            if (explicitPercent !== undefined && explicitPercent !== null && explicitPercent > 0) {
+                return Math.min(90, Math.max(15, Math.round(explicitPercent)));
+            }
             if (totalPagesCount > 0 && extractedPagesCount >= 0) {
                 const ratio = Math.min(1, Math.max(0, extractedPagesCount / totalPagesCount));
-                return Math.min(85, Math.round(20 + ratio * 65));
-            }
-            if (explicitPercent !== undefined && explicitPercent !== null) {
-                return Math.min(85, Math.max(20, Math.round(20 + (explicitPercent / 100) * 65)));
+                return Math.min(90, Math.round(15 + ratio * 75));
             }
             return 50;
         }
 
-        // Step 3: Processing & Saving -> 85% to 99% (Smooth, never freezes at 98%, 100% when stage === 'done')
+        // Step 3: Processing & Saving -> 90% to 98% (Smooth, never freezes at 98%, 100% when stage === 'done')
         if (stage === 'saving') {
-            if (explicitPercent !== undefined && explicitPercent !== null) {
-                return Math.min(99, Math.max(85, Math.round(85 + (explicitPercent / 100) * 14)));
+            if (explicitPercent !== undefined && explicitPercent !== null && explicitPercent > 0) {
+                return Math.min(98, Math.max(90, Math.round(explicitPercent)));
             }
-            return 92;
+            return 94;
         }
 
         // Fallback default
@@ -131,13 +131,13 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
     const highestPercentRef = useRef(0);
     const prevFileRef = useRef(fileName);
 
-    // Reset watermark only when a completely new file begins
+    // Reset watermark only when a completely new upload begins in uploading stage
     useEffect(() => {
-        if (fileName && fileName !== prevFileRef.current) {
+        if (stage === 'uploading' && fileName && fileName !== prevFileRef.current) {
             prevFileRef.current = fileName;
             highestPercentRef.current = 0;
         }
-    }, [fileName]);
+    }, [fileName, stage]);
 
     // Fluid continuous percentage state
     const [fluidPercent, setFluidPercent] = useState(() => {
@@ -172,7 +172,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
         const interval = setInterval(() => {
             setFluidPercent(prev => {
                 if (prev >= 99) return prev;
-                const ceiling = stage === 'uploading' ? 20 : stage === 'converting' ? 85 : 99;
+                const ceiling = stage === 'uploading' ? 20 : stage === 'converting' ? 90 : 98;
                 if (prev >= ceiling) return prev;
 
                 const increment = stage === 'uploading' ? 0.4 : stage === 'converting' ? 0.3 : 0.2;
@@ -190,9 +190,9 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
         ? 100 
         : Math.min(99, Math.max(0, Math.round(fluidPercent)));
 
-    // Smooth physics-based spring interpolation for percentage & circle stroke
+    // Smooth physics-based spring interpolation for percentage & circle stroke (responsive & silky smooth)
     const progressMotion = useMotionValue(displayPercent);
-    const smoothProgress = useSpring(progressMotion, { stiffness: 45, damping: 15, mass: 0.7 });
+    const smoothProgress = useSpring(progressMotion, { stiffness: 95, damping: 18, mass: 0.3 });
     const strokeDashoffset = useTransform(smoothProgress, [0, 100], [276.46, 0]);
 
     const [animatedDisplayPercent, setAnimatedDisplayPercent] = useState(displayPercent);
@@ -207,6 +207,22 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
         });
         return () => unsubscribe();
     }, [smoothProgress, isDone]);
+
+    // Extracted pages count displayed in badge (strictly in lockstep with the visible circle percentage)
+    const displayedPagesCount = useMemo(() => {
+        if (!totalPagesCount || totalPagesCount <= 0) return 0;
+        if (isDone || stage === 'done' || stage === 'saving') {
+            return totalPagesCount;
+        }
+        if (stage === 'uploading') {
+            return 0;
+        }
+        // In converting stage: strictly synchronized with the circular animated percentage
+        // When circle is 15%, count is 1. When circle is 84%, count is 84. When circle hits 90%, count is 100.
+        const conversionRatio = Math.min(1, Math.max(0, (animatedDisplayPercent - 15) / 75));
+        const computedCount = Math.round(conversionRatio * totalPagesCount);
+        return Math.min(totalPagesCount, Math.max(1, computedCount));
+    }, [totalPagesCount, isDone, stage, animatedDisplayPercent]);
 
     // Derive active step (1: Uploading, 2: Extracting, 3: Processing, 4: Complete, 5: All Finished)
     const activeStep = useMemo(() => {
@@ -250,18 +266,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
             >
                 {/* Ambient Decorative Background Glows with breathing animation */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-                    <style>{`
-                        @keyframes infiniteStepSpin {
-                            0% { transform: rotate(0deg); }
-                            100% { transform: rotate(360deg); }
-                        }
-                        .infinite-step-spinner {
-                            animation: infiniteStepSpin 0.75s linear infinite !important;
-                            will-change: transform;
-                            transform: translateZ(0);
-                            transform-origin: center center;
-                        }
-                    `}</style>
+
                     {/* Top-Right Soft Lavender Glow */}
                     <motion.div 
                         className="absolute -top-[10vw] -right-[10vw] w-[40vw] h-[40vw] rounded-full bg-gradient-to-br from-indigo-100/60 to-purple-100/40 blur-[7vw]"
@@ -470,48 +475,19 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                             isCompleted
                                                 ? 'bg-[#3B82F6] text-white shadow-blue-200'
                                                 : isActive
-                                                ? 'bg-white border-[0.15vw] border-[#4F46E5] text-[#4F46E5] ring-[0.25vw] ring-indigo-50 shadow-indigo-100'
+                                                ? 'bg-white border-[0.16vw] border-[#4F46E5] text-[#4F46E5] ring-[0.25vw] ring-indigo-50 shadow-indigo-100'
                                                 : 'bg-[#F1F5F9] border border-[#E2E8F0] text-[#94A3B8]'
                                         }`}
                                     >
-                                        <AnimatePresence>
-                                            {isCompleted ? (
-                                                <motion.div
-                                                    key="completed"
-                                                    initial={{ scale: 0, rotate: -40, opacity: 0 }}
-                                                    animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                                                    exit={{ scale: 0, opacity: 0 }}
-                                                    transition={{ type: 'spring', stiffness: 400, damping: 24 }}
-                                                >
-                                                    <Check className="w-[1vw] h-[1vw] stroke-[3]" />
-                                                </motion.div>
-                                            ) : isActive ? (
-                                                <svg
-                                                    key="active"
-                                                    className="w-[1.15vw] h-[1.15vw] text-[#4F46E5] infinite-step-spinner"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                >
-                                                    <circle
-                                                        cx="12"
-                                                        cy="12"
-                                                        r="8.5"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2.8"
-                                                        strokeLinecap="round"
-                                                        strokeDasharray="53.4"
-                                                        strokeDashoffset="34"
-                                                    />
-                                                </svg>
-                                            ) : (
-                                                <span
-                                                    key="pending"
-                                                    className="text-[0.78vw] font-semibold"
-                                                >
-                                                    {step.id}
-                                                </span>
-                                            )}
-                                        </AnimatePresence>
+                                        {isCompleted ? (
+                                            <Check className="w-[1.05vw] h-[1.05vw] text-white stroke-[3]" />
+                                        ) : isActive ? (
+                                            <Loader2 className="w-[1.15vw] h-[1.15vw] text-[#4F46E5] animate-spin" />
+                                        ) : (
+                                            <span className="text-[0.78vw] font-bold text-[#64748B] select-none">
+                                                {step.id}
+                                            </span>
+                                        )}
                                     </div>
 
                                     {/* Step Title with Extract Count beside Point 2 */}
@@ -535,7 +511,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
                                                 {isActive && (
                                                     <span className="w-[0.35vw] h-[0.35vw] rounded-full bg-[#4F46E5] animate-pulse" />
                                                 )}
-                                                <span>{extractedPagesCount}/{totalPagesCount}</span>
+                                                <span>{displayedPagesCount}/{totalPagesCount}</span>
                                             </motion.span>
                                         )}
                                     </div>

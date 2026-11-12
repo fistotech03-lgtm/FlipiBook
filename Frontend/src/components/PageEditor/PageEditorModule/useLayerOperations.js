@@ -4,6 +4,7 @@
  * visibility, locking, renaming, z-index ordering (bringToFront, sendToBack, moveForward, moveBackward),
  * hierarchical reordering, delete, copy, cut, paste, and duplicate.
  */
+import { safeSerializeSvg } from '../utils/editorUtils';
 
 export const useLayerOperations = ({
   pages,
@@ -72,8 +73,8 @@ export const useLayerOperations = ({
       };
 
       const newLayers = processLayers(page.layers);
-      const serializer = new XMLSerializer();
-      updated[pageIndex] = { ...page, layers: newLayers, html: serializer.serializeToString(doc.documentElement) };
+      const newHtml = safeSerializeSvg(doc) || page.html;
+      updated[pageIndex] = { ...page, layers: newLayers, html: newHtml };
       return updated;
     });
   };
@@ -112,8 +113,8 @@ export const useLayerOperations = ({
       };
 
       const newLayers = processLayers(page.layers);
-      const serializer = new XMLSerializer();
-      updated[pageIndex] = { ...page, layers: newLayers, html: serializer.serializeToString(doc.documentElement) };
+      const newHtml = safeSerializeSvg(doc) || page.html;
+      updated[pageIndex] = { ...page, layers: newLayers, html: newHtml };
       return updated;
     });
   };
@@ -146,8 +147,7 @@ export const useLayerOperations = ({
         element.setAttribute('data-name', newName);
       }
 
-      const serializer = new XMLSerializer();
-      const newHtml = serializer.serializeToString(doc.documentElement);
+      const newHtml = safeSerializeSvg(doc) || page.html;
 
       updated[pageIndex] = {
         ...page,
@@ -187,8 +187,8 @@ export const useLayerOperations = ({
       };
 
       processList(newLayers);
-      const serializer = new XMLSerializer();
-      updated[pageIndex] = { ...page, layers: newLayers, html: serializer.serializeToString(doc.documentElement) };
+      const newHtml = safeSerializeSvg(doc) || page.html;
+      updated[pageIndex] = { ...page, layers: newLayers, html: newHtml };
       return updated;
     });
   };
@@ -231,8 +231,8 @@ export const useLayerOperations = ({
       };
 
       processList(newLayers);
-      const serializer = new XMLSerializer();
-      updated[pageIndex] = { ...page, layers: newLayers, html: serializer.serializeToString(doc.documentElement) };
+      const newHtml = safeSerializeSvg(doc) || page.html;
+      updated[pageIndex] = { ...page, layers: newLayers, html: newHtml };
       return updated;
     });
   };
@@ -265,8 +265,8 @@ export const useLayerOperations = ({
       };
 
       processList(newLayers);
-      const serializer = new XMLSerializer();
-      updated[pageIndex] = { ...page, layers: newLayers, html: serializer.serializeToString(doc.documentElement) };
+      const newHtml = safeSerializeSvg(doc) || page.html;
+      updated[pageIndex] = { ...page, layers: newLayers, html: newHtml };
       return updated;
     });
   };
@@ -304,8 +304,8 @@ export const useLayerOperations = ({
       };
 
       processList(newLayers);
-      const serializer = new XMLSerializer();
-      updated[pageIndex] = { ...page, layers: newLayers, html: serializer.serializeToString(doc.documentElement) };
+      const newHtml = safeSerializeSvg(doc) || page.html;
+      updated[pageIndex] = { ...page, layers: newLayers, html: newHtml };
       return updated;
     });
   };
@@ -371,8 +371,7 @@ export const useLayerOperations = ({
         targetEl.parentNode.insertBefore(sourceEl, targetEl.nextSibling);
       }
 
-      const serializer = new XMLSerializer();
-      const newHtml = serializer.serializeToString(doc.documentElement);
+      const newHtml = safeSerializeSvg(doc) || page.html;
 
       updated[pageIndex] = { ...page, layers: newLayers, html: newHtml };
       return updated;
@@ -420,8 +419,7 @@ export const useLayerOperations = ({
       const newLayers = JSON.parse(JSON.stringify(targetPage.layers));
       deleteFromLayers(newLayers);
 
-      const serializer = new XMLSerializer();
-      const newHtml = serializer.serializeToString(doc.documentElement);
+      const newHtml = safeSerializeSvg(doc) || page.html;
 
       updated[pageIndex] = { ...targetPage, layers: newLayers, html: newHtml };
       return updated;
@@ -755,8 +753,8 @@ export const useLayerOperations = ({
         }
       });
 
-      const serializer = new XMLSerializer();
-      updated[pageIndex] = { ...page, layers: newLayers, html: serializer.serializeToString(doc.documentElement) };
+      const newHtml = safeSerializeSvg(doc) || page.html;
+      updated[pageIndex] = { ...page, layers: newLayers, html: newHtml };
       return updated;
     });
 

@@ -12,6 +12,7 @@ import {
   TYPE_CURSOR,
   svgGlobalStyles
 } from '../utils/constants';
+import { normalizeForeignObjectNamespaces, healTableElementNode } from '../../LeftActionMenu/Elements/utils/tableElementUtils';
 
 export const CanvasViewport = ({
   zoomContainerRef,
@@ -49,6 +50,9 @@ export const CanvasViewport = ({
 
   const getHtmlToRender = (index, currentHtml) => {
     let clean = currentHtml || '';
+
+    // Auto-heal any corrupted asset URLs with trailing base64 garbage
+    clean = clean.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[A-Za-z0-9_.-]+)(?:[\s/]+[A-Za-z0-9+/=_%-]+)+(?=["'])/g, "$1");
 
     // Auto-fix for corrupted templates: strip out the pink XML parsererror and any baked-in custom controls
     if (clean.includes('parsererror') || clean.includes('id="custom-ctrl-')) {
@@ -100,6 +104,9 @@ export const CanvasViewport = ({
       clean = clean.replace(/(<rect\b[^>]*\bclass="[^"]*audio-fill-layer[^"]*"[^>]*)data-shape-type="[^"]*"/gi, '$1');
     }
 
+    // Auto-heal: Ensure foreignObjects retain explicit XHTML namespace so HTML elements render
+    clean = normalizeForeignObjectNamespaces(clean);
+
     if (isEditingTextRef?.current && lastRenderedHtmlRef.current[index]) {
       return lastRenderedHtmlRef.current[index];
     }
@@ -149,7 +156,28 @@ export const CanvasViewport = ({
                         const isTypeActive = activeMainTool === 'type';
 
                         const pageHtml = pages[displayIndex]?.html;
-                        const isPageEmpty = !pages[displayIndex]?.isHidden && (!pageHtml || (pages[displayIndex]?.layers?.length === 1 && (!pages[displayIndex].layers[0].children || pages[displayIndex].layers[0].children.length === 0)));
+                        const pageLayers = pages[displayIndex]?.layers || [];
+                        const hasLayerElements = pageLayers.some(
+                          (layer) =>
+                            (Array.isArray(layer.children) && layer.children.length > 0) ||
+                            (layer.type !== 'g' && layer.type !== 'frame')
+                        );
+                        const hasHtmlElements = (() => {
+                          if (!pageHtml) return false;
+                          const cleanHtml = pageHtml
+                            .replace(/<defs[\s\S]*?<\/defs>/gi, '')
+                            .replace(/<style[\s\S]*?<\/style>/gi, '')
+                            .replace(/<rect\b[^>]*data-name=["\']Overlay["\'][^>]*\/>/gi, '')
+                            .replace(/<rect\b[^>]*data-name=["\']Overlay["\'][^>]*>[\s\S]*?<\/rect>/gi, '')
+                            .replace(/<rect\b[^>]*data-type=["\']background["\'][^>]*\/>/gi, '')
+                            .replace(/<rect\b[^>]*data-type=["\']background["\'][^>]*>[\s\S]*?<\/rect>/gi, '');
+                          return /<(path|image|text|foreignobject|circle|ellipse|polygon|polyline|use|video)\b/i.test(cleanHtml);
+                        })();
+
+                        const isPageEmpty =
+                          !pages[displayIndex]?.isHidden &&
+                          !hasHtmlElements &&
+                          (!pageHtml || (!hasLayerElements && pageLayers.length <= 1));
 
                         return (
                           <div
@@ -188,6 +216,10 @@ export const CanvasViewport = ({
                                         });
                                         el.querySelectorAll?.('rect.audio-fill-layer[data-shape-type]').forEach(rectEl => {
                                           rectEl.removeAttribute('data-shape-type');
+                                        });
+                                        // Auto-heal Table elements: restore inner table structure if missing or corrupted
+                                        el.querySelectorAll?.('[data-type="table-frame"], g[id^="table-"]').forEach(tblG => {
+                                          healTableElementNode(tblG);
                                         });
                                       } else {
                                         const parser = new DOMParser();

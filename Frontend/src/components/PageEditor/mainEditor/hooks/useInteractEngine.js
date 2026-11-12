@@ -20,6 +20,7 @@ import {
   clearSmartGuides
 } from '../utils/smartGuides';
 import { convertTextToForeignObject } from '../utils/textConversionUtils';
+import { isPageRootElement as fallbackIsPageRootElement } from '../utils/frameHierarchyUtils';
 
 /**
  * Custom hook encapsulating the Interact.js pointer drag and resize engine
@@ -57,6 +58,8 @@ export const useInteractEngine = ({
   useEffect(() => {
     localTrimViewRef.current = localTrimView;
   }, [localTrimView]);
+
+  const isPageRoot = typeof isPageRootElement === 'function' ? isPageRootElement : fallbackIsPageRootElement;
 
   const safeRectChecker = (element) => {
     if (element && typeof element.getBoundingClientRect === 'function') {
@@ -98,7 +101,7 @@ export const useInteractEngine = ({
       .styleCursor(false) // Prevents interact.js from dynamically setting cursors on hover
       .rectChecker(safeRectChecker)
       .draggable({
-        ignoreFrom: '.resize-handle, .text-edit-box, [data-editing="true"]',
+        ignoreFrom: '.resize-handle, .text-edit-box, [data-editing="true"], .table-cell-selection-overlay, .swiper-button-prev, .swiper-button-prev *, .swiper-button-next, .swiper-button-next *, .swiper-pagination, .swiper-pagination *, .swiper-pagination-bullet, [data-slideshow-nav], [data-slideshow-nav] *',
         cursorChecker: () => null, // Second layer of prevention just in case
         inertia: false, // Disable inertia for perfect cursor sync
         autoScroll: true,
@@ -113,13 +116,18 @@ export const useInteractEngine = ({
             if (!svgElement) return;
 
             const isEditing = target.closest('[data-editing="true"]') || (document.activeElement && document.activeElement.getAttribute('contenteditable') === 'true');
+            const tableParent = target.closest('[data-type="table-frame"], [data-type="table"], g[id^="table-"]');
+            const isTableSelected = tableParent && tableParent.getAttribute('data-table-selected') === 'true';
+            const hitCellWhileSelected = Boolean(isTableSelected && target.closest('td, th, .table-cell-selection-overlay'));
+            const isTableCellEditing = tableParent && tableParent.getAttribute('data-table-mode') === 'cell-edit';
+            const isResizingDivider = Boolean(window.__isResizingTableDivider) || Boolean(window.__isHoveringTableDivider);
             // If adjusting shape image mask/crop, stop interact.js drag so user can pan the inner image
             if (window.__isAdjustingShapeImage || document.body.classList.contains("shape-adjust-active")) {
               safeStopInteraction(event.interaction);
               return;
             }
-            // If Ctrl is held, not in selection mode, or node edit mode is active, stop interact.js drag
-            if (!['select', 'upload'].includes(activeMainToolRef.current) || isEditing || event.ctrlKey || nodeEditModeRef.current) {
+            // If Ctrl is held, not in selection mode, node edit mode is active, table is in cell-edit mode, hit a table cell while selected, or resizing divider, stop interact.js drag
+            if (!['select', 'upload'].includes(activeMainToolRef.current) || isEditing || isTableCellEditing || hitCellWhileSelected || isResizingDivider || event.ctrlKey || nodeEditModeRef.current) {
               safeStopInteraction(event.interaction);
               return;
             }
@@ -375,6 +383,34 @@ export const useInteractEngine = ({
               elementToDrag = compoundParent;
             }
 
+            // If dragging a table, immediately clear any cell selection highlight and stop it from returning
+            const isTableElem = elementToDrag?.getAttribute?.('data-type') === 'table-frame' || (elementToDrag?.id && elementToDrag.id.startsWith('table-'));
+            if (isTableElem) {
+              window.dispatchEvent(new CustomEvent('clear-table-cell-selection', { detail: { elementId: elementToDrag.id } }));
+              const table = elementToDrag.querySelector('table');
+              if (table) {
+                const normalBorder = elementToDrag.getAttribute('data-border-color') || '#cbd5e1';
+                table.querySelectorAll('[data-neighbor-highlighted]').forEach(td => {
+                  td.removeAttribute('data-neighbor-highlighted');
+                  td.style.removeProperty('border-top-color');
+                  td.style.removeProperty('border-bottom-color');
+                  td.style.removeProperty('border-left-color');
+                  td.style.removeProperty('border-right-color');
+                  td.style.borderColor = td.getAttribute('data-cell-border-color') || normalBorder;
+                });
+                table.querySelectorAll('td[data-cell-selected], th[data-cell-selected]').forEach(td => {
+                  td.removeAttribute('data-cell-selected');
+                  td.style.removeProperty('box-shadow');
+                  td.style.borderColor = td.getAttribute('data-cell-border-color') || normalBorder;
+                });
+                elementToDrag.querySelectorAll('.table-cell-selection-overlay').forEach(n => n.remove());
+                table.style.removeProperty('border-top-color');
+                table.style.removeProperty('border-bottom-color');
+                table.style.removeProperty('border-left-color');
+                table.style.removeProperty('border-right-color');
+              }
+            }
+
             // Safety check for metadata-based 'locked' or 'hidden'
             if (!elementToDrag ||
               elementToDrag.getAttribute('data-hidden') === 'true' ||
@@ -419,19 +455,19 @@ export const useInteractEngine = ({
               (multiSelectedIdsRef.current && multiSelectedIdsRef.current.has(elementToDrag.id));
 
             if (isMultiKey) {
-              if (isPageRootElement(elementToDrag, svgElement)) {
+              if (isPageRoot(elementToDrag, svgElement)) {
                 return;
               }
               const nextSet = new Set(multiSelectedIdsRef.current);
               const primaryId = selectedLayerIdRef.current;
               const primaryEl = primaryId ? svgElement.querySelector(`[id="${primaryId}"]`) : null;
-              if (primaryId && !isPageRootElement(primaryEl, svgElement)) {
+              if (primaryId && !isPageRoot(primaryEl, svgElement)) {
                 nextSet.add(primaryId);
               }
               // Purge any root elements
               for (const id of Array.from(nextSet)) {
                 const el = svgElement.querySelector(`[id="${id}"]`);
-                if (isPageRootElement(el, svgElement)) {
+                if (isPageRoot(el, svgElement)) {
                   nextSet.delete(id);
                 }
               }
@@ -451,7 +487,7 @@ export const useInteractEngine = ({
               });
             } else if (!isSelected) {
               // Force update refs immediately so drag logic sees the selection
-              const isRoot = isPageRootElement(elementToDrag, svgElement);
+              const isRoot = isPageRoot(elementToDrag, svgElement);
               selectedLayerIdRef.current = elementToDrag.id;
               const nextMulti = isRoot ? new Set() : new Set([elementToDrag.id]);
               multiSelectedIdsRef.current = nextMulti;
@@ -582,6 +618,19 @@ export const useInteractEngine = ({
                 }
               } else {
                 dragState.element.setAttribute('data-dragging', 'true');
+                if (dragState.element?.getAttribute('data-type') === 'table-frame' || dragState.element?.id?.startsWith('table-')) {
+                  const bColor = dragState.element.getAttribute('data-border-color') || '#cbd5e1';
+                  dragState.element.querySelectorAll('td[data-cell-selected], th[data-cell-selected]').forEach(td => {
+                    td.removeAttribute('data-cell-selected');
+                    td.style.removeProperty('outline');
+                    td.style.removeProperty('outline-offset');
+                    td.style.removeProperty('box-shadow');
+                    td.style.removeProperty('position');
+                    td.style.removeProperty('z-index');
+                    td.style.borderColor = td.getAttribute('data-cell-border-color') || bColor;
+                  });
+                  dragState.element.querySelectorAll('rect.svg-table-overlay, rect.svg-image-stroke-overlay, rect.table-fill-layer, .table-cell-selection-overlay').forEach(r => r.remove());
+                }
               }
 
               // Purge lingering ghost selection boxes for other elements across all overlay layers
@@ -838,6 +887,10 @@ export const useInteractEngine = ({
               if (dragState.element) {
                 dragState.element.removeAttribute('data-dragging');
                 delete dragState.element._dragLocalBBox;
+                if (dragState.element?.getAttribute('data-type') === 'table-frame' || dragState.element?.id?.startsWith('table-')) {
+                  window.__lastTableDragEndTime = Date.now();
+                  dragState.element.__lastTableDragEndTime = Date.now();
+                }
               }
               delete event.interaction.dragState;
               return;
@@ -867,6 +920,10 @@ export const useInteractEngine = ({
               if (dragState.element) {
                 dragState.element.removeAttribute('data-dragging');
                 delete dragState.element._dragLocalBBox;
+                if (dragState.element?.getAttribute('data-type') === 'table-frame' || dragState.element?.id?.startsWith('table-')) {
+                  window.__lastTableDragEndTime = Date.now();
+                  dragState.element.__lastTableDragEndTime = Date.now();
+                }
               }
               if (dragState.multiDragItems) {
                 dragState.multiDragItems.forEach(item => {
@@ -2193,6 +2250,122 @@ export const useInteractEngine = ({
                           }
                         }
 
+                        if (tag === 'foreignobject') {
+                          const tableInside = child.querySelector('table');
+                          const isTable = (el.getAttribute?.('data-type') === 'table-frame') || (el.id && el.id.startsWith('table-')) || Boolean(tableInside);
+                          if (isTable && tableInside) {
+                            const trs = tableInside.querySelectorAll('tr');
+                            const rowCount = trs.length || 1;
+                            const colCount = trs[0]?.children?.length || 1;
+
+                            // Ensure cells never have inline heights so rows scale cleanly
+                            tableInside.querySelectorAll('td, th').forEach(cell => {
+                              cell.style.removeProperty('height');
+                            });
+
+                            // Self-heal: if row 0 became blown up (>= 70% with multiple rows), reset all rows to equal percentages
+                            const r0H = parseFloat(trs[0]?.style?.height) || 0;
+                            if (r0H >= 70 && rowCount > 1) {
+                              const eqPct = (100 / rowCount).toFixed(3);
+                              trs.forEach(tr => {
+                                tr.style.height = `${eqPct}%`;
+                                tr.style.boxSizing = 'border-box';
+                              });
+                            }
+
+                            // Corner resize: scale font-size and padding proportionally
+                            const isCorner = ['nw', 'ne', 'sw', 'se'].includes(dir);
+                            if (isCorner) {
+                              const origW = state.bbox?.width || 300;
+                              const origH = state.bbox?.height || 150;
+                              const scale = Math.max(0.4, Math.min(imgW / origW, imgH / origH));
+                              if (!state.initialTableFontSize) {
+                                state.initialTableFontSize = parseFloat(el.getAttribute('data-font-size') || tableInside.style.fontSize) || 13;
+                              }
+                              const newFs = Math.max(8, Math.round(state.initialTableFontSize * scale));
+                              tableInside.style.fontSize = `${newFs}pt`;
+                              el.setAttribute('data-font-size', String(newFs));
+
+                              if (!state.initialTablePadY) {
+                                state.initialTablePadY = parseFloat(el.getAttribute('data-padding-y')) || 6;
+                              }
+                              const newPadY = Math.max(2, Math.round(state.initialTablePadY * scale));
+                              trs.forEach(r => {
+                                Array.from(r.children).forEach(c => {
+                                  c.style.paddingTop = `${newPadY}px`;
+                                  c.style.paddingBottom = `${newPadY}px`;
+                                });
+                              });
+
+                              // Real-time dispatch to update properties panel
+                              window.dispatchEvent(new CustomEvent('table-properties-sync', {
+                                detail: { elementId: el.id, fontSize: newFs, paddingY: newPadY }
+                              }));
+                            }
+
+                            // Measure per-row minimum content height so no row can compress below its cell content
+                            const currentFs = parseFloat(tableInside.style.fontSize) || parseFloat(el.getAttribute('data-font-size')) || 13;
+                            const fsPx = Math.round(currentFs * 1.333);
+                            const padY = parseFloat(el.getAttribute('data-padding-y')) || 6;
+                            const bWidth = parseFloat(el.getAttribute('data-border-width')) || 1;
+                            const baseRowMinH = Math.max(24, fsPx + (padY * 2) + Math.ceil(bWidth * 2));
+
+                            let minTotalTableHeight = 0;
+                            trs.forEach(tr => {
+                              let rowMinH = baseRowMinH;
+                              Array.from(tr.children).forEach(cell => {
+                                const text = (cell.textContent || '').trim();
+                                if (text) {
+                                  const sH = cell.scrollHeight || 0;
+                                  if (sH > rowMinH) rowMinH = sH;
+                                }
+                              });
+                              minTotalTableHeight += rowMinH;
+                            });
+                            const minTableH = Math.max(minTotalTableHeight, rowCount * baseRowMinH);
+
+                            // Measure per-column minimum content width so no column can compress below its cell content
+                            const padX = parseFloat(el.getAttribute('data-padding-x')) || 8;
+                            const baseColMinW = Math.max(28, (padX * 2) + 12);
+                            let minTotalTableWidth = 0;
+                            for (let c = 0; c < colCount; c++) {
+                              let colMinW = baseColMinW;
+                              trs.forEach(tr => {
+                                const cell = tr.children[c];
+                                if (cell) {
+                                  const textLen = (cell.textContent || '').trim().length;
+                                  if (textLen > 0) {
+                                    colMinW = Math.max(colMinW, Math.min(cell.scrollWidth || 0, 300), (padX * 2) + Math.min(textLen * 8, 80));
+                                  }
+                                }
+                              });
+                              minTotalTableWidth += colMinW;
+                            }
+                            const minTableW = Math.max(minTotalTableWidth, colCount * baseColMinW, 80);
+
+                            if (imgH < minTableH) {
+                              if (dir === 'n' || dir === 'nw' || dir === 'ne') {
+                                imgY = imgY + (imgH - minTableH);
+                              }
+                              imgH = minTableH;
+                            }
+
+                            if (imgW < minTableW) {
+                              if (dir === 'w' || dir === 'nw' || dir === 'sw') {
+                                imgX = imgX + (imgW - minTableW);
+                              }
+                              imgW = minTableW;
+                            }
+
+                            const wrapper = child.querySelector('.table-card-wrapper');
+                            if (wrapper) {
+                              wrapper.style.overflow = 'visible';
+                              wrapper.style.width = '100%';
+                              wrapper.style.height = '100%';
+                            }
+                          }
+                        }
+
                         child.setAttribute('x', imgX);
                         child.setAttribute('y', imgY);
                         child.setAttribute('width', imgW);
@@ -2717,6 +2890,22 @@ export const useInteractEngine = ({
                 if (rectChild) {
                   const curRx = rectChild.child.getAttribute('rx');
                   if (curRx) rectChild.child.setAttribute('data-base-rx', curRx);
+                }
+                const isTable = state.el?.getAttribute?.('data-type') === 'table-frame' || (state.el?.id && state.el.id.startsWith('table-'));
+                if (isTable) {
+                  const fo = state.el.querySelector ? state.el.querySelector('foreignObject') : null;
+                  const tbl = fo ? fo.querySelector('table') : null;
+                  if (fo && tbl) {
+                    const scrollH = tbl.scrollHeight;
+                    const curH = parseFloat(fo.getAttribute('height') || '0');
+                    if (scrollH > curH) {
+                      fo.setAttribute('height', String(scrollH));
+                    }
+                    const curFs = parseInt(state.el.getAttribute('data-font-size') || '13', 10);
+                    window.dispatchEvent(new CustomEvent('table-properties-sync', {
+                      detail: { elementId: state.el.id, fontSize: curFs }
+                    }));
+                  }
                 }
               }
               if (updatePageHtmlRef.current) {

@@ -1,176 +1,140 @@
 /**
  * slideshowCatalog.jsx
- * Slideshow Presets Catalog for FlipiBook Elements Panel
- * Inspired by Slideshow Studio Pro Multi-Engine System
+ * Clean, Code-Generated Swiper.js Presets for FlipiBook Elements Panel
+ * Features ONLY the 5 official Swiper effects: Fade, Cube, Coverflow, Flip, Cards
+ * 100% vector SVG previews, zero external images
  */
 import React from 'react';
 import {
   createSlideshowElementNode,
-  getFilmstripSvg,
-  get3DStackSvg,
-  get3DCoverflowSvg,
-  getFadeshowSvg,
-  getInfiniteCarouselSvg,
-  getMonochromeMinimalSvg,
-  getFlatGallerySvg
+  getBannerSliderSvg,
+  SLIDESHOW_PRESET_CONFIGS
 } from '../utils/slideshowElementUtils';
 
 export const SLIDESHOW_ITEMS = [
   {
-    id: 'slideshow-card-filmstrip',
-    name: 'Card Filmstrip',
+    id: 'slideshow-fade',
+    name: 'Effect Fade',
+    category: 'slideshow',
+    type: 'slideshow',
+    renderPreview: () => (
+      <div className="w-full h-full flex items-center justify-center p-[0.15vw] pointer-events-none select-none">
+        <div className="w-full h-[88%] rounded-[0.35vw] bg-amber-50/70 border border-amber-100 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 shadow-2xs">
+          <svg viewBox="0 0 60 40" className="w-[85%] h-[85%] object-contain" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="3" width="56" height="34" rx="3" stroke="#f59e0b" strokeWidth="1.2" fill="#fffbeb" />
+            <rect x="6" y="6" width="48" height="26" rx="2.5" fill="#fde68a" stroke="#f59e0b" strokeWidth="0.8" />
+            <rect x="10" y="8" width="40" height="22" rx="2" fill="#f59e0b" fillOpacity="0.85" />
+            <circle cx="30" cy="18" r="4" fill="#ffffff" fillOpacity="0.75" />
+            <rect x="23" y="33.5" width="8" height="1.8" rx="0.9" fill="#f59e0b" />
+            <circle cx="34" cy="34.4" r="0.9" fill="#fcd34d" />
+            <circle cx="37" cy="34.4" r="0.9" fill="#fcd34d" />
+          </svg>
+        </div>
+      </div>
+    ),
+    insert: (cx, cy) => createSlideshowElementNode('fade', cx, cy),
+    getSvgString: (isDrag) => getBannerSliderSvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"', SLIDESHOW_PRESET_CONFIGS.fade)
+  },
+  {
+    id: 'slideshow-cube',
+    name: 'Effect Cube',
+    category: 'slideshow',
+    type: 'slideshow',
+    renderPreview: () => (
+      <div className="w-full h-full flex items-center justify-center p-[0.15vw] pointer-events-none select-none">
+        <div className="w-full h-[88%] rounded-[0.35vw] bg-emerald-50/70 border border-emerald-100 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 shadow-2xs">
+          <svg viewBox="0 0 60 40" className="w-[85%] h-[85%] object-contain" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="3" width="56" height="34" rx="3" stroke="#10b981" strokeWidth="1.2" fill="#ecfdf5" />
+            {/* 3D Cube Faces */}
+            <path d="M30 7L46 13L30 19L14 13Z" fill="#6ee7b7" stroke="#059669" strokeWidth="0.8" />
+            <path d="M14 13L30 19V31L14 25Z" fill="#10b981" stroke="#059669" strokeWidth="0.8" />
+            <path d="M30 19L46 13V25L30 31Z" fill="#047857" stroke="#059669" strokeWidth="0.8" />
+            <path d="M10 20C8 23 9 27 13 29" stroke="#10b981" strokeWidth="1" strokeLinecap="round" />
+            <path d="M50 20C52 23 51 27 47 29" stroke="#10b981" strokeWidth="1" strokeLinecap="round" />
+          </svg>
+        </div>
+      </div>
+    ),
+    insert: (cx, cy) => createSlideshowElementNode('cube', cx, cy),
+    getSvgString: (isDrag) => getBannerSliderSvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"', SLIDESHOW_PRESET_CONFIGS.cube)
+  },
+  {
+    id: 'slideshow-coverflow',
+    name: 'Effect Coverflow',
     category: 'slideshow',
     type: 'slideshow',
     renderPreview: () => (
       <div className="w-full h-full flex items-center justify-center p-[0.15vw] pointer-events-none select-none">
         <div className="w-full h-[88%] rounded-[0.35vw] bg-blue-50/70 border border-blue-100 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 shadow-2xs">
           <svg viewBox="0 0 60 40" className="w-[85%] h-[85%] object-contain" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="8" width="12" height="22" rx="2" stroke="#3b82f6" strokeWidth="1" strokeOpacity="0.5" fill="#eff6ff" opacity="0.7" />
-            <rect x="46" y="8" width="12" height="22" rx="2" stroke="#3b82f6" strokeWidth="1" strokeOpacity="0.5" fill="#eff6ff" opacity="0.7" />
-            <rect x="16" y="3" width="28" height="28" rx="2.5" stroke="#3b82f6" strokeWidth="2" fill="white" />
-            <path d="M5 19L3 20L5 21" stroke="#3b82f6" strokeWidth="1" strokeLinecap="round" />
-            <path d="M55 19L57 20L55 21" stroke="#3b82f6" strokeWidth="1" strokeLinecap="round" />
-            <rect x="23" y="34" width="6" height="2" rx="1" fill="#3b82f6" />
-            <circle cx="33" cy="35" r="1" fill="#93c5fd" />
-            <circle cx="37" cy="35" r="1" fill="#93c5fd" />
-          </svg>
-        </div>
-      </div>
-    ),
-    insert: (cx, cy) => createSlideshowElementNode('filmstrip', cx, cy),
-    getSvgString: (isDrag) => getFilmstripSvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"')
-  },
-  {
-    id: 'slideshow-3d-stack',
-    name: '3D Pop-Out Stack',
-    category: 'slideshow',
-    type: 'slideshow',
-    renderPreview: () => (
-      <div className="w-full h-full flex items-center justify-center p-[0.15vw] pointer-events-none select-none">
-        <div className="w-full h-[88%] rounded-[0.35vw] bg-cyan-50/70 border border-cyan-100 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 shadow-2xs">
-          <svg viewBox="0 0 60 40" className="w-[85%] h-[85%] object-contain" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="5" y="7" width="20" height="25" rx="2" stroke="#06b6d4" strokeWidth="1" strokeOpacity="0.5" fill="#ecfeff" transform="skewY(4)" opacity="0.7" />
-            <rect x="35" y="7" width="20" height="25" rx="2" stroke="#06b6d4" strokeWidth="1" strokeOpacity="0.5" fill="#ecfeff" transform="skewY(-4)" opacity="0.7" />
-            <rect x="16" y="2" width="28" height="34" rx="3" stroke="#06b6d4" strokeWidth="2" fill="white" />
-            <circle cx="26" cy="31" r="1.2" fill="#06b6d4" />
-            <circle cx="30" cy="31" r="1" fill="#a5f3fc" />
-            <circle cx="34" cy="31" r="1" fill="#a5f3fc" />
-          </svg>
-        </div>
-      </div>
-    ),
-    insert: (cx, cy) => createSlideshowElementNode('stack', cx, cy),
-    getSvgString: (isDrag) => get3DStackSvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"')
-  },
-  {
-    id: 'slideshow-3d-coverflow',
-    name: '3D Coverflow',
-    category: 'slideshow',
-    type: 'slideshow',
-    renderPreview: () => (
-      <div className="w-full h-full flex items-center justify-center p-[0.15vw] pointer-events-none select-none">
-        <div className="w-full h-[88%] rounded-[0.35vw] bg-purple-50/60 border border-purple-100 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 shadow-2xs">
-          <svg viewBox="0 0 60 40" className="w-[85%] h-[85%] object-contain" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="8" width="20" height="24" rx="2" stroke="#a855f7" strokeWidth="1.5" fill="#faf5ff" opacity="0.7" />
-            <rect x="38" y="8" width="20" height="24" rx="2" stroke="#a855f7" strokeWidth="1.5" fill="#faf5ff" opacity="0.7" />
-            <rect x="15" y="2" width="30" height="36" rx="3" stroke="#a855f7" strokeWidth="2" fill="white" />
-            <path d="M22 20L25 17V23L22 20Z" fill="#a855f7" />
-            <path d="M38 20L35 17V23L38 20Z" fill="#a855f7" />
+            <rect x="2" y="3" width="56" height="34" rx="3" stroke="#3b82f6" strokeWidth="1.2" fill="#f8fafc" />
+            {/* Left Side Perspective Card */}
+            <rect x="6" y="8" width="16" height="22" rx="2" fill="#93c5fd" fillOpacity="0.5" stroke="#60a5fa" strokeWidth="0.8" />
+            {/* Right Side Perspective Card */}
+            <rect x="38" y="8" width="16" height="22" rx="2" fill="#93c5fd" fillOpacity="0.5" stroke="#60a5fa" strokeWidth="0.8" />
+            {/* Center Front Card */}
+            <rect x="18" y="6" width="24" height="26" rx="2.5" fill="#3b82f6" stroke="#1d4ed8" strokeWidth="1" />
+            <circle cx="30" cy="17" r="3" fill="#ffffff" fillOpacity="0.9" />
+            <path d="M24 23C24 20.5 27 19.5 30 19.5C33 19.5 36 20.5 36 23" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" />
+            <circle cx="8" cy="19" r="1.5" fill="#3b82f6" />
+            <circle cx="52" cy="19" r="1.5" fill="#3b82f6" />
+            <rect x="24" y="33" width="6" height="1.8" rx="0.9" fill="#3b82f6" />
+            <circle cx="33" cy="33.9" r="0.9" fill="#93c5fd" />
+            <circle cx="36" cy="33.9" r="0.9" fill="#93c5fd" />
           </svg>
         </div>
       </div>
     ),
     insert: (cx, cy) => createSlideshowElementNode('coverflow', cx, cy),
-    getSvgString: (isDrag) => get3DCoverflowSvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"')
+    getSvgString: (isDrag) => getBannerSliderSvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"', SLIDESHOW_PRESET_CONFIGS.coverflow)
   },
   {
-    id: 'slideshow-css-fadeshow',
-    name: 'CSS Fadeshow',
+    id: 'slideshow-flip',
+    name: 'Effect Flip',
     category: 'slideshow',
     type: 'slideshow',
     renderPreview: () => (
       <div className="w-full h-full flex items-center justify-center p-[0.15vw] pointer-events-none select-none">
-        <div className="w-full h-[88%] rounded-[0.35vw] bg-orange-50/70 border border-orange-100 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 shadow-2xs">
+        <div className="w-full h-[88%] rounded-[0.35vw] bg-pink-50/70 border border-pink-100 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 shadow-2xs">
           <svg viewBox="0 0 60 40" className="w-[85%] h-[85%] object-contain" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="4" y="3" width="52" height="34" rx="3" stroke="#f97316" strokeWidth="1.8" fill="white" />
-            <rect x="4" y="23" width="52" height="14" rx="1" fill="#ea580c" fillOpacity="0.12" />
-            <rect x="8" y="26" width="20" height="3" rx="1" fill="#f97316" />
-            <rect x="8" y="31" width="12" height="2" rx="0.5" fill="#fdba74" />
-            <circle cx="44" cy="32" r="1.2" fill="#f97316" />
-            <circle cx="48" cy="32" r="1" fill="#fdba74" />
-            <circle cx="52" cy="32" r="1" fill="#fdba74" />
+            <rect x="2" y="3" width="56" height="34" rx="3" stroke="#ec4899" strokeWidth="1.2" fill="#fdf2f8" />
+            {/* Flipping Card */}
+            <path d="M22 8L40 10L36 29L18 27Z" fill="#f472b6" stroke="#db2777" strokeWidth="0.9" />
+            <path d="M23 10L38 12L35 27L20 25Z" fill="#ec4899" />
+            <path d="M46 14C49 18 48 23 44 26" stroke="#ec4899" strokeWidth="1.3" strokeLinecap="round" strokeDasharray="2,2" />
+            <polygon points="43,26 46,28 46,24" fill="#ec4899" />
+            <circle cx="26" cy="33.5" r="1" fill="#ec4899" />
+            <circle cx="30" cy="33.5" r="1" fill="#fbcfe8" />
+            <circle cx="34" cy="33.5" r="1" fill="#fbcfe8" />
           </svg>
         </div>
       </div>
     ),
-    insert: (cx, cy) => createSlideshowElementNode('fade', cx, cy),
-    getSvgString: (isDrag) => getFadeshowSvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"')
+    insert: (cx, cy) => createSlideshowElementNode('flip', cx, cy),
+    getSvgString: (isDrag) => getBannerSliderSvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"', SLIDESHOW_PRESET_CONFIGS.flip)
   },
   {
-    id: 'slideshow-pure-infinite',
-    name: 'Infinite Carousel',
+    id: 'slideshow-cards',
+    name: 'Effect Cards',
     category: 'slideshow',
     type: 'slideshow',
     renderPreview: () => (
       <div className="w-full h-full flex items-center justify-center p-[0.15vw] pointer-events-none select-none">
-        <div className="w-full h-[88%] rounded-[0.35vw] bg-indigo-50/70 border border-indigo-100 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 shadow-2xs">
+        <div className="w-full h-[88%] rounded-[0.35vw] bg-purple-50/70 border border-purple-100 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 shadow-2xs">
           <svg viewBox="0 0 60 40" className="w-[85%] h-[85%] object-contain" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="7" width="16" height="26" rx="2" stroke="#818cf8" strokeWidth="1" strokeOpacity="0.6" fill="#e0e7ff" opacity="0.6" />
-            <rect x="42" y="7" width="16" height="26" rx="2" stroke="#818cf8" strokeWidth="1" strokeOpacity="0.6" fill="#e0e7ff" opacity="0.6" />
-            <rect x="18" y="3" width="24" height="34" rx="2.5" stroke="#6366f1" strokeWidth="2" fill="white" />
-            <path d="M10 37H50" stroke="#6366f1" strokeWidth="1" strokeDasharray="2,2" opacity="0.7" />
+            <rect x="2" y="3" width="56" height="34" rx="3" stroke="#8b5cf6" strokeWidth="1.2" fill="#faf5ff" />
+            <rect x="18" y="5" width="24" height="23" rx="2" fill="#ddd6fe" stroke="#c4b5fd" strokeWidth="0.8" />
+            <rect x="15" y="8" width="28" height="23" rx="2.5" fill="#a78bfa" stroke="#8b5cf6" strokeWidth="0.9" />
+            <rect x="12" y="11" width="34" height="22" rx="3" fill="#8b5cf6" stroke="#6d28d9" strokeWidth="1" />
+            <circle cx="29" cy="20" r="3" fill="#ffffff" fillOpacity="0.8" />
+            <rect x="25" y="34" width="7" height="1.8" rx="0.9" fill="#8b5cf6" />
+            <circle cx="34.5" cy="34.9" r="0.9" fill="#c4b5fd" />
           </svg>
         </div>
       </div>
     ),
-    insert: (cx, cy) => createSlideshowElementNode('pure', cx, cy),
-    getSvgString: (isDrag) => getInfiniteCarouselSvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"')
-  },
-  {
-    id: 'slideshow-monochrome-minimal',
-    name: 'Monochrome Minimal',
-    category: 'slideshow',
-    type: 'slideshow',
-    renderPreview: () => (
-      <div className="w-full h-full flex items-center justify-center p-[0.15vw] pointer-events-none select-none">
-        <div className="w-full h-[88%] rounded-[0.35vw] bg-slate-900 border border-slate-800 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 shadow-2xs">
-          <svg viewBox="0 0 60 40" className="w-[85%] h-[85%] object-contain" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="4" y="6" width="52" height="28" rx="2" stroke="#475569" strokeWidth="1.5" fill="#0f172a" />
-            <rect x="7" y="9" width="46" height="22" rx="1" fill="#334155" opacity="0.8" />
-            <rect x="10" y="24" width="18" height="2.5" rx="0.5" fill="#f8fafc" opacity="0.9" />
-            <circle cx="28" cy="27" r="1" fill="#f8fafc" />
-            <circle cx="32" cy="27" r="1" fill="#94a3b8" />
-            <circle cx="36" cy="27" r="1" fill="#94a3b8" />
-          </svg>
-        </div>
-      </div>
-    ),
-    insert: (cx, cy) => createSlideshowElementNode('mono', cx, cy),
-    getSvgString: (isDrag) => getMonochromeMinimalSvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"')
-  },
-  {
-    id: 'slideshow-flat-gallery',
-    name: 'Flat Gallery',
-    category: 'slideshow',
-    type: 'slideshow',
-    renderPreview: () => (
-      <div className="w-full h-full flex items-center justify-center p-[0.15vw] pointer-events-none select-none">
-        <div className="w-full h-[88%] rounded-[0.35vw] bg-sky-50/60 border border-sky-100 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-200 shadow-2xs">
-          <svg viewBox="0 0 60 40" className="w-[85%] h-[85%] object-contain" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="3" width="14" height="22" rx="2" stroke="#0ea5e9" strokeWidth="1.5" fill="#f0f9ff" opacity="0.6" />
-            <rect x="44" y="3" width="14" height="22" rx="2" stroke="#0ea5e9" strokeWidth="1.5" fill="#f0f9ff" opacity="0.6" />
-            <rect x="18" y="2" width="24" height="25" rx="3" stroke="#0ea5e9" strokeWidth="2" fill="white" />
-            <rect x="4" y="30" width="8" height="6" rx="1" stroke="#94a3b8" strokeWidth="0.8" fill="#f8fafc" />
-            <rect x="14" y="30" width="8" height="6" rx="1" stroke="#94a3b8" strokeWidth="0.8" fill="#f8fafc" />
-            <rect x="24" y="30" width="12" height="7" rx="1" stroke="#0ea5e9" strokeWidth="1.2" fill="white" />
-            <rect x="38" y="30" width="8" height="6" rx="1" stroke="#94a3b8" strokeWidth="0.8" fill="#f8fafc" />
-            <rect x="48" y="30" width="8" height="6" rx="1" stroke="#94a3b8" strokeWidth="0.8" fill="#f8fafc" />
-          </svg>
-        </div>
-      </div>
-    ),
-    insert: (cx, cy) => createSlideshowElementNode('flat', cx, cy),
-    getSvgString: (isDrag) => getFlatGallerySvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"')
+    insert: (cx, cy) => createSlideshowElementNode('cards', cx, cy),
+    getSvgString: (isDrag) => getBannerSliderSvg(Date.now(), isDrag ? '' : 'transform="translate(100, 150)"', SLIDESHOW_PRESET_CONFIGS.cards)
   }
 ];
 

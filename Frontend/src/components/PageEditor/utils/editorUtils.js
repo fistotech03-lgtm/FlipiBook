@@ -431,7 +431,7 @@ export const parseLayersFromSVG = (element) => {
       const isTypography = !isPageRoot && (
                            child.getAttribute('data-typography-type') === 'motion-graphic' ||
                            child.getAttribute('data-typography-type') === 'kinetic' ||
-                           child.getAttribute('data-is-element-typography') === 'true' ||
+                           (child.getAttribute('data-subtopic') === 'Titles' && child.getAttribute('data-is-element-typography') !== 'true') ||
                            (lowerId.startsWith('typography-') && child.getAttribute('data-type') === 'text')
       );
 
@@ -449,14 +449,57 @@ export const parseLayersFromSVG = (element) => {
         const subLayers = parseLayersFromSVG(child);
         if (subLayers.length > 0) layer.children = subLayers;
       } else if (isGroup) {
-        // Strip IDs from all descendants of an Image Group so they can't be selected individually
-        const stripIds = (node) => {
-          Array.from(node.children).forEach(descendant => {
-            descendant.removeAttribute('id');
-            stripIds(descendant);
-          });
-        };
-        stripIds(child);
+        // Strip IDs from internal helper elements of a generic compound Group so they can't be selected individually,
+        // but never touch dedicated element containers (image-frame, qrcode, audio-frame, etc.) or SVG definition tags (defs, pattern, clipPath, mask, filter, grad)
+        const isElementPresetContainer =
+          isImageFrame || isQRCode || isAudioFrame || isEmbedGroup ||
+          isButton || isMap || isSlideshow || isTable || isTypography || isShape || isDecorator;
+
+        if (!isElementPresetContainer) {
+          const stripIds = (node) => {
+            Array.from(node.children).forEach(descendant => {
+              const tag = (descendant.tagName || '').toLowerCase();
+              if (['defs', 'clippath', 'pattern', 'mask', 'filter', 'lineargradient', 'radialgradient', 'symbol', 'marker', 'style'].includes(tag)) {
+                return;
+              }
+              if (descendant.closest && descendant.closest('defs, clipPath, pattern, mask, filter')) {
+                return;
+              }
+
+              const dId = (descendant.getAttribute('id') || '').toLowerCase();
+              if (
+                dId.startsWith('pattern') ||
+                dId.startsWith('clip') ||
+                dId.startsWith('filter') ||
+                dId.startsWith('mask') ||
+                dId.startsWith('grad') ||
+                dId.startsWith('image-frame') ||
+                dId.startsWith('imageframe')
+              ) {
+                return;
+              }
+
+              const isProtected =
+                descendant.getAttribute('data-is-element-typography') === 'true' ||
+                descendant.getAttribute('data-is-element-shape') === 'true' ||
+                descendant.getAttribute('data-is-element-button') === 'true' ||
+                descendant.getAttribute('data-is-image-frame') === 'true' ||
+                descendant.getAttribute('data-typography-type') ||
+                descendant.getAttribute('data-type') ||
+                dId.startsWith('typography-') ||
+                dId.startsWith('embed-') ||
+                dId.startsWith('audio-') ||
+                dId.startsWith('qrcode-') ||
+                dId.startsWith('shape-') ||
+                dId.startsWith('button-');
+              if (!isProtected) {
+                descendant.removeAttribute('id');
+                stripIds(descendant);
+              }
+            });
+          };
+          stripIds(child);
+        }
       }
 
       const isText = child.tagName.toLowerCase() === 'text' ||
@@ -536,12 +579,25 @@ export const parseLayersFromSVG = (element) => {
           coreType = 'decorator';
         } else if (isTypography) {
           const customName = child.getAttribute('data-name');
-          const isDefault = !customName || customName.startsWith('typography-') || customName.toLowerCase() === 'typography' || [
-            'Motion Graphic', 'Kinetic Typography', 'Comic Poster', "We're Hiring",
-            'Free Shipping', 'Golden Hour', 'Holiday', 'Heading', 'Subheading',
-            'Paragraph Text', 'Bullet List', 'Numbered List'
-          ].includes(customName);
-          coreName = isDefault ? 'Typography' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          const presetTitle = child.getAttribute('data-preset-title');
+          const isTitleSubtopic = child.getAttribute('data-subtopic') === 'Titles' || child.getAttribute('data-motion-template') || child.getAttribute('data-typography-type') === 'motion-graphic';
+          const templateName = child.getAttribute('data-motion-template');
+
+          if (isTitleSubtopic || presetTitle) {
+            let label = presetTitle || customName || '';
+            label = label.replace(/^Title\s*-\s*/i, '').replace(/^Typography\s*/i, '').replace(/\s*\([^)]*\)/g, '').trim();
+            if (!label && templateName) {
+              label = templateName.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+            }
+            coreName = label ? `Title - ${label}` : 'Title';
+          } else {
+            const isDefault = !customName || customName.startsWith('typography-') || customName.toLowerCase() === 'typography' || [
+              'Motion Graphic', 'Kinetic Typography', 'Comic Poster', "We're Hiring",
+              'Free Shipping', 'Golden Hour', 'Holiday', 'Heading', 'Subheading',
+              'Paragraph Text', 'Bullet List', 'Numbered List'
+            ].includes(customName);
+            coreName = isDefault ? 'Typography' : customName.replace(/^tpl-[a-z0-9]{4}-/, '');
+          }
           coreType = 'text';
         } else if (isText) {
           const customName = child.getAttribute('data-name');
@@ -1253,4 +1309,126 @@ export function formatTemplateSvgToPageSvg(svgContent, targetW = 210, targetH = 
     console.error('Error formatting template SVG to page SVG:', err);
     return '';
   }
-}
+};
+
+/**
+ * Universal SVG XML Sanitizer & Self-Healer:
+ * - Completely removes any browser `<parsererror>` blocks
+ * - Discards extraneous `<html>`, `<head>`, `<body>` wrappers to ensure strict `<svg>...</svg>` root
+ * - Automatically balances and self-closes unclosed HTML void tags inside `<foreignObject>` or SVG text (`<br/>`, `<img/>`, etc.)
+ * - Removes temporary editor overlays, damage rects, and selection handles
+ * - Automatically heals broken markup using browser HTML5 tree builder if XML parser fails
+ * - Validates strict XML compliance before returning
+ */
+export const sanitizeSvgXml = (rawContent) => {
+  if (!rawContent || typeof rawContent !== 'string') return '';
+
+  let str = rawContent.trim();
+  if (!str) return '';
+
+  // 1. If wrapped in <html> or contains <parsererror>, extract strictly the <svg> element
+  if (str.includes('<parsererror') || str.includes('<html') || str.includes('<!DOCTYPE')) {
+    str = str.replace(/<parsererror[\s\S]*?<\/parsererror>/gi, '');
+    const svgStart = str.search(/<svg\b/i);
+    const svgEnd = str.lastIndexOf('</svg>');
+    if (svgStart !== -1 && svgEnd !== -1 && svgEnd > svgStart) {
+      str = str.substring(svgStart, svgEnd + 6);
+    }
+  }
+
+  // 2. Remove lingering editor overlays, temporary handles, and damage rects
+  str = str.replace(/<[^>]*id="(?:vectra-overlay-group|node-edit-overlay-group|multi-selection-bounds)"[^>]*>[\s\S]*?<\/[^>]*>/gi, '');
+  str = str.replace(/<[^>]*class="[^"]*(?:slideshow-transition-clone|custom-video-overlay|video-damage-rect)[^"]*"[^>]*>[\s\S]*?<\/[^>]*>/gi, '');
+  str = str.replace(/<[^>]*id="custom-ctrl-[^"]*"[^>]*>[\s\S]*?<\/[^>]*>/gi, '');
+
+  // 3. Fix unclosed void HTML tags inside foreignObject/text (<br>, <img>, <hr>, <input>, <link>, <meta>)
+  str = str.replace(/<br(?:\s*\/?>|\s+[^>]*?\/?>)/gi, '<br/>');
+  str = str.replace(/<(img|hr|input|link|meta)(\s+[^>]*?)?(?<!\/)>/gi, '<$1$2/>');
+
+  // 4. Sanitize bare ampersands not part of valid XML entities
+  str = str.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
+
+  // 5. Verify & self-heal with DOMParser
+  try {
+    if (typeof DOMParser !== 'undefined') {
+      const parser = new DOMParser();
+      let xmlDoc = parser.parseFromString(str, 'image/svg+xml');
+
+      if (xmlDoc.querySelector('parsererror')) {
+        // If strict XML parse fails, use browser HTML5 parser to balance and heal tag tree
+        const htmlDoc = parser.parseFromString(str, 'text/html');
+        const svgInHtml = htmlDoc.querySelector('svg');
+        if (svgInHtml) {
+          svgInHtml.querySelectorAll('parsererror').forEach(el => el.remove());
+          const serializer = new XMLSerializer();
+          const serialized = serializer.serializeToString(svgInHtml);
+          const healed = serialized
+            .replace(/<br(?:\s*\/?>|\s+[^>]*?\/?>)/gi, '<br/>')
+            .replace(/<(img|hr|input|link|meta)(\s+[^>]*?)?(?<!\/)>/gi, '<$1$2/>');
+
+          const recheck = parser.parseFromString(healed, 'image/svg+xml');
+          if (!recheck.querySelector('parsererror')) {
+            str = healed;
+          }
+        }
+      } else {
+        const svgEl = xmlDoc.querySelector('svg');
+        if (svgEl) {
+          str = new XMLSerializer().serializeToString(svgEl);
+        }
+      }
+    }
+  } catch (e) {
+    // Fallback safe string cleanup
+  }
+
+  // 6. Guarantee self-closing of all void HTML tags in XML
+  str = str.replace(/<br(?:\s*\/?>|\s+[^>]*?\/?>)/gi, '<br/>');
+  str = str.replace(/<(img|hr|input|link|meta)(\s+[^>]*?)?(?<!\/)>/gi, '<$1$2/>');
+  str = str.replace(/<parsererror[\s\S]*?<\/parsererror>/gi, '');
+
+  // 7. Ensure xmlns is present on root <svg
+  if (!str.includes('xmlns=')) {
+    str = str.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  if (str.includes('xlink:href') && !str.includes('xmlns:xlink=')) {
+    str = str.replace(/<svg\b/i, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+  }
+
+  return str;
+};
+
+/**
+ * Safely serialize an SVG Document or SVG Element:
+ * Prevents serializing `doc.documentElement` if it is an HTML error document containing `<parsererror>`.
+ * Always extracts and sanitizes the root `<svg>`.
+ */
+export const safeSerializeSvg = (docOrSvg) => {
+  if (!docOrSvg) return '';
+  try {
+    let svgEl = docOrSvg;
+    if (docOrSvg.nodeType === 9) { // Document node
+      if (docOrSvg.querySelector('parsererror')) {
+        // Find svg within error document if present
+        svgEl = docOrSvg.querySelector('svg');
+        if (!svgEl) return '';
+      } else {
+        svgEl = docOrSvg.querySelector('svg') || (docOrSvg.documentElement?.tagName?.toLowerCase() === 'svg' ? docOrSvg.documentElement : null);
+      }
+    }
+    if (!svgEl) return '';
+    if (typeof svgEl.closest === 'function') {
+      const rootSvg = svgEl.closest('svg');
+      if (rootSvg) svgEl = rootSvg;
+    }
+    if (svgEl.tagName?.toLowerCase() !== 'svg' && typeof svgEl.querySelector === 'function') {
+      const innerSvg = svgEl.querySelector('svg');
+      if (innerSvg) svgEl = innerSvg;
+    }
+    const raw = typeof XMLSerializer !== 'undefined' ? new XMLSerializer().serializeToString(svgEl) : (svgEl.outerHTML || '');
+    return sanitizeSvgXml(raw);
+  } catch (e) {
+    console.warn('[safeSerializeSvg] Failed to serialize svg cleanly:', e);
+    return '';
+  }
+};

@@ -31,13 +31,6 @@ const authenticateUser = (req, res, next) => {
     return next();
   }
 
-  // Graceful fallback if client sends emailId param
-  const fallbackEmail = (req.query?.emailId || req.body?.emailId || '').trim().toLowerCase();
-  if (fallbackEmail) {
-    req.user = { emailId: fallbackEmail, email: fallbackEmail };
-    return next();
-  }
-
   return res.status(401).json({
     success: false,
     message: 'Authentication required. Please sign in to access user services.'
@@ -54,15 +47,15 @@ const optionalAuth = (req, res, next) => {
     (req.headers.authorization?.startsWith('Bearer ')
       ? req.headers.authorization.split(' ')[1]
       : null);
+  const refreshToken = req.cookies?.refreshToken;
 
-  const decoded = verifyToken(token);
+  let decoded = verifyToken(token);
+  if ((!decoded || (!decoded.userId && !decoded.id && !decoded.emailId)) && refreshToken) {
+    decoded = verifyToken(refreshToken);
+  }
+
   if (decoded && (decoded.userId || decoded.id || decoded.emailId)) {
     req.user = decoded;
-  } else {
-    const fallbackEmail = (req.query?.emailId || req.body?.emailId || req.headers['x-user-email'] || '').trim().toLowerCase();
-    if (fallbackEmail) {
-      req.user = { emailId: fallbackEmail, email: fallbackEmail };
-    }
   }
   next();
 };

@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
 /**
- * ElementToggle - Signature toggle switch matching reference design.
- * OFF: White pill, #E05638 border, solid #E05638 circle on the left.
- * ON:  Solid #E05638 pill, #E05638 border, solid White circle on the right.
+ * ElementToggle - Clean modern toggle switch.
+ * OFF: Muted gray pill with white circular knob on the left.
+ * ON:  Active colored pill with white circular knob smoothly translated to the right.
  */
 export const ElementToggle = ({
   checked,
@@ -12,7 +12,8 @@ export const ElementToggle = ({
   onChange,
   disabled = false,
   title = '',
-  className = ''
+  className = '',
+  activeColor = '#4D47FF'
 }) => {
   const isChecked = checked !== undefined ? Boolean(checked) : Boolean(enabled);
 
@@ -27,23 +28,19 @@ export const ElementToggle = ({
         e.stopPropagation();
         if (!disabled && onChange) onChange(!isChecked);
       }}
-      className={`relative w-[2.2vw] h-[1.2vw] min-w-[34px] min-h-[19px] flex items-center rounded-full border-2 cursor-pointer transition-all duration-200 select-none ${
+      className={`relative inline-flex items-center w-[2.2vw] h-[1.2vw] min-w-[34px] min-h-[19px] p-[2px] rounded-full transition-colors duration-200 cursor-pointer select-none ${
         disabled ? 'opacity-40 cursor-not-allowed' : ''
       } ${
-        isChecked
-          ? 'bg-[#E05638] border-[#E05638]'
-          : 'bg-white border-[#E05638]'
+        isChecked ? '' : 'bg-gray-200 hover:bg-gray-300'
       } ${className}`}
+      style={{
+        backgroundColor: isChecked ? activeColor : undefined,
+      }}
     >
       <span
-        className={`block w-[0.8vw] h-[0.8vw] min-w-[13px] min-h-[13px] rounded-full shadow-sm transform transition-all duration-200 ${
-          isChecked
-            ? 'translate-x-[0.95vw] bg-white'
-            : 'translate-x-0 bg-[#E05638]'
+        className={`inline-block w-[0.9vw] h-[0.9vw] min-w-[15px] min-h-[15px] rounded-full bg-white shadow-xs transform transition-transform duration-200 ease-in-out ${
+          isChecked ? 'translate-x-full' : 'translate-x-0'
         }`}
-        style={{
-          marginLeft: '0.12vw'
-        }}
       />
     </button>
   );
@@ -135,6 +132,15 @@ export const ElementDropdown = ({
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      // Allow the dropdown menu to render in the DOM before scrolling to center, matching Animation & Interaction panels
+      setTimeout(() => {
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
   }, [isOpen]);
 
   // Normalize options into { label, value }

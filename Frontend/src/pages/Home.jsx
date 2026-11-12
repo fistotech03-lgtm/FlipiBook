@@ -195,14 +195,21 @@ export default function Home() {
       }
       const targetFolder = 'My_Flipbooks';
 
-      setProcessingProgress({
-        current: 0,
-        total: allImages.length,
+      const totalDocPages = (allImages.totalPages && allImages.totalPages > allImages.length)
+        ? allImages.totalPages
+        : allImages.length;
+
+      setProcessingProgress(prev => ({
+        ...(prev || {}),
+        current: totalDocPages,
+        total: totalDocPages,
         totalFiles: files.length,
+        pageCount: totalDocPages,
+        percent: 92,
         message: 'Saving pages & binding flipbook...',
         fileName: uniqueName,
         stage: 'saving'
-      });
+      }));
       // Yield to event loop so Step 3 spinner runs with 0 stutter
       await new Promise(r => setTimeout(r, 0));
 
@@ -223,14 +230,17 @@ export default function Home() {
       const resolvedBookType = initialDocType === 'powerpoint' ? 'pptx' : initialDocType === 'word' ? 'word' : 'pdf';
 
       if (allPages.length <= 20) {
-        setProcessingProgress({
-          current: allPages.length,
-          total: allPages.length,
+        setProcessingProgress(prev => ({
+          ...(prev || {}),
+          current: totalDocPages,
+          total: totalDocPages,
           totalFiles: files.length,
+          pageCount: totalDocPages,
+          percent: 94,
           message: 'Saving pages & binding flipbook...',
           fileName: uniqueName,
           stage: 'saving'
-        });
+        }));
         const createRes = await axios.post(`${backendUrl}/api/flipbook/save`, {
           emailId,
           flipbookName: uniqueName,
@@ -249,19 +259,22 @@ export default function Home() {
           return;
         }
 
-        setProcessingProgress({
-          current: allPages.length,
-          total: allPages.length,
+        setProcessingProgress(prev => ({
+          ...(prev || {}),
+          current: totalDocPages,
+          total: totalDocPages,
           totalFiles: files.length,
+          pageCount: totalDocPages,
+          percent: 100,
           message: 'Opening flipbook...',
           fileName: uniqueName,
           stage: 'done'
-        });
+        }));
 
-        const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
         const folderVId = (isFolId(createRes?.data?.folder_v_id) ? createRes.data.folder_v_id : null) ||
           (isFolId(createRes?.data?.folder_id) ? createRes.data.folder_id : null) ||
-          'fol_default';
+          'default';
         navigate(`/editor/${encodeURIComponent(folderVId)}/${v_id}`);
         return;
       }
@@ -318,10 +331,10 @@ export default function Home() {
         stage: 'done'
       });
 
-      const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+      const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
       const folderVId = (isFolId(createRes?.data?.folder_v_id) ? createRes.data.folder_v_id : null) ||
         (isFolId(createRes?.data?.folder_id) ? createRes.data.folder_id : null) ||
-        'fol_default';
+        'default';
       navigate(`/editor/${encodeURIComponent(folderVId)}/${v_id}`);
 
     } catch (error) {

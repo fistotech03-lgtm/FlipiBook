@@ -238,12 +238,18 @@ export const useCanvasPointerEvents = ({
   };
 
   const handleSvgMouseDown = (pageIndex, e) => {
+    window.__isCanvasPointerDown = true;
     if (e._handledMarquee) return;
-    if (e.button !== 0 || e.target.closest('.resize-handle')) return;
+    if (e.button !== 0 || e.target.closest('.resize-handle') || window.__isHoveringTableDivider || window.__isResizingTableDivider) return;
 
     // Allow native text selection/interaction inside actively edited text boxes
     if (e.target.closest('[contenteditable="true"]')) {
       e.stopPropagation();
+      return;
+    }
+
+    // Allow native button/navigation clicks on slideshow navigation arrows and pagination
+    if (e.target.closest('.swiper-button-prev, .swiper-button-next, .swiper-pagination, .swiper-pagination-bullet, [data-slideshow-nav]')) {
       return;
     }
 
@@ -1132,8 +1138,9 @@ export const useCanvasPointerEvents = ({
     // Start marquee if user holds Ctrl (unless clicking a selected image) OR if they clicked on the background/base frame
     // (Also start if Shift is held so Shift+Drag can draw marquee over elements without Ctrl)
     // Converted flipbooks / Interaction & Animation modules: NEVER start marquee drag-selection
+    const isInsideTable = Boolean(e.target?.closest?.('td, th, table, [data-type="table-frame"], [data-type="table"], g[id^="table-"]'));
     const isModuleWithoutMarquee = activeTopTool === 'interaction' || activeTopTool === 'animation' || activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
-    const shouldStartMarquee = !isModuleWithoutMarquee && !isConvertedFlipbook && (((e.ctrlKey || e.shiftKey) && !hitSelectedImage) || ((!hitCandidate || hitBaseFrame) && selectedSelectToolRef.current !== 'direct' && !isEditingTextRef.current));
+    const shouldStartMarquee = !isInsideTable && !isModuleWithoutMarquee && !isConvertedFlipbook && (((e.ctrlKey || e.shiftKey) && !hitSelectedImage) || ((!hitCandidate || hitBaseFrame) && selectedSelectToolRef.current !== 'direct' && !isEditingTextRef.current));
 
     if (shouldStartMarquee) {
       const rect = container.getBoundingClientRect();
@@ -1787,6 +1794,7 @@ export const useCanvasPointerEvents = ({
   // ── FIGMA-STYLE GLOBAL MOUSE UP (Handles end of marquee or tool drawing) ────────────────
   useEffect(() => {
     const handleGlobalMouseUp = (e) => {
+      window.__isCanvasPointerDown = false;
       // ── Node Edit Mode: Finalize node drag ──
       if (nodeEditDragRef.current) {
         const { pathEl, pageIndex: nePageIndex } = nodeEditDragRef.current;
@@ -1825,6 +1833,7 @@ export const useCanvasPointerEvents = ({
               : activePageIndex;
             renderVectraOverlay(targetPageIndex, drawingPathRef.current.parentElement, vSession);
           }
+          window.dispatchEvent(new CustomEvent('editor-content-changed'));
         }
       }
 
@@ -2156,9 +2165,12 @@ export const useCanvasPointerEvents = ({
     let resolvedId = id;
     if (resolvedId) {
       const el = document.getElementById(resolvedId);
-      const typographyParent = el?.closest?.('[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"]');
-      if (typographyParent && typographyParent.id) {
-        resolvedId = typographyParent.id;
+      const isInternalTextOfTypography = el && ['text', 'tspan', 'foreignobject'].includes(el.tagName?.toLowerCase());
+      if (!isInternalTextOfTypography) {
+        const typographyParent = el?.closest?.('[data-typography-type="motion-graphic"], [data-subtopic="Titles"], [data-motion-template]');
+        if (typographyParent && typographyParent.id) {
+          resolvedId = typographyParent.id;
+        }
       }
       const shapeParent = el?.closest?.('[data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"]');
       if (shapeParent && shapeParent.id && !shapeParent.closest?.('[data-type="audio-frame"], g[id^="audio-"]')) {
@@ -2171,6 +2183,10 @@ export const useCanvasPointerEvents = ({
       const audioParent = el?.closest?.('[data-type="audio-frame"], g[id^="audio-"]');
       if (audioParent && audioParent.id) {
         resolvedId = audioParent.id;
+      }
+      const tableParent = el?.closest?.('[data-type="table-frame"], [data-type="table"], g[id^="table-"]');
+      if (tableParent && tableParent.id) {
+        resolvedId = tableParent.id;
       }
       const mediaParent = el?.closest?.('[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
       if (mediaParent && mediaParent.id) {
@@ -2208,6 +2224,42 @@ export const useCanvasPointerEvents = ({
       if (mbOld) mbOld.remove();
     }
 
+    const clearAllTableHighlights = (targetTableEl = null) => {
+      const tables = targetTableEl ? [targetTableEl] : Array.from(document.querySelectorAll('[data-type="table-frame"], [data-type="table"], g[id^="table-"]'));
+      tables.forEach(tParent => {
+        tParent.removeAttribute('data-table-selected');
+        tParent.removeAttribute('data-table-mode');
+        tParent.querySelectorAll('.table-cell-selection-overlay').forEach(n => n.remove());
+        const table = tParent.querySelector('table');
+        if (table) {
+          const normalBorder = tParent.getAttribute('data-border-color') || '#cbd5e1';
+          table.querySelectorAll('[data-neighbor-highlighted]').forEach(td => {
+            td.removeAttribute('data-neighbor-highlighted');
+            td.style.removeProperty('border-top-color');
+            td.style.removeProperty('border-bottom-color');
+            td.style.removeProperty('border-left-color');
+            td.style.removeProperty('border-right-color');
+            td.style.borderColor = td.getAttribute('data-cell-border-color') || normalBorder;
+          });
+          table.querySelectorAll('td[data-cell-selected], th[data-cell-selected], td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+            td.removeAttribute('data-cell-selected');
+            td.removeAttribute('contenteditable');
+            td.style.removeProperty('outline');
+            td.style.removeProperty('outline-offset');
+            td.style.removeProperty('box-shadow');
+            td.style.cursor = 'default';
+            td.style.userSelect = 'none';
+            td.style.borderColor = td.getAttribute('data-cell-border-color') || normalBorder;
+          });
+          table.style.removeProperty('border-top-color');
+          table.style.removeProperty('border-bottom-color');
+          table.style.removeProperty('border-left-color');
+          table.style.removeProperty('border-right-color');
+        }
+      });
+      window.dispatchEvent(new CustomEvent('clear-table-cell-selection', { detail: { elementId: targetTableEl ? targetTableEl.id : null } }));
+    };
+
     if (id) {
       // Purge selection overlays for other elements across all overlay layers
       document.querySelectorAll('.selection-overlay-layer').forEach(overlay => {
@@ -2216,6 +2268,17 @@ export const useCanvasPointerEvents = ({
             node.remove();
           }
         });
+      });
+      // Clear data-table-selected and cell selections for any table that is not the newly selected element
+      document.querySelectorAll('[data-type="table-frame"], [data-type="table"], g[id^="table-"]').forEach(tbl => {
+        if (tbl.id !== id) {
+          clearAllTableHighlights(tbl);
+        } else {
+          tbl.setAttribute('data-table-selected', 'true');
+          if (!tbl.getAttribute('data-table-mode')) {
+            tbl.setAttribute('data-table-mode', 'global');
+          }
+        }
       });
       document.querySelectorAll('[id^="highlight-overlay-html-"]').forEach(htmlOverlay => {
         htmlOverlay.querySelectorAll('.resize-handle, .corner-value-badge, [id^="rotation-degree-badge-"], [id^="rotate-handle-"], [id^="rotate-hotspot-"]').forEach(node => {
@@ -2227,6 +2290,7 @@ export const useCanvasPointerEvents = ({
     } else {
       clearOverlayType('selected');
       clearOverlayType('child-selected');
+      clearAllTableHighlights();
     }
     clearSmartGuides();
   };
@@ -2254,11 +2318,16 @@ export const useCanvasPointerEvents = ({
   // ── FIGMA-STYLE CLICK: hierarchical frame drill-down selection ─────────────────
   const handleSvgClick = (e) => {
     clearSmartGuides();
-    if (e.target.closest('.resize-handle')) return;
+    if (e.target.closest('.resize-handle') || window.__isHoveringTableDivider || window.__isResizingTableDivider) return;
 
     // Allow native text selection/interaction inside actively edited text boxes
     if (e.target.closest('[contenteditable="true"]')) {
       e.stopPropagation();
+      return;
+    }
+
+    // Allow native button/navigation clicks on slideshow navigation arrows and pagination
+    if (e.target.closest('.swiper-button-prev, .swiper-button-next, .swiper-pagination, .swiper-pagination-bullet, [data-slideshow-nav]')) {
       return;
     }
 
@@ -2465,6 +2534,11 @@ export const useCanvasPointerEvents = ({
           }
 
           if (currentSet.has(polySelectionId)) {
+            const clickedTable = clickedEl?.closest?.('[data-type="table-frame"], [data-type="table"]') || (polySelectionId?.startsWith('table-') ? clickedEl : null);
+            if (clickedTable) {
+              // Clicking on the selected table with Shift/Ctrl/Cmd is intended for cell selection/range, keep table selected!
+              return;
+            }
             currentSet.delete(polySelectionId);
             if (primaryId === polySelectionId) {
               const remaining = [...currentSet];
@@ -2491,7 +2565,13 @@ export const useCanvasPointerEvents = ({
           // If the Type tool is active, clicking on the selected text enters inline editing
           if (activeMainToolRef.current === 'type') {
             const underlyingEl = svg.querySelector(`[id="${polySelectionId}"]`);
-            if (underlyingEl && (underlyingEl.tagName.toLowerCase() === 'text' || underlyingEl.tagName.toLowerCase() === 'tspan' || underlyingEl.tagName.toLowerCase() === 'foreignobject')) {
+            const isTextTag = underlyingEl && ['text', 'tspan', 'foreignobject'].includes(underlyingEl.tagName?.toLowerCase());
+            const isNotWidget = underlyingEl && !underlyingEl.closest?.(
+              '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
+              '[data-is-slideshow="true"], [data-type="slideshow"], g[id^="slideshow-"], .slideshow-foreign-object, .flipibook-swiper-container, .swiper, ' +
+              '[data-type="embed-frame"], [data-type="audio-frame"], [data-type="video"], [data-type="qrcode"], [data-type="map"], [data-type="table-frame"]'
+            );
+            if (isTextTag && isNotWidget) {
               enterTextEditMode(underlyingEl, e.clientX, e.clientY);
             }
           }
@@ -2566,6 +2646,12 @@ export const useCanvasPointerEvents = ({
     // Works at top-level OR inside an entered frame, but does NOT enter frames.
     const isMultiSelectClick = Boolean(e.shiftKey || e.metaKey || (e.ctrlKey && !e.altKey));
     if (isMultiSelectClick) {
+      // If clicking inside a table cell/element, do not toggle off the table from selection!
+      const isInsideTable = Boolean(e.target?.closest?.('td, th, table, [data-type="table-frame"], [data-type="table"], g[id^="table-"]'));
+      if (isInsideTable) {
+        return;
+      }
+
       const frameId = currentFrameIdRef.current;
 
       // Determine candidate element pool (same as current navigation level)
@@ -2973,35 +3059,67 @@ export const useCanvasPointerEvents = ({
     // ── INSTANT TEXT EDIT MODE (Vector-Studio Style) ─────────────────────────
     // Directly check what is under the cursor on double-click (pierces selection polygons, user groups, and frames)
     let directTextEl = null;
+    const isExcludedFromTextEditing = (node) => {
+      if (!node) return false;
+      const selector = (
+        '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
+        '[data-is-slideshow="true"], [data-type="slideshow"], g[id^="slideshow-"], .slideshow-foreign-object, .flipibook-swiper-container, .swiper, ' +
+        '[data-type="embed-frame"], [data-type="audio-frame"], [data-type="video"], [data-type="qrcode"], [data-type="map"], [data-type="table-frame"], ' +
+        '[data-is-image-frame="true"], [data-type="image-frame"], [data-frame-type], g[id^="image-frame-"]'
+      );
+      return Boolean(node.matches?.(selector) || node.closest?.(selector));
+    };
+
+    const isGenuineTextElement = (node) => {
+      if (!node) return false;
+      if (isExcludedFromTextEditing(node)) return false;
+      const tag = node.tagName?.toLowerCase();
+      if (tag === 'text' || tag === 'tspan') return true;
+      if (tag === 'foreignobject') {
+        if (node.getAttribute?.('data-type') === 'video' || node.querySelector?.('video, iframe, .swiper, table, canvas')) {
+          return false;
+        }
+        return true;
+      }
+      return false;
+    };
+
     const clickTargetTag = e.target?.tagName?.toLowerCase();
-    if (['text', 'tspan', 'foreignobject'].includes(clickTargetTag)) {
+    if (['text', 'tspan'].includes(clickTargetTag) && !isExcludedFromTextEditing(e.target)) {
       directTextEl = clickTargetTag === 'tspan' ? (e.target.parentElement || e.target.parentNode) : e.target;
-    } else if (e.target?.closest && e.target.closest('foreignObject')) {
+    } else if (clickTargetTag === 'foreignobject' && isGenuineTextElement(e.target)) {
+      directTextEl = e.target;
+    } else if (e.target?.closest && e.target.closest('foreignObject') && isGenuineTextElement(e.target.closest('foreignObject'))) {
       directTextEl = e.target.closest('foreignObject');
     } else if (typeof document.elementsFromPoint === 'function') {
       const elements = document.elementsFromPoint(e.clientX, e.clientY);
       for (const el of elements) {
         if (!svg.contains(el)) continue;
+        if (isExcludedFromTextEditing(el)) continue;
         const tag = el.tagName?.toLowerCase();
         if (tag === 'tspan') {
           directTextEl = el.parentElement || el.parentNode;
           break;
         }
-        if (tag === 'text' || tag === 'foreignobject') {
+        if (tag === 'text') {
           directTextEl = el;
           break;
         }
-        if (el.closest && el.closest('foreignObject')) {
+        if (tag === 'foreignobject' && isGenuineTextElement(el)) {
+          directTextEl = el;
+          break;
+        }
+        if (el.closest && el.closest('foreignObject') && isGenuineTextElement(el.closest('foreignObject'))) {
           directTextEl = el.closest('foreignObject');
           break;
         }
       }
     }
 
-    // Fallback: check currently selected layer if it's text within hitTest range
+    // Fallback: check currently selected layer if it's text within hitTest range (exclude buttons, slideshows, etc.)
     if (!directTextEl && selectedLayerIdRef.current) {
       const activeEl = svg.querySelector(`[id="${selectedLayerIdRef.current}"]`);
-      if (activeEl && ['text', 'tspan', 'foreignobject'].includes(activeEl.tagName?.toLowerCase())) {
+      if (activeEl && isGenuineTextElement(activeEl)) {
         if (hitTest(activeEl, e.clientX, e.clientY, 15)) {
           directTextEl = activeEl.tagName?.toLowerCase() === 'tspan' ? (activeEl.parentElement || activeEl.parentNode) : activeEl;
         }
@@ -3026,7 +3144,16 @@ export const useCanvasPointerEvents = ({
       effectiveTarget?.getAttribute?.('data-type') === 'vector-path'
     );
 
-    if (!isFlattenedClick) {
+    const isDirectTextTarget = Boolean(
+      directTextEl ||
+      (!isExcludedFromTextEditing(effectiveTarget) && (
+        ['text', 'tspan'].includes(effectiveTarget?.tagName?.toLowerCase()) ||
+        (effectiveTarget?.tagName?.toLowerCase() === 'foreignobject' && isGenuineTextElement(effectiveTarget)) ||
+        (effectiveTarget?.closest?.('foreignObject') && isGenuineTextElement(effectiveTarget.closest('foreignObject')))
+      ))
+    );
+
+    if (!isFlattenedClick && !isDirectTextTarget) {
       // 1. Check if double-clicked inside an image frame (or its slots)
       const frameParent = effectiveTarget?.closest?.(
         '[data-is-image-frame="true"], [data-type="image-frame"], [data-frame-type], g[id^="image-frame-"]'
@@ -3054,10 +3181,12 @@ export const useCanvasPointerEvents = ({
       }
 
       const compoundParent = effectiveTarget?.closest?.(
-        '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+        '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"], [data-type="table"], g[id^="table-"]'
       );
       if (compoundParent) {
-        if (compoundParent.id) {
+        const isTable = compoundParent.getAttribute('data-type') === 'table-frame' || compoundParent.id?.startsWith('table-');
+        const isCellClick = isTable && Boolean(effectiveTarget?.closest?.('td, th'));
+        if (compoundParent.id && (!isCellClick || selectedLayerIdRef.current !== compoundParent.id)) {
           setSingleSelection(compoundParent.id);
         }
         const hasMask = Boolean(
@@ -3138,7 +3267,15 @@ export const useCanvasPointerEvents = ({
       }
     }
 
-    const targetCompound = !isFlattenedTarget ? target?.closest?.(
+    const isTargetText = Boolean(
+      !isExcludedFromTextEditing(target) && (
+        ['text', 'tspan'].includes(target?.tagName?.toLowerCase()) ||
+        (target?.tagName?.toLowerCase() === 'foreignobject' && isGenuineTextElement(target)) ||
+        (target?.closest?.('foreignObject') && isGenuineTextElement(target.closest('foreignObject')))
+      )
+    );
+
+    const targetCompound = (!isFlattenedTarget && !isTargetText) ? target?.closest?.(
       '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
     ) : null;
     if (targetCompound) {
@@ -3159,14 +3296,14 @@ export const useCanvasPointerEvents = ({
       return;
     }
 
-    // 2. Proactively check if we are double-clicking while a text is selected
+    // 2. Proactively check if we are double-clicking while a text is selected (exclude buttons, widgets, etc.)
     const selIdContext = selectedLayerIdRef.current;
     if (selIdContext && (!target || !['text', 'tspan', 'foreignobject'].includes(target.tagName?.toLowerCase()))) {
       let activeSelEls = svg.querySelectorAll(`[id="${selIdContext}"]`);
       // If there are duplicates due to temporary template saving leaks, find the visible one
       const activeSelEl = Array.from(activeSelEls).find(el => el.getBoundingClientRect().width > 0) || activeSelEls[0];
 
-      if (activeSelEl && ['text', 'tspan', 'foreignobject'].includes(activeSelEl.tagName.toLowerCase()) && activeSelEl.getAttribute('data-locked') !== 'true') {
+      if (activeSelEl && isGenuineTextElement(activeSelEl) && activeSelEl.getAttribute('data-locked') !== 'true') {
         // Bypass strict hitTest if the target was the overlay polygon (meaning they clicked inside the blue box exactly)
         const clickedPolygon = e.target.tagName.toLowerCase() === 'polygon';
         if (clickedPolygon || hitTest(activeSelEl, e.clientX, e.clientY, 15)) {
@@ -3211,7 +3348,7 @@ export const useCanvasPointerEvents = ({
       return;
     }
 
-    const isText = (['text', 'tspan'].includes(target.tagName.toLowerCase()) || target.tagName.toLowerCase() === 'foreignobject') && target.getAttribute('data-type') !== 'video' && !target.querySelector('video, iframe');
+    const isText = isGenuineTextElement(target);
     if (isText && target.id) {
       if (activeTopTool !== 'interaction' && activeTopTool !== 'animation') {
         enterTextEditMode(target, e.clientX, e.clientY);

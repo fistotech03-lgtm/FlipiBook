@@ -27,6 +27,7 @@ import {
 } from './penOverlayEngine';
 import { getLocalPoint } from '../mainEditor/utils/geometryUtils';
 import { updateShapeMaskTransform } from '../LeftActionMenu/Elements/utils/shapeMaskUtils';
+import { safeSerializeSvg } from '../utils/editorUtils';
 
 /**
  * Hook for managing Pen Tool drawing (Vectra session, bezier curves, pencil)
@@ -364,7 +365,7 @@ export const usePenNodeEngine = ({
         const comboD = pathToDCombo(vSession.paths);
         if (comboD) {
           pathEl.setAttribute('d', comboD);
-        } else if (!vSession.paths || vSession.paths.size === 0) {
+        } else if ((!vSession.paths || vSession.paths.size === 0) && (!pathEl.getAttribute('d') || pathEl.getAttribute('d').trim() === '')) {
           if (pathEl.parentNode) pathEl.parentNode.removeChild(pathEl);
         }
       }
@@ -384,7 +385,8 @@ export const usePenNodeEngine = ({
       });
 
       if (pathEl && svgEl && updatePageHtml) {
-        updatePageHtml(pageIdx, svgEl.outerHTML);
+        const cleanHtml = safeSerializeSvg(svgEl) || svgEl.outerHTML;
+        updatePageHtml(pageIdx, cleanHtml);
         if (targetId) {
           skipClearSelectionRef.current = true;
           window.dispatchEvent(new CustomEvent('expand-layer-parent', { detail: { id: targetId } }));
@@ -772,6 +774,28 @@ export const usePenNodeEngine = ({
       commitAndExitPenDrawing();
     }
   }, [activeMainTool, commitAndExitPenDrawing, clearPenToolNodes]);
+
+  // Listen for global commit signal before saves, refreshes, or page transitions
+  useEffect(() => {
+    const handleCommit = (e) => {
+      const isManual = e?.detail?.isManual;
+      // In automated background saves, if user is in pen mode, ensure live DOM path has latest d
+      // without destroying the active pen drawing session or resetting nodes!
+      if (!isManual && activeMainTool === 'pen') {
+        const vSession = vectraPenSessionRef.current;
+        if (vSession && drawingPathRef.current) {
+          const comboD = pathToDCombo(vSession.paths);
+          if (comboD) {
+            drawingPathRef.current.setAttribute('d', comboD);
+          }
+        }
+        return;
+      }
+      commitAndExitPenDrawing();
+    };
+    window.addEventListener('editor-commit-active-tools', handleCommit);
+    return () => window.removeEventListener('editor-commit-active-tools', handleCommit);
+  }, [commitAndExitPenDrawing, activeMainTool]);
 
   return {
     paperScopeRef,

@@ -149,6 +149,18 @@ const defaultProfile = {
   avatarBgColor: '#E8D4C8',
   about: '',
   mobile: '',
+  contact1: '',
+  contact1CountryCode: '+91',
+  contact1Label: 'Contact 1',
+  contact2: '',
+  contact2CountryCode: '+91',
+  contact2Label: 'Contact 2',
+  contact3: '',
+  contact3CountryCode: '+91',
+  contact3Label: 'Contact 3',
+  contactCount: 2,
+  profileType: 'Individual',
+  professionalTitle: '',
   companyName: '',
   industryType: '',
   companyEmail: '',
@@ -197,6 +209,8 @@ const Profile = () => {
     ...localProfileData
   }), [effectiveAuthUser, localProfileData]);
 
+  const displayUser = user;
+
   const setUser = useCallback((updater) => {
     setLocalProfileData(prev => {
       const currentFull = { ...defaultProfile, ...(effectiveAuthUser || {}), ...prev };
@@ -233,6 +247,21 @@ const Profile = () => {
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [activeStatsBookId, setActiveStatsBookId] = useState(null);
   const [isAvatarPopupOpen, setIsAvatarPopupOpen] = useState(false);
+  const bannerPopupRef = useRef(null);
+  const avatarPopupRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (bannerPopupRef.current && !bannerPopupRef.current.contains(e.target)) {
+        setIsColorPickerOpen(false);
+      }
+      if (avatarPopupRef.current && !avatarPopupRef.current.contains(e.target)) {
+        setIsAvatarPopupOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
   const [activeTab, setActiveTab] = useState('Edit Profile');
   const [editProfileActions, setEditProfileActions] = useState(null);
   const [bannerBg, setBannerBg] = useState({
@@ -315,7 +344,19 @@ const Profile = () => {
             about: p.about !== undefined ? p.about : (user.about || ''),
             mobile: p.mobile !== undefined ? p.mobile : (user.mobile || ''),
             countryCode: p.countryCode || user.countryCode || '+91',
+            contact1: p.contact1 !== undefined ? p.contact1 : (user.contact1 || p.mobile || user.mobile || ''),
+            contact1CountryCode: p.contact1CountryCode || user.contact1CountryCode || p.countryCode || user.countryCode || '+91',
+            contact1Label: p.contact1Label !== undefined ? p.contact1Label : (user.contact1Label || 'Contact 1'),
+            contact2: p.contact2 !== undefined ? p.contact2 : (user.contact2 || ''),
+            contact2CountryCode: p.contact2CountryCode || user.contact2CountryCode || '+91',
+            contact2Label: p.contact2Label !== undefined ? p.contact2Label : (user.contact2Label || 'Contact 2'),
+            contact3: p.contact3 !== undefined ? p.contact3 : (user.contact3 || ''),
+            contact3CountryCode: p.contact3CountryCode || user.contact3CountryCode || '+91',
+            contact3Label: p.contact3Label !== undefined ? p.contact3Label : (user.contact3Label || 'Contact 3'),
+            contactCount: p.contactCount !== undefined ? p.contactCount : (user.contactCount || 2),
             displayName: p.displayName || p.name || user.displayName || '',
+            profileType: p.profileType || user.profileType || 'Individual',
+            professionalTitle: p.professionalTitle || p.title || user.professionalTitle || user.title || '',
             address1: p.address1 !== undefined ? p.address1 : (user.address1 || ''),
             address2: p.address2 !== undefined ? p.address2 : (user.address2 || ''),
             city: p.city !== undefined ? p.city : (user.city || ''),
@@ -558,7 +599,7 @@ const Profile = () => {
 
         {/* Top right menu icon - Moved outside banner wrapper to avoid stacking context issues */}
         <div className="sticky top-0 z-[60] w-full pointer-events-none" style={{ height: 0 }}>
-          <div className="absolute top-[1vw] right-[1vw] pointer-events-auto flex items-center gap-[0.4vw]">
+          <div ref={bannerPopupRef} className="absolute top-[1vw] right-[1vw] pointer-events-auto flex items-center gap-[0.4vw]">
             {(bannerBg.type === 'image' || bannerBg.type === 'media') && bannerBg.value && (
               <button
                 onClick={() => {
@@ -664,11 +705,11 @@ const Profile = () => {
 
                   <div
                     className="w-[10.7vw] h-[10.7vw] rounded-full overflow-hidden relative shadow-inner z-10 bg-white transition-colors duration-300 flex items-center justify-center"
-                    style={{ backgroundColor: (user.picture && user.picture !== 'color_only') ? '#ffffff' : ((user.avatarBgColor && user.avatarBgColor !== '#E8D4C8' && user.avatarBgColor !== '#ffffff') ? user.avatarBgColor : getAvatarColor(user.name || user.email || 'User')) }}
+                    style={{ backgroundColor: (displayUser.picture && displayUser.picture !== 'color_only') ? '#ffffff' : ((displayUser.avatarBgColor && displayUser.avatarBgColor !== '#E8D4C8' && displayUser.avatarBgColor !== '#ffffff') ? displayUser.avatarBgColor : getAvatarColor(displayUser.name || displayUser.email || 'User')) }}
                   >
-                    {user.picture && user.picture !== 'color_only' ? (
+                    {displayUser.picture && displayUser.picture !== 'color_only' ? (
                       <img
-                        src={user.picture.startsWith('blob:') || user.picture.startsWith('data:') ? user.picture : resolveUploadsPath(user.picture)}
+                        src={displayUser.picture.startsWith('blob:') || displayUser.picture.startsWith('data:') ? displayUser.picture : resolveUploadsPath(displayUser.picture)}
                         alt="Profile Avatar"
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
@@ -679,7 +720,7 @@ const Profile = () => {
                     ) : (
                       <span className="text-white text-[4.5vw] font-semibold drop-shadow-md">
                         {(() => {
-                          const activeName = (user.displayName && user.displayName.trim() !== '') ? user.displayName.trim() : (user.name || user.email || 'U');
+                          const activeName = (displayUser.displayName && displayUser.displayName.trim() !== '') ? displayUser.displayName.trim() : (displayUser.name || displayUser.email || 'U');
                           return activeName.charAt(0).toUpperCase();
                         })()}
                       </span>
@@ -688,7 +729,7 @@ const Profile = () => {
                 </div>
 
                 {/* Camera Edit Icon badge matching screenshot */}
-                <div className="absolute top-[1.5vw] right-[0.8vw] z-20">
+                <div ref={avatarPopupRef} className="absolute top-[1.5vw] right-[0.8vw] z-20">
                   <button
                     onClick={() => {
                       setIsAvatarPopupOpen(!isAvatarPopupOpen);
@@ -704,7 +745,7 @@ const Profile = () => {
                       onClose={() => setIsAvatarPopupOpen(false)}
                       onSelectAvatar={handleSelectAvatar}
                       onSelectColor={handleSelectColor}
-                      currentAvatar={user.picture}
+                      currentAvatar={displayUser.picture}
                       onStartCrop={handleStartCrop}
                     />
                   </div>
@@ -714,12 +755,12 @@ const Profile = () => {
               {/* Name and Email */}
               <div className="flex flex-col items-center w-full">
                 <h1 className="text-[1.25vw] font-semibold text-gray-900 mt-[0.3vw] truncate max-w-[18vw]">
-                  {user.displayName && user.displayName.trim() !== '' ? user.displayName.trim() : (user.name || '')}
+                  {displayUser.displayName && displayUser.displayName.trim() !== '' ? displayUser.displayName.trim() : (displayUser.name || '')}
                 </h1>
-                {user.visibilitySettings?.showContact !== false && (
+                {displayUser.visibilitySettings?.showContact !== false && (
                   <div className="flex items-center gap-[0.4vw] text-[0.75vw] text-gray-500 mt-[0.2vw] truncate max-w-[18vw]">
                     <Icon icon="mdi:check-decagram" className="w-[0.95vw] h-[0.95vw] text-[#22c55e] flex-shrink-0" />
-                    <span className="truncate font-normal">{user.email}</span>
+                    <span className="truncate font-normal">{displayUser.email}</span>
                   </div>
                 )}
 
@@ -739,7 +780,7 @@ const Profile = () => {
                   <div className="flex flex-col items-center">
                     <span className="text-[1.05vw] font-semibold text-gray-900 leading-none">
                       {(() => {
-                        const count = Array.isArray(user.followers) ? user.followers.length : (typeof user.followers === 'number' ? user.followers : 0);
+                        const count = Array.isArray(displayUser.followers) ? displayUser.followers.length : (typeof displayUser.followers === 'number' ? displayUser.followers : 0);
                         if (count >= 1000) return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
                         return count;
                       })()}
@@ -757,7 +798,7 @@ const Profile = () => {
                           const v = Number(b.viewsCount !== undefined ? b.viewsCount : (b.views !== undefined ? b.views : 0));
                           return acc + (isNaN(v) ? 0 : v);
                         }, 0);
-                        const viewsVal = user.views !== undefined ? user.views : totalViews;
+                        const viewsVal = displayUser.views !== undefined ? displayUser.views : totalViews;
                         if (viewsVal >= 1000) return (viewsVal / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
                         return viewsVal;
                       })()}
@@ -770,221 +811,451 @@ const Profile = () => {
               {/* Info Cards Container */}
               <div 
                 id="left-scroll-container" 
-                className="w-full pb-[2vw] flex flex-col flex-1 min-h-0 overflow-y-auto hide-scrollbar rounded-b-[1vw] mt-[1.2vw]"
+                className="w-full px-[1.5vw] py-[1.2vw] flex flex-col gap-[1.3vw] flex-1 min-h-0 overflow-y-auto hide-scrollbar rounded-b-[1vw]"
               >
-
-                {/* Full Name (above About) */}
-                {user.name && user.name.trim() !== '' && (
-                  <div className="px-[1.2vw] py-[0.8vw] border-b border-gray-100 bg-white">
-                    <h3 className="flex items-center gap-[0.55vw] text-[0.82vw] font-medium text-[#374151] mb-[0.25vw]">
-                      <Icon icon="solar:user-bold" className="w-[1.05vw] h-[1.05vw] text-[#4b5563]" />
-                      <span>Full Name</span>
-                    </h3>
-                    <p className="text-[0.78vw] font-normal text-[#22262e] pl-[1.6vw]">
-                      {user.name}
-                    </p>
+                {/* 1. Profile Details Section */}
+                <div className="flex flex-col gap-[0.7vw]">
+                  <div className="flex items-center gap-[0.45vw] text-[#ec5137]">
+                    <Icon icon="solar:user-bold" className="w-[1.05vw] h-[1.05vw] flex-shrink-0" />
+                    <h3 className="text-[0.88vw] font-bold text-gray-900 tracking-tight leading-none">Profile Details</h3>
                   </div>
-                )}
 
-                {/* About */}
-                <div className="px-[1.2vw] py-[0.9vw] border-b border-gray-100 bg-white">
-                  <h3 className="flex items-center gap-[0.55vw] text-[0.82vw] font-medium text-[#374151] mb-[0.5vw]">
-                    <Icon icon="ix:about-filled" className="w-[1.15vw] h-[1.15vw] text-[#4b5563]" />
-                    <span>About</span>
-                  </h3>
-                  <p className="text-[0.74vw] text-[#555962] leading-[1.6] font-normal whitespace-pre-wrap">
-                    {user.about || 'No about info provided yet.'}
-                  </p>
-                </div>
+                  <div className="flex flex-col gap-[0.7vw] pl-[0.1vw]">
+                    {/* Full Name */}
+                    {displayUser.name || displayUser.displayName ? (
+                      <div>
+                        <p className="text-[0.70vw] text-gray-400 font-normal leading-none">Full Name</p>
+                        <p className="text-[0.78vw] text-gray-800 font-medium leading-snug mt-[0.15vw]">
+                          {displayUser.name || displayUser.displayName}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-[0.35vw]">
+                        <p className="text-[0.70vw] text-gray-400 font-normal leading-none">Full Name</p>
+                        <span className="text-[0.74vw] text-gray-400 font-medium leading-none">-</span>
+                      </div>
+                    )}
 
-                {/* Contact Number */}
-                {user.visibilitySettings?.showContact !== false && (
-                  <div className="px-[1.2vw] py-[1vw] bg-[#f8f9fa] border-y border-[#f0f2f5]">
-                    <h3 className="flex items-center gap-[0.6vw] text-[0.82vw] font-medium text-[#374151] mb-[0.5vw]">
-                      <Icon icon="mdi:call" className="w-[1.15vw] h-[1.15vw] text-[#4b5563]" />
-                      <span>Contact Number</span>
-                    </h3>
-                    <div className="flex flex-col gap-[0.25vw] text-[0.75vw] text-[#4b5563] font-normal tracking-wide pl-[0.1vw]">
-                      {user.mobile || user.contact1 ? (
+                    {/* Profile Type */}
+                    <div>
+                      <p className="text-[0.70vw] text-gray-400 font-normal leading-none">Profile Type</p>
+                      <p className="text-[0.78vw] text-gray-800 font-medium leading-snug mt-[0.15vw]">
+                        {displayUser.profileType || 'Individual'}
+                      </p>
+                    </div>
+
+                    {/* Conditional Fields based on Profile Type */}
+                    {(!displayUser.profileType || displayUser.profileType === 'Individual') ? (
+                      (displayUser.professionalTitle || displayUser.title) ? (
                         <div>
-                          {user.contact1Label && user.contact1Label !== 'Contact 1' && (
-                            <span className="font-medium text-gray-700 mr-[0.3vw]">{user.contact1Label}:</span>
-                          )}
-                          <span>{(user.contact1CountryCode || user.countryCode || '+91')} {(user.contact1 || user.mobile)}</span>
+                          <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Professional Title</p>
+                          <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                            {displayUser.professionalTitle || displayUser.title}
+                          </p>
                         </div>
                       ) : (
-                        <span>-</span>
-                      )}
-                      {user.contact2 && (
-                        <div>
-                          {user.contact2Label && user.contact2Label !== 'Contact 2' && (
-                            <span className="font-medium text-gray-700 mr-[0.3vw]">{user.contact2Label}:</span>
-                          )}
-                          <span>{(user.contact2CountryCode || '+91')} {user.contact2}</span>
+                        <div className="flex items-center gap-[0.35vw]">
+                          <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Professional Title</p>
+                          <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
                         </div>
-                      )}
-                      {user.contact3 && (
+                      )
+                    ) : displayUser.profileType === 'Company' ? (
+                      <>
+                        {/* Industry Type */}
                         <div>
-                          {user.contact3Label && user.contact3Label !== 'Contact 3' && (
-                            <span className="font-medium text-gray-700 mr-[0.3vw]">{user.contact3Label}:</span>
-                          )}
-                          <span>{(user.contact3CountryCode || '+91')} {user.contact3}</span>
+                          <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Industry Type</p>
+                          <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                            {displayUser.industryType || displayUser.industry || 'Software Development'}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
-                {/* Professional Details Section matching screenshot */}
-                <div className="px-[1.2vw] py-[1vw] border-b border-gray-100 bg-white">
-                  <h3 className="flex items-center gap-[0.6vw] text-[0.82vw] font-medium text-[#374151] mb-[0.7vw]">
-                    <Icon icon="material-symbols-light:home-work-rounded" className="w-[1.2vw] h-[1.2vw] text-[#4b5563]" />
-                    <span>Professional Details</span>
-                  </h3>
-                  <div className="text-[0.74vw] flex flex-col gap-[0.45vw] text-[#555962]">
-                    <div>
-                      <span className="font-medium text-[#22262e]">Profile : </span>
-                      <span>{user.profileType || 'Individual'}</span>
-                    </div>
-                    {(user.agencyName || user.businessName || user.companyName) && (
-                      <div>
-                        <span className="font-medium text-[#22262e]">
-                          {user.profileType === 'Company'
-                            ? 'Company / Organization : '
-                            : (user.profileType === 'Agency'
-                              ? 'Agency Name : '
-                              : (user.profileType === 'Freelancer' ? 'Business / Brand : ' : 'Company Name : '))}
-                        </span>
-                        <span>{user.companyName || user.agencyName || user.businessName}</span>
-                      </div>
+                        {/* Company / Organization */}
+                        {(displayUser.companyName || displayUser.businessName) ? (
+                          <div>
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Company / Organization</p>
+                            <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                              {displayUser.companyName || displayUser.businessName}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-[0.35vw]">
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Company / Organization</p>
+                            <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                          </div>
+                        )}
+
+                        {/* Company Size */}
+                        {displayUser.companySize ? (
+                          <div>
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Company Size</p>
+                            <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                              {displayUser.companySize}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-[0.35vw]">
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Company Size</p>
+                            <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                          </div>
+                        )}
+
+                        {/* Business / Company Gmail */}
+                        {(displayUser.businessEmail || displayUser.companyEmail) ? (
+                          <div>
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Company Gmail</p>
+                            <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                              {displayUser.businessEmail || displayUser.companyEmail}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-[0.35vw]">
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Company Gmail</p>
+                            <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                          </div>
+                        )}
+                      </>
+                    ) : displayUser.profileType === 'Agency' ? (
+                      <>
+                        {/* Industry Type */}
+                        <div>
+                          <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Industry Type</p>
+                          <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                            {displayUser.industryType || displayUser.industry || 'Software Development'}
+                          </p>
+                        </div>
+
+                        {/* Agency Name */}
+                        {(displayUser.agencyName || displayUser.companyName || displayUser.businessName) ? (
+                          <div>
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Agency Name</p>
+                            <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                              {displayUser.agencyName || displayUser.companyName || displayUser.businessName}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-[0.35vw]">
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Agency Name</p>
+                            <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                          </div>
+                        )}
+
+                        {/* Team Size */}
+                        {displayUser.teamSize ? (
+                          <div>
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Team Size</p>
+                            <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                              {displayUser.teamSize}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-[0.35vw]">
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Team Size</p>
+                            <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                          </div>
+                        )}
+
+                        {/* Business Gmail */}
+                        {(displayUser.businessEmail || displayUser.companyEmail) ? (
+                          <div>
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Business Gmail</p>
+                            <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                              {displayUser.businessEmail || displayUser.companyEmail}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-[0.35vw]">
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Business Gmail</p>
+                            <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      /* Freelancer */
+                      <>
+                        {/* Industry Type */}
+                        <div>
+                          <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Industry Type</p>
+                          <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                            {displayUser.industryType || displayUser.industry || 'Software Development'}
+                          </p>
+                        </div>
+
+                        {/* Business / Brand Name */}
+                        {(displayUser.businessName || displayUser.companyName) ? (
+                          <div>
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Business / Brand Name</p>
+                            <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                              {displayUser.businessName || displayUser.companyName}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-[0.35vw]">
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Business / Brand Name</p>
+                            <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                          </div>
+                        )}
+
+                        {/* Experience */}
+                        {displayUser.experience ? (
+                          <div>
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Experience</p>
+                            <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                              {displayUser.experience}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-[0.35vw]">
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Experience</p>
+                            <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                          </div>
+                        )}
+
+                        {/* Business Gmail */}
+                        {(displayUser.businessEmail || displayUser.companyEmail) ? (
+                          <div>
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Business Gmail</p>
+                            <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                              {displayUser.businessEmail || displayUser.companyEmail}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-[0.35vw]">
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Business Gmail</p>
+                            <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                          </div>
+                        )}
+                      </>
                     )}
-                    <div>
-                      <span className="font-medium text-[#22262e]">Industry Type : </span>
-                      <span>{user.industryType || user.industry || 'Software Development'}</span>
-                    </div>
-                    {user.profileType === 'Freelancer' && user.experience && (
+
+                    {/* Skills / Expertise */}
+                    {(() => {
+                      const skillsList = (Array.isArray(displayUser.services) && displayUser.services.length > 0)
+                        ? displayUser.services
+                        : (Array.isArray(displayUser.skills) && displayUser.skills.length > 0 ? displayUser.skills : []);
+                      return skillsList.length > 0 ? (
+                        <div>
+                          <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Skills / Expertise</p>
+                          <p className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw]">
+                            {skillsList.join(', ')}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-[0.35vw]">
+                          <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Skills / Expertise</p>
+                          <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                        </div>
+                      );
+                    })()}
+
+                    {/* About */}
+                    {displayUser.about ? (
                       <div>
-                        <span className="font-medium text-[#22262e]">Experience : </span>
-                        <span>{user.experience}</span>
+                        <p className="text-[0.68vw] text-gray-400 font-normal leading-none">About</p>
+                        <p className="text-[0.72vw] text-gray-700 font-normal leading-[1.5] mt-[0.15vw] whitespace-pre-wrap">
+                          {displayUser.about}
+                        </p>
                       </div>
-                    )}
-                    {user.profileType === 'Agency' && user.teamSize && (
-                      <div>
-                        <span className="font-medium text-[#22262e]">Team Size : </span>
-                        <span>{user.teamSize}</span>
-                      </div>
-                    )}
-                    {user.profileType === 'Company' && user.companySize && (
-                      <div>
-                        <span className="font-medium text-[#22262e]">Company Size : </span>
-                        <span>{user.companySize}</span>
-                      </div>
-                    )}
-                    {(user.businessEmail || user.companyEmail) && user.visibilitySettings?.showContact !== false && (
-                      <div>
-                        <span className="font-medium text-[#22262e]">
-                          {(user.profileType === 'Freelancer' || user.profileType === 'Agency' || user.profileType === 'Company') ? 'Business Gmail : ' : 'Company Gmail : '}
-                        </span>
-                        <span>{user.businessEmail || user.companyEmail}</span>
-                      </div>
-                    )}
-                    {(user.profileType === 'Freelancer' || user.profileType === 'Agency' || user.profileType === 'Company') && Array.isArray(user.specialization) && user.specialization.length > 0 && (
-                      <div>
-                        <span className="font-medium text-[#22262e]">Specialization : </span>
-                        <span>{user.specialization.join(', ')}</span>
-                      </div>
-                    )}
-                    {((Array.isArray(user.services) && user.services.length > 0) || (Array.isArray(user.skills) && user.skills.length > 0)) && (
-                      <div>
-                        <span className="font-medium text-[#22262e]">Service/Expertise : </span>
-                        <span>
-                          {((Array.isArray(user.services) && user.services.length > 0)
-                            ? user.services
-                            : user.skills
-                          ).join(', ')}
-                        </span>
-                      </div>
-                    )}
-                    {user.visibilitySettings?.showContact !== false && Boolean(
-                      (user.website && user.website.trim() !== '') ||
-                      (user.socials?.website && typeof user.socials.website === 'string' && user.socials.website.trim() !== '')
-                    ) && (
-                      <div>
-                        <span className="font-medium text-[#22262e]">
-                          {user.profileType === 'Company'
-                            ? 'Company Website : '
-                            : (user.profileType === 'Agency'
-                              ? 'Agency Website : '
-                              : (user.profileType === 'Freelancer' ? 'Portfolio / Website : ' : 'Website : '))}
-                        </span>
-                        {(() => {
-                          const siteUrl = (user.website && user.website.trim() !== '') ? user.website.trim() : user.socials.website.trim();
-                          return (
-                            <a
-                              href={siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-blue-600 hover:underline"
-                            >
-                              {siteUrl}
-                            </a>
-                          );
-                        })()}
+                    ) : (
+                      <div className="flex items-center gap-[0.35vw]">
+                        <p className="text-[0.68vw] text-gray-400 font-normal leading-none">About</p>
+                        <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Address */}
-                {user.visibilitySettings?.showAddress !== false && (
-                  <div className="px-[1.2vw] py-[1vw] bg-[#f8f9fa] border-y border-[#f0f2f5]">
-                    <h3 className="flex items-center gap-[0.6vw] text-[0.82vw] font-medium text-[#374151] mb-[0.6vw]">
-                      <Icon icon="carbon:location-company-filled" className="w-[1.15vw] h-[1.15vw] text-[#4b5563]" />
-                      <span>Address</span>
-                    </h3>
-                    <div className="text-[0.74vw] flex flex-col gap-[0.3vw] text-[#4b5563] leading-[1.5] font-normal pl-[0.1vw]">
-                      {(user.address1 || user.address2) ? (
-                        <div>{[user.address1, user.address2].filter(Boolean).join(', ')}</div>
-                      ) : null}
-                      {(user.city || user.state) ? (
-                        <div>{[user.city, user.state].filter(Boolean).join(', ')}</div>
-                      ) : null}
-                      <div>
-                        {[user.country || 'India', user.pincode ? `${user.pincode}` : ''].filter(Boolean).join(' - ')}
-                      </div>
+                {/* 2. Contact & Location Section */}
+                {displayUser.visibilitySettings?.showContact !== false && (
+                  <div className="flex flex-col gap-[0.7vw]">
+                    <div className="flex items-center gap-[0.45vw] text-[#ec5137]">
+                      <Icon icon="solar:map-point-bold" className="w-[1.05vw] h-[1.05vw] flex-shrink-0" />
+                      <h3 className="text-[0.88vw] font-bold text-gray-900 tracking-tight leading-none">Contact & Location</h3>
+                    </div>
+
+                    <div className="flex flex-col gap-[0.7vw] pl-[0.1vw]">
+                      {/* Number */}
+                      {displayUser.mobile || displayUser.contact1 ? (
+                        <div>
+                          <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Number</p>
+                          <div className="text-[0.76vw] text-gray-900 font-medium leading-snug mt-[0.15vw] flex flex-col gap-[0.15vw]">
+                            <div>
+                              {displayUser.contact1Label && displayUser.contact1Label !== 'Contact 1' && (
+                                <span className="font-normal text-gray-500 mr-[0.25vw]">{displayUser.contact1Label}:</span>
+                              )}
+                              <span>{(displayUser.contact1CountryCode || displayUser.countryCode || '+91')} {(displayUser.contact1 || displayUser.mobile)}</span>
+                            </div>
+                            {displayUser.contact2 && (
+                              <div>
+                                {displayUser.contact2Label && displayUser.contact2Label !== 'Contact 2' && (
+                                  <span className="font-normal text-gray-500 mr-[0.25vw]">{displayUser.contact2Label}:</span>
+                                )}
+                                <span>{(displayUser.contact2CountryCode || '+91')} {displayUser.contact2}</span>
+                              </div>
+                            )}
+                            {displayUser.contact3 && (
+                              <div>
+                                {displayUser.contact3Label && displayUser.contact3Label !== 'Contact 3' && (
+                                  <span className="font-normal text-gray-500 mr-[0.25vw]">{displayUser.contact3Label}:</span>
+                                )}
+                                <span>{(displayUser.contact3CountryCode || '+91')} {displayUser.contact3}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-[0.35vw]">
+                          <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Number</p>
+                          <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                        </div>
+                      )}
+
+                      {/* Address */}
+                      {displayUser.visibilitySettings?.showAddress !== false && (() => {
+                        const lines = [];
+                        if (displayUser.address1) lines.push(displayUser.address1);
+                        const line2 = [displayUser.address2, displayUser.city].filter(Boolean).join(' , ');
+                        if (line2) lines.push(line2);
+                        const statePart = displayUser.state && displayUser.state !== 'None' ? displayUser.state : '';
+                        const pinPart = displayUser.pincode ? `${displayUser.pincode}` : '';
+                        const line3 = [statePart, pinPart].filter(Boolean).join(' - ');
+                        if (line3) {
+                          const fullLine3 = displayUser.country && displayUser.country !== 'None' && displayUser.country !== 'INDIA'
+                            ? `${line3}, ${displayUser.country}`
+                            : line3;
+                          lines.push(fullLine3);
+                        } else if (displayUser.country && displayUser.country !== 'None' && displayUser.country !== 'INDIA') {
+                          lines.push(displayUser.country);
+                        }
+
+                        if (lines.length === 0) {
+                          return (
+                            <div className="flex items-center gap-[0.35vw]">
+                              <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Address</p>
+                              <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div>
+                            <p className="text-[0.68vw] text-gray-400 font-normal leading-none">Address</p>
+                            <div className="text-[0.72vw] text-gray-700 font-normal leading-[1.45] mt-[0.15vw]">
+                              <div className="flex flex-col">
+                                {lines.map((l, i) => (
+                                  <span key={i}>{l}</span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
 
-                {user.visibilitySettings?.showSocial !== false && (
-                  <div className="px-[1.2vw] py-[1vw] flex gap-[0.6vw] justify-start items-center">
-                    {Boolean(user.socials?.website && typeof user.socials.website === 'string' && user.socials.website.trim() !== '') && (
-                      <div onClick={() => window.open(user.socials.website.startsWith('http') ? user.socials.website : `https://${user.socials.website}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#1a1a1a] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
-                        <Globe className="w-[1.2vw] h-[1.2vw] text-white" />
+                {/* 3. Social Media & Links Section */}
+                {displayUser.visibilitySettings?.showSocial !== false && (() => {
+                  const hasWebsite = Boolean((displayUser.socials?.website && typeof displayUser.socials.website === 'string' && displayUser.socials.website.trim() !== '') || (displayUser.website && typeof displayUser.website === 'string' && displayUser.website.trim() !== ''));
+                  const hasLinkedin = Boolean(displayUser.socials?.linkedin && typeof displayUser.socials.linkedin === 'string' && displayUser.socials.linkedin.trim() !== '');
+                  const hasInstagram = Boolean(displayUser.socials?.instagram && typeof displayUser.socials.instagram === 'string' && displayUser.socials.instagram.trim() !== '');
+                  const hasFacebook = Boolean(displayUser.socials?.facebook && typeof displayUser.socials.facebook === 'string' && displayUser.socials.facebook.trim() !== '');
+                  const hasWhatsapp = Boolean(displayUser.socials?.whatsapp && typeof displayUser.socials.whatsapp === 'string' && displayUser.socials.whatsapp.trim() !== '');
+
+                  const hasAny = hasWebsite || hasLinkedin || hasInstagram || hasFacebook || hasWhatsapp;
+
+                  if (!hasAny) {
+                    return (
+                      <div className="flex items-center gap-[0.35vw]">
+                        <div className="flex items-center gap-[0.45vw] text-[#ec5137]">
+                          <Icon icon="solar:share-bold" className="w-[1.05vw] h-[1.05vw] flex-shrink-0" />
+                          <h3 className="text-[0.88vw] font-bold text-gray-900 tracking-tight leading-none">Social Media & Links</h3>
+                        </div>
+                        <span className="text-[0.72vw] text-gray-400 font-medium leading-none">-</span>
                       </div>
-                    )}
-                    {Boolean(user.socials?.linkedin && typeof user.socials.linkedin === 'string' && user.socials.linkedin.trim() !== '') && (
-                      <div onClick={() => window.open(user.socials.linkedin.startsWith('http') ? user.socials.linkedin : `https://${user.socials.linkedin}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#0077b5] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
-                        <Icon icon="mdi:linkedin" className="w-[1.4vw] h-[1.4vw] text-white" />
+                    );
+                  }
+
+                  return (
+                    <div className="flex flex-col gap-[0.7vw]">
+                      <div className="flex items-center gap-[0.45vw] text-[#ec5137]">
+                        <Icon icon="solar:share-bold" className="w-[1.05vw] h-[1.05vw] flex-shrink-0" />
+                        <h3 className="text-[0.88vw] font-bold text-gray-900 tracking-tight leading-none">Social Media & Links</h3>
                       </div>
-                    )}
-                    {Boolean(user.socials?.instagram && typeof user.socials.instagram === 'string' && user.socials.instagram.trim() !== '') && (
-                      <div onClick={() => window.open(user.socials.instagram.startsWith('http') ? user.socials.instagram : `https://${user.socials.instagram}`, '_blank')} className="w-[2vw] h-[2vw] bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
-                        <Icon icon="mdi:instagram" className="w-[1.3vw] h-[1.3vw] text-white" />
+
+                      <div className="flex items-center gap-[0.55vw] mt-[0.1vw] flex-wrap">
+                        {/* Website */}
+                        {hasWebsite && (
+                          <div
+                            onClick={() => {
+                              const site = displayUser.socials?.website || displayUser.website;
+                              if (site) window.open(site.startsWith('http') ? site : `https://${site}`, '_blank');
+                            }}
+                            className="w-[2.2vw] h-[2.2vw] bg-[#1a1a1a] rounded-[0.45vw] flex items-center justify-center transition-opacity shadow-xs cursor-pointer hover:opacity-80"
+                            title={displayUser.socials?.website || displayUser.website || 'Website'}
+                          >
+                            <Globe className="w-[1.2vw] h-[1.2vw] text-white" />
+                          </div>
+                        )}
+
+                        {/* LinkedIn */}
+                        {hasLinkedin && (
+                          <div
+                            onClick={() => {
+                              const li = displayUser.socials?.linkedin;
+                              if (li) window.open(li.startsWith('http') ? li : `https://${li}`, '_blank');
+                            }}
+                            className="w-[2.2vw] h-[2.2vw] bg-[#0077b5] rounded-[0.45vw] flex items-center justify-center transition-opacity shadow-xs cursor-pointer hover:opacity-80"
+                            title={displayUser.socials?.linkedin || 'LinkedIn'}
+                          >
+                            <Icon icon="mdi:linkedin" className="w-[1.4vw] h-[1.4vw] text-white" />
+                          </div>
+                        )}
+
+                        {/* Instagram */}
+                        {hasInstagram && (
+                          <div
+                            onClick={() => {
+                              const ig = displayUser.socials?.instagram;
+                              if (ig) window.open(ig.startsWith('http') ? ig : `https://${ig}`, '_blank');
+                            }}
+                            className="w-[2.2vw] h-[2.2vw] bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-[0.45vw] flex items-center justify-center transition-opacity shadow-xs cursor-pointer hover:opacity-80"
+                            title={displayUser.socials?.instagram || 'Instagram'}
+                          >
+                            <Icon icon="mdi:instagram" className="w-[1.3vw] h-[1.3vw] text-white" />
+                          </div>
+                        )}
+
+                        {/* Facebook */}
+                        {hasFacebook && (
+                          <div
+                            onClick={() => {
+                              const fb = displayUser.socials?.facebook;
+                              if (fb) window.open(fb.startsWith('http') ? fb : `https://${fb}`, '_blank');
+                            }}
+                            className="w-[2.2vw] h-[2.2vw] bg-[#1877f2] rounded-[0.45vw] flex items-center justify-center transition-opacity shadow-xs cursor-pointer hover:opacity-80"
+                            title={displayUser.socials?.facebook || 'Facebook'}
+                          >
+                            <Icon icon="mdi:facebook" className="w-[1.4vw] h-[1.4vw] text-white" />
+                          </div>
+                        )}
+
+                        {/* WhatsApp */}
+                        {hasWhatsapp && (
+                          <div
+                            onClick={() => {
+                              const wa = displayUser.socials?.whatsapp;
+                              if (wa) window.open(wa.startsWith('http') ? wa : `https://wa.me/${wa.replace(/[^0-9]/g, '')}`, '_blank');
+                            }}
+                            className="w-[2.2vw] h-[2.2vw] bg-[#25d366] rounded-[0.45vw] flex items-center justify-center transition-opacity shadow-xs cursor-pointer hover:opacity-80"
+                            title={displayUser.socials?.whatsapp || 'WhatsApp'}
+                          >
+                            <Icon icon="mdi:whatsapp" className="w-[1.4vw] h-[1.4vw] text-white" />
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {Boolean(user.socials?.facebook && typeof user.socials.facebook === 'string' && user.socials.facebook.trim() !== '') && (
-                      <div onClick={() => window.open(user.socials.facebook.startsWith('http') ? user.socials.facebook : `https://${user.socials.facebook}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#1877f2] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
-                        <Icon icon="mdi:facebook" className="w-[1.4vw] h-[1.4vw] text-white" />
-                      </div>
-                    )}
-                    {Boolean(user.socials?.whatsapp && typeof user.socials.whatsapp === 'string' && user.socials.whatsapp.trim() !== '') && (
-                      <div onClick={() => window.open(user.socials.whatsapp.startsWith('http') ? user.socials.whatsapp : `https://wa.me/${user.socials.whatsapp.replace(/[^0-9]/g, '')}`, '_blank')} className="w-[2vw] h-[2vw] bg-[#25d366] rounded-[0.4vw] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
-                        <Icon icon="mdi:whatsapp" className="w-[1.4vw] h-[1.4vw] text-white" />
-                      </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -995,8 +1266,8 @@ const Profile = () => {
               {/* Header Area: Title on Left, Action Buttons on Right in the SAME LINE */}
               <div className="pt-[1.2vw] pl-[1.5vw] pr-[1.5vw] pb-[0.8vw] relative flex-shrink-0 z-[60] flex items-center justify-between border-b border-gray-100">
                 <div>
-                  <h2 className="text-[1.15vw] font-medium text-gray-800 tracking-tight leading-none">Edit Profile</h2>
-                  <p className="text-[0.72vw] text-gray-400 mt-[0.35vw]">Only your actions and activities will appear here.</p>
+                  <h2 className="text-[1.35vw] font-bold text-gray-900 tracking-tight leading-none">Edit Profile</h2>
+                  <p className="text-[0.78vw] text-gray-500 mt-[0.35vw]">Only your actions and activities will appear here.</p>
                 </div>
 
                 {/* Action Buttons: Hidden until user types/makes changes */}
@@ -1007,20 +1278,20 @@ const Profile = () => {
                         type="button"
                         disabled={editProfileActions.isSaving}
                         onClick={editProfileActions.handleCancel}
-                        className="flex items-center gap-[0.4vw] px-[1.2vw] py-[0.55vw] border border-gray-300 rounded-[0.5vw] text-[0.85vw] font-medium text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                        className="h-[2.15vw] flex items-center gap-[0.35vw] px-[1.1vw] border border-gray-200 rounded-[0.55vw] text-[0.78vw] font-medium text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                       >
-                        <X className="w-[1vw] h-[1vw] text-gray-500" strokeWidth={1.8} /> Cancel
+                        <X className="w-[0.9vw] h-[0.9vw] text-gray-500" strokeWidth={2} /> Cancel
                       </button>
                       <button
                         type="button"
                         disabled={editProfileActions.isSaving}
                         onClick={editProfileActions.handleSave}
-                        className="flex items-center gap-[0.4vw] px-[1.2vw] py-[0.55vw] bg-[#43A047] hover:bg-[#388E3C] rounded-[0.5vw] text-[0.85vw] font-medium text-white transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                        className="h-[2.15vw] flex items-center gap-[0.35vw] px-[1.2vw] bg-[#EC5137] hover:bg-[#d9442b] rounded-[0.55vw] text-[0.78vw] font-semibold text-white transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                       >
                         {editProfileActions.isSaving ? (
-                          <Icon icon="line-md:loading-loop" className="w-[1vw] h-[1vw]" />
+                          <Icon icon="line-md:loading-loop" className="w-[0.9vw] h-[0.9vw]" />
                         ) : (
-                          <Check className="w-[1vw] h-[1vw] text-white" strokeWidth={2.5} />
+                          <Check className="w-[0.9vw] h-[0.9vw] text-white" strokeWidth={2.5} />
                         )}
                         {editProfileActions.isSaving
                           ? (editProfileActions.isAlreadySaved ? 'Updating...' : 'Saving...')

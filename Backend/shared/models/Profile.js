@@ -96,42 +96,6 @@ const profileSchema = new mongoose.Schema(
     following: {
       type: [String],
       default: []
-    },
-    myShelf: {
-      shelfCount: {
-        type: Number,
-        default: 1
-      },
-      folders: [
-        {
-          _id: false,
-          folderName: {
-            type: String,
-            default: ''
-          },
-          shelf_design: {
-            type: Number,
-            default: 1
-          },
-          books: [
-            {
-              _id: false,
-              row: {
-                type: Number,
-                default: 1
-              },
-              order: {
-                type: Number,
-                default: 1
-              },
-              v_id: {
-                type: String,
-                required: true
-              }
-            }
-          ]
-        }
-      ]
     }
   },
   {

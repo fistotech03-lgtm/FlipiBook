@@ -186,14 +186,14 @@ export default function MyFlipbooks() {
             try {
                 const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books`, {
                     withCredentials: true,
-                    params: { t: Date.now() }
+                    params: { t: Date.now(), emailId }
                 });
-                const actualMyShelf = res.data?.myShelf;
+                const actualMyShelf = res.data?.shelfCustomizations || res.data?.myShelf;
                 if (actualMyShelf && actualMyShelf.folders && actualMyShelf.folders.length > 0) {
                     const previewFolders = actualMyShelf.folders.map(f => ({
                         name: f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : (f.folderName || 'My Flipbooks'),
                         books: f.books || [],
-                        shelf_design: f.shelf_design || 4
+                        shelf_design: f.shelf_design || 'customize4'
                     }));
                     setShelfFolders(prev => prev.length === 0 ? previewFolders : prev);
                 }

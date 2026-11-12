@@ -1,4 +1,5 @@
 const express = require('express');
+const ShelfCustomizations = require('../../../../shared/models/ShelfCustomizations');
 const Profile = require('../../../../shared/models/Profile');
 const Flipbook = require('../../../../shared/models/Flipbook');
 const { optionalAuth } = require('../middlewares/authMiddleware');
@@ -12,31 +13,62 @@ const normalizeFolderName = (name) => {
   return trimmed || 'My Bookshelf';
 };
 
-const normalizeAndMergeFolders = (profile) => {
-  if (!profile.myShelf) {
-    profile.myShelf = { shelfCount: 1, folders: [] };
+const getOrCreateShelf = async (emailId) => {
+  const normalizedEmail = (emailId || '').trim().toLowerCase();
+  if (!normalizedEmail) return null;
+
+  let shelf = await ShelfCustomizations.findOne({ emailId: normalizedEmail });
+  if (!shelf) {
+    // Migration fallback: check if legacy data exists in Profile.myShelf
+    try {
+      const legacyProfile = await Profile.findOne({ emailId: normalizedEmail }).lean();
+      if (legacyProfile?.myShelf?.folders?.length > 0) {
+        shelf = new ShelfCustomizations({
+          userID: legacyProfile.userID || '',
+          emailId: normalizedEmail,
+          shelfCount: legacyProfile.myShelf.shelfCount || 1,
+          folders: legacyProfile.myShelf.folders
+        });
+        await shelf.save();
+      }
+    } catch (_) {}
   }
-  if (!Array.isArray(profile.myShelf.folders)) {
-    profile.myShelf.folders = [];
+
+  if (!shelf) {
+    shelf = new ShelfCustomizations({
+      emailId: normalizedEmail,
+      shelfCount: 1,
+      folders: []
+    });
   }
-  return false;
+
+  if (!Array.isArray(shelf.folders)) {
+    shelf.folders = [];
+  }
+  return shelf;
 };
 
 // GET /api/profile/my-shelf-books or /api/shelf/my-shelf-books
 router.get('/my-shelf-books', async (req, res) => {
   try {
-    const emailId = (req.query?.emailId || req.user?.emailId || '').trim().toLowerCase();
+    const emailId = (
+      req.query?.emailId ||
+      req.query?.email ||
+      req.user?.emailId ||
+      req.user?.email ||
+      ''
+    ).trim().toLowerCase();
     if (!emailId) return res.status(400).json({ success: false, message: 'Authentication required' });
 
     const normalizedEmail = emailId;
-    const profile = await Profile.findOne({ emailId: normalizedEmail });
-    if (!profile) {
-      return res.json({ success: true, books: [], myShelf: { folders: [] } });
+    const shelf = await getOrCreateShelf(normalizedEmail);
+    if (!shelf) {
+      return res.json({ success: true, books: [], myShelf: { folders: [] }, shelfCustomizations: { folders: [] } });
     }
 
     let bookIds = [];
-    if (profile.myShelf && profile.myShelf.folders) {
-      profile.myShelf.folders.forEach((f) => {
+    if (shelf.folders && Array.isArray(shelf.folders)) {
+      shelf.folders.forEach((f) => {
         if (f.books) {
           f.books.forEach((b) => {
             const id = typeof b === 'string' ? b : b.v_id;
@@ -75,10 +107,16 @@ router.get('/my-shelf-books', async (req, res) => {
       };
     });
 
+    const shelfPayload = {
+      shelfCount: shelf.shelfCount || 1,
+      folders: shelf.folders || []
+    };
+
     return res.json({
       success: true,
       books: booksWithFlag,
-      myShelf: profile.myShelf || { folders: [] }
+      myShelf: shelfPayload,
+      shelfCustomizations: shelf
     });
   } catch (error) {
     console.error('Error fetching my-shelf-books:', error);
@@ -89,26 +127,27 @@ router.get('/my-shelf-books', async (req, res) => {
 // POST /api/profile/add-to-shelf
 router.post('/add-to-shelf', async (req, res) => {
   try {
-    const emailId = (req.body?.emailId || req.user?.emailId || '').trim().toLowerCase();
+    const emailId = (
+      req.body?.emailId ||
+      req.user?.emailId ||
+      req.body?.email ||
+      req.user?.email ||
+      ''
+    ).trim().toLowerCase();
     const { bookId, folderName } = req.body;
     if (!emailId || !bookId) {
       return res.status(400).json({ success: false, message: 'Missing emailId or bookId' });
     }
 
     const normalizedEmail = emailId;
-    let profile = await Profile.findOne({ emailId: normalizedEmail });
-    if (!profile) {
-      profile = new Profile({ emailId: normalizedEmail });
-    }
-
-    normalizeAndMergeFolders(profile);
+    const shelf = await getOrCreateShelf(normalizedEmail);
 
     let targetFolder = normalizeFolderName(folderName);
-    let folder = profile.myShelf.folders.find((f) => f.folderName === targetFolder);
+    let folder = shelf.folders.find((f) => f.folderName === targetFolder);
 
     if (!folder) {
-      profile.myShelf.folders.push({ folderName: targetFolder, shelf_design: 'customize4', books: [] });
-      folder = profile.myShelf.folders.find((f) => f.folderName === targetFolder);
+      shelf.folders.push({ folderName: targetFolder, shelf_design: 'customize4', books: [] });
+      folder = shelf.folders.find((f) => f.folderName === targetFolder);
     }
 
     if (!folder.books) folder.books = [];
@@ -129,10 +168,9 @@ router.post('/add-to-shelf', async (req, res) => {
       order: currentCount % 6
     });
 
-    profile.updatedAt = new Date();
-    profile.markModified('myShelf.folders');
-    profile.markModified('myShelf');
-    await profile.save();
+    shelf.updatedAt = new Date();
+    shelf.markModified('folders');
+    await shelf.save();
 
     return res.json({ success: true, message: 'Book added to shelf' });
   } catch (error) {
@@ -144,22 +182,26 @@ router.post('/add-to-shelf', async (req, res) => {
 // POST /api/profile/remove-from-shelf
 router.post('/remove-from-shelf', async (req, res) => {
   try {
-    const emailId = (req.body?.emailId || req.user?.emailId || '').trim().toLowerCase();
+    const emailId = (
+      req.body?.emailId ||
+      req.user?.emailId ||
+      req.body?.email ||
+      req.user?.email ||
+      ''
+    ).trim().toLowerCase();
     const { bookId, folderName } = req.body;
     if (!emailId || !bookId) {
       return res.status(400).json({ success: false, message: 'Missing emailId or bookId' });
     }
 
     const normalizedEmail = emailId;
-    let profile = await Profile.findOne({ emailId: normalizedEmail });
-    if (!profile || !profile.myShelf || !profile.myShelf.folders) {
-      return res.status(404).json({ success: false, message: 'Profile or shelf not found' });
+    const shelf = await getOrCreateShelf(normalizedEmail);
+    if (!shelf || !shelf.folders) {
+      return res.status(404).json({ success: false, message: 'Shelf not found' });
     }
 
-    normalizeAndMergeFolders(profile);
-
     let removed = false;
-    profile.myShelf.folders.forEach((folder) => {
+    shelf.folders.forEach((folder) => {
       if (folderName && folder.folderName !== folderName) return;
       if (folder.books) {
         const initLength = folder.books.length;
@@ -182,10 +224,9 @@ router.post('/remove-from-shelf', async (req, res) => {
     });
 
     if (removed) {
-      profile.updatedAt = new Date();
-      profile.markModified('myShelf.folders');
-      profile.markModified('myShelf');
-      await profile.save();
+      shelf.updatedAt = new Date();
+      shelf.markModified('folders');
+      await shelf.save();
     }
 
     return res.json({ success: true, message: 'Book removed from shelf' });
@@ -198,39 +239,49 @@ router.post('/remove-from-shelf', async (req, res) => {
 // POST /api/profile/update-shelf-order
 router.post('/update-shelf-order', async (req, res) => {
   try {
-    const emailId = (req.body?.emailId || req.user?.emailId || '').trim().toLowerCase();
-    const { folderName, bookIds } = req.body;
-    if (!emailId || !folderName || !Array.isArray(bookIds)) {
+    const emailId = (
+      req.body?.emailId ||
+      req.body?.email ||
+      req.user?.emailId ||
+      req.user?.email ||
+      ''
+    ).trim().toLowerCase();
+    const { folderName, bookIds, oldFolderName } = req.body;
+    if (!emailId || !folderName) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    let profile = await Profile.findOne({ emailId });
-    if (!profile) {
-      profile = new Profile({ emailId });
+    const shelf = await getOrCreateShelf(emailId);
+
+    // Handle renaming shelf folder if oldFolderName is passed
+    if (oldFolderName && oldFolderName !== folderName) {
+      const existingFolder = shelf.folders.find((f) => f.folderName === oldFolderName);
+      if (existingFolder) {
+        existingFolder.folderName = folderName;
+      }
     }
 
-    normalizeAndMergeFolders(profile);
-
-    let folder = profile.myShelf.folders.find((f) => f.folderName === folderName);
+    let folder = shelf.folders.find((f) => f.folderName === folderName);
     if (!folder) {
-      profile.myShelf.folders.push({
+      shelf.folders.push({
         folderName,
         shelf_design: 'customize4',
         books: []
       });
-      folder = profile.myShelf.folders.find((f) => f.folderName === folderName);
+      folder = shelf.folders.find((f) => f.folderName === folderName);
     }
 
-    folder.books = bookIds.map((id, index) => ({
-      v_id: id,
-      row: Math.floor(index / 6),
-      order: index % 6
-    }));
+    if (Array.isArray(bookIds)) {
+      folder.books = bookIds.map((id, index) => ({
+        v_id: id,
+        row: Math.floor(index / 6),
+        order: index % 6
+      }));
+    }
 
-    profile.updatedAt = new Date();
-    profile.markModified('myShelf.folders');
-    profile.markModified('myShelf');
-    await profile.save();
+    shelf.updatedAt = new Date();
+    shelf.markModified('folders');
+    await shelf.save();
 
     return res.json({ success: true, message: 'Shelf order updated successfully' });
   } catch (error) {
@@ -242,34 +293,62 @@ router.post('/update-shelf-order', async (req, res) => {
 // POST /api/profile/update-shelf-design
 router.post('/update-shelf-design', async (req, res) => {
   try {
-    const emailId = (req.body?.emailId || req.user?.emailId || '').trim().toLowerCase();
-    const { folderName, shelf_design } = req.body;
+    const emailId = (
+      req.body?.emailId ||
+      req.body?.email ||
+      req.user?.emailId ||
+      req.user?.email ||
+      ''
+    ).trim().toLowerCase();
+    const {
+      folderName,
+      shelf_design,
+      defaultLightType,
+      lights,
+      selectedWallTheme,
+      selectedLightTheme,
+      showLightSwitch,
+      lightOpacity,
+      decors,
+      logo
+    } = req.body;
+
     if (!emailId || !folderName) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    let profile = await Profile.findOne({ emailId });
-    if (!profile) {
-      profile = new Profile({ emailId });
-    }
+    const shelf = await getOrCreateShelf(emailId);
 
-    normalizeAndMergeFolders(profile);
-
-    let folder = profile.myShelf.folders.find((f) => f.folderName === folderName);
+    let folder = shelf.folders.find((f) => f.folderName === folderName);
     if (!folder) {
-      profile.myShelf.folders.push({
+      shelf.folders.push({
         folderName,
         shelf_design: shelf_design || 'customize4',
+        defaultLightType: defaultLightType || 'Turn on',
+        lights: lights !== undefined ? lights : true,
+        selectedWallTheme: selectedWallTheme || null,
+        selectedLightTheme: selectedLightTheme || null,
+        showLightSwitch: showLightSwitch !== undefined ? showLightSwitch : true,
+        lightOpacity: lightOpacity !== undefined ? lightOpacity : 1,
+        decors: decors || {},
+        logo: logo || '',
         books: []
       });
     } else {
-      folder.shelf_design = shelf_design;
+      if (shelf_design !== undefined) folder.shelf_design = shelf_design;
+      if (defaultLightType !== undefined) folder.defaultLightType = defaultLightType;
+      if (lights !== undefined) folder.lights = lights;
+      if (selectedWallTheme !== undefined) folder.selectedWallTheme = selectedWallTheme;
+      if (selectedLightTheme !== undefined) folder.selectedLightTheme = selectedLightTheme;
+      if (showLightSwitch !== undefined) folder.showLightSwitch = showLightSwitch;
+      if (lightOpacity !== undefined) folder.lightOpacity = lightOpacity;
+      if (decors !== undefined) folder.decors = decors;
+      if (logo !== undefined) folder.logo = logo;
     }
 
-    profile.updatedAt = new Date();
-    profile.markModified('myShelf.folders');
-    profile.markModified('myShelf');
-    await profile.save();
+    shelf.updatedAt = new Date();
+    shelf.markModified('folders');
+    await shelf.save();
 
     return res.json({ success: true, message: 'Shelf design updated successfully' });
   } catch (error) {
@@ -279,4 +358,3 @@ router.post('/update-shelf-design', async (req, res) => {
 });
 
 module.exports = router;
-

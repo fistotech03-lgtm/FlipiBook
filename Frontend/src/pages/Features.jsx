@@ -5,7 +5,6 @@ import Footer from './Footer';
 
 // Asset imports
 import heroBg from '../assets/Features/Feature.webp';
-import converterCardMock from '../assets/Features/converter.webp';
 import imgMock from '../assets/Features/img.webp';
 import imgBgLeaves from '../assets/Features/imgbg.webp';
 import vdoMock from '../assets/Features/vdo.webp';
@@ -30,93 +29,113 @@ export default function Features() {
         {/* =========================================
             SECTION 1: HERO (Converter & Compress)
         ========================================= */}
-        <section className="relative w-full pt-8 sm:pt-12 md:pt-14 lg:pt-16 pb-12 sm:pb-20 overflow-hidden">
-          {/* Top Banner / Laptop Floating Background */}
-          <div className="relative w-full max-w-[1920px] mx-auto min-h-[480px] sm:min-h-[580px] lg:min-h-[680px] flex items-center">
-            {/* The laptop + rock 3D illustration background */}
-            <div className="absolute inset-0 z-0 pointer-events-none select-none flex justify-end items-center">
-              <img
-                src={heroBg}
-                alt="FlipiBook Converter Preview"
-                className="w-full h-full object-contain object-right-top max-h-[720px]"
-              />
-            </div>
-
-            {/* Left Content Column */}
-            <div className="relative z-10 w-full max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 py-8">
-              <div className="max-w-[540px] lg:max-w-[580px]">
-                <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                  <span className="text-[11px] sm:text-xs font-bold tracking-[0.22em] text-[#94A3B8] uppercase">
-                    CONVERTER
-                  </span>
-                  <span className="w-10 h-[1.5px] bg-[#CBD5E1]"></span>
-                </div>
-
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-bold tracking-tight text-[#111827] leading-[1.12]">
-                  Convert &amp; Compress <br />
-                  <span className="text-[#EA580C]">Your Media</span>
-                </h1>
-
-                <p className="mt-4 sm:mt-5 text-sm sm:text-base text-[#64748B] leading-relaxed max-w-[480px]">
-                  Convert and compress images, videos, and 3D models with easy-to-use tools and optimized output quality.
-                </p>
-
-                {/* Pill Feature Badges */}
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-6 sm:mt-8">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] font-medium text-[#475569]">
-                    <Icon icon="lucide:zap" className="w-3.5 h-3.5 text-[#EA580C]" />
-                    Fast Conversion
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] font-medium text-[#475569]">
-                    <Icon icon="lucide:check-circle-2" className="w-3.5 h-3.5 text-[#EA580C]" />
-                    High Quality Output
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] font-medium text-[#475569]">
-                    <Icon icon="lucide:shield-check" className="w-3.5 h-3.5 text-[#EA580C]" />
-                    Secure &amp; Private
-                  </span>
-                </div>
-              </div>
-            </div>
+        <section className="relative w-full pt-10 sm:pt-14 md:pt-16 lg:pt-20 pb-16 sm:pb-24 overflow-hidden">
+          {/* Background Illustration / Banner */}
+          <div className="absolute inset-0 pointer-events-none z-0 flex justify-center items-start">
+            <img
+              src={heroBg}
+              alt=""
+              className="w-full max-w-[1920px] h-auto object-cover opacity-90 select-none"
+            />
           </div>
 
-          {/* Bottom Container Image: converter.webp with interactive click zones */}
-          <div className="relative z-10 max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 -mt-6 sm:-mt-10 lg:-mt-14">
-            <div className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(15,23,42,0.08)] border border-[#F1F5F9] bg-white group">
-              <img
-                src={converterCardMock}
-                alt="Convert Image, Video, and 3D Model options"
-                className="w-full h-auto block select-none pointer-events-none"
-              />
+          <div className="relative z-10 max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14">
+            {/* Top Heading Content */}
+            <div className="max-w-2xl pt-2 sm:pt-4">
+              <span className="text-[11px] sm:text-xs font-bold tracking-[0.22em] text-[#94A3B8] uppercase block mb-2 sm:mb-3">
+                CONVERTER
+              </span>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[52px] font-bold tracking-tight text-[#111827] leading-[1.15]">
+                Convert &amp; Compress <br />
+                <span className="text-[#EA580C]">Your Media</span>
+              </h1>
+              <p className="mt-4 sm:mt-5 text-sm sm:text-base text-[#64748B] leading-relaxed max-w-xl">
+                Convert and compress images, videos, and 3D models with easy file
+                conversions to optimize output quality.
+              </p>
 
-              {/* Interactive Overlay Click Areas for each card */}
-              <div className="absolute inset-0 flex items-stretch">
-                {/* 1. Image Card Area */}
-                <button
-                  type="button"
-                  onClick={() => handleChooseFile('image')}
-                  title="Choose Image File"
-                  aria-label="Choose Image File"
-                  className="flex-1 cursor-pointer transition-colors hover:bg-slate-900/[0.02] focus:outline-none focus:ring-2 focus:ring-[#EA580C]/40"
-                />
+              {/* Pill feature tags */}
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mt-6 sm:mt-8">
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] font-medium text-[#475569]">
+                  <Icon icon="lucide:sparkles" className="w-3.5 h-3.5 text-[#EA580C]" />
+                  Fast Conversion
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] font-medium text-[#475569]">
+                  <Icon icon="lucide:badge-check" className="w-3.5 h-3.5 text-[#EA580C]" />
+                  High Quality Output
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] font-medium text-[#475569]">
+                  <Icon icon="lucide:shield-check" className="w-3.5 h-3.5 text-[#EA580C]" />
+                  Secure &amp; Private
+                </span>
+              </div>
+            </div>
 
-                {/* 2. Video Card Area */}
-                <button
-                  type="button"
-                  onClick={() => handleChooseFile('video')}
-                  title="Choose Video File"
-                  aria-label="Choose Video File"
-                  className="flex-1 cursor-pointer transition-colors hover:bg-slate-900/[0.02] focus:outline-none focus:ring-2 focus:ring-[#EA580C]/40"
-                />
+            {/* Laptop / Preview floating mock spacer for larger screens */}
+            <div className="mt-12 sm:mt-16 lg:mt-20">
+              {/* Main Converter Card Container */}
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-[#F1F5F9] shadow-[0_20px_60px_-15px_rgba(15,23,42,0.08)] p-5 sm:p-8 lg:p-10">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+                  {/* Card 1: Image */}
+                  <div className="flex flex-col items-center text-center p-6 sm:p-7 rounded-2xl bg-[#FAFAFC] border border-[#F1F5F9] hover:border-[#EA580C]/30 hover:shadow-md transition-all group">
+                    <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-[#F1F5F9] flex items-center justify-center text-[#EA580C] group-hover:scale-110 transition-transform mb-4">
+                      <Icon icon="lucide:image" className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[#1E293B]">Image</h3>
+                    <p className="text-xs sm:text-[13px] text-[#64748B] mt-1.5 mb-6">
+                      Convert &amp; optimize images
+                    </p>
+                    <div className="w-full mt-auto">
+                      <button
+                        onClick={() => handleChooseFile('image')}
+                        className="w-full py-3 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-[13px] font-semibold tracking-wide transition-colors flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <span>Choose Image File</span>
+                        <Icon icon="lucide:arrow-right" className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
 
-                {/* 3. 3D Model Card Area */}
-                <button
-                  type="button"
-                  onClick={() => handleChooseFile('3d')}
-                  title="Choose 3D Model File"
-                  aria-label="Choose 3D Model File"
-                  className="flex-1 cursor-pointer transition-colors hover:bg-slate-900/[0.02] focus:outline-none focus:ring-2 focus:ring-[#EA580C]/40"
-                />
+                  {/* Card 2: Video */}
+                  <div className="flex flex-col items-center text-center p-6 sm:p-7 rounded-2xl bg-[#FAFAFC] border border-[#F1F5F9] hover:border-[#EA580C]/30 hover:shadow-md transition-all group">
+                    <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-[#F1F5F9] flex items-center justify-center text-[#EA580C] group-hover:scale-110 transition-transform mb-4">
+                      <Icon icon="lucide:video" className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[#1E293B]">Videos</h3>
+                    <p className="text-xs sm:text-[13px] text-[#64748B] mt-1.5 mb-6">
+                      Compress &amp; convert video formats
+                    </p>
+                    <div className="w-full mt-auto">
+                      <button
+                        onClick={() => handleChooseFile('video')}
+                        className="w-full py-3 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-[13px] font-semibold tracking-wide transition-colors flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <span>Choose Video File</span>
+                        <Icon icon="lucide:arrow-right" className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Card 3: 3D Model */}
+                  <div className="flex flex-col items-center text-center p-6 sm:p-7 rounded-2xl bg-[#FAFAFC] border border-[#F1F5F9] hover:border-[#EA580C]/30 hover:shadow-md transition-all group">
+                    <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-[#F1F5F9] flex items-center justify-center text-[#EA580C] group-hover:scale-110 transition-transform mb-4">
+                      <Icon icon="lucide:box" className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[#1E293B]">3D Model</h3>
+                    <p className="text-xs sm:text-[13px] text-[#64748B] mt-1.5 mb-6">
+                      Optimize 3D assets (GLB, GLTF, OBJ)
+                    </p>
+                    <div className="w-full mt-auto">
+                      <button
+                        onClick={() => handleChooseFile('3d')}
+                        className="w-full py-3 px-4 rounded-xl bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs sm:text-[13px] font-semibold tracking-wide transition-colors flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <span>Choose 3D Model File</span>
+                        <Icon icon="lucide:arrow-right" className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

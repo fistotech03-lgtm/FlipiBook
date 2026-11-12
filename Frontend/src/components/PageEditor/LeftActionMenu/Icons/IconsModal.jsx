@@ -768,11 +768,21 @@ export const IconsModal = ({
   const handleDragStart = (e, item) => {
     const IconComp = icons[item.key];
     const svgData = extractIconSvg(item.key, IconComp);
- 
+
+    let dragSize = 38;
+    if (e.currentTarget) {
+      const svgEl = e.currentTarget.querySelector('svg');
+      if (svgEl) {
+        const rect = svgEl.getBoundingClientRect();
+        dragSize = Math.max(28, Math.round(rect.width || 38));
+      }
+    }
+
     const payload = {
       type: 'icon',
       name: item.name,
       iconName: item.key,
+      dragSize,
       icon: {
         name: item.name,
         iconKey: item.key,
@@ -780,9 +790,52 @@ export const IconsModal = ({
         viewBox: svgData.viewBox,
       },
     };
- 
+
     e.dataTransfer.setData('application/json', JSON.stringify(payload));
     e.dataTransfer.effectAllowed = 'copy';
+
+    // Customize drag preview to show only the icon itself (excluding card and name)
+    if (e.currentTarget && e.dataTransfer.setDragImage) {
+      try {
+        const svgEl = e.currentTarget.querySelector('svg');
+        if (svgEl) {
+          const ghost = document.createElement('div');
+          ghost.style.position = 'fixed';
+          ghost.style.top = '0px';
+          ghost.style.left = '0px';
+          ghost.style.width = `${dragSize}px`;
+          ghost.style.height = `${dragSize}px`;
+          ghost.style.background = 'transparent';
+          ghost.style.border = 'none';
+          ghost.style.display = 'flex';
+          ghost.style.alignItems = 'center';
+          ghost.style.justifyContent = 'center';
+          ghost.style.pointerEvents = 'none';
+          ghost.style.zIndex = '-99999';
+          ghost.style.opacity = '0.99';
+
+          const clone = svgEl.cloneNode(true);
+          clone.setAttribute('width', `${dragSize}`);
+          clone.setAttribute('height', `${dragSize}`);
+          clone.style.width = `${dragSize}px`;
+          clone.style.height = `${dragSize}px`;
+          clone.style.transform = 'none';
+
+          ghost.appendChild(clone);
+          document.body.appendChild(ghost);
+          e.dataTransfer.setDragImage(ghost, dragSize / 2, dragSize / 2);
+
+          const cleanup = () => {
+            if (ghost && ghost.parentNode) ghost.remove();
+            window.removeEventListener('dragend', cleanup);
+          };
+          window.addEventListener('dragend', cleanup, { once: true });
+          setTimeout(cleanup, 1000);
+        }
+      } catch (err) {
+        console.warn('[IconsModal] Failed to set drag image:', err);
+      }
+    }
   };
  
   if (!isOpen) return null;

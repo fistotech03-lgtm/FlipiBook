@@ -275,13 +275,17 @@ export default function CameraBottomTray({
     const cleanName = (modelName || "model")
       .toLowerCase()
       .replace(/[^a-z0-9_-]/g, "_");
-    const timestamp = Date.now();
     const fmt = fileType.toLowerCase();
+
+    // Format DATE_TIME as YYYYMMDD_HHmmss (e.g. 20261112_180630)
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const dateTimeStr = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 
     try {
       if (toExport.length === 1) {
         const snap = toExport[0];
-        const filename = `${cleanName}_${(snap.title || "angle").replace(/\s+/g, "_")}_${timestamp}`;
+        const filename = `${cleanName}_${(snap.title || "angle").replace(/\s+/g, "_")}_${dateTimeStr}`;
         const rendered = await renderSnapshotWithTitle(snap, fmt, quality);
 
         if (fmt === "pdf") {
@@ -328,7 +332,7 @@ export default function CameraBottomTray({
             }
           }
           if (pdf) {
-            pdf.save(`${cleanName}_saved_angles_${toExport.length}_pages_${timestamp}.pdf`);
+            pdf.save(`${cleanName}_${fmt.toUpperCase()}_${dateTimeStr}.pdf`);
           }
         } else {
           // Zip
@@ -346,7 +350,8 @@ export default function CameraBottomTray({
           const zipUrl = URL.createObjectURL(content);
           const link = document.createElement("a");
           link.href = zipUrl;
-          link.download = `${cleanName}_saved_angles_${fmt.toUpperCase()}_bundle_${timestamp}.zip`;
+          // Format: {MODEL_NAME}_{FORMAT}_{DATE_TIME}.zip
+          link.download = `${cleanName}_${fmt.toUpperCase()}_${dateTimeStr}.zip`;
           link.click();
           setTimeout(() => URL.revokeObjectURL(zipUrl), 10000);
         }

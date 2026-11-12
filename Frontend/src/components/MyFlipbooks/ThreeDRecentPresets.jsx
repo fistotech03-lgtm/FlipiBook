@@ -35,7 +35,7 @@ export default function ThreeDRecentPresets({
     : RECENT_3D_PRESETS;
 
   return (
-    <div className="w-full bg-white rounded-[1vw] p-[1.1vw] shadow-[0_2px_12px_rgba(15,23,42,0.04)] border border-slate-100 flex-shrink-0 select-none">
+    <div className="w-full bg-white py-[0.75vw] px-[1.5vw] shadow-[0_2px_12px_rgba(15,23,42,0.04)] border border-slate-100 flex-shrink-0 select-none">
       {/* Header Row */}
       <div className="flex items-center justify-between mb-[0.9vw]">
         <h2 className="text-[1.15vw] font-bold text-slate-900 tracking-tight">
@@ -51,7 +51,7 @@ export default function ThreeDRecentPresets({
       </div>
 
       {/* Cards Grid: Matching the exact old card style from screenshot */}
-      <div className="grid grid-cols-5 gap-[0.85vw]">
+      <div className="grid grid-cols-5 gap-[0.7vw]">
         {displayModels.map((model) => {
           const id = model.modelId || model.id;
           const title = model.displayName || model.name || 'Untitled 3D Model';
@@ -70,28 +70,28 @@ export default function ThreeDRecentPresets({
           return (
             <div
               key={id || title}
-              className={`group bg-white rounded-[0.9vw] border transition-all duration-200 flex flex-col justify-between relative ${
+              className={`group bg-white rounded-[0.75vw] border transition-all duration-200 flex flex-col justify-between relative ${
                 isMenuOpen ? 'z-30 ring-1 ring-gray-300' : 'z-10'
               } border-gray-200/80 hover:border-gray-300 hover:shadow-md`}
             >
               {/* Top Thumbnail Container */}
-              <div className="w-full h-[9.5vw] min-h-[140px] rounded-t-[0.9vw] bg-slate-50 border-b border-gray-100 relative flex items-center justify-center overflow-hidden">
+              <div className="w-full h-[7.5vw] min-h-[110px] rounded-t-[0.75vw] bg-slate-50 border-b border-gray-100 relative flex items-center justify-center overflow-hidden">
                 {ModelCardPreview && model.url ? (
                   <ModelCardPreview model={model} />
                 ) : model.image ? (
                   <img
                     src={model.image}
                     alt={title}
-                    className="w-full h-full object-contain p-[0.6vw] transition-transform duration-300 group-hover:scale-105"
+                    className="w-full h-full object-contain p-[0.4vw] transition-transform duration-300 group-hover:scale-105"
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center text-gray-400">
-                    <Icon icon="ph:cube-duotone" className="w-[2.4vw] h-[2.4vw] text-slate-300 group-hover:text-[#ea543a] transition-colors" />
+                    <Icon icon="ph:cube-duotone" className="w-[2vw] h-[2vw] text-slate-300 group-hover:text-[#ea543a] transition-colors" />
                   </div>
                 )}
 
                 {/* Format Badge Top Left (e.g. GLB) */}
-                <span className="absolute top-[0.45vw] left-[0.45vw] bg-black/65 backdrop-blur-xs text-white text-[0.58vw] font-bold px-[0.38vw] py-[0.12vw] rounded-[0.25vw] pointer-events-none z-10 uppercase">
+                <span className="absolute top-[0.38vw] left-[0.38vw] bg-black/65 backdrop-blur-xs text-white text-[0.52vw] font-bold px-[0.32vw] py-[0.1vw] rounded-[0.22vw] pointer-events-none z-10 uppercase">
                   {fileType}
                 </span>
 
@@ -102,19 +102,19 @@ export default function ThreeDRecentPresets({
                     e.stopPropagation();
                     toggleFavorite && toggleFavorite(id);
                   }}
-                  className="absolute top-[0.45vw] right-[0.45vw] w-[1.6vw] h-[1.6vw] rounded-full bg-white/80 backdrop-blur-xs hover:bg-white text-gray-400 hover:text-rose-500 flex items-center justify-center transition-all cursor-pointer shadow-xs z-10"
+                  className="absolute top-[0.38vw] right-[0.38vw] w-[1.4vw] h-[1.4vw] rounded-full bg-white/80 backdrop-blur-xs hover:bg-white text-gray-400 hover:text-rose-500 flex items-center justify-center transition-all cursor-pointer shadow-xs z-10"
                   title="Favorite"
                 >
-                  <Heart className={`w-[0.85vw] h-[0.85vw] ${isFav ? 'text-rose-500 fill-rose-500' : ''}`} />
+                  <Heart className={`w-[0.75vw] h-[0.75vw] ${isFav ? 'text-rose-500 fill-rose-500' : ''}`} />
                 </button>
               </div>
 
               {/* Card Main Body */}
-              <div className="p-[0.75vw] flex flex-col justify-between flex-1 space-y-[0.55vw]">
+              <div className="p-[0.6vw] flex flex-col justify-between flex-1 space-y-[0.45vw]">
                 <div>
-                  <div className="flex items-start justify-between gap-[0.4vw]">
+                  <div className="flex items-start justify-between gap-[0.35vw]">
                     <h3
-                      className="text-[0.82vw] font-bold text-gray-800 line-clamp-1 hover:text-[#ea543a] cursor-pointer transition-colors"
+                      className="text-[0.76vw] font-bold text-gray-800 line-clamp-1 hover:text-[#ea543a] cursor-pointer transition-colors"
                       onClick={() => onLaunchEditor && onLaunchEditor(id)}
                       title={title}
                     >
@@ -129,14 +129,14 @@ export default function ThreeDRecentPresets({
                           e.stopPropagation();
                           setActiveMenuId(isMenuOpen ? null : id);
                         }}
-                        className="p-[0.2vw] text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer transition-colors"
+                        className="p-[0.18vw] text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer transition-colors"
                         title="More options"
                       >
-                        <MoreVertical className="w-[0.85vw] h-[0.85vw]" />
+                        <MoreVertical className="w-[0.78vw] h-[0.78vw]" />
                       </button>
 
                       {isMenuOpen && (
-                        <div className="absolute right-0 top-full mt-[0.25vw] w-[8.8vw] min-w-[120px] bg-white border border-gray-200/90 rounded-[0.55vw] shadow-xl py-[0.25vw] z-50">
+                        <div className="absolute right-0 top-full mt-[0.2vw] w-[8.5vw] min-w-[115px] bg-white border border-gray-200/90 rounded-[0.5vw] shadow-xl py-[0.2vw] z-50">
                           {/* 1. File Info */}
                           <button
                             type="button"

@@ -1982,7 +1982,7 @@ export default function MyFlipbooks() {
 
             {/* Main Content */}
             <main
-                className="flex-1 ml-[18vw] p-[1vw] relative bg-[#f8f9fb] flex flex-col select-none h-[93vh] max-h-[93vh] overflow-hidden"
+                className={`flex-1 ml-[18vw] ${dashboardMode == '3d' ? 'p-0' : 'p-[1vw]'} relative bg-[#f8f9fb] flex flex-col select-none h-[93vh] max-h-[93vh] overflow-hidden`}
             >
                 {dashboardMode === '3d' ? (
                     <ThreeDDashboard

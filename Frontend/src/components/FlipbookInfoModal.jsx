@@ -9,11 +9,6 @@ import { Icon } from '@iconify/react';
 import PremiumDropdown from './CustomizedEditor/components/PremiumDropdown';
 import { ImageCropOverlay } from './CustomizedEditor/AppearanceShared';
 import ColorPicker from './ThreedEditor/ColorPicker';
-import cover1 from '../assets/cover/cover1.svg';
-import cover2 from '../assets/cover/cover2.svg';
-import cover3 from '../assets/cover/cover3.svg';
-import cover4 from '../assets/cover/cover4.svg';
-import cover5 from '../assets/cover/cover5.svg';
 
 const scrollbarStyles = `
   .custom-popup-scrollbar::-webkit-scrollbar {
@@ -49,68 +44,322 @@ const scrollbarStyles = `
   }
 `;
 
-const COVER_TEMPLATES = [
-  { id: 1, src: cover1, label: 'Cover 1' },
-  { id: 2, src: cover2, label: 'Cover 2' },
-  { id: 3, src: cover3, label: 'Cover 3' },
-  { id: 4, src: cover4, label: 'Cover 4' },
-  { id: 5, src: cover5, label: 'Cover 5' },
+export const COVER_TEMPLATES = [
+  { id: 1, label: 'Dual Hardcover', defaultText1: 'Hard.Cover Book', defaultText2: 'Free .psd Mockup' },
+  { id: 2, label: 'Single Hardcover', defaultText1: 'Premium Edition', defaultText2: 'Classic Minimal Design' },
+  { id: 3, label: 'Landscape Catalog', defaultText1: 'Corporate Showcase', defaultText2: 'Annual Brochure & Catalog' },
+  { id: 4, label: 'Modern Magazine', defaultText1: 'Magazine Lookbook', defaultText2: 'Vol. 24 / Summer Edition' },
+  { id: 5, label: 'Stacked Trio', defaultText1: 'Master Collection', defaultText2: 'Series Edition Vol. 1' },
+  { id: 6, label: 'Isometric Floating', defaultText1: 'Minimalist Journal', defaultText2: 'Special Edition Portfolio' },
 ];
+
+export const extractPageBgColor = (page) => {
+  if (!page) return null;
+  if (page.backgroundColor && page.backgroundColor !== 'transparent') return page.backgroundColor;
+  if (page.bg && page.bg !== 'transparent') return page.bg;
+  if (typeof page.html === 'string') {
+    const bgMatch = page.html.match(/data-type=["']background["'][^>]*fill=["']([^"']+)["']/i) ||
+                    page.html.match(/data-name=["']Overlay["'][^>]*fill=["']([^"']+)["']/i) ||
+                    page.html.match(/<rect[^>]*fill=["'](#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))["']/i);
+    if (bgMatch && bgMatch[1] && bgMatch[1] !== 'none' && bgMatch[1] !== 'transparent') {
+      return bgMatch[1];
+    }
+  }
+  return null;
+};
+
+export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], scaleClass = "scale-[1.05]", customTitle = null, customSubtitle = null) => {
+  const page1 = selectedPages[0] && pages[selectedPages[0] - 1] ? pages[selectedPages[0] - 1] : null;
+  const page2 = selectedPages[1] && pages[selectedPages[1] - 1] ? pages[selectedPages[1] - 1] : page1;
+  const page3 = selectedPages[2] && pages[selectedPages[2] - 1] ? pages[selectedPages[2] - 1] : page2;
+
+  const page1Color = page1 ? (extractPageBgColor(page1) || '#334155') : null;
+
+  switch (templateId) {
+    case 1:
+      // Dual Hardcover Mockup
+      return (
+        <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transform ${scaleClass}`}>
+          {/* Back book */}
+          <div className={`absolute w-[10vw] h-[13.5vw] ${page1 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-orange-500 to-amber-600 border-orange-400 p-[0.7vw]'} rounded-[0.6vw] transform -rotate-6 border flex flex-col justify-between text-white overflow-hidden`}>
+            <div className="absolute top-0 right-0 w-[4vw] h-[14vw] bg-white opacity-10 transform rotate-12 -translate-y-[1vw] translate-x-[1vw] z-10 pointer-events-none"></div>
+            {page1 ? (
+              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
+                <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+              </div>
+            ) : (
+              <>
+                <span className="text-[0.7vw] font-bold tracking-widest uppercase opacity-85 relative z-10">HARD.COVER</span>
+                <div className="relative z-10">
+                  <h3 className="text-[0.85vw] font-black leading-tight break-words">{customTitle || "Hard.Cover Book"}</h3>
+                  <p className="text-[0.6vw] opacity-90 mt-[0.1vw] break-words">{customSubtitle || "Free .psd Mockup"}</p>
+                </div>
+              </>
+            )}
+          </div>
+          
+          {/* Front book */}
+          <div className={`absolute w-[10vw] h-[13.5vw] ${page2 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-amber-600 to-orange-500 border-amber-400 p-[0.7vw]'} rounded-[0.6vw] shadow-sm transform rotate-6 border flex flex-col justify-between text-white overflow-hidden`}>
+            <div className="absolute top-0 left-0 w-[3vw] h-[14vw] bg-black opacity-10 filter blur-[0.2vw] -translate-x-[0.5vw] z-10 pointer-events-none"></div>
+            <div className="absolute top-0 right-0 w-[5vw] h-[14vw] bg-white opacity-20 transform rotate-12 -translate-y-[1vw] translate-x-[2vw] z-10 pointer-events-none"></div>
+            {page2 ? (
+              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
+                <div dangerouslySetInnerHTML={{ __html: page2.html }} />
+              </div>
+            ) : (
+              <>
+                <span className="text-[0.7vw] font-bold tracking-widest uppercase opacity-85 relative z-10">HARD.COVER</span>
+                <div className="relative z-10">
+                  <h3 className="text-[0.85vw] font-black leading-tight break-words">{customTitle || "Hard.Cover Book"}</h3>
+                  <p className="text-[0.6vw] opacity-90 mt-[0.1vw] break-words">{customSubtitle || "Free .psd Mockup"}</p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      );
+
+    case 2:
+      // Single Minimalist Standing Hardcover
+      return (
+        <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transform ${scaleClass}`}>
+          {/* Depth / Side spine effect */}
+          <div className="relative w-[11.2vw] h-[14.8vw] rounded-[0.5vw] border border-black/10 overflow-hidden bg-white flex">
+            {/* Book spine simulation strip */}
+            <div 
+              className={`w-[0.9vw] h-full ${!page1 ? 'bg-gradient-to-r from-gray-700 via-gray-600 to-gray-800' : ''} shrink-0 relative shadow-[inset_-0.2vw_0_0.4vw_rgba(0,0,0,0.5)] z-20 flex items-center justify-center`}
+              style={page1Color ? { backgroundColor: page1Color } : {}}
+            >
+              {!page1 && (
+                <span className="text-[0.45vw] text-white/70 font-bold uppercase tracking-widest transform -rotate-90 whitespace-nowrap">EDITION</span>
+              )}
+            </div>
+            {/* Book cover area */}
+            <div className="flex-1 h-full relative overflow-hidden bg-gradient-to-br from-slate-900 to-indigo-950 text-white flex flex-col justify-between p-[0.9vw]">
+              <div className="absolute top-0 right-0 w-[6vw] h-full bg-gradient-to-l from-white/10 to-transparent pointer-events-none z-10" />
+              <div className="absolute inset-y-0 left-0 w-[0.3vw] bg-black/30 z-10 pointer-events-none" />
+              {page1 ? (
+                <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
+                  <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+                </div>
+              ) : (
+                <>
+                  <div className="relative z-10 flex items-center gap-[0.4vw]">
+                    <div className="w-[1.2vw] h-[0.15vw] bg-amber-400" />
+                    <span className="text-[0.6vw] tracking-wider uppercase font-semibold text-amber-300">HARDCOVER</span>
+                  </div>
+                  <div className="relative z-10">
+                    <h3 className="text-[1vw] font-bold tracking-tight leading-snug break-words">{customTitle || 'Title'}</h3>
+                    <p className="text-[0.6vw] text-gray-300 mt-[0.2vw] break-words">{customSubtitle || 'Supporting Text'}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+
+        case 3:
+      // Landscape Catalog / Wide Brochure Mockup
+      return (
+        <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transform ${scaleClass}`}>
+          <div className="relative w-[18.5vw] h-[12vw] bg-white rounded-[0.5vw] flex overflow-hidden border border-gray-300">
+            {/* Spine Left Edge */}
+            <div 
+              className={`w-[0.8vw] h-full ${!page1 ? 'bg-gradient-to-r from-gray-800 to-gray-700' : ''} shrink-0 shadow-[inset_-0.15vw_0_0.3vw_rgba(0,0,0,0.4)] z-20 flex items-center justify-center`}
+              style={page1Color ? { backgroundColor: page1Color } : {}}
+            >
+              {!page1 && (
+                <span className="text-[0.4vw] text-white/70 font-bold uppercase tracking-wider transform -rotate-90 whitespace-nowrap">CATALOG</span>
+              )}
+            </div>
+            {/* Front Cover Area */}
+            <div className="flex-1 h-full relative overflow-hidden bg-gradient-to-br from-slate-800 via-slate-900 to-zinc-950 text-white p-[1.1vw] flex flex-col justify-between">
+              {/* Glossy sheen */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 pointer-events-none z-10" />
+              {page1 ? (
+                <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
+                  <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+                </div>
+              ) : (
+                <>
+                  <div className="relative z-10 flex items-center justify-between">
+                    <span className="text-[0.6vw] font-black uppercase tracking-widest text-sky-400">LANDSCAPE EDITION</span>
+                    <span className="text-[0.55vw] text-gray-400 font-mono">2026</span>
+                  </div>
+                  <div className="relative z-10">
+                    <h3 className="text-[1.15vw] font-black tracking-tight leading-snug break-words">{customTitle || "Corporate Showcase"}</h3>
+                    <p className="text-[0.65vw] text-gray-300 mt-[0.2vw] break-words">{customSubtitle || "Annual Brochure & Catalog"}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+
+    case 4:
+      // Modern Glossy Magazine Mockup (Slight tilt with glossy reflection sheen)
+      return (
+        <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transform ${scaleClass}`}>
+          <div className="relative w-[11.5vw] h-[15vw] rounded-[0.3vw] transform -rotate-3 overflow-hidden bg-white border border-gray-200">
+            {/* Magazine spine crease */}
+            <div className="absolute left-[0.4vw] inset-y-0 w-[0.1vw] bg-black/20 z-20 pointer-events-none" />
+            <div className="absolute left-0 inset-y-0 w-[0.4vw] bg-gradient-to-r from-black/20 to-transparent z-20 pointer-events-none" />
+            {/* Glossy sheen */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/25 to-white/40 z-20 pointer-events-none" />
+            {page1 ? (
+              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
+                <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+              </div>
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-emerald-600 to-teal-800 text-white p-[1vw] flex flex-col justify-between">
+                <div>
+                  <span className="text-[0.6vw] font-black tracking-widest uppercase bg-black/40 px-[0.4vw] py-[0.15vw] rounded-[0.2vw]">MAGAZINE</span>
+                  <h3 className="text-[1.1vw] font-black leading-tight mt-[0.5vw] break-words">{customTitle || "LOOKBOOK"}</h3>
+                </div>
+                <div>
+                  <p className="text-[0.6vw] opacity-90 font-medium break-words">{customSubtitle || "Vol. 24 / Summer Edition"}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+
+    case 5:
+      // Stacked Trio Mockup (Three staggered hardcover books)
+      return (
+        <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transform ${scaleClass}`}>
+          {/* Bottom Book */}
+          <div className={`absolute w-[9.8vw] h-[13.2vw] ${page3 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-violet-600 to-indigo-700 border-violet-500'} rounded-[0.5vw] transform -rotate-12 -translate-x-[1.5vw] border flex overflow-hidden`}>
+            {page3 ? (
+              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
+                <div dangerouslySetInnerHTML={{ __html: page3.html }} />
+              </div>
+            ) : (
+              <div className="p-[0.6vw] text-white/80 font-bold text-[0.6vw]">VOL. 3</div>
+            )}
+          </div>
+
+          {/* Middle Book */}
+          <div className={`absolute w-[9.8vw] h-[13.2vw] ${page2 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-sky-500 to-blue-600 border-sky-400'} rounded-[0.5vw] shadow-sm transform rotate-2 border flex overflow-hidden`}>
+            {page2 ? (
+              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
+                <div dangerouslySetInnerHTML={{ __html: page2.html }} />
+              </div>
+            ) : (
+              <div className="p-[0.6vw] text-white/80 font-bold text-[0.6vw]">VOL. 2</div>
+            )}
+          </div>
+
+          {/* Top Front Book */}
+          <div className={`absolute w-[9.8vw] h-[13.2vw] ${page1 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-rose-500 to-red-600 border-rose-400'} rounded-[0.5vw] shadow-sm transform rotate-12 translate-x-[1.4vw] border flex flex-col justify-between text-white p-[0.6vw] overflow-hidden`}>
+            <div className="absolute top-0 right-0 w-[4vw] h-[14vw] bg-white opacity-20 transform rotate-12 -translate-y-[1vw] translate-x-[2vw] z-10 pointer-events-none" />
+            {page1 ? (
+              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
+                <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+              </div>
+            ) : (
+              <>
+                <span className="text-[0.6vw] font-bold tracking-widest uppercase">SERIES</span>
+                <div>
+                  <h3 className="text-[0.8vw] font-black leading-tight break-words">{customTitle || "Master Collection"}</h3>
+                  <p className="text-[0.55vw] opacity-90 mt-[0.1vw] break-words">{customSubtitle || "Vol. 1"}</p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      );
+
+        case 6:
+      // Isometric Floating Hardcover Mockup
+      return (
+        <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transform ${scaleClass}`}>
+          {/* Isometric Perspective Book */}
+          <div className="relative w-[11.8vw] h-[15.2vw] rounded-[0.4vw] transform rotate-[-8deg] skew-y-[3deg] overflow-hidden bg-white border border-black/10 flex">
+            {/* Book Spine Simulation */}
+            <div 
+              className={`w-[0.9vw] h-full ${!page1 ? 'bg-gradient-to-r from-amber-800 via-amber-700 to-amber-900' : ''} shrink-0 shadow-[inset_-0.2vw_0_0.4vw_rgba(0,0,0,0.5)] z-20 flex items-center justify-center`}
+              style={page1Color ? { backgroundColor: page1Color } : {}}
+            >
+              {!page1 && (
+                <span className="text-[0.45vw] text-amber-200/80 font-bold uppercase tracking-widest transform -rotate-90 whitespace-nowrap">PREMIUM</span>
+              )}
+            </div>
+            {/* Front Cover Body */}
+            <div className="flex-1 h-full relative overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-950 to-slate-950 text-white p-[1vw] flex flex-col justify-between">
+              {/* Glossy angled highlight */}
+              <div className="absolute top-0 right-0 w-[5vw] h-full bg-gradient-to-l from-white/15 to-transparent pointer-events-none z-10" />
+              {page1 ? (
+                <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
+                  <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+                </div>
+              ) : (
+                <>
+                  <div className="relative z-10">
+                    <span className="text-[0.55vw] font-bold uppercase tracking-widest bg-white/10 px-[0.4vw] py-[0.15vw] rounded-[0.2vw] text-amber-300">LIMITED EDITION</span>
+                  </div>
+                  <div className="relative z-10">
+                    <h3 className="text-[1vw] font-black tracking-tight leading-tight break-words">{customTitle || "Minimalist Journal"}</h3>
+                    <p className="text-[0.6vw] text-gray-300 mt-[0.2vw] break-words">{customSubtitle || "Special Edition Portfolio"}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+
+    default:
+      return null;
+  }
+};
+
+export const getShadowRgba = (hex = '#000000', opacity = 80) => {
+  if (!hex) return `rgba(0, 0, 0, ${(opacity !== undefined ? opacity : 80) / 100})`;
+  if (hex.startsWith('rgba') || hex.startsWith('rgb')) return hex;
+  let cleanHex = hex.replace('#', '');
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex.split('').map(c => c + c).join('');
+  }
+  const r = parseInt(cleanHex.substring(0, 2) || '0', 16) || 0;
+  const g = parseInt(cleanHex.substring(2, 4) || '0', 16) || 0;
+  const b = parseInt(cleanHex.substring(4, 6) || '0', 16) || 0;
+  const a = (opacity !== undefined ? opacity : 80) / 100;
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+};
 
 const TemplatePreview = ({ 
     selectedTemplate, 
     bgColor, bgOpacity, 
-    shadowX, shadowY, shadowBlur, shadowColor,
+    shadowX, shadowY, shadowBlur, shadowColor, shadowOpacity,
     logoUrl,
     text1, text1FontFamily, text1FontSize, text1FontWeight, text1LetterSpacing, text1LineHeight, text1Align, text1Color, text1ColorOpacity, text1Italic, text1Underline, text1Linethrough,
     text2, text2FontFamily, text2FontSize, text2FontWeight, text2LetterSpacing, text2LineHeight, text2Align, text2Color, text2ColorOpacity, text2Italic, text2Underline, text2Linethrough,
     selectedPages = [], pages = []
-}) => (
+}) => {
+    const shadowRgba = getShadowRgba(shadowColor, shadowOpacity);
+    const dropShadowFilter = `drop-shadow(${shadowX || 0}px ${shadowY || 0}px ${(shadowBlur !== undefined ? shadowBlur : 35) / 10}px ${shadowRgba})`;
+
+    return (
     <div className="relative w-full h-full bg-gray-100 overflow-hidden" style={{ backgroundColor: bgColor }}>
-        {selectedTemplate?.id === 1 ? (
-             <div className="absolute inset-0 flex items-center justify-center pointer-events-none transform scale-[1.05]">
-                {/* Back book */}
-                <div className={`absolute w-[10vw] h-[13.5vw] ${selectedPages.length > 0 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-orange-500 to-amber-600 border-orange-400 p-[0.7vw]'} rounded-[0.6vw] shadow-xl transform -rotate-6 border flex flex-col justify-between text-white overflow-hidden`}>
-                   <div className="absolute top-0 right-0 w-[4vw] h-[14vw] bg-white opacity-10 transform rotate-12 -translate-y-[1vw] translate-x-[1vw] z-10 pointer-events-none"></div>
-                   {selectedPages.length > 0 && pages[selectedPages[0] - 1] ? (
-                       <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                          <div dangerouslySetInnerHTML={{ __html: pages[selectedPages[0] - 1].html }} />
-                       </div>
-                   ) : (
-                       <>
-                           <span className="text-[0.7vw] font-bold tracking-widest uppercase opacity-85 relative z-10">HARD.COVER</span>
-                           <div className="relative z-10">
-                              <h3 className="text-[0.85vw] font-black leading-tight">Hard.Cover Book</h3>
-                              <p className="text-[0.6vw] opacity-90 mt-[0.1vw]">Free .psd Mockup</p>
-                           </div>
-                       </>
-                   )}
-                </div>
-                
-                {/* Front book */}
-                <div className={`absolute w-[10vw] h-[13.5vw] ${selectedPages.length > 0 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-amber-600 to-orange-500 border-amber-400 p-[0.7vw]'} rounded-[0.6vw] shadow-2xl transform rotate-6 border flex flex-col justify-between text-white overflow-hidden`}>
-                   <div className="absolute top-0 left-0 w-[3vw] h-[14vw] bg-black opacity-10 filter blur-[0.2vw] -translate-x-[0.5vw] z-10 pointer-events-none"></div>
-                   <div className="absolute top-0 right-0 w-[5vw] h-[14vw] bg-white opacity-20 transform rotate-12 -translate-y-[1vw] translate-x-[2vw] z-10 pointer-events-none"></div>
-                   {selectedPages.length > 0 && pages[selectedPages[1] ? selectedPages[1] - 1 : selectedPages[0] - 1] ? (
-                       <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                          <div dangerouslySetInnerHTML={{ __html: pages[selectedPages[1] ? selectedPages[1] - 1 : selectedPages[0] - 1].html }} />
-                       </div>
-                   ) : (
-                       <>
-                           <span className="text-[0.7vw] font-bold tracking-widest uppercase opacity-85 relative z-10">HARD.COVER</span>
-                           <div className="relative z-10">
-                              <h3 className="text-[0.85vw] font-black leading-tight">Hard.Cover Book</h3>
-                              <p className="text-[0.6vw] opacity-90 mt-[0.1vw]">Free .psd Mockup</p>
-                           </div>
-                       </>
-                   )}
-                </div>
-             </div>
+        {selectedTemplate?.id ? (
+            <div 
+              className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none transition-all duration-150"
+              style={{ 
+                opacity: (bgOpacity !== undefined ? bgOpacity : 100) / 100, 
+                filter: dropShadowFilter 
+              }}
+            >
+              {renderTemplateBooks(selectedTemplate.id, selectedPages, pages, "scale-[0.95]", text1, text2)}
+            </div>
         ) : (
             <img
               src={selectedTemplate?.src}
               className="absolute inset-0 pointer-events-none transition-all duration-300 z-0 w-full h-full object-cover"
-              style={{ opacity: (bgOpacity !== undefined ? bgOpacity : 100) / 100, filter: `drop-shadow(${shadowX || 0}px ${shadowY || 0}px ${(shadowBlur || 35) / 10}px ${shadowColor || '#000000'})` }}
+              style={{ opacity: (bgOpacity !== undefined ? bgOpacity : 100) / 100, filter: dropShadowFilter }}
               alt={selectedTemplate?.label || 'Template'}
             />
         )}
@@ -123,7 +372,7 @@ const TemplatePreview = ({
             />
         )}
 
-        <div className="absolute left-0 right-0 text-center z-10 flex flex-col items-center" style={{ bottom: '1.5vw', paddingLeft: '0.8vw', paddingRight: '0.8vw' }}>
+        <div className={`absolute left-0 right-0 text-center z-10 flex flex-col items-center ${selectedTemplate?.id && selectedPages.length === 0 ? 'hidden' : ''}`} style={{ bottom: '1.5vw', paddingLeft: '0.8vw', paddingRight: '0.8vw' }}>
             <h4 className="leading-tight break-words w-full" style={{
                 fontFamily: text1FontFamily,
                 fontSize: typeof text1FontSize === 'number' ? `${(text1FontSize / 15) * 1.1}vw` : '1.3vw',
@@ -151,7 +400,8 @@ const TemplatePreview = ({
             }}>{text2 || 'Supporting Text'}</p>
         </div>
     </div>
-);
+    );
+};
 
 export const CoverPicturePopup = ({ onClose, onSave, onPreview, settings, pages = [], zIndex = 'z-[200]', inline = false }) => {
   const [option, setOption] = useState(settings.coverPicture?.type || 'template');
@@ -166,8 +416,9 @@ export const CoverPicturePopup = ({ onClose, onSave, onPreview, settings, pages 
   const [imageFixType, setImageFixType] = useState(settings.coverPicture?.fit || 'Fit');
   const [showMenu, setShowMenu] = useState(false);
 
-  const [text1, setText1] = useState(settings.coverPicture?.text1 || 'Title');
-  const [text2, setText2] = useState(settings.coverPicture?.text2 || 'Supporting Text');
+  const initialTpl = settings.coverPicture?.selectedTemplate || COVER_TEMPLATES[0];
+  const [text1, setText1] = useState(settings.coverPicture?.text1 || initialTpl?.defaultText1 || 'Hard.Cover Book');
+  const [text2, setText2] = useState(settings.coverPicture?.text2 || initialTpl?.defaultText2 || 'Free .psd Mockup');
   const [bgColor, setBgColor] = useState(settings.coverPicture?.bgColor || '#D7D8E8');
   const [bgOpacity, setBgOpacity] = useState(settings.coverPicture?.bgOpacity || 100);
   const [shadowColor, setShadowColor] = useState(settings.coverPicture?.shadowColor || '#000000');
@@ -333,15 +584,15 @@ export const CoverPicturePopup = ({ onClose, onSave, onPreview, settings, pages 
             {/* Left Upload/Preview Area */}
             <div className="w-[50%] flex items-start justify-center pt-[0.5vw] relative">
                {!uploadedImage ? (
-                  <div className="w-[23vw] h-[17.5vw] border-[0.15vw] border-dashed border-gray-300 rounded-[0.9vw] flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors relative">
+                  <div className="w-full aspect-[4/3] max-w-[24vw] border-[0.15vw] border-dashed border-gray-300 rounded-[0.9vw] flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors relative">
                      <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleCoverUpload} />
                      <span className="text-[0.75vw] text-gray-400 font-semibold mb-[1vw]">Drag & Drop or <span className="text-[#4A3AFF] font-bold">Upload</span></span>
                      <Upload size="1.8vw" className="text-gray-400 mb-[1vw]" strokeWidth={1.5} />
-                     <span className="text-[0.6vw] text-gray-400 mb-[0.3vw]">Dimensions 1080 X 880 px</span>
+                     <span className="text-[0.6vw] text-gray-400 mb-[0.3vw]">Dimensions 1200 X 900 px (4:3)</span>
                      <span className="text-[0.6vw] text-gray-400">Supported File Format : JPG, PNG</span>
                   </div>
                ) : (
-                  <div className="w-[23vw] h-[17.5vw] bg-[#edd8cd] rounded-[0.9vw] overflow-hidden relative group shadow-inner flex items-center justify-center border border-amber-100/40">
+                  <div className="w-full aspect-[4/3] max-w-[24vw] bg-[#edd8cd] rounded-[0.9vw] overflow-hidden relative group shadow-inner flex items-center justify-center border border-amber-100/40">
                      <img 
                          ref={previewImgRef}
                          src={uploadedImage} 
@@ -419,13 +670,13 @@ export const CoverPicturePopup = ({ onClose, onSave, onPreview, settings, pages 
           <div className="flex gap-[1vw] flex-1 min-h-0">
             {/* Left Preview */}
             <div className="w-[45%] flex items-start justify-center pt-[0.5vw] relative">
-               <div className="relative group rounded-[0.9vw] bg-[#edd8cd] w-[23vw] h-[17.5vw] flex items-center justify-center shadow-inner overflow-hidden border border-amber-100/40">
+               <div className="relative group rounded-[0.9vw] bg-[#edd8cd] w-full aspect-[4/3] max-w-[24vw] flex items-center justify-center shadow-inner overflow-hidden border border-amber-100/40">
                   {option === 'template' && selectedTemplate ? (
                      <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-gray-100 rounded-[0.5vw]">
                         <TemplatePreview 
                             selectedTemplate={selectedTemplate}
                             bgColor={bgColor} bgOpacity={bgOpacity}
-                            shadowX={shadowX} shadowY={shadowY} shadowBlur={shadowBlur} shadowColor={shadowColor}
+                            shadowX={shadowX} shadowY={shadowY} shadowBlur={shadowBlur} shadowColor={shadowColor} shadowOpacity={shadowOpacity}
                             logoUrl={logoUrl}
                             text1={text1} text1FontFamily={text1FontFamily} text1FontSize={text1FontSize} text1FontWeight={text1FontWeight} text1LetterSpacing={text1LetterSpacing} text1LineHeight={text1LineHeight} text1Align={text1Align} text1Color={text1Color} text1ColorOpacity={text1ColorOpacity} text1Italic={text1Italic} text1Underline={text1Underline} text1Linethrough={text1Linethrough}
                             text2={text2} text2FontFamily={text2FontFamily} text2FontSize={text2FontSize} text2FontWeight={text2FontWeight} text2LetterSpacing={text2LetterSpacing} text2LineHeight={text2LineHeight} text2Align={text2Align} text2Color={text2Color} text2ColorOpacity={text2ColorOpacity} text2Italic={text2Italic} text2Underline={text2Underline} text2Linethrough={text2Linethrough}
@@ -468,34 +719,33 @@ export const CoverPicturePopup = ({ onClose, onSave, onPreview, settings, pages 
                            {COVER_TEMPLATES.map((tpl) => (
                               <div
                                  key={tpl.id}
-                                 onClick={() => setSelectedTemplate(tpl)}
-                                 className={`aspect-[3/4] rounded-[0.4vw] cursor-pointer overflow-hidden border-[0.15vw] transition-all hover:scale-[1.03] hover:shadow-md relative group ${
+                                 onClick={() => {
+                                     setSelectedTemplate(tpl);
+                                     if (tpl.defaultText1) setText1(tpl.defaultText1);
+                                     if (tpl.defaultText2) setText2(tpl.defaultText2);
+                                  }}
+                                 className={`aspect-[4/3] rounded-[0.4vw] cursor-pointer overflow-hidden border-[0.15vw] transition-all hover:scale-[1.03] hover:shadow-md relative group ${
                                  selectedTemplate?.id === tpl.id
                                     ? 'border-[#4A3AFF] shadow-[0_0_0_0.15vw_rgba(74,58,255,0.3)]'
                                     : 'border-transparent hover:border-gray-400'
                                  }`}
                                  title={tpl.label}
                               >
-                                 {tpl.id === 1 ? (
-                                    <div className="w-full h-full bg-[#edd8cd] flex items-center justify-center relative overflow-hidden">
-                                       <div className="relative w-[5vw] h-[5.5vw] flex items-center justify-center scale-[0.45]">
-                                          <div className="absolute w-[10vw] h-[13.5vw] bg-gradient-to-br from-orange-500 to-amber-600 rounded-[0.6vw] shadow-xl transform -rotate-6 border border-orange-400 p-[0.7vw] flex flex-col justify-between text-white">
-                                             <span className="text-[0.7vw] font-bold tracking-widest uppercase opacity-85">HARD.COVER</span>
-                                             <div>
-                                                <h3 className="text-[0.85vw] font-black leading-tight">Hard.Cover Book</h3>
-                                                <p className="text-[0.6vw] opacity-90 mt-[0.1vw]">Free .psd Mockup</p>
-                                             </div>
-                                          </div>
-                                          <div className="absolute w-[10vw] h-[13.5vw] bg-gradient-to-br from-amber-600 to-orange-500 rounded-[0.6vw] shadow-2xl transform rotate-6 border border-amber-400 p-[0.7vw] flex flex-col justify-between text-white">
-                                             <span className="text-[0.7vw] font-bold tracking-widest uppercase opacity-85">HARD.COVER</span>
-                                             <div>
-                                                <h3 className="text-[0.85vw] font-black leading-tight">Hard.Cover Book</h3>
-                                                <p className="text-[0.6vw] opacity-90 mt-[0.1vw]">Free .psd Mockup</p>
-                                             </div>
-                                          </div>
-                                       </div>
-                                    </div>
-                                 ) : (
+                                 {tpl.id ? (
+                                     <div className="w-full h-full bg-[#edd8cd] relative overflow-hidden pointer-events-none">
+                                        <div className="absolute inset-0 w-[400%] h-[400%] origin-top-left transform scale-[0.25]">
+                                           <TemplatePreview 
+                                              selectedTemplate={tpl}
+                                              bgColor="#edd8cd"
+                                              bgOpacity={100}
+                                              text1={tpl.defaultText1}
+                                              text2={tpl.defaultText2}
+                                              selectedPages={[]}
+                                              pages={pages}
+                                           />
+                                        </div>
+                                     </div>
+                                  ) : (
                                     <img src={tpl.src} alt={tpl.label} className="w-full h-full object-cover" />
                                  )}
                                  {selectedTemplate?.id === tpl.id && (
@@ -849,7 +1099,7 @@ export const CoverPicturePopup = ({ onClose, onSave, onPreview, settings, pages 
                         type: 'template',
                         activeTab,
                         selectedTemplate,
-                        url: selectedTemplate?.id === 1 ? '' : (selectedTemplate?.src || ''),
+                        url: selectedTemplate?.id ? '' : (selectedTemplate?.src || ''),
                         text1,
                         text2,
                         bgColor,
@@ -1182,7 +1432,7 @@ const FlipbookInfoModal = ({ isOpen, onClose, currentBook, onSaveSuccess }) => {
             <div className="grid grid-cols-2 gap-[1.5vw]">
               {/* Left Column */}
               <div className="flex flex-col justify-between gap-[0.9vw]">
-                <div className="relative group rounded-[0.9vw] bg-gray-50 h-[17.5vw] flex items-center justify-center shadow-inner overflow-hidden border border-gray-200/50">
+                <div className="relative group rounded-[0.9vw] bg-gray-50 w-full aspect-[4/3] flex items-center justify-center shadow-inner overflow-hidden border border-gray-200/50">
                   {coverPicture?.type === 'template' ? (
                      <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-gray-100 rounded-[0.5vw]">
                         <TemplatePreview 
@@ -1207,15 +1457,15 @@ const FlipbookInfoModal = ({ isOpen, onClose, currentBook, onSaveSuccess }) => {
                       <div className="absolute w-[10vw] h-[13.5vw] bg-gradient-to-br from-orange-500 to-amber-600 rounded-[0.6vw] shadow-xl transform -rotate-6 border border-orange-400 p-[0.7vw] flex flex-col justify-between text-white">
                         <span className="text-[0.7vw] font-bold tracking-widest uppercase opacity-85">HARD.COVER</span>
                         <div>
-                          <h3 className="text-[0.85vw] font-black leading-tight">Hard.Cover Book</h3>
-                          <p className="text-[0.6vw] opacity-90 mt-[0.1vw]">Free .psd Mockup</p>
+                          <h3 className="text-[0.85vw] font-black leading-tight break-words">Hard.Cover Book</h3>
+                          <p className="text-[0.6vw] opacity-90 mt-[0.1vw] break-words">Free .psd Mockup</p>
                         </div>
                       </div>
                       <div className="absolute w-[10vw] h-[13.5vw] bg-gradient-to-br from-amber-600 to-orange-500 rounded-[0.6vw] shadow-2xl transform rotate-6 border border-amber-400 p-[0.7vw] flex flex-col justify-between text-white">
                         <span className="text-[0.7vw] font-bold tracking-widest uppercase opacity-85">HARD.COVER</span>
                         <div>
-                          <h3 className="text-[0.85vw] font-black leading-tight">Hard.Cover Book</h3>
-                          <p className="text-[0.6vw] opacity-90 mt-[0.1vw]">Free .psd Mockup</p>
+                          <h3 className="text-[0.85vw] font-black leading-tight break-words">Hard.Cover Book</h3>
+                          <p className="text-[0.6vw] opacity-90 mt-[0.1vw] break-words">Free .psd Mockup</p>
                         </div>
                       </div>
                     </div>

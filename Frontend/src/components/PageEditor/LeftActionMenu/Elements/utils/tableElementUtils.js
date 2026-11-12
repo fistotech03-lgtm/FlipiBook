@@ -92,8 +92,8 @@ const buildTemplates = () => {
       subtopic: p.name,
       rows: 3,
       cols: 3,
-      width: 300,
-      height: 150,
+      width: 150,
+      height: 70,
       themeColor: '#ffffff',
       themeOpacity: 100,
       borderColor: p.border,
@@ -102,12 +102,12 @@ const buildTemplates = () => {
       borderRadius: 0,
       cellColor: '#1e293b',
       fontFamily: 'Poppins',
-      fontSize: 13,
+      fontSize: 9,
       fontWeight: 'Regular',
       textAlign: 'left',
       verticalAlign: 'middle',
-      paddingX: 10,
-      paddingY: 8,
+      paddingX: 6,
+      paddingY: 4,
       rowBackgrounds: ['#ffffff', '#ffffff', '#ffffff'],
     });
 
@@ -119,8 +119,8 @@ const buildTemplates = () => {
       subtopic: p.name,
       rows: 3,
       cols: 3,
-      width: 300,
-      height: 150,
+      width: 150,
+      height: 70,
       themeColor: '#ffffff',
       themeOpacity: 100,
       borderColor: p.border,
@@ -131,12 +131,12 @@ const buildTemplates = () => {
       headerBg: p.soft,
       headerColor: p.darkText,
       fontFamily: 'Poppins',
-      fontSize: 13,
+      fontSize: 9,
       fontWeight: 'Medium',
       textAlign: 'left',
       verticalAlign: 'middle',
-      paddingX: 10,
-      paddingY: 8,
+      paddingX: 6,
+      paddingY: 4,
       rowBackgrounds: [p.soft, '#ffffff', '#ffffff'],
     });
 
@@ -148,8 +148,8 @@ const buildTemplates = () => {
       subtopic: p.name,
       rows: 3,
       cols: 3,
-      width: 300,
-      height: 150,
+      width: 150,
+      height: 70,
       themeColor: '#ffffff',
       themeOpacity: 100,
       borderColor: p.border,
@@ -162,12 +162,12 @@ const buildTemplates = () => {
       footerBg: p.soft,
       footerColor: p.darkText,
       fontFamily: 'Poppins',
-      fontSize: 13,
+      fontSize: 9,
       fontWeight: 'Medium',
       textAlign: 'left',
       verticalAlign: 'middle',
-      paddingX: 10,
-      paddingY: 8,
+      paddingX: 6,
+      paddingY: 4,
       rowBackgrounds: [p.soft, '#ffffff', p.soft],
     });
 
@@ -179,8 +179,8 @@ const buildTemplates = () => {
       subtopic: p.name,
       rows: 3,
       cols: 3,
-      width: 300,
-      height: 150,
+      width: 150,
+      height: 70,
       themeColor: '#ffffff',
       themeOpacity: 100,
       borderColor: p.border,
@@ -191,12 +191,12 @@ const buildTemplates = () => {
       headerBg: p.solid,
       headerColor: '#ffffff',
       fontFamily: 'Poppins',
-      fontSize: 13,
+      fontSize: 9,
       fontWeight: 'Medium',
       textAlign: 'left',
       verticalAlign: 'middle',
-      paddingX: 10,
-      paddingY: 8,
+      paddingX: 6,
+      paddingY: 4,
       rowBackgrounds: [p.solid, '#ffffff', '#ffffff'],
     });
 
@@ -208,8 +208,8 @@ const buildTemplates = () => {
       subtopic: p.name,
       rows: 3,
       cols: 3,
-      width: 300,
-      height: 150,
+      width: 150,
+      height: 70,
       themeColor: '#f8fafc',
       themeOpacity: 100,
       borderColor: '#ffffff',
@@ -221,12 +221,12 @@ const buildTemplates = () => {
       headerBg: p.solid,
       headerColor: '#ffffff',
       fontFamily: 'Poppins',
-      fontSize: 13,
+      fontSize: 9,
       fontWeight: 'Medium',
       textAlign: 'left',
       verticalAlign: 'middle',
-      paddingX: 10,
-      paddingY: 8,
+      paddingX: 6,
+      paddingY: 4,
       rowBackgrounds: [p.solid, '#f8fafc', '#f8fafc'],
     });
 
@@ -238,8 +238,8 @@ const buildTemplates = () => {
       subtopic: p.name,
       rows: 3,
       cols: 3,
-      width: 300,
-      height: 150,
+      width: 150,
+      height: 70,
       themeColor: '#ffffff',
       themeOpacity: 100,
       borderColor: '#ffffff',
@@ -251,12 +251,12 @@ const buildTemplates = () => {
       headerBg: p.solid,
       headerColor: '#ffffff',
       fontFamily: 'Poppins',
-      fontSize: 13,
+      fontSize: 9,
       fontWeight: 'Medium',
       textAlign: 'left',
       verticalAlign: 'middle',
-      paddingX: 10,
-      paddingY: 8,
+      paddingX: 6,
+      paddingY: 4,
       rowBackgrounds: [p.solid, p.med, p.light],
     });
   });
@@ -300,8 +300,8 @@ export function createTableElementNode(config = {}, cx = 200, cy = 200) {
   const merged = { ...tmpl, ...config };
 
   const uniqueId = `table-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-  const width = merged.width || 300;
-  const height = merged.height || 150;
+  const width = merged.width || 150;
+  const height = merged.height || 70;
   const x = Math.round(cx - width / 2);
   const y = Math.round(cy - height / 2);
 
@@ -322,12 +322,12 @@ export function createTableElementNode(config = {}, cx = 200, cy = 200) {
   g.setAttribute('data-border-radius', String(merged.borderRadius || 0));
   g.setAttribute('data-cell-color', merged.cellColor);
   g.setAttribute('data-font-family', merged.fontFamily || 'Poppins');
-  g.setAttribute('data-font-size', String(merged.fontSize || 13));
+  g.setAttribute('data-font-size', String(merged.fontSize || 9));
   g.setAttribute('data-font-weight', merged.fontWeight || 'Regular');
   g.setAttribute('data-text-align', merged.textAlign || 'left');
   g.setAttribute('data-vertical-align', merged.verticalAlign || 'middle');
-  g.setAttribute('data-padding-x', String(merged.paddingX || 8));
-  g.setAttribute('data-padding-y', String(merged.paddingY || 6));
+  g.setAttribute('data-padding-x', String(merged.paddingX || 6));
+  g.setAttribute('data-padding-y', String(merged.paddingY || 4));
   g.setAttribute('data-text-wrapping', 'true');
   if (merged.headerBg) g.setAttribute('data-header-bg', merged.headerBg);
   if (merged.footerBg) g.setAttribute('data-footer-bg', merged.footerBg);
@@ -361,8 +361,8 @@ export function getTableSvgString(config = {}, isDrag = false) {
   const tmpl = TABLE_TEMPLATES.find((t) => t.id === config.id) || TABLE_TEMPLATES[0];
   const merged = { ...tmpl, ...config };
   const uniqueId = `table-${Date.now()}`;
-  const width = merged.width || 300;
-  const height = merged.height || 150;
+  const width = merged.width || 150;
+  const height = merged.height || 70;
   const transform = isDrag ? '' : 'transform="translate(80, 100)"';
 
   const extraAttrs = [
@@ -374,7 +374,7 @@ export function getTableSvgString(config = {}, isDrag = false) {
 
   const tableInnerHtml = generateTableHtml(merged);
 
-  return `<g id="${uniqueId}" data-type="table-frame" data-scrollable="false" data-rows="${merged.rows}" data-cols="${merged.cols}" data-theme-color="${merged.themeColor}" data-theme-opacity="${merged.themeOpacity || 100}" data-border-color="${merged.borderColor}" data-border-opacity="100" data-border-width="${merged.borderWidth}" data-border-style="${merged.borderStyle || 'solid'}" data-border-radius="${merged.borderRadius || 0}" data-cell-color="${merged.cellColor}" data-font-family="${merged.fontFamily || 'Poppins'}" data-font-size="${merged.fontSize || 13}" data-font-weight="${merged.fontWeight || 'Regular'}" data-text-align="${merged.textAlign || 'left'}" data-vertical-align="${merged.verticalAlign || 'middle'}" data-padding-x="${merged.paddingX || 8}" data-padding-y="${merged.paddingY || 6}" data-text-wrapping="true" ${extraAttrs} ${transform}><foreignObject x="0" y="0" width="${width}" height="${height}" style="overflow:visible;"><div class="table-card-wrapper table-container" xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;box-sizing:border-box;border-radius:${merged.borderRadius || 0}px;overflow:visible;display:block;margin:0;padding:0;white-space:normal;line-height:normal;outline:none;user-select:none;pointer-events:auto;">${tableInnerHtml}</div></foreignObject></g>`.trim();
+  return `<g id="${uniqueId}" data-type="table-frame" data-scrollable="false" data-rows="${merged.rows}" data-cols="${merged.cols}" data-theme-color="${merged.themeColor}" data-theme-opacity="${merged.themeOpacity || 100}" data-border-color="${merged.borderColor}" data-border-opacity="100" data-border-width="${merged.borderWidth}" data-border-style="${merged.borderStyle || 'solid'}" data-border-radius="${merged.borderRadius || 0}" data-cell-color="${merged.cellColor}" data-font-family="${merged.fontFamily || 'Poppins'}" data-font-size="${merged.fontSize || 9}" data-font-weight="${merged.fontWeight || 'Regular'}" data-text-align="${merged.textAlign || 'left'}" data-vertical-align="${merged.verticalAlign || 'middle'}" data-padding-x="${merged.paddingX || 6}" data-padding-y="${merged.paddingY || 4}" data-text-wrapping="true" ${extraAttrs} ${transform}><foreignObject x="0" y="0" width="${width}" height="${height}" style="overflow:visible;"><div class="table-card-wrapper table-container" xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;box-sizing:border-box;border-radius:${merged.borderRadius || 0}px;overflow:visible;display:block;margin:0;padding:0;white-space:normal;line-height:normal;outline:none;user-select:none;pointer-events:auto;">${tableInnerHtml}</div></foreignObject></g>`.trim();
 }
 
 /**

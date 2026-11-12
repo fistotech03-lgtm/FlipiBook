@@ -78,9 +78,14 @@ const AccountOverview = ({
       const netInfo = await getPublicClientIpAndLocation();
       const headers = {
         'x-device-id': deviceInfo.deviceId,
+        'x-client-browser': deviceInfo.browser,
+        'x-client-os': deviceInfo.operatingSystem,
       };
       if (netInfo?.ip) {
         headers['x-client-ip'] = netInfo.ip;
+      }
+      if (netInfo?.location) {
+        headers['x-client-location'] = netInfo.location;
       }
 
       const res = await axios.get(`${backendUrl}/api/auth/recent-activity`, {

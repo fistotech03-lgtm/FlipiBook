@@ -1,18 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import axios from 'axios';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../context/AuthContext';
-
-const getBackendUrl = () => {
-  if (import.meta.env.VITE_BACKEND_URL) {
-    return import.meta.env.VITE_BACKEND_URL.trim().replace(/\/+$/, '');
-  }
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  if (origin.includes('devtunnels.ms')) {
-    return origin.replace('-5173', '-8000');
-  }
-  return 'http://localhost:8000';
-};
+import { flipbookApi, analyticsApi } from '../api';
 
 const formatDuration = (seconds = 0) => {
   const sec = Math.max(0, Math.round(Number(seconds) || 0));
@@ -100,20 +89,11 @@ const getCountryFlag = (code = '') => {
 
 export default function Overview() {
   const { user } = useAuth();
-  const emailId = user?.emailId || user?.email;
 
-  // Resolved user email with fallback
+  // Resolved user email from auth context
   const userEmail = useMemo(() => {
-    if (emailId) return emailId.toLowerCase();
-    try {
-      const stored = localStorage.getItem('user') || localStorage.getItem('user_profile');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return (parsed.emailId || parsed.email || (typeof stored === 'string' && !stored.startsWith('{') ? stored : '') || '').toLowerCase();
-      }
-    } catch {}
-    return '';
-  }, [emailId]);
+    return (user?.emailId || user?.email || '').toLowerCase();
+  }, [user]);
 
   const [flipbooks, setFlipbooks] = useState([]);
   const [selectedBookId, setSelectedBookId] = useState(null); // null represents overall, or specific v_id
@@ -143,12 +123,10 @@ export default function Overview() {
     if (!userEmail) return;
     const fetchBooks = async () => {
       try {
-        const backendUrl = getBackendUrl();
-        const res = await axios.get(`${backendUrl}/api/flipbook/list`, {
-          params: { emailId: userEmail }
-        });
-        if (res.data && Array.isArray(res.data.flipbooks)) {
-          setFlipbooks(res.data.flipbooks.filter(b => !b.trash));
+        const res = await flipbookApi.getBooks({ emailId: userEmail });
+        const list = res.data?.books || res.data?.flipbooks || [];
+        if (Array.isArray(list)) {
+          setFlipbooks(list.filter(b => !b.trash));
         }
       } catch (err) {
         console.warn('Could not load flipbooks list:', err);
@@ -168,19 +146,14 @@ export default function Overview() {
     setError(null);
 
     try {
-      const backendUrl = getBackendUrl();
       if (!selectedBookId) {
-        const res = await axios.get(`${backendUrl}/api/analytics/user/${encodeURIComponent(userEmail)}`, {
-          params: { days: selectedDays }
-        });
+        const res = await analyticsApi.getUserAnalytics(userEmail, selectedDays);
         setAnalyticsData({
           mode: 'OVERALL',
           ...res.data
         });
       } else {
-        const res = await axios.get(`${backendUrl}/api/analytics/book/${selectedBookId}`, {
-          params: { days: selectedDays }
-        });
+        const res = await analyticsApi.getFlipbookAnalytics(selectedBookId, selectedDays);
         setAnalyticsData({
           mode: 'SINGLE',
           ...res.data

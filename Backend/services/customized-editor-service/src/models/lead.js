@@ -9,11 +9,11 @@ const leadSchema = new mongoose.Schema(
       unique: true,
       index: true
     },
-    // The flipbook owner's userId is the primary accessor
+    // The flipbook owner's userId is optional to support public guest views & preview
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'user',
-      required: true,
+      required: false,
       index: true
     },
     userID: {

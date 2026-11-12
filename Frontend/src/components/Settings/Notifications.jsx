@@ -101,26 +101,46 @@ const contentOptions = [
   'Choose what to include',
 ];
 
-const ToggleSwitch = ({ checked, onChange }) => {
+const ToggleSwitch = ({ checked, onChange, variant = 'coral' }) => {
+  const isGrayOff = variant === 'gray';
+
   return (
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-[1.35vw] w-[2.4vw] items-center rounded-full transition-colors duration-200 ease-in-out cursor-pointer focus:outline-none ${
-        checked ? 'bg-[#EC5137]' : 'bg-gray-300'
-      }`}
+      className="relative inline-flex items-center w-[2.8vw] h-[1.6vw] shrink-0 cursor-pointer focus:outline-none"
     >
+      {/* Track */}
       <span
-        className={`inline-block h-[1.05vw] w-[1.05vw] transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
-          checked ? 'translate-x-[1.18vw]' : 'translate-x-[0.16vw]'
+        className={`w-[2.5vw] h-[1.1vw] rounded-full transition-colors duration-200 ease-in-out ${
+          checked 
+            ? 'bg-[#EC5137]' 
+            : isGrayOff
+              ? 'bg-white border-[1.5px] border-gray-400'
+              : 'bg-white border-[1.5px] border-[#EC5137]'
         }`}
       />
+
+      {/* Circular Button */}
+      <span
+        className={`absolute top-1/2 -translate-y-1/2 w-[1.45vw] h-[1.45vw] rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.22)] flex items-center justify-center transition-transform duration-200 ease-in-out ${
+          checked
+            ? 'translate-x-[1.35vw] bg-[#EC5137]'
+            : isGrayOff
+              ? 'translate-x-0 bg-[#64748B]'
+              : 'translate-x-0 bg-[#EC5137]'
+        }`}
+      >
+        {checked ? (
+          <Icon icon="lucide:check" className="w-[0.85vw] h-[0.85vw] text-white stroke-[3.5]" />
+        ) : null}
+      </span>
     </button>
   );
 };
 
 const Notifications = () => {
-  const [activeTab, setActiveTab] = useState('delivery'); // Default to delivery per user focus or 'manage'
+  const [activeTab, setActiveTab] = useState('manage');
   const [items, setItems] = useState(defaultNotificationItems);
 
   // Quick controls state
@@ -422,6 +442,7 @@ const Notifications = () => {
                   <ToggleSwitch
                     checked={quickControls.turnOnAll}
                     onChange={(val) => handleQuickControl('turnOnAll', val)}
+                    variant="gray"
                   />
                 </div>
 
@@ -438,6 +459,7 @@ const Notifications = () => {
                   <ToggleSwitch
                     checked={quickControls.turnOffAll}
                     onChange={(val) => handleQuickControl('turnOffAll', val)}
+                    variant="gray"
                   />
                 </div>
 
@@ -454,6 +476,7 @@ const Notifications = () => {
                   <ToggleSwitch
                     checked={quickControls.turnOffMarketing}
                     onChange={(val) => handleQuickControl('turnOffMarketing', val)}
+                    variant="gray"
                   />
                 </div>
 
@@ -470,6 +493,7 @@ const Notifications = () => {
                   <ToggleSwitch
                     checked={quickControls.turnOnEssentialOnly}
                     onChange={(val) => handleQuickControl('turnOnEssentialOnly', val)}
+                    variant="gray"
                   />
                 </div>
               </div>

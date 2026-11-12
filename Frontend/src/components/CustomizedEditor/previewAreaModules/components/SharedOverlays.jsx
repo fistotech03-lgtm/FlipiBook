@@ -92,7 +92,9 @@ const SharedOverlays = ({
   vId,
   shareId,
   currentBook,
-  countdown
+  countdown,
+  leadFormSettings,
+  onOpenLeadForm
 }) => {
   return (
     <>
@@ -344,6 +346,74 @@ const SharedOverlays = ({
           </motion.div>
         </motion.div>
       )}
+
+      {/* Floating Canvas Enquiry Button */}
+      {(() => {
+        const isLeadFormEnabled = leadFormSettings?.enabled === true || leadFormSettings?.enabled === 'true';
+        const enquiryBtn = leadFormSettings?.enquiryButton;
+        const isEnquiryBtnEnabled = enquiryBtn?.enabled !== false;
+
+        if (!isLeadFormEnabled || !isEnquiryBtnEnabled) return null;
+
+        const pos = enquiryBtn?.position || 'bottom-right';
+        const positionClasses = {
+          'top-left': isTablet ? 'top-[4vw] left-[1.5vw]' : (isMobile ? 'top-14 left-4' : 'top-[4.5vw] left-[2vw]'),
+          'top-right': isTablet ? 'top-[4vw] right-[1.5vw]' : (isMobile ? 'top-14 right-4' : 'top-[4.5vw] right-[2vw]'),
+          'bottom-left': isTablet ? 'bottom-[4vw] left-[1.5vw]' : (isMobile ? 'bottom-16 left-4' : 'bottom-[4.5vw] left-[2vw]'),
+          'bottom-right': isTablet ? 'bottom-[4vw] right-[1.5vw]' : (isMobile ? 'bottom-16 right-4' : 'bottom-[4.5vw] right-[2vw]')
+        }[pos] || (isTablet ? 'bottom-[4vw] right-[1.5vw]' : (isMobile ? 'bottom-16 right-4' : 'bottom-[4.5vw] right-[2vw]'));
+
+        const bgFill = enquiryBtn?.bgFill && enquiryBtn.bgFill !== '#' ? enquiryBtn.bgFill : '#E05638';
+        const bgOpacity = (enquiryBtn?.bgOpacity ?? 100) / 100;
+        const textColor = enquiryBtn?.textColor && enquiryBtn.textColor !== '#' ? enquiryBtn.textColor : '#FFFFFF';
+        const textOpacity = (enquiryBtn?.textOpacity ?? 100) / 100;
+        const iconColor = enquiryBtn?.iconColor && enquiryBtn.iconColor !== '#' ? enquiryBtn.iconColor : textColor;
+        const iconOpacity = (enquiryBtn?.iconOpacity ?? 100) / 100;
+        const iconName = enquiryBtn?.icon && enquiryBtn.icon !== 'none' ? enquiryBtn.icon : 'lucide:message-square';
+        const btnText = enquiryBtn?.text !== undefined ? enquiryBtn.text : 'Enquiry Now';
+        const showText = enquiryBtn?.showText !== false;
+
+        const hexToRgba = (hex, op) => {
+          if (!hex || !hex.startsWith('#') || hex.length < 7) return hex;
+          const r = parseInt(hex.slice(1, 3), 16) || 0;
+          const g = parseInt(hex.slice(3, 5), 16) || 0;
+          const b = parseInt(hex.slice(5, 7), 16) || 0;
+          return `rgba(${r}, ${g}, ${b}, ${op})`;
+        };
+
+        const resolvedBg = hexToRgba(bgFill, bgOpacity);
+        const resolvedText = hexToRgba(textColor, textOpacity);
+        const resolvedIcon = hexToRgba(iconColor, iconOpacity);
+
+        return (
+          <div className={`absolute z-[999] pointer-events-auto transition-all ${positionClasses}`}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onOpenLeadForm) onOpenLeadForm();
+              }}
+              style={{
+                backgroundColor: resolvedBg,
+                color: resolvedText
+              }}
+              className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.55vw] rounded-full shadow-[0_0.4vw_1.2vw_rgba(0,0,0,0.18)] hover:brightness-110 active:scale-95 transition-all cursor-pointer font-medium text-[0.78vw] leading-none select-none max-sm:text-xs max-sm:px-3 max-sm:py-2"
+              title={btnText || 'Enquiry'}
+            >
+              {iconName && iconName !== 'none' && (
+                <Icon
+                  icon={iconName}
+                  className="w-[1vw] h-[1vw] shrink-0 max-sm:w-3.5 max-sm:h-3.5"
+                  style={{ color: resolvedIcon }}
+                />
+              )}
+              {showText && btnText && (
+                <span className="tracking-tight whitespace-nowrap">{btnText}</span>
+              )}
+            </button>
+          </div>
+        );
+      })()}
     </>
   );
 };

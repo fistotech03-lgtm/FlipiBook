@@ -219,7 +219,10 @@ const PageEditor = () => {
     ) {
       pageCacheManager.prioritizePage(activePageIndex);
       const parser = new DOMParser();
-      const doc = parser.parseFromString(curPage.html, "image/svg+xml");
+      let doc = parser.parseFromString(curPage.html, "image/svg+xml");
+      if (doc.querySelector("parsererror")) {
+        doc = parser.parseFromString(curPage.html, "text/html");
+      }
       const svgEl = doc.querySelector("svg");
       const layers = svgEl ? parseLayersFromSVG(svgEl) : [];
       pageCacheManager.setCachedLayers(curPage.id, curPage.html, layers);

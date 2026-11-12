@@ -179,6 +179,54 @@ router.post('/add-to-shelf', async (req, res) => {
   }
 });
 
+// POST /api/profile/delete-shelf
+router.post('/delete-shelf', async (req, res) => {
+  try {
+    const emailId = (
+      req.body?.emailId ||
+      req.user?.emailId ||
+      req.body?.email ||
+      req.user?.email ||
+      ''
+    ).trim().toLowerCase();
+    const { folderName } = req.body;
+
+    if (!emailId || !folderName) {
+      return res.status(400).json({ success: false, message: 'Missing emailId or folderName' });
+    }
+
+    const shelf = await getOrCreateShelf(emailId);
+    if (!shelf || !shelf.folders) {
+      return res.status(404).json({ success: false, message: 'Shelf not found' });
+    }
+
+    const initialCount = shelf.folders.length;
+    shelf.folders = shelf.folders.filter((f) => f.folderName !== folderName);
+
+    if (shelf.folders.length < initialCount) {
+      shelf.shelfCount = shelf.folders.length;
+      shelf.updatedAt = new Date();
+      shelf.markModified('folders');
+      await shelf.save();
+
+      // Also clean up from legacy Profile.myShelf if it exists
+      try {
+        const profile = await Profile.findOne({ emailId });
+        if (profile?.myShelf?.folders) {
+          profile.myShelf.folders = profile.myShelf.folders.filter((f) => f.folderName !== folderName);
+          profile.markModified('myShelf.folders');
+          await profile.save();
+        }
+      } catch (_) {}
+    }
+
+    return res.json({ success: true, message: 'Shelf deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting shelf:', error);
+    return res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+});
+
 // POST /api/profile/remove-from-shelf
 router.post('/remove-from-shelf', async (req, res) => {
   try {

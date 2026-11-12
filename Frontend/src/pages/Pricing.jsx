@@ -637,7 +637,7 @@ const Pricing = () => {
             </thead>
 
             {/* Table Body */}
-            <tbody className=" text-[0.86vw] text-gray-600 font-normal">
+            <tbody className="divide-y divide-gray-100 text-[0.86vw] text-gray-600 font-normal">
 
               {/* ---------------- SECTION 1 ---------------- */}
               <tr className="text-gray-800">
@@ -2239,33 +2239,30 @@ const Pricing = () => {
                 <td className="py-[0.85vw] px-[1.2vw] bg-[#f8f9fa]"></td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[1.1vw] px-[1.2vw] text-center bg-white cursor-pointer ${getColBg('free')}`}>
                   <button type="button"
-                    className="inline-block py-[0.42vw] px-[1.1vw] rounded-[0.5vw] border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium text-[0.78vw] transition-all shadow-xs active:scale-[0.98]"
+                    className="inline-block py-[0.42vw] px-[1.1vw] rounded-[0.5vw] bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all shadow-xs"
                   >
                     Get Started Free
                   </button>
                 </td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[1.1vw] px-[1.2vw] text-center bg-[#fff8f6] cursor-pointer ${getColBg('basic')}`}>
                   <button type="button"
-                    className="inline-flex items-center justify-center gap-[0.3vw] py-[0.42vw] px-[1.2vw] rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all shadow-xs"
+                    className="inline-flex items-center justify-center py-[0.42vw] px-[1.2vw] rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all shadow-xs"
                   >
-                    <span>Buy Now</span>
-                    <ArrowRight className="w-[0.8vw] h-[0.8vw]" />
+                    Buy Now
                   </button>
                 </td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[1.1vw] px-[1.2vw] text-center bg-[#f8f9fa] cursor-pointer ${getColBg('premium')}`}>
                   <button type="button"
-                    className="inline-flex items-center justify-center gap-[0.3vw] py-[0.42vw] px-[1.2vw] rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all shadow-xs"
+                    className="inline-flex items-center justify-center py-[0.42vw] px-[1.2vw] rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all shadow-xs"
                   >
-                    <span>Buy Now</span>
-                    <ArrowRight className="w-[0.8vw] h-[0.8vw]" />
+                    Buy Now
                   </button>
                 </td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[1.1vw] px-[1.2vw] text-center bg-white cursor-pointer ${getColBg('pro')}`}>
                   <button type="button"
-                    className="inline-flex items-center justify-center gap-[0.3vw] py-[0.42vw] px-[1.2vw] rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all shadow-xs"
+                    className="inline-flex items-center justify-center py-[0.42vw] px-[1.2vw] rounded-[0.5vw] bg-[#ec5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all shadow-xs"
                   >
-                    <span>Buy Now</span>
-                    <ArrowRight className="w-[0.8vw] h-[0.8vw]" />
+                    Buy Now
                   </button>
                 </td>
               </tr>

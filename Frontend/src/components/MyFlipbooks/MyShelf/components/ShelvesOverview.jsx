@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Icon } from '@iconify/react';
 import {
   blueshade,
   greenshade,
@@ -18,7 +19,16 @@ const ShelvesOverview = ({
   setSelectedWallTheme,
   setCurrentView,
   setShowAddShelfModal,
+  onDeleteShelf,
 }) => {
+  const [openMenuFolder, setOpenMenuFolder] = useState(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => setOpenMenuFolder(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start max-w-5xl">
       {/* Real User Shelves */}
@@ -48,14 +58,55 @@ const ShelvesOverview = ({
               setSelectedWallTheme(null);
               setCurrentView('shelf_detail');
             }}
-            className="group cursor-pointer flex flex-col items-center"
+            className="group cursor-pointer flex flex-col items-center relative"
           >
-            <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-blue-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center">
+            <div className="w-full aspect-[354/200] rounded-xl overflow-hidden shadow-sm border border-gray-200/90 group-hover:shadow-lg group-hover:-translate-y-1 group-hover:border-blue-400/50 transition-all duration-200 ease-out bg-white flex items-center justify-center relative">
               <img
                 src={shelfCardImg}
                 alt={shelfTitle}
                 className="w-full h-full object-cover transition-all duration-200 group-hover:contrast-[1.03]"
               />
+
+              {/* Three-dots Menu on Hover */}
+              <div
+                className="absolute top-2.5 right-2.5 z-20"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenMenuFolder(openMenuFolder === folder.name ? null : folder.name);
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-gray-700 shadow-md flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer backdrop-blur-xs"
+                  title="Shelf Options"
+                >
+                  <Icon icon="mdi:dots-vertical" className="w-4 h-4" />
+                </button>
+
+                {/* Dropdown Menu */}
+                {openMenuFolder === folder.name && (
+                  <div
+                    className="absolute right-0 top-9 w-36 bg-white rounded-lg shadow-xl py-1 z-30 border border-gray-100 text-left animate-in fade-in zoom-in-95 duration-100"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuFolder(null);
+                        if (typeof onDeleteShelf === 'function') {
+                          onDeleteShelf(folder.name);
+                        }
+                      }}
+                      className="w-full px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <Icon icon="mdi:trash-can-outline" className="w-4 h-4" />
+                      <span>Remove Shelf</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             <span className="mt-3 text-sm font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">
               {shelfTitle}

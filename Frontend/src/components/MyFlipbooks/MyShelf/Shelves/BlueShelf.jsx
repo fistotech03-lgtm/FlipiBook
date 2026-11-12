@@ -48,27 +48,42 @@ const BlueShelf = ({
             ...Array.from({ length: booksPerRow - rowBooks.length }).fill(null)
           ];
 
+          // Check if this row contains any landscape book
+          const hasLandscapeBook = rowBooks.some(b => b && Boolean(
+            b.isLandscape ||
+            b.orientation === 'landscape' ||
+            b.rawBook?.orientation === 'landscape' ||
+            b.rawBook?.Customized_Settings?.FlipbookInfo?.orientation === 'landscape' ||
+            (b.width && b.height && Number(b.width) > Number(b.height)) ||
+            (b.rawBook?.width && b.rawBook?.height && Number(b.rawBook.width) > Number(b.rawBook.height)) ||
+            (b.title && /landscape/i.test(b.title)) ||
+            (b.rawBook?.flipbookName && /landscape/i.test(b.rawBook.flipbookName))
+          ));
+
           return (
             <div
               key={`blue-shelf-row-${i}`}
               className="absolute left-0 w-full pointer-events-auto"
               style={{
                 top: rowTops[i] || '13.5%',
-                padding: '0 4% 0 26%'
+                padding: hasLandscapeBook ? '0 0% 0 26%' : '0 4% 0 26%'
               }}
             >
               <div className="relative w-full">
-                {/* Floating Wood Shelf Plank */}
+                {/* Floating Wood Shelf Plank: expands to w-[106%] if landscape, original w-full for portrait */}
                 <img
                   src={blueshelfwood}
                   alt="Shelf"
-                  className="w-full h-auto drop-shadow-lg"
+                  className={`${hasLandscapeBook ? 'w-[106%] max-w-none' : 'w-full'} h-auto drop-shadow-lg`}
                 />
 
-                {/* Books & Slots Container */}
+                {/* Books & Slots Container: reduced gap and shifted slightly left for landscape */}
                 <div
-                  className="absolute inset-x-0 flex items-end justify-center gap-[2vw]"
-                  style={{ bottom: '51.8%', padding: '0 6% 0 0' }}
+                  className="absolute inset-x-0 flex items-end justify-center gap-[1.2vw]"
+                  style={{
+                    bottom: '51.8%',
+                    padding: hasLandscapeBook ? '0 5% 0 0' : '0 6% 0 0'
+                  }}
                 >
                   {paddedBooks.map((book, bIdx) => {
                     const bookIndex = i * booksPerRow + bIdx;
@@ -117,6 +132,17 @@ const BlueShelf = ({
                     const bookName = book.rawBook?.flipbookName || book.rawBook?.title || '';
                     const basePath = '';
 
+                    const isLandscape = Boolean(
+                      book.isLandscape ||
+                      book.orientation === 'landscape' ||
+                      book.rawBook?.orientation === 'landscape' ||
+                      book.rawBook?.Customized_Settings?.FlipbookInfo?.orientation === 'landscape' ||
+                      (book.width && book.height && Number(book.width) > Number(book.height)) ||
+                      (book.rawBook?.width && book.rawBook?.height && Number(book.rawBook.width) > Number(book.rawBook.height)) ||
+                      (book.title && /landscape/i.test(book.title)) ||
+                      (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
+                    );
+
                     return (
                       <div
                         key={book.v_id || `book-${i}-${bIdx}`}
@@ -127,9 +153,9 @@ const BlueShelf = ({
                         onDragEnd={handleDragEnd}
                         className={`relative group cursor-pointer flex justify-center items-end translate-y-0 ${openMenuId === `${i}-${bIdx}` ? 'z-40' : 'hover:z-30'
                           } ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
-                        style={{ width: '15%' }}
+                        style={{ width: isLandscape ? '18%' : '15%' }}
                       >
-                        <div className="w-[100%] aspect-[2.5/3.25] relative rounded-[3px] drop-shadow-md transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+                        <div className={`w-[100%] ${isLandscape ? 'aspect-[3.2/2.05]' : 'aspect-[2.5/3.25]'} relative rounded-[3px] drop-shadow-md transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
                           {LazyPreview && (
                             <LazyPreview
                               v_id={book.v_id}

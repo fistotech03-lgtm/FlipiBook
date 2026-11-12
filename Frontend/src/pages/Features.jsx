@@ -55,35 +55,35 @@ export default function Features() {
 
             {/* Left Content Column */}
             <div className="relative z-10 w-full max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 py-8">
-              <div className="max-w-[540px] pb-[10vw] lg:max-w-[580px]">
+              <div className="max-w-[540px] lg:max-w-[48vw] xl:max-w-[580px] pb-[4vw] lg:pb-[8vw]">
                 <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                  <span className="text-[11px] sm:text-xs font-bold tracking-[0.22em] text-[#94A3B8] uppercase">
+                  <span className="text-[11px] sm:text-xs lg:text-[0.8vw] xl:text-xs font-bold tracking-[0.22em] text-[#94A3B8] uppercase">
                     CONVERTER
                   </span>
                   <span className="w-10 h-[1.5px] bg-[#CBD5E1]"></span>
                 </div>
 
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-bold tracking-tight text-[#111827] leading-[1.12]">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.4vw] xl:text-[54px] font-bold tracking-tight text-[#111827] leading-[1.12]">
                   Convert &amp; Compress <br />
                   <span className="text-[#EA580C]">Your Media</span>
                 </h1>
 
-                <p className="mt-4 sm:mt-5 text-sm sm:text-base text-[#64748B] leading-relaxed max-w-[480px]">
+                <p className="mt-4 sm:mt-5 text-sm sm:text-base lg:text-[1.05vw] xl:text-base text-[#64748B] leading-relaxed max-w-[480px] lg:max-w-[36vw] xl:max-w-[480px]">
                   Convert and compress images, videos, and 3D models with easy-to-use tools and optimized output quality.
                 </p>
 
                 {/* Pill Feature Badges */}
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-6 sm:mt-8">
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] font-medium text-[#475569]">
-                    <Icon icon="lucide:sparkles" className="w-3.5 h-3.5 text-[#EA580C]" />
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 lg:px-[1vw] lg:py-[0.45vw] rounded-full bg-white/95 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] lg:text-[0.8vw] xl:text-[13px] font-medium text-[#475569]">
+                    <Icon icon="lucide:sparkles" className="w-3.5 h-3.5 lg:w-[0.9vw] lg:h-[0.9vw] text-[#EA580C]" />
                     Fast Conversion
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] font-medium text-[#475569]">
-                    <Icon icon="lucide:badge-check" className="w-3.5 h-3.5 text-[#EA580C]" />
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 lg:px-[1vw] lg:py-[0.45vw] rounded-full bg-white/95 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] lg:text-[0.8vw] xl:text-[13px] font-medium text-[#475569]">
+                    <Icon icon="lucide:badge-check" className="w-3.5 h-3.5 lg:w-[0.9vw] lg:h-[0.9vw] text-[#EA580C]" />
                     High Quality Output
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] font-medium text-[#475569]">
-                    <Icon icon="lucide:shield-check" className="w-3.5 h-3.5 text-[#EA580C]" />
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 lg:px-[1vw] lg:py-[0.45vw] rounded-full bg-white/95 border border-[#E2E8F0] shadow-sm text-xs sm:text-[13px] lg:text-[0.8vw] xl:text-[13px] font-medium text-[#475569]">
+                    <Icon icon="lucide:shield-check" className="w-3.5 h-3.5 lg:w-[0.9vw] lg:h-[0.9vw] text-[#EA580C]" />
                     Secure &amp; Private
                   </span>
                 </div>

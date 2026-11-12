@@ -628,7 +628,7 @@ export const BUTTON_ITEMS = BUTTON_TEMPLATES.map((tmpl) => ({
   category: 'buttons',
   type: 'button',
   renderPreview: () => <ButtonPreview template={tmpl} />,
-  insert: (cx, cy) => createButtonElementNode(tmpl, cx, cy)
+  insert: (cx, cy, customSize) => createButtonElementNode(tmpl, cx, cy, customSize)
 }));
 
 export default BUTTON_ITEMS;

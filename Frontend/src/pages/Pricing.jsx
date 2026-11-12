@@ -26,9 +26,9 @@ const Pricing = () => {
   // Helper for active column background highlight: slightly deeper visible warm orange tint #eeeeee
   const getColBg = (colKey, isHeader = false) => {
     if (selectedCol === colKey) {
-      return 'bg-[#fff0ed] transition-colors duration-200';
+      return 'bg-[#fff0ed] border-b border-[#fcd5ce] transition-colors duration-200';
     }
-    return isHeader ? 'bg-[#f8f9fa] transition-colors duration-200' : 'transition-colors duration-200';
+    return isHeader ? 'bg-[#f8f9fa] border-b border-gray-200 transition-colors duration-200' : 'border-b border-gray-200 transition-colors duration-200';
   };
 
   // Invoice modal state
@@ -654,7 +654,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Storage Capacity</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -677,7 +677,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Number of Flipbooks</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -700,7 +700,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Maximum Pages per Flipbook</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -723,7 +723,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Maximum File Upload Size</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -746,7 +746,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Number of Devices</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -780,7 +780,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>PDF, Word, and PowerPoint File Conversion</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -803,7 +803,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Bulk File Conversion</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -826,7 +826,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Import Files from Google Drive and Dropbox</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -849,7 +849,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Automatic Link Detection in PDF Files</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -872,7 +872,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Flipbook Preview and Publishing</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -895,7 +895,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Create Flipbooks from Scratch</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -918,7 +918,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Branded and Locked Templates for Teams</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -952,7 +952,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Number of Available Templates</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -975,7 +975,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Easy Template Customization</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -998,7 +998,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Custom Colour Settings</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1021,7 +1021,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>High-Quality PDF Export</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1055,7 +1055,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Custom Subdomains</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1078,7 +1078,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Custom Logo &amp; Company Profile</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1101,7 +1101,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Custom Branding Watermark</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1124,7 +1124,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Remove Flipbook Watermark</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1147,7 +1147,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Website Embedding</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1170,7 +1170,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Sharing (Social Media, QR Code, Direct Link)</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1204,7 +1204,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Themes and Layouts</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1227,7 +1227,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Customizable Lead Capture Forms</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1250,7 +1250,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Image Gallery Pop-ups</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1273,7 +1273,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Page Flip Effects (Hard Cover, Soft Cover)</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1296,7 +1296,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Customizable Auto-Turn, Thumbnail Navigation, Zoom Settings, etc.</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1330,7 +1330,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Interactive Multimedia Elements (Videos, Audio, Images, GIFs, Icons)</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1353,7 +1353,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Image, Video, and Audio Embedding</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1376,7 +1376,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Customizable Pop-up Templates</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1399,7 +1399,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Interactivity Elements (Frames, QR Code, Shapes, Grid, Text, Tables)</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1422,7 +1422,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Interactive Hotspots</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1456,7 +1456,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Total Flipbook Views</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1479,7 +1479,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Average Time Spent per Page</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1502,7 +1502,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Lead Capture Forms and Data Export</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1525,7 +1525,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Google Tag Manager</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1548,7 +1548,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Geolocation and Device Tracking</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1582,7 +1582,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Password-Protected Flipbooks</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1605,7 +1605,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Public and Unlisted (Link-Only) Publishing</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1628,7 +1628,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Private Sharing with Specific Email Addresses</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1651,7 +1651,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Flipbook Deactivation</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1685,7 +1685,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Viewer and Editor Seat Management</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1708,7 +1708,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Role-Based Access Control &amp; Permissions</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1731,7 +1731,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Shared Team Folders &amp; Collaborative Workspaces</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1754,7 +1754,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Branded and Locked Team Templates</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1777,7 +1777,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Team Member Activity Logs</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1800,7 +1800,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Single Sign-On (SSO) with SAML</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1834,7 +1834,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Number of 3D Model Uploads &amp; Storage</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1857,7 +1857,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>3D Material Customization &amp; Custom Texture Upload</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1880,7 +1880,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Lighting, Environment Settings &amp; Realistic Shadow Rendering</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1903,7 +1903,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>3D Scene Export and Publishing</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1926,7 +1926,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Multiple Export Formats (PNG, JPG, PDF, GLB, glTF)</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1960,7 +1960,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>QR Code-Based AR Access</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -1983,7 +1983,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Real-World 3D Model Placement</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -2006,7 +2006,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>3D Model Rotation and Zoom</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -2029,7 +2029,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Interactive AR Hotspots</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -2052,7 +2052,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Real-Time Shadow &amp; AR Occlusion</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -2086,7 +2086,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Private &amp; Shared Folders</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -2109,7 +2109,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Customized Digital Bookshelf</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -2132,7 +2132,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Flipbook Count</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -2166,7 +2166,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Chat Support</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -2189,7 +2189,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Priority Ticket Support</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -2212,7 +2212,7 @@ const Pricing = () => {
                   <div className="flex items-center justify-between gap-[0.5vw] group relative">
                     <span>Dedicated Technical Support</span>
                     <div className="relative inline-flex items-center shrink-0 group/tip">
-                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full bg-gray-100 border border-gray-200 text-gray-400 group-hover/tip:bg-gray-200 group-hover/tip:text-gray-600 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
                         i
                       </span>
                       {/* Tooltip Popup on Hover */}
@@ -2239,7 +2239,7 @@ const Pricing = () => {
                 <td className="py-[0.85vw] px-[1.2vw] bg-[#f8f9fa]"></td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[1.1vw] px-[1.2vw] text-center bg-white cursor-pointer ${getColBg('free')}`}>
                   <button type="button"
-                    className="inline-block py-[0.42vw] px-[1.1vw] rounded-[0.5vw] bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all shadow-xs"
+                    className="inline-block py-[0.42vw] px-[1.1vw] rounded-[0.5vw] bg-[#1e40af] hover:bg-[#1e3a8a] active:scale-[0.98] text-white font-medium text-[0.78vw] transition-all shadow-xs"
                   >
                     Get Started Free
                   </button>

@@ -90,8 +90,8 @@ const GoldenShelf = ({
           style={{
             filter: decors.lights
               ? (selectedLightTheme === 'light1'
-                  ? 'brightness(1.15) contrast(1.02)'
-                  : selectedLightTheme === 'light2'
+                ? 'brightness(1.15) contrast(1.02)'
+                : selectedLightTheme === 'light2'
                   ? 'brightness(1.20) contrast(1.02)'
                   : 'brightness(1.10) contrast(1.02)')
               : 'none'
@@ -125,8 +125,8 @@ const GoldenShelf = ({
                       selectedLightTheme === 'light1'
                         ? 'linear-gradient(to bottom, rgba(255, 250, 220, 0.95) 0%, rgba(254, 240, 138, 0.52) 32%, rgba(251, 191, 36, 0.16) 75%, transparent 95%)'
                         : selectedLightTheme === 'light2'
-                        ? 'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.58) 32%, rgba(203, 213, 225, 0.16) 75%, transparent 95%)'
-                        : 'linear-gradient(to bottom, rgba(240, 249, 255, 0.95) 0%, rgba(186, 230, 253, 0.42) 30%, rgba(147, 197, 253, 0.10) 75%, transparent 95%)',
+                          ? 'linear-gradient(to bottom, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.58) 32%, rgba(203, 213, 225, 0.16) 75%, transparent 95%)'
+                          : 'linear-gradient(to bottom, rgba(240, 249, 255, 0.95) 0%, rgba(186, 230, 253, 0.42) 30%, rgba(147, 197, 253, 0.10) 75%, transparent 95%)',
                     borderRadius: '50% 50% 45% 45% / 25% 25% 75% 75%',
                     filter: 'blur(5px)',
                     mixBlendMode: 'screen'
@@ -145,8 +145,8 @@ const GoldenShelf = ({
                       selectedLightTheme === 'light1'
                         ? 'linear-gradient(to bottom, rgba(255, 255, 240, 0.95) 0%, rgba(254, 240, 138, 0.60) 25%, rgba(251, 191, 36, 0.15) 70%, transparent 92%)'
                         : selectedLightTheme === 'light2'
-                        ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(248, 250, 252, 0.65) 25%, rgba(203, 213, 225, 0.15) 70%, transparent 92%)'
-                        : 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(224, 242, 254, 0.60) 25%, rgba(186, 230, 253, 0.12) 70%, transparent 92%)',
+                          ? 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(248, 250, 252, 0.65) 25%, rgba(203, 213, 225, 0.15) 70%, transparent 92%)'
+                          : 'linear-gradient(to bottom, rgba(255, 255, 255, 1.0) 0%, rgba(224, 242, 254, 0.60) 25%, rgba(186, 230, 253, 0.12) 70%, transparent 92%)',
                     borderRadius: '50% 50% 45% 45% / 20% 20% 80% 80%',
                     filter: 'blur(3.5px)',
                     mixBlendMode: 'screen'
@@ -210,7 +210,7 @@ const GoldenShelf = ({
         </div>
       )}
 
-      {/* 6. Exactly 4 Books Placed Side-by-Side on the Shelf - Each directly centered under its spotlight bulb */}
+      {/* 6. Exactly 4 Books Placed Side-by-Side on the Shelf - Landed firmly on top of the shelf plank */}
       <div
         className="absolute inset-0 z-20 pointer-events-none"
       >
@@ -230,7 +230,7 @@ const GoldenShelf = ({
                 className="absolute pointer-events-auto -translate-x-1/2 flex flex-col justify-end items-center"
                 style={{
                   left: center,
-                  top: '33.5%',
+                  top: '35.6%',
                   width: '9.8%',
                   height: '26.5%'
                 }}
@@ -278,7 +278,7 @@ const GoldenShelf = ({
               className={`absolute pointer-events-auto -translate-x-1/2 flex flex-col justify-end items-center group cursor-pointer ${openMenuId === `golden-${slotIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === slotIdx ? 'opacity-50' : ''}`}
               style={{
                 left: center,
-                top: isLandscape ? '36.5%' : '33.5%',
+                top: isLandscape ? '34.6%' : '34.6%',
                 width: isLandscape ? '14%' : '9.8%',
                 height: '26.5%'
               }}

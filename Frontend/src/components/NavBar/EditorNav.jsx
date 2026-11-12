@@ -196,14 +196,30 @@ const EditorNavbar = ({
     queryClient.invalidateQueries({ queryKey: ["flipbook-folders"] });
     if (hasUnsavedChanges) {
       if (!isAutoSaveEnabled) {
-        const ok = await confirm({
+        const result = await confirm({
           title: "Leave Site?",
           message: "Changes you made may not be saved.",
           confirmText: "Leave",
           cancelText: "Stay",
           type: "danger",
+          showSave: isThreedEditor,
+          saveText: "Save",
         });
-        if (!ok) return;
+
+        if (!result) {
+          // Clicked Stay / backdrop
+          return;
+        }
+
+        if (result === 'save') {
+          try {
+            if (onSave) {
+              await onSave(true);
+            }
+          } catch (err) {
+            console.error("[EditorNav] Error saving before navigation:", err);
+          }
+        }
       } else {
         try {
           if (onSave) {

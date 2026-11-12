@@ -1986,6 +1986,7 @@ export default function MyFlipbooks() {
                         navigate={navigate}
                         activeFolder={active3dFolder}
                         onCountsChange={setThreeDCounts}
+                        flipbooks={books.filter(b => !b.trash && b.folder !== 'Trash')}
                     />
                 ) : dashboardMode === 'shelf' ? (
                     <div className="flex-1 w-full h-full overflow-hidden min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs flex flex-col">

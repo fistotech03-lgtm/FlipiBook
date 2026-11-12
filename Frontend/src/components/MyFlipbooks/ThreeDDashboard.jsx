@@ -34,6 +34,10 @@ import dashboardBannerImg from '../../assets/Dashboard/Main.png';
 import { resolveUploadsPath } from '../../utils/assetUtils';
 import AlertModal from '../AlertModal';
 import ThreeDBanner from './ThreeDBanner';
+import ThreeDUploadHero from './ThreeDUploadHero';
+import ThreeDRecentPresets from './ThreeDRecentPresets';
+import AddToFlipbookModal from './AddToFlipbookModal';
+import ViewAll3DModelsModal from './ViewAll3DModelsModal';
 import CustomScrollbar from '../CustomScrollbar';
 import { useAuth } from '../../context/AuthContext';
 
@@ -242,7 +246,8 @@ export default function ThreeDDashboard({
   activeFolder,
   onUploadModel,
   onAddToFlipbook,
-  onCountsChange
+  onCountsChange,
+  flipbooks = []
 } = {}) {
   const internalNavigate = useNavigate();
   const navigate = propNavigate || internalNavigate;
@@ -250,6 +255,9 @@ export default function ThreeDDashboard({
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'recent', 'favorites', 'trash'
+  const [isDraggingHero, setIsDraggingHero] = useState(false);
+  const [addToFlipbookModel, setAddToFlipbookModel] = useState(null);
+  const [isViewAllOpen, setIsViewAllOpen] = useState(false);
 
   // Sync with activeFolder prop from sidebar
   useEffect(() => {
@@ -737,17 +745,46 @@ export default function ThreeDDashboard({
 
   return (
     <div className="w-full h-full flex flex-col select-none text-slate-800 min-h-0">
-      {/* TOP 3D BANNER (Unified with FlipbooksBanner styling & split into file) */}
-      <ThreeDBanner
-        user={user}
-        onImportClick={() => setIsUploadModalOpen(true)}
-        onLaunchEditor={() => handleLaunchEditor()}
-        onViewPresets={() => {
-          setTypeFilter('all');
-          setStatusFilter('all');
-          setSearchQuery('');
+      {/* 3D DARK UPLOAD HERO DROPZONE (Matching Screenshot 1) */}
+      <ThreeDUploadHero
+        onFileSelect={(file) => {
+          setUploadFile(file);
+          setModelNameInput(file.name.replace(/\.[^/.]+$/, ''));
+          setIsUploadModalOpen(true);
+        }}
+        isDragging={isDraggingHero}
+        setIsDragging={setIsDraggingHero}
+        onClick={() => {
+          if (fileInputRef.current) {
+            fileInputRef.current.click();
+          } else {
+            setIsUploadModalOpen(true);
+          }
         }}
       />
+
+      {/* RECENT 3D MODELS PRESETS ROW (Matching Screenshot 1) */}
+      <div className="w-full mb-[0.9vw] flex-shrink-0">
+        <ThreeDRecentPresets
+          onViewPreset={(preset) => {
+            setPreviewModel({
+              name: preset.name,
+              displayName: preset.title,
+              size: preset.size,
+              type: preset.format.toLowerCase(),
+              url: preset.modelUrl,
+              thumbnailUrl: preset.image,
+              uploadedAt: new Date().toISOString()
+            });
+          }}
+          onAddToFlipbook={(preset) => {
+            setAddToFlipbookModel(preset);
+          }}
+          onViewAll={() => {
+            setIsViewAllOpen(true);
+          }}
+        />
+      </div>
 
       {/* CONTROLS & FILTER HEADER BAR (Exact FlipbooksToolbar styling & size) */}
       <div className="w-full mb-[0.8vw] relative z-20 flex-shrink-0">
@@ -1464,6 +1501,51 @@ export default function ThreeDDashboard({
           }}
           onClose={() => setDuplicateConfirm(null)}
           isLoading={isUploading}
+        />
+      )}
+
+      {/* ADD TO FLIPBOOK MODAL */}
+      {addToFlipbookModel && (
+        <AddToFlipbookModal
+          isOpen={!!addToFlipbookModel}
+          onClose={() => setAddToFlipbookModel(null)}
+          model={addToFlipbookModel}
+          flipbooks={flipbooks}
+          onConfirm={async (targetBookId, targetModel) => {
+            if (onAddToFlipbook) {
+              await onAddToFlipbook(targetBookId, targetModel);
+            } else {
+              navigate(`/editor/page_editor/${targetBookId}`);
+            }
+          }}
+        />
+      )}
+
+      {/* VIEW ALL 3D MODELS MODAL (Presets & Uploaded in Popup) */}
+      {isViewAllOpen && (
+        <ViewAll3DModelsModal
+          isOpen={isViewAllOpen}
+          onClose={() => setIsViewAllOpen(false)}
+          uploadedModels={models}
+          onOpenInEditor={(modelId) => {
+            setIsViewAllOpen(false);
+            handleLaunchEditor(modelId);
+          }}
+          onAddToFlipbook={(item) => {
+            setIsViewAllOpen(false);
+            setAddToFlipbookModel(item);
+          }}
+          onViewPreset={(item) => {
+            setPreviewModel({
+              name: item.name,
+              displayName: item.title,
+              size: item.size,
+              type: (item.format || 'glb').toLowerCase(),
+              url: item.modelUrl,
+              thumbnailUrl: item.image,
+              uploadedAt: item.uploadedAt || new Date().toISOString()
+            });
+          }}
         />
       )}
     </div>

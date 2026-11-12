@@ -484,7 +484,7 @@ export default function ThreedEditor() {
 
   const defaultMaterialSettings = useMemo(() => ({
     alpha: 100, metallic: 0, roughness: 50, normal: 100, bump: 100,
-    scale: 100, scaleY: 100, rotation: 0, specular: 50, reflection: 10,
+    scale: 100, scaleY: 100, rotation: 0, specular: 50, reflection: 18,
     shadow: 50, softness: 50, ao: 100, environment: 'studio',
     worldOpacity: 0, worldBlur: 0, color: '#ffffff',
     useFactorColor: false, autoUnwrap: false, envRotation: 0,
@@ -1329,7 +1329,12 @@ export default function ThreedEditor() {
                 ? `${rawUrl}&v=${updatedAtTime}`
                 : `${rawUrl}?v=${updatedAtTime}`;
               const loadedHotspots = Array.isArray(modelData.hotspots) ? modelData.hotspots : [];
-              const loadedMaterialSettings = modelData.materialSettings || null;
+              const loadedMaterialSettings = modelData.materialSettings
+                ? {
+                    ...modelData.materialSettings,
+                    reflection: modelData.materialSettings.reflection !== undefined ? modelData.materialSettings.reflection : 18
+                  }
+                : null;
               const loadedTransformValues = modelData.transformValues || null;
 
               const newModel = {
@@ -1460,7 +1465,12 @@ export default function ThreedEditor() {
             setIsSidebarCollapsed(false);
             const loadedHotspots = Array.isArray(parsed.hotspots) ? parsed.hotspots : [];
             const loadedTransformValues = parsed.transformValues || null;
-            const loadedMaterialSettings = parsed.materialSettings || null;
+            const loadedMaterialSettings = parsed.materialSettings
+              ? {
+                  ...parsed.materialSettings,
+                  reflection: parsed.materialSettings.reflection !== undefined ? parsed.materialSettings.reflection : 18
+                }
+              : null;
 
             setHotspots(loadedHotspots);
             setThreedState(prev => ({
@@ -1525,7 +1535,7 @@ export default function ThreedEditor() {
           hotspots: [],
           materialSettings: {
             alpha: 100, metallic: 0, roughness: 50, normal: 100, bump: 100, scale: 50, rotation: 0,
-            specular: 50, reflection: 10, shadow: 50, softness: 50, ao: 100, environment: 'studio',
+            specular: 50, reflection: 18, shadow: 50, softness: 50, ao: 100, environment: 'studio',
             worldOpacity: 0, worldBlur: 0,
             color: '#ffffff', useFactorColor: false, autoUnwrap: false, envRotation: 0, offset: { x: 0, y: 0 },
             lightPosition: { x: 10, y: 10, z: 10 }

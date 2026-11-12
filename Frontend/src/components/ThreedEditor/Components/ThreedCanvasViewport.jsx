@@ -381,13 +381,13 @@ export default function ThreedCanvasViewport({
               }
               background={!isCapturing && activeLeftTab !== "camera"}
               blur={(materialSettings?.worldBlur ?? 0) / 100}
-              environmentIntensity={(materialSettings?.reflection ?? 50) <= 50 ? ((materialSettings?.reflection ?? 50) / 50) : 1.0 + (((materialSettings?.reflection ?? 50) - 50) / 50) * 2.0}
+              environmentIntensity={(materialSettings?.reflection ?? 18) <= 50 ? ((materialSettings?.reflection ?? 18) / 50) : 1.0 + (((materialSettings?.reflection ?? 18) - 50) / 50) * 2.0}
             />
             <SceneEnvironmentController
               envRotation={materialSettings?.envRotation || 0}
               worldOpacity={materialSettings?.worldOpacity ?? 0}
               worldBlur={materialSettings?.worldBlur ?? 0}
-              reflection={materialSettings?.reflection ?? 50}
+              reflection={materialSettings?.reflection ?? 18}
               isCapturing={isCapturing}
               isCameraTab={activeLeftTab === "camera"}
               customBgColor={null}

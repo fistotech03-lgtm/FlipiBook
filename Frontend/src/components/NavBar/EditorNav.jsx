@@ -203,7 +203,7 @@ const EditorNavbar = ({
           cancelText: "Stay",
           type: "danger",
           showSave: isThreedEditor,
-          saveText: "Save",
+          saveText: "Save and exit",
         });
 
         if (!result) {

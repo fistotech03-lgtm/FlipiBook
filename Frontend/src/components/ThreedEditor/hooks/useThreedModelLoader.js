@@ -382,7 +382,7 @@ export function useThreedModelLoader({
       hotspots: [],
       materialSettings: {
         alpha: 100, metallic: 0, roughness: 50, normal: 100, bump: 100, scale: 100, scaleY: 100, rotation: 0,
-        specular: 50, reflection: 10, shadow: 50, softness: 50, ao: 100, environment: 'studio',
+        specular: 50, reflection: 18, shadow: 50, softness: 50, ao: 100, environment: 'studio',
         worldOpacity: 0, worldBlur: 0,
         color: '#ffffff', useFactorColor: false, autoUnwrap: false, envRotation: 0, offset: { x: 0, y: 0 },
         lightPosition: { x: 10, y: 10, z: 10 }
@@ -395,7 +395,7 @@ export function useThreedModelLoader({
       transformValues: defaultTransform,
       materialSettings: {
         alpha: 100, metallic: 0, roughness: 50, normal: 100, bump: 100, scale: 100, scaleY: 100, rotation: 0,
-        specular: 50, reflection: 10, shadow: 50, softness: 50, ao: 100, environment: 'studio',
+        specular: 50, reflection: 18, shadow: 50, softness: 50, ao: 100, environment: 'studio',
         worldOpacity: 0, worldBlur: 0,
         color: '#ffffff', useFactorColor: false, autoUnwrap: false, envRotation: 0, offset: { x: 0, y: 0 },
         lightPosition: { x: 10, y: 10, z: 10 }

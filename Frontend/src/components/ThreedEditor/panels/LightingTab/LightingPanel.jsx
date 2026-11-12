@@ -367,7 +367,7 @@ export function LightingPanel({
 
   // Environment parameters
   const envRotation = currentControls.envRotation ?? 0;
-  const envBrightness = currentControls.reflection ?? 100;
+  const envBrightness = currentControls.reflection ?? 18;
   const envBlur = currentControls.worldBlur ?? 0;
   const envOpacity = currentControls.worldOpacity ?? 100;
   const activeEnv = currentControls.environment || "studio";

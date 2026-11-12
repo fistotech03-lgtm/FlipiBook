@@ -777,6 +777,13 @@ export default function ThreeDDashboard({
           onAddToFlipbook={(m) => {
             setAddToFlipbookModel(m);
           }}
+          onRename={(m) => {
+            setRenamingModel(m);
+            setNewNameInput(m.displayName || m.name);
+          }}
+          onDelete={(m) => {
+            setDeletingModel(m);
+          }}
           onLaunchEditor={(modelId) => {
             handleLaunchEditor(modelId);
           }}

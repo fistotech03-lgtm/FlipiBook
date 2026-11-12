@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, MoreVertical, Heart, Info, Edit2, Trash2 } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import { RECENT_3D_PRESETS } from './recent3dPresets';
@@ -16,6 +16,19 @@ export default function ThreeDRecentPresets({
   formatModelSize,
   ModelCardPreview
 }) {
+  const [activeMenuId, setActiveMenuId] = useState(null);
+
+  // Close menu on click outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (!e.target.closest('.preset-more-menu')) {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
   // Use models from backend if present; otherwise fallback to the default sample presets
   const displayModels = (models && models.length > 0)
     ? models.slice(0, 5)
@@ -52,11 +65,14 @@ export default function ThreeDRecentPresets({
               })
             : '12 Nov 2026';
           const isFav = favorites?.has ? favorites.has(id) : false;
+          const isMenuOpen = activeMenuId === id;
 
           return (
             <div
               key={id || title}
-              className="group bg-white rounded-[0.9vw] border border-gray-200/80 hover:border-gray-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+              className={`group bg-white rounded-[0.9vw] border transition-all duration-200 flex flex-col justify-between relative ${
+                isMenuOpen ? 'z-30 ring-1 ring-gray-300' : 'z-10'
+              } border-gray-200/80 hover:border-gray-300 hover:shadow-md`}
             >
               {/* Top Thumbnail Container */}
               <div className="w-full h-[9.5vw] min-h-[140px] rounded-t-[0.9vw] bg-slate-50 border-b border-gray-100 relative flex items-center justify-center overflow-hidden">
@@ -105,18 +121,68 @@ export default function ThreeDRecentPresets({
                       {title}
                     </h3>
 
-                    {/* Three Dots More Menu */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onViewPreset && onViewPreset(model);
-                      }}
-                      className="p-[0.2vw] text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer transition-colors shrink-0"
-                      title="File info"
-                    >
-                      <MoreVertical className="w-[0.85vw] h-[0.85vw]" />
-                    </button>
+                    {/* Three Dots More Menu Dropdown */}
+                    <div className="relative preset-more-menu shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuId(isMenuOpen ? null : id);
+                        }}
+                        className="p-[0.2vw] text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer transition-colors"
+                        title="More options"
+                      >
+                        <MoreVertical className="w-[0.85vw] h-[0.85vw]" />
+                      </button>
+
+                      {isMenuOpen && (
+                        <div className="absolute right-0 top-full mt-[0.25vw] w-[8.8vw] min-w-[120px] bg-white border border-gray-200/90 rounded-[0.55vw] shadow-xl py-[0.25vw] z-50">
+                          {/* 1. File Info */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(null);
+                              onViewPreset && onViewPreset(model);
+                            }}
+                            className="w-full text-left px-[0.7vw] py-[0.38vw] text-[0.74vw] font-medium text-gray-700 hover:bg-[#fff5f3] hover:text-[#ea543a] flex items-center gap-[0.4vw] cursor-pointer transition-colors"
+                          >
+                            <Info className="w-[0.8vw] h-[0.8vw]" />
+                            <span>File info</span>
+                          </button>
+
+                          {/* 2. Rename */}
+                          {onRename && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(null);
+                                onRename(model);
+                              }}
+                              className="w-full text-left px-[0.7vw] py-[0.38vw] text-[0.74vw] font-medium text-gray-700 hover:bg-[#fff5f3] hover:text-[#ea543a] flex items-center gap-[0.4vw] cursor-pointer transition-colors"
+                            >
+                              <Edit2 className="w-[0.8vw] h-[0.8vw]" />
+                              <span>Rename</span>
+                            </button>
+                          )}
+
+                          {/* 3. Delete */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(null);
+                              onDelete && onDelete(model);
+                            }}
+                            className="w-full text-left px-[0.7vw] py-[0.38vw] text-[0.74vw] font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-[0.4vw] cursor-pointer transition-colors border-t border-gray-100"
+                          >
+                            <Trash2 className="w-[0.8vw] h-[0.8vw]" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Metadata (e.g., 2.44 MB • 12 Nov 2026) */}

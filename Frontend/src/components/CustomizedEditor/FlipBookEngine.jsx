@@ -27,9 +27,9 @@ import { getOrRasterizePage, getCachedRaster, subscribeRasterCache } from '../..
 /* ─────────────────────────────── helpers ─────────────────────────────── */
 
 const textureCache = new Map();
-const extractPageTexture = (rawContent) => {
+const extractPageTexture = (rawContent, pageNum = '') => {
     if (!rawContent || typeof rawContent !== 'string') return null;
-    const cacheKey = rawContent.length > 300 ? `${rawContent.length}_${rawContent.slice(0, 150)}` : rawContent;
+    const cacheKey = pageNum ? `p_${pageNum}` : (rawContent.length > 300 ? `${rawContent.length}_${rawContent.slice(0, 150)}` : rawContent);
     if (textureCache.has(cacheKey)) return textureCache.get(cacheKey);
 
     let res = null;
@@ -692,18 +692,30 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
         if (!rawContent || !rawContent.trim()) {
             return; // Never wipe out existing content if incoming content is empty
         }
+        const isSkeleton = rawContent.includes('generateSkeletonPageSvg') || rawContent.includes('createDefaultPageData') || rawContent.includes('fbe-skeleton');
         const cached = getCachedRaster(pageNum);
-        const texture = cached || extractPageTexture(rawContent);
+        const texture = cached || extractPageTexture(rawContent, pageNum);
         if (texture) {
             const existingImg = staticBgEl.querySelector('img');
             if (existingImg && existingImg.getAttribute('src') === texture) {
+                staticBgEl.setAttribute('data-loaded', 'true');
+                staticBgEl.removeAttribute('data-placeholder');
                 return; // Already rendering this exact texture, avoid rebuilding DOM
             }
             staticBgEl.innerHTML = `<img src="${texture}" style="width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;user-select:none;-webkit-user-drag:none;" alt="Page ${pageNum}" decoding="async" />`;
+            staticBgEl.setAttribute('data-loaded', 'true');
+            staticBgEl.removeAttribute('data-placeholder');
             return;
         }
         const cleanSvg = cleanStaticHtml(rawContent);
         staticBgEl.innerHTML = `<style>[data-name="Free Frame"] { stroke: transparent !important; } .fbe-static-bg svg { width: 100% !important; height: 100% !important; display: block !important; }</style>` + cleanSvg;
+        if (isSkeleton) {
+            staticBgEl.setAttribute('data-placeholder', 'true');
+            staticBgEl.removeAttribute('data-loaded');
+        } else {
+            staticBgEl.setAttribute('data-loaded', 'true');
+            staticBgEl.removeAttribute('data-placeholder');
+        }
     }, []);
 
     const prewarmedSetRef = useRef(new Set());
@@ -891,13 +903,15 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
         }
         if (!staticBg) return;
 
-        // If it already has rendered content, do not re-fetch
-        if (staticBg.children.length > 0 && staticBg.innerHTML.trim().length > 10) return;
+        // Only skip if real (non-placeholder) content has already been rendered
+        const isAlreadyLoaded = staticBg.getAttribute('data-loaded') === 'true' && !staticBg.getAttribute('data-placeholder');
+        if (isAlreadyLoaded) return;
 
         // Check in-memory page content first (instant, 0ms)
         const memPage = augmentedPages[pageIdx];
         const memContent = memPage?.html || memPage?.content || '';
-        if (memContent && memContent.trim().length > 10) {
+        const memIsPlaceholder = !memContent || memPage?.isPlaceholder || memContent.includes('generateSkeletonPageSvg') || memContent.includes('createDefaultPageData');
+        if (memContent && !memIsPlaceholder && memContent.trim().length > 10) {
             applyPageVisual(staticBg, memContent, pageNum);
             renderedContentMapRef.current.set(pageNum, `${memContent.length}:${memPage.sheetData ? JSON.stringify(memPage.sheetData) : ''}`);
             return;
@@ -906,12 +920,13 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
         getPageFromIDB(v_id, pageIdx).then((pageData) => {
             if (!pageData) return;
             const content = pageData.html || pageData.content || '';
-            if (content && staticBg) {
+            const idbIsPlaceholder = !content || pageData.isPlaceholder || content.includes('generateSkeletonPageSvg') || content.includes('createDefaultPageData');
+            if (content && !idbIsPlaceholder && staticBg) {
                 applyPageVisual(staticBg, content, pageNum);
                 renderedContentMapRef.current.set(pageNum, `${content.length}:${pageData.sheetData ? JSON.stringify(pageData.sheetData) : ''}`);
             }
         }).catch(() => {});
-    }, [v_id, augmentedPages.length, applyPageVisual]);
+    }, [v_id, augmentedPages, applyPageVisual]);
 
     const preloadSurroundingPages = useCallback((centerPageNum) => {
         const radius = 4;
@@ -1692,7 +1707,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                     >
                         {!singlePage && (
                             <div style={{ position: 'relative', width, height, overflow: 'hidden', pointerEvents: hasInteractiveLeft ? 'auto' : 'none' }}>
-                                {leftIdx !== null && leftIdx >= 0 && leftIdx < pages.length && pages[leftIdx] && !pages[leftIdx].isPad && (
+                                {hasInteractiveLeft && leftIdx !== null && leftIdx >= 0 && leftIdx < pages.length && pages[leftIdx] && !pages[leftIdx].isPad && (
                                     <iframe
                                         key="spread-left"
                                         title={`Page ${leftIdx + 1}`}
@@ -1707,7 +1722,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                                             height: '100%',
                                             border: 'none',
                                             outline: 'none',
-                                            pointerEvents: hasInteractiveLeft ? 'auto' : 'none',
+                                            pointerEvents: 'auto',
                                             background: 'transparent',
                                             opacity: 1,
                                             transition: 'opacity 0.15s ease'
@@ -1722,7 +1737,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                             </div>
                         )}
                         <div style={{ position: 'relative', width, height, overflow: 'hidden', pointerEvents: hasInteractiveRight ? 'auto' : 'none' }}>
-                            {rightIdx !== null && rightIdx >= 0 && rightIdx < pages.length && pages[rightIdx] && !pages[rightIdx].isPad && (
+                            {hasInteractiveRight && rightIdx !== null && rightIdx >= 0 && rightIdx < pages.length && pages[rightIdx] && !pages[rightIdx].isPad && (
                                 <iframe
                                     key="spread-right"
                                     title={`Page ${rightIdx + 1}`}
@@ -1737,7 +1752,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
                                         height: '100%',
                                         border: 'none',
                                         outline: 'none',
-                                        pointerEvents: hasInteractiveRight ? 'auto' : 'none',
+                                        pointerEvents: 'auto',
                                         background: 'transparent',
                                         opacity: 1,
                                         transition: 'opacity 0.15s ease'

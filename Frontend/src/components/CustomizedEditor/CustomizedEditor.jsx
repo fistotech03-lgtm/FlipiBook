@@ -290,7 +290,8 @@ const CustomizedEditor = () => {
           if (idx < 0 || idx >= next.length) continue;
           const current = next[idx];
           const freshHtml = pageData.html || pageData.content || '';
-          if (freshHtml && current.html !== freshHtml) {
+          const isFreshPlaceholder = pageData.isPlaceholder || freshHtml.includes('generateSkeletonPageSvg') || freshHtml.includes('createDefaultPageData');
+          if (freshHtml && current.html !== freshHtml && !isFreshPlaceholder) {
             next[idx] = {
               ...current,
               html: freshHtml,

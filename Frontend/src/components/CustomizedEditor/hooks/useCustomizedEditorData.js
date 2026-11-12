@@ -335,8 +335,15 @@ export const useCustomizedEditorData = ({
                   if (slotIdx >= 0 && slotIdx < next.length) {
                     const current = next[slotIdx];
                     const isBlank = !page.html || page.html.includes('createDefaultPageData') || page.html.includes('rect width="100%" height="100%" fill="#fff"');
-                    if (isBlank && current && current.html && !current.isPlaceholder && !current.html.includes('createDefaultPageData')) {
-                      next[slotIdx] = { ...page, html: current.html, content: current.content || current.html, isPlaceholder: false };
+                    if (isBlank) {
+                      if (current && current.html && !current.isPlaceholder && !current.html.includes('createDefaultPageData')) {
+                        next[slotIdx] = { ...page, html: current.html, content: current.content || current.html, isPlaceholder: false };
+                      } else if (cached?.pages?.[slotIdx]?.html && !cached.pages[slotIdx].isPlaceholder && !cached.pages[slotIdx].html.includes('createDefaultPageData')) {
+                        const cp = cached.pages[slotIdx];
+                        next[slotIdx] = { ...page, html: cp.html || cp.content, content: cp.content || cp.html, isPlaceholder: false };
+                      } else {
+                        next[slotIdx] = page;
+                      }
                     } else {
                       next[slotIdx] = page;
                     }

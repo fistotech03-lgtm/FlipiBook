@@ -669,41 +669,31 @@ const Profile = () => {
           <div className="w-[22vw] flex-shrink-0 border-r-2 border-gray-200 relative flex flex-col min-h-0">
             <div className="flex flex-col items-center flex-1 min-h-0 z-[70] w-full">
 
-              {/* Top border eraser for container */}
+              {/* Top border eraser across notch */}
               <div
-                className="absolute top-[-0.2vw] left-[calc(50%-5.7vw)] w-[11.4vw] h-[0.4vw] bg-white z-10 pointer-events-none"
+                className="absolute top-[-0.2vw] left-[calc(50%-5.76vw)] w-[11.52vw] h-[0.4vw] bg-white z-10 pointer-events-none"
               ></div>
+
+              {/* Seamless Continuous Notch Line around Avatar Bottom */}
+              <svg
+                className="absolute top-[-1px] left-0 w-full h-[5vw] pointer-events-none z-[75] overflow-visible"
+                viewBox="0 0 220 50"
+                preserveAspectRatio="none"
+              >
+                <path
+                  d="M 52.398 0 A 8 8 0 0 1 60.015 5.554 A 52.5 52.5 0 0 0 159.985 5.554 A 8 8 0 0 1 167.602 0"
+                  fill="none"
+                  stroke="#e5e7eb"
+                  strokeWidth="2"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
 
               {/* Avatar Wrapper (Fixed default size, no scroll scaling) */}
               <div
                 className="relative flex justify-center items-center z-[70] w-[10.5vw] h-[10.5vw] mt-[-6.3vw]"
               >
-                {/* Left Smooth Corner (White fill) */}
-                <svg className="absolute top-[4.75vw] -left-[1vw] w-[1.5vw] h-[1.8vw] z-10 pointer-events-none" viewBox="0 0 10 10">
-                  <path d="M0,10 L10,10 L10,0 A10,10 0 0,1 0,10 Z" fill="white" />
-                </svg>
-                {/* Right Smooth Corner (White fill) */}
-                <svg className="absolute top-[4.75vw] -right-[1vw] w-[1.5vw] h-[1.8vw] z-10 pointer-events-none" viewBox="0 0 10 10">
-                  <path d="M10,10 L0,10 L0,0 A10,10 0 0,0 10,10 Z" fill="white" />
-                </svg>
-
                 <div className="w-full h-full rounded-full bg-white p-[0.8vw] relative flex items-center justify-center">
-
-                  {/* Perfect Round Circular Arc for the bottom half */}
-                  <div
-                    className="absolute inset-0 w-full h-full border-2 border-gray-200 rounded-full pointer-events-none z-20"
-                    style={{ clipPath: 'polygon(0 60%, 100% 60%, 100% 100%, 0 100%)' }}
-                  ></div>
-
-                  {/* Left Connecting Curve to Container Top Border */}
-                  <svg className="absolute top-[6.3vw] -left-[0.98vw] w-[1vw] h-[1vw] z-20 pointer-events-none overflow-visible" viewBox="0 0 10 10">
-                    <path d="M -10 0 L 0 0 A 10 10 0 0 1 10 10" fill="none" stroke="#e5e7eb" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                  </svg>
-                  {/* Right Connecting Curve to Container Top Border */}
-                  <svg className="absolute top-[6.3vw] -right-[0.98vw] w-[1vw] h-[1vw] z-20 pointer-events-none overflow-visible" viewBox="0 0 10 10">
-                    <path d="M 20 0 L 10 0 A 10 10 0 0 0 0 10" fill="none" stroke="#e5e7eb" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                  </svg>
-
                   <div
                     className="w-[9.3vw] h-[9.3vw] rounded-full overflow-hidden relative shadow-inner z-10 bg-white transition-colors duration-300 flex items-center justify-center"
                     style={{ backgroundColor: (displayUser.picture && displayUser.picture !== 'color_only') ? '#ffffff' : ((displayUser.avatarBgColor && displayUser.avatarBgColor !== '#E8D4C8' && displayUser.avatarBgColor !== '#ffffff') ? displayUser.avatarBgColor : getAvatarColor(displayUser.name || displayUser.email || 'User')) }}

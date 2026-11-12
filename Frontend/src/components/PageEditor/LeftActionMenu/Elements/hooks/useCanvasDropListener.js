@@ -8,12 +8,12 @@ import { getElementItemById } from '../elementCatalog';
 export function useCanvasDropListener(onInsert) {
   useEffect(() => {
     const handleAddElementEvent = (e) => {
-      const { pageIndex, elementId, dropPoint } = e.detail || {};
+      const { pageIndex, elementId, dropPoint, dropSize } = e.detail || {};
       const item = getElementItemById(elementId);
       if (!item) return;
 
       if (typeof onInsert === 'function') {
-        onInsert(item, dropPoint?.x, dropPoint?.y, pageIndex);
+        onInsert(item, dropPoint?.x, dropPoint?.y, pageIndex, dropSize);
       }
     };
 

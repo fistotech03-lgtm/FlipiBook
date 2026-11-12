@@ -46,7 +46,7 @@ export const SHAPE_ITEMS = SHAPES_DATA.map((shape) => {
     svgContent,
     previewSvg,
     renderPreview: () => <ShapePreview shape={shape} />,
-    insert: (cx, cy) => createShapeSvgNode(shape, cx, cy)
+    insert: (cx, cy, customSize) => createShapeSvgNode(shape, cx, cy, customSize)
   };
 });
 

@@ -842,7 +842,7 @@ export const getButtonPreviewSvg = (template) => {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="100%" height="100%">${innerSvg}</svg>`;
 };
 
-export const createButtonElementNode = (template, cx, cy) => {
+export const createButtonElementNode = (template, cx, cy, customSize) => {
   const uniqueId = Date.now() + Math.floor(Math.random() * 1000);
   const svgXml = getButtonSvgCode(template, uniqueId, false);
 
@@ -853,9 +853,13 @@ export const createButtonElementNode = (template, cx, cy) => {
 
   // Scale down button so it inserts cleanly and compact onto the page canvas
   let scale = 1;
-  const maxInitialWidth = 55;
-  if (template.width > maxInitialWidth) {
-    scale = maxInitialWidth / template.width;
+  if (customSize && customSize.width) {
+    scale = customSize.width / template.width;
+  } else {
+    const maxInitialWidth = 55;
+    if (template.width > maxInitialWidth) {
+      scale = maxInitialWidth / template.width;
+    }
   }
 
   const renderW = template.width * scale;

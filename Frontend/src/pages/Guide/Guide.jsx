@@ -69,15 +69,78 @@ export default function Guide() {
 
   // Left primary navigation items
   const primaryNavItems = [
-    { id: 'Get Started', label: 'Get Started', icon: Rocket, path: '/login', defaultSubItem: 'get-started-auth' },
-    { id: 'Profile & Account', label: 'Profile & Account', icon: UserCheck, path: '/overview', defaultSubItem: 'profile-overview-setup' },
-    { id: 'Flipbook', label: 'Flipbook', icon: BookOpen, path: '/my-flipbooks', defaultSubItem: 'flipbook-file-create' },
-    { id: 'Customization', label: 'Customization', icon: Sliders, path: '/templates', defaultSubItem: 'custom-bg-theme-layouts' },
-    { id: 'Page Editor', label: 'Page Editor', icon: FileEdit, path: '/my-flipbooks', defaultSubItem: 'page-editor-settings' },
-    { id: '3D Studio Editor', label: '3D Studio Editor', icon: Box, path: '/converter', defaultSubItem: '3d-studio-create-upload' },
-    { id: '3D Request Page', label: '3D Request Page', icon: HelpCircle, path: '/converter', defaultSubItem: '3d-request-page-overview' },
-    { id: 'Forum', label: 'Forum', icon: MessageSquare, path: '/forum', defaultSubItem: 'forum-discussions-overview' },
-    { id: 'Explore', label: 'Explore', icon: Compass, path: '/explore', defaultSubItem: 'explore-books-overview' },
+    {
+      id: 'Get Started',
+      label: 'Get Started',
+      icon: Rocket,
+      path: '/login',
+      defaultSubItem: 'get-started-auth',
+      about: 'Master the essentials to set up your account, explore core tools, and create your first interactive digital flipbook.'
+    },
+    {
+      id: 'Profile & Account',
+      label: 'Profile & Account',
+      icon: UserCheck,
+      path: '/overview',
+      defaultSubItem: 'profile-overview-setup',
+      about: 'Manage your profile settings, team workspace, account preferences, billing subscriptions, and support requests.'
+    },
+    {
+      id: 'Flipbook',
+      label: 'Flipbook',
+      icon: BookOpen,
+      path: '/my-flipbooks',
+      defaultSubItem: 'flipbook-file-create',
+      about: 'Create, upload, and organize your flipbooks from PDF documents, pre-designed templates, or custom blank canvases.'
+    },
+    {
+      id: 'Customization',
+      label: 'Customization',
+      icon: Sliders,
+      path: '/templates',
+      defaultSubItem: 'custom-bg-theme-layouts',
+      about: 'Personalize viewer themes, brand styling, navigation layouts, lead generation forms, and publication privacy.'
+    },
+    {
+      id: 'Page Editor',
+      label: 'Page Editor',
+      icon: FileEdit,
+      path: '/my-flipbooks',
+      defaultSubItem: 'page-editor-settings',
+      about: 'Design engaging flipbook pages with interactive media, custom links, animated elements, audio hotspots, and widgets.'
+    },
+    {
+      id: '3D Studio Editor',
+      label: '3D Studio Editor',
+      icon: Box,
+      path: '/converter',
+      defaultSubItem: '3d-studio-create-upload',
+      about: 'Build and render realistic 3D models with customizable material textures, dynamic lighting presets, and studio environments.'
+    },
+    {
+      id: '3D Request Page',
+      label: '3D Request Page',
+      icon: HelpCircle,
+      path: '/converter',
+      defaultSubItem: '3d-request-page-overview',
+      about: 'Submit custom 3D model modeling requests, track ongoing conversion projects, and collaborate with 3D specialists.'
+    },
+    {
+      id: 'Forum',
+      label: 'Forum',
+      icon: MessageSquare,
+      path: '/forum',
+      defaultSubItem: 'forum-discussions-overview',
+      about: 'Connect with the creator community, ask questions, share flipbook showcases, and discover community tips and tutorials.'
+    },
+    {
+      id: 'Explore',
+      label: 'Explore',
+      icon: Compass,
+      path: '/explore',
+      defaultSubItem: 'explore-books-overview',
+      about: 'Browse curated community flipbooks, featured creator publications, interactive magazines, and inspiring showcase designs.'
+    },
   ];
 
   // Map each primary tab to its sub-sections and component
@@ -192,6 +255,8 @@ export default function Guide() {
       setSelectedSubItem(item.defaultSubItem);
     }
   };
+
+  const currentNavItem = primaryNavItems.find((item) => item.id === activeNav);
 
   return (
     <div className="h-full w-full bg-white text-black flex font-sans antialiased select-none overflow-hidden">
@@ -332,16 +397,21 @@ export default function Guide() {
       {/* 3. Main Content Area */}
       <main className="flex-1 bg-white overflow-hidden pt-[1.2vh] pb-[1vh] h-full text-black flex flex-col">
         {/* Top Header Bar matching Flipbook Guide layout */}
-        <div className="flex items-center justify-between pb-[1.4vh] px-[1.5vw]">
+        <div className="flex items-start justify-between pb-[1.4vh] px-[1.5vw]">
           {/* Title on the left */}
-          <div className="flex items-center">
-            <h1 className="text-[1.5vw] font-semibold text-black">
+          <div className="flex flex-col flex-1 pr-[1.5vw]">
+            <h1 className="text-[1.5vw] font-semibold text-black tracking-tight leading-snug">
               {activeNav === 'Get Started' ? 'Get Started Guide' : activeNav === 'Profile & Account' ? 'Profile & Account Guide' : `${activeNav} Guide`}
             </h1>
+            {currentNavItem?.about && (
+              <p className="text-[0.8vw] font-semibold text-gray-400 mt-[0.6vh]">
+                {currentNavItem.about}
+              </p>
+            )}
           </div>
 
           {/* Right inline controls: Search, Quick Navigation, FAQs */}
-          <div className="flex items-center gap-[0.8vw]">
+          <div className="flex items-center gap-[0.8vw] shrink-0 mt-[0.3vh]">
             {/* Search Input Container */}
             <div ref={searchContainerRef} className="relative w-[22vw] min-w-[13rem]">
               <Search

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = global.mongoose || require('mongoose');
 const Counter = require('./Counter');
 
 const userSchema = new mongoose.Schema(

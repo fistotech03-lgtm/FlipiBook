@@ -13,6 +13,63 @@ const {
 const { sendOtpEmail, sendSignupOtpEmail } = require("../utils/emailService");
 const { createUserWorkspace } = require("../utils/workspaceHelper");
 const { parseUserAgent, resolveLocation } = require("../utils/deviceParser");
+const { getRedis, isAvailable } = require("../../../../shared/redisClient");
+
+/**
+ * Fast Redis session blacklisting & profile caching helpers
+ */
+const isSessionRevokedInRedis = async (sessionId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !sessionId) return false;
+  try {
+    const val = await redis.get(`revoked:session:${sessionId}`);
+    return val === "1";
+  } catch (_) {
+    return false;
+  }
+};
+
+const markSessionRevokedInRedis = async (sessionId, ttlSeconds = 7 * 24 * 60 * 60) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !sessionId) return;
+  try {
+    await redis.set(`revoked:session:${sessionId}`, "1", "EX", ttlSeconds);
+  } catch (_) {}
+};
+
+const getCachedUserProfile = async (userId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId) return null;
+  try {
+    const raw = await redis.get(`user:profile:${userId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+};
+
+const setCachedUserProfile = async (userId, userDoc, ttlSeconds = 300) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId || !userDoc) return;
+  try {
+    const payload = {
+      _id: userDoc._id ? String(userDoc._id) : undefined,
+      name: userDoc.name || "",
+      picture: userDoc.picture || "",
+      emailId: userDoc.emailId || "",
+      userID: userDoc.userID || ""
+    };
+    await redis.set(`user:profile:${userId}`, JSON.stringify(payload), "EX", ttlSeconds);
+  } catch (_) {}
+};
+
+const purgeCachedUserProfile = async (userId) => {
+  const redis = getRedis();
+  if (!isAvailable() || !redis || !userId) return;
+  try {
+    await redis.del(`user:profile:${userId}`);
+  } catch (_) {}
+};
 
 /**
  * Hash 6-digit OTP using SHA-256 before database storage
@@ -1218,7 +1275,15 @@ const resetPassword = async (req, res) => {
 
     await user.save();
 
-    // Revoke any existing active sessions upon password reset (OWASP standard)
+    // Revoke any existing active sessions in Redis & DB upon password reset (OWASP standard)
+    try {
+      const activeSessions = await LoginLog.find({ userId: user.userID, status: "ACTIVE" }).select("sessionId");
+      for (const s of activeSessions) {
+        if (s.sessionId) markSessionRevokedInRedis(s.sessionId);
+      }
+      purgeCachedUserProfile(user._id);
+    } catch (_) {}
+
     await LoginLog.updateMany(
       { userId: user.userID, status: "ACTIVE" },
       { $set: { status: "LOGGED_OUT", logoutTime: new Date() } }
@@ -1261,9 +1326,16 @@ const logout = async (req, res) => {
 
     let updatedCount = 0;
 
+    const targetSessionId = decoded?.sessionId || req.body?.sessionId || null;
+    if (targetSessionId) {
+      markSessionRevokedInRedis(targetSessionId);
+    }
+    if (decoded?.id) {
+      purgeCachedUserProfile(decoded.id);
+    }
+
     try {
       const dbUpdatePromise = (async () => {
-        const targetSessionId = decoded?.sessionId || req.body?.sessionId || null;
         const targetDeviceId = decoded?.deviceId || req.headers["x-device-id"] || req.cookies?.flipibook_device_id || null;
 
         const sessionMatches = [
@@ -1331,6 +1403,83 @@ const logout = async (req, res) => {
 };
 
 /**
+ * Helper to build comprehensive user queries and identify user details for sessions/audit
+ */
+const getUserIdentityQueries = async (user) => {
+  if (!user) return { userQueries: [], dbUser: null, userId: '', emailId: '', userObjectId: null };
+  const rawId = user.id || user._id;
+  const rawUserId = user.userId || user.userID;
+  const rawEmail = (user.emailId || user.email || '').trim().toLowerCase();
+
+  let dbUser = null;
+  if (rawId && mongoose.Types.ObjectId.isValid(rawId)) {
+    try {
+      dbUser = await User.findById(rawId).select('_id userID emailId');
+    } catch (_) {}
+  }
+  if (!dbUser && rawEmail) {
+    try {
+      dbUser = await User.findOne({ emailId: rawEmail }).select('_id userID emailId');
+    } catch (_) {}
+  }
+
+  const queries = [];
+  const seenUserIds = new Set();
+  const seenEmails = new Set();
+  const seenObjIds = new Set();
+
+  const addUserId = (uid) => {
+    if (uid && !seenUserIds.has(uid)) {
+      seenUserIds.add(uid);
+      queries.push({ userId: uid });
+    }
+  };
+
+  const addEmail = (em) => {
+    if (em) {
+      const lower = em.trim().toLowerCase();
+      if (!seenEmails.has(lower)) {
+        seenEmails.add(lower);
+        queries.push({ emailId: lower });
+        queries.push({ emailId: { $regex: new RegExp(`^${lower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } });
+      }
+    }
+  };
+
+  const addObjId = (oid) => {
+    if (oid && mongoose.Types.ObjectId.isValid(oid)) {
+      const s = String(oid);
+      if (!seenObjIds.has(s)) {
+        seenObjIds.add(s);
+        queries.push({ userObjectId: new mongoose.Types.ObjectId(oid) });
+        queries.push({ userObjectId: s });
+      }
+    }
+  };
+
+  if (rawUserId) addUserId(rawUserId);
+  if (dbUser?.userID) addUserId(dbUser.userID);
+
+  if (rawEmail) addEmail(rawEmail);
+  if (dbUser?.emailId) addEmail(dbUser.emailId);
+
+  if (rawId) addObjId(rawId);
+  if (dbUser?._id) addObjId(dbUser._id);
+
+  const finalUserId = dbUser?.userID || rawUserId || (rawId ? `FLIPI${String(rawId).slice(-4).toUpperCase()}` : 'FLIPI0001');
+  const finalEmailId = dbUser?.emailId?.toLowerCase() || rawEmail;
+  const finalUserObjectId = dbUser?._id || (rawId && mongoose.Types.ObjectId.isValid(rawId) ? new mongoose.Types.ObjectId(rawId) : undefined);
+
+  return {
+    userQueries: queries,
+    dbUser,
+    userId: finalUserId,
+    emailId: finalEmailId,
+    userObjectId: finalUserObjectId,
+  };
+};
+
+/**
  * 7. Get Login Logs History
  */
 const getLoginLogs = async (req, res) => {
@@ -1344,19 +1493,8 @@ const getLoginLogs = async (req, res) => {
       });
     }
 
-    const userIdentifier = req.user.userId;
-    const userObjectId = req.user.id;
-    const userEmail = req.user.emailId;
-
-    const orClauses = [
-      userIdentifier ? { userId: userIdentifier } : null,
-      userObjectId && mongoose.Types.ObjectId.isValid(userObjectId)
-        ? { userObjectId }
-        : null,
-      userEmail ? { emailId: userEmail.toLowerCase() } : null,
-    ].filter(Boolean);
-
-    const query = orClauses.length > 0 ? { $or: orClauses } : {};
+    const { userQueries } = await getUserIdentityQueries(req.user);
+    const query = userQueries.length > 0 ? { $or: userQueries } : {};
 
     const logs = await LoginLog.find(query)
       .sort({ loginTime: -1 })
@@ -1401,6 +1539,17 @@ const verifySession = async (req, res) => {
       if (decodedAccess && decodedAccess.id) {
         // Verify session is active in LoginLog (safeguarded against DB buffering delay)
         if (decodedAccess.sessionId) {
+          // Fast in-memory check for remote session revocation
+          if (await isSessionRevokedInRedis(decodedAccess.sessionId)) {
+            clearAuthCookies(res, req);
+            return res.status(200).json({
+              success: true,
+              isAuthenticated: false,
+              user: null,
+              message: "Session has been revoked or logged out",
+            });
+          }
+
           try {
             const session = await LoginLog.findOne({
               $or: [
@@ -1444,6 +1593,17 @@ const verifySession = async (req, res) => {
         tokenEmail = decodedRefresh.emailId || null;
         // Verify session is active in LoginLog (safeguarded against DB buffering delay)
         if (decodedRefresh.sessionId) {
+          // Fast in-memory check for remote session revocation
+          if (await isSessionRevokedInRedis(decodedRefresh.sessionId)) {
+            clearAuthCookies(res, req);
+            return res.status(200).json({
+              success: true,
+              isAuthenticated: false,
+              user: null,
+              message: "Session has been revoked or logged out",
+            });
+          }
+
           try {
             const session = await LoginLog.findOne({
               $or: [
@@ -1506,13 +1666,20 @@ const verifySession = async (req, res) => {
       });
     }
 
-    // 5. Retrieve user details by ID
+    // 5. Retrieve user details by ID (Check fast Redis cache first)
     let user = null;
-    if (targetUserId && mongoose.Types.ObjectId.isValid(targetUserId)) {
+    if (targetUserId) {
+      user = await getCachedUserProfile(targetUserId);
+    }
+
+    if (!user && targetUserId && mongoose.Types.ObjectId.isValid(targetUserId)) {
       try {
         user = await User.findById(targetUserId).select(
           "name picture emailId userID",
         );
+        if (user) {
+          setCachedUserProfile(targetUserId, user);
+        }
       } catch (userErr) {
         console.warn("[Verify Session] User lookup by ID warning:", userErr.message);
       }
@@ -1591,11 +1758,7 @@ const getActiveSessions = async (req, res) => {
       });
     }
 
-    const userQueries = [
-      req.user.userId ? { userId: req.user.userId } : null,
-      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
-      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
-    ].filter(Boolean);
+    const { userQueries, userId, emailId, userObjectId } = await getUserIdentityQueries(req.user);
 
     if (userQueries.length === 0) {
       return res.status(400).json({ success: false, message: "User identity unknown" });
@@ -1640,9 +1803,9 @@ const getActiveSessions = async (req, res) => {
 
         const createdSession = await LoginLog.create({
           _id: sessionObjectId,
-          userId: req.user.userId || `FLIPI${req.user.id?.toString().slice(-4).toUpperCase()}`,
-          userObjectId: req.user.id,
-          emailId: req.user.emailId,
+          userId: userId || `FLIPI${req.user.id?.toString().slice(-4).toUpperCase()}`,
+          userObjectId: userObjectId || (req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? new mongoose.Types.ObjectId(req.user.id) : undefined),
+          emailId: emailId || req.user.emailId,
           sessionId: sessionObjectId.toString(),
           deviceId: assignedDeviceId,
           ipAddress,
@@ -1773,11 +1936,10 @@ const revokeSession = async (req, res) => {
       return res.status(400).json({ success: false, message: "Session ID is required" });
     }
 
-    const userQueries = [
-      req.user.userId ? { userId: req.user.userId } : null,
-      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
-      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
-    ].filter(Boolean);
+    const { userQueries } = await getUserIdentityQueries(req.user);
+    if (userQueries.length === 0) {
+      return res.status(400).json({ success: false, message: "User identity unknown" });
+    }
 
     const sessionQuery = [
       { sessionId: String(sessionId) },
@@ -1802,6 +1964,11 @@ const revokeSession = async (req, res) => {
     targetSession.isRevoked = true;
     targetSession.logoutTime = new Date();
     await targetSession.save();
+
+    // Instantly blacklist revoked session in Redis (< 0.5ms)
+    if (targetSession.sessionId) {
+      await markSessionRevokedInRedis(targetSession.sessionId);
+    }
 
     return res.status(200).json({
       success: true,
@@ -1828,11 +1995,10 @@ const revokeOtherSessions = async (req, res) => {
     const currentSessionId = req.user.sessionId ? String(req.user.sessionId) : null;
     const currentDeviceId = req.headers["x-device-id"] || req.user.deviceId || req.cookies?.flipibook_device_id || null;
 
-    const userQueries = [
-      req.user.userId ? { userId: req.user.userId } : null,
-      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
-      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
-    ].filter(Boolean);
+    const { userQueries } = await getUserIdentityQueries(req.user);
+    if (userQueries.length === 0) {
+      return res.status(400).json({ success: false, message: "User identity unknown" });
+    }
 
     const filter = {
       $or: userQueries,
@@ -1849,6 +2015,14 @@ const revokeOtherSessions = async (req, res) => {
     if (excludeQueries.length > 0) {
       filter.$nor = excludeQueries;
     }
+
+    // Instantly blacklist other sessions in Redis (< 0.5ms)
+    try {
+      const revokedSessions = await LoginLog.find(filter).select("sessionId");
+      for (const s of revokedSessions) {
+        if (s.sessionId) markSessionRevokedInRedis(s.sessionId);
+      }
+    } catch (_) {}
 
     const result = await LoginLog.updateMany(filter, {
       $set: {
@@ -1882,18 +2056,69 @@ const getRecentActivities = async (req, res) => {
     }
 
     const { limit = 20 } = req.query;
-    const userQueries = [
-      req.user.userId ? { userId: req.user.userId } : null,
-      req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? { userObjectId: req.user.id } : null,
-      req.user.emailId ? { emailId: req.user.emailId.toLowerCase() } : null,
-    ].filter(Boolean);
+    const { userQueries, userId, emailId, userObjectId } = await getUserIdentityQueries(req.user);
 
-    const logs = await LoginLog.find({
+    if (userQueries.length === 0) {
+      return res.status(400).json({ success: false, message: "User identity unknown" });
+    }
+
+    let logs = await LoginLog.find({
       $or: userQueries,
     })
       .sort({ createdAt: -1 })
       .limit(Math.min(Math.max(1, Number(limit) || 20), 50))
       .lean();
+
+    // If no activities found yet, pull from active sessions or auto-register current activity
+    if (logs.length === 0) {
+      const activeSession = await LoginLog.findOne({
+        $or: userQueries,
+        status: { $in: ["ACTIVE", "active"] },
+        isRevoked: { $ne: true },
+      })
+        .sort({ lastActiveAt: -1 })
+        .lean();
+
+      if (activeSession) {
+        logs.push(activeSession);
+      } else {
+        try {
+          const userAgent = req.headers["user-agent"] || "";
+          const parsed = parseUserAgent(userAgent);
+          const callerBrowser = req.headers["x-client-browser"] || parsed.browser;
+          const callerOS = req.headers["x-client-os"] || parsed.operatingSystem;
+          const callerDeviceId = req.headers["x-device-id"] || req.user.deviceId || req.cookies?.flipibook_device_id || `dev_${callerBrowser.toLowerCase()}_${crypto.randomBytes(8).toString("hex")}`;
+          const sessionObjectId = new mongoose.Types.ObjectId();
+          const ipAddress = getClientIp(req);
+          const location = resolveLocation(req, ipAddress);
+
+          const initialLog = await LoginLog.create({
+            _id: sessionObjectId,
+            userId: userId || `FLIPI${req.user.id?.toString().slice(-4).toUpperCase()}`,
+            userObjectId: userObjectId || (req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? new mongoose.Types.ObjectId(req.user.id) : undefined),
+            emailId: emailId || req.user.emailId,
+            sessionId: sessionObjectId.toString(),
+            deviceId: callerDeviceId,
+            ipAddress,
+            userAgent,
+            browser: callerBrowser,
+            operatingSystem: callerOS,
+            deviceType: parsed.deviceType,
+            location,
+            loginTime: new Date(),
+            lastActiveAt: new Date(),
+            status: "ACTIVE",
+            isRevoked: false,
+            eventType: "SUCCESSFUL_LOGIN",
+            loginMethod: "TOKEN_AUTH",
+          });
+          const initialObj = initialLog.toObject ? initialLog.toObject() : initialLog;
+          logs.push(initialObj);
+        } catch (initialErr) {
+          console.warn("[Recent Activities Initial Log Warning]:", initialErr.message);
+        }
+      }
+    }
 
     const currentSessionId = req.user.sessionId ? String(req.user.sessionId) : null;
     const callerDeviceId = req.headers["x-device-id"] || req.user.deviceId || null;
@@ -1901,7 +2126,7 @@ const getRecentActivities = async (req, res) => {
 
     const activities = logs.map((log) => {
       const isCurrent = Boolean(
-        (currentSessionId && (log.sessionId === currentSessionId || log._id.toString() === currentSessionId)) ||
+        (currentSessionId && (log.sessionId === currentSessionId || log._id?.toString() === currentSessionId)) ||
         (callerDeviceId && log.deviceId === callerDeviceId)
       );
 

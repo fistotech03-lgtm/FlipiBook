@@ -18,6 +18,7 @@ import {
 } from './vectorNodeEngine';
 import {
   drawNodeEditOverlay as drawNodeEditOverlayExt,
+  drawShapeImageAdjustOverlay,
   clearPenToolNodes as clearPenToolNodesExt,
   drawPenToolNodes as drawPenToolNodesExt,
   drawBendingNodes as drawBendingNodesExt,
@@ -25,6 +26,8 @@ import {
   clearVectraOverlay as clearVectraOverlayExt
 } from './penOverlayEngine';
 import { getLocalPoint } from '../mainEditor/utils/geometryUtils';
+import { updateShapeMaskTransform } from '../LeftActionMenu/Elements/utils/shapeMaskUtils';
+import { safeSerializeSvg } from '../utils/editorUtils';
 
 /**
  * Hook for managing Pen Tool drawing (Vectra session, bezier curves, pencil)
@@ -67,6 +70,7 @@ export const usePenNodeEngine = ({
   const nodeEditScreenNodesRef = useRef([]);
   const nodeEditScreenSegmentsRef = useRef([]);
   const nodeEditRetractHandleRef = useRef(null);
+  const nodeEditImageAdjustRef = useRef(false);
 
   // ── Pen & Drawing Session Refs ────────────────────────────────────────────
   const vectraPenSessionRef = useRef(new VectraPenSession());
@@ -170,11 +174,14 @@ export const usePenNodeEngine = ({
       nodeEditScreenNodesRef,
       nodeEditScreenSegmentsRef,
       nodeEditRetractHandleRef,
+      nodeEditImageAdjustRef,
     });
   }, [zoom]);
 
   const exitNodeEditMode = useCallback(() => {
     if (!nodeEditModeRef.current) return;
+
+    nodeEditImageAdjustRef.current = false;
 
     document.querySelectorAll('[id^="highlight-overlay-"]').forEach(overlay => {
       const nodeGroup = overlay.querySelector('#node-edit-overlay-group');
@@ -184,6 +191,7 @@ export const usePenNodeEngine = ({
     const pathEl = nodeEditPathRef.current;
     if (pathEl) {
       pathEl.removeAttribute('data-node-edit');
+      pathEl.removeAttribute('data-image-adjust-active');
     }
     document.querySelectorAll('[data-node-edit-active="true"]').forEach(el => el.removeAttribute('data-node-edit-active'));
     document.querySelectorAll('[data-node-edit="true"]').forEach(el => el.removeAttribute('data-node-edit'));
@@ -237,10 +245,19 @@ export const usePenNodeEngine = ({
         targetEl.querySelector('[data-type="shape"]') !== null
       ))
     );
-    if (isElShape) return;
+    const isFlattened = Boolean(
+      targetEl.getAttribute?.('data-flattened') === 'true' ||
+      targetEl.closest?.('[data-flattened="true"]') !== null ||
+      (typeof targetEl.querySelector === 'function' && targetEl.querySelector('[data-flattened="true"]') !== null)
+    );
+    if (isElShape && !isFlattened) return;
 
     const pathEl = targetEl.tagName?.toLowerCase() === 'path' ? targetEl : targetEl.querySelector('path');
     if (!pathEl || !pathEl.getAttribute('d')) return;
+
+    if (!pathEl.id) {
+      pathEl.id = targetEl.id || `vpath-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
+    }
 
     const d = pathEl.getAttribute('d');
     if (!d) return;
@@ -258,9 +275,20 @@ export const usePenNodeEngine = ({
       nodeEditPageIndexRef.current = pageIndex;
       nodeEditPaperPathRef.current = paperPath;
       nodeEditDragRef.current = null;
+      nodeEditImageAdjustRef.current = false;
+      pathEl.removeAttribute('data-image-adjust-active');
       nodeEditSelectedSegIdxRef.current = 0;
       nodeEditSelectedSegIndicesRef.current = new Set([0]);
       nodeEditSplitSegIdxRef.current = null;
+
+      const hasImageMask = Boolean(
+        pathEl.getAttribute('data-mask-enabled') === 'true' ||
+        pathEl.getAttribute('data-masked-image-url') ||
+        (pathEl.getAttribute('fill') && pathEl.getAttribute('fill').includes('url(#pattern-'))
+      );
+      if (hasImageMask) {
+        updateShapeMaskTransform({ selectedElement: pathEl });
+      }
 
       if (pathEl.id) {
         pathEl.setAttribute('data-node-edit', 'true');
@@ -337,7 +365,7 @@ export const usePenNodeEngine = ({
         const comboD = pathToDCombo(vSession.paths);
         if (comboD) {
           pathEl.setAttribute('d', comboD);
-        } else if (!vSession.paths || vSession.paths.size === 0) {
+        } else if ((!vSession.paths || vSession.paths.size === 0) && (!pathEl.getAttribute('d') || pathEl.getAttribute('d').trim() === '')) {
           if (pathEl.parentNode) pathEl.parentNode.removeChild(pathEl);
         }
       }
@@ -357,7 +385,8 @@ export const usePenNodeEngine = ({
       });
 
       if (pathEl && svgEl && updatePageHtml) {
-        updatePageHtml(pageIdx, svgEl.outerHTML);
+        const cleanHtml = safeSerializeSvg(svgEl) || svgEl.outerHTML;
+        updatePageHtml(pageIdx, cleanHtml);
         if (targetId) {
           skipClearSelectionRef.current = true;
           window.dispatchEvent(new CustomEvent('expand-layer-parent', { detail: { id: targetId } }));
@@ -448,13 +477,41 @@ export const usePenNodeEngine = ({
         }
         const { mode, segIdx, handleSide, pathEl, paperPath, startPt, startPoints,
           curveIndex, startHandle1, startHandle2, pageIndex } = nodeEditDragRef.current;
+
+        if (mode === 'image-pan') {
+          const { pathEl: panPathEl, startClientX, startClientY, startPanX, startPanY, startZoom, bbox, scale } = nodeEditDragRef.current;
+          const currentScale = scale || (zoom / 100) || 1;
+          const dxPx = (e.clientX - startClientX) / currentScale;
+          const dyPx = (e.clientY - startClientY) / currentScale;
+          const unscaledW = (bbox && bbox.width > 0) ? (bbox.width / currentScale) : 100;
+          const unscaledH = (bbox && bbox.height > 0) ? (bbox.height / currentScale) : 100;
+          const normDx = dxPx / unscaledW;
+          const normDy = dyPx / unscaledH;
+          const newPanX = Math.round((startPanX + normDx) * 1000) / 1000;
+          const newPanY = Math.round((startPanY + normDy) * 1000) / 1000;
+
+          updateShapeMaskTransform({
+            selectedElement: panPathEl,
+            panX: newPanX,
+            panY: newPanY,
+            zoom: startZoom
+          });
+          if (nodeEditDragRef.current?.isStandaloneAdjust) {
+            drawShapeImageAdjustOverlay(panPathEl, pageIndex !== undefined ? pageIndex : nodeEditPageIndexRef.current, zoom);
+          } else if (typeof drawNodeEditOverlay === 'function' && paperPath) {
+            drawNodeEditOverlay(panPathEl, paperPath, pageIndex !== undefined ? pageIndex : nodeEditPageIndexRef.current);
+          }
+          if (suppressClickRef) suppressClickRef.current = true;
+          return;
+        }
+
         const svgEl = pathEl?.ownerSVGElement;
         if (!svgEl || !paperPath || !paperScopeRef.current) return;
 
         const pt = getLocalPoint(svgEl, pathEl, e.clientX, e.clientY);
         paperScopeRef.current.activate();
         const mousePoint = new paperScopeRef.current.Point(pt.x, pt.y);
-        const delta = mousePoint.subtract(new paperScopeRef.current.Point(startPt.x, startPt.y));
+        const delta = (startPt && startPt.x !== undefined) ? mousePoint.subtract(new paperScopeRef.current.Point(startPt.x, startPt.y)) : null;
 
         const segments = getPaperSegments(paperPath);
         const curves = getPaperCurves(paperPath);
@@ -543,6 +600,14 @@ export const usePenNodeEngine = ({
           }
         } else {
           pathEl.setAttribute('d', dStr);
+          const hasImageMask = Boolean(
+            pathEl.getAttribute('data-mask-enabled') === 'true' ||
+            pathEl.getAttribute('data-masked-image-url') ||
+            (pathEl.getAttribute('fill') && pathEl.getAttribute('fill').includes('url(#pattern-'))
+          );
+          if (hasImageMask) {
+            updateShapeMaskTransform({ selectedElement: pathEl });
+          }
           drawNodeEditOverlay(pathEl, paperPath, pageIndex !== undefined ? pageIndex : nodeEditPageIndexRef.current);
         }
         suppressClickRef.current = true;
@@ -557,8 +622,21 @@ export const usePenNodeEngine = ({
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (nodeEditDragRef.current) {
-        const { pathEl, paperPath, pageIndex } = nodeEditDragRef.current;
+        const { mode, pathEl, paperPath, pageIndex } = nodeEditDragRef.current;
         nodeEditDragRef.current = null;
+
+        if (mode === 'image-pan') {
+          if (pathEl && pathEl.ownerSVGElement && saveModifiedPageHtml) {
+            saveModifiedPageHtml(
+              pageIndex !== undefined ? pageIndex : nodeEditPageIndexRef.current,
+              pathEl.ownerSVGElement
+            );
+          }
+          if (suppressClickRef) {
+            setTimeout(() => { suppressClickRef.current = false; }, 50);
+          }
+          return;
+        }
 
         if (nodeEditRetractHandleRef.current && nodeEditRetractHandleRef.current.isReadyToDelete) {
           const { segIdx, handleSide } = nodeEditRetractHandleRef.current;
@@ -606,6 +684,14 @@ export const usePenNodeEngine = ({
           } else {
             pathEl.setAttribute('d', dStr);
           }
+          const hasImageMask = Boolean(
+            pathEl.getAttribute('data-mask-enabled') === 'true' ||
+            pathEl.getAttribute('data-masked-image-url') ||
+            (pathEl.getAttribute('fill') && pathEl.getAttribute('fill').includes('url(#pattern-'))
+          );
+          if (hasImageMask) {
+            updateShapeMaskTransform({ selectedElement: pathEl });
+          }
           drawNodeEditOverlay(pathEl, paperPath, pageIndex !== undefined ? pageIndex : nodeEditPageIndexRef.current);
         }
 
@@ -625,7 +711,13 @@ export const usePenNodeEngine = ({
   // ── Auto-exit Node Edit Mode when switching pages or changing layer selection ──
   useEffect(() => {
     if (nodeEditModeRef.current) {
-      if (activePageIndex !== nodeEditPageIndexRef.current || (selectedLayerId && selectedLayerId !== nodeEditPathRef.current?.id)) {
+      const currentPath = nodeEditPathRef.current;
+      const isLayerMatched = selectedLayerId && currentPath && (
+        selectedLayerId === currentPath.id ||
+        currentPath.closest?.(`[id="${selectedLayerId}"]`) !== null ||
+        Boolean(currentPath.querySelector?.(`[id="${selectedLayerId}"]`))
+      );
+      if (activePageIndex !== nodeEditPageIndexRef.current || (selectedLayerId && !isLayerMatched)) {
         exitNodeEditMode();
       }
     }
@@ -683,6 +775,28 @@ export const usePenNodeEngine = ({
     }
   }, [activeMainTool, commitAndExitPenDrawing, clearPenToolNodes]);
 
+  // Listen for global commit signal before saves, refreshes, or page transitions
+  useEffect(() => {
+    const handleCommit = (e) => {
+      const isManual = e?.detail?.isManual;
+      // In automated background saves, if user is in pen mode, ensure live DOM path has latest d
+      // without destroying the active pen drawing session or resetting nodes!
+      if (!isManual && activeMainTool === 'pen') {
+        const vSession = vectraPenSessionRef.current;
+        if (vSession && drawingPathRef.current) {
+          const comboD = pathToDCombo(vSession.paths);
+          if (comboD) {
+            drawingPathRef.current.setAttribute('d', comboD);
+          }
+        }
+        return;
+      }
+      commitAndExitPenDrawing();
+    };
+    window.addEventListener('editor-commit-active-tools', handleCommit);
+    return () => window.removeEventListener('editor-commit-active-tools', handleCommit);
+  }, [commitAndExitPenDrawing, activeMainTool]);
+
   return {
     paperScopeRef,
     nodeEditModeRef,
@@ -699,6 +813,7 @@ export const usePenNodeEngine = ({
     nodeEditScreenNodesRef,
     nodeEditScreenSegmentsRef,
     nodeEditRetractHandleRef,
+    nodeEditImageAdjustRef,
     vectraPenSessionRef,
     drawingPathRef,
     drawingPointsRef,

@@ -148,7 +148,7 @@ const RAW_PRESETS = [
   },
   {
     "id": "frame-2-colums",
-    "name": "2 Colums",
+    "name": "2 Columns",
     "width": 83,
     "height": 69,
     "viewBox": "0 0 83 69",
@@ -173,10 +173,10 @@ const RAW_PRESETS = [
   {
     "id": "frame-4-grid",
     "name": "4 Grid",
-    "width": 83,
-    "height": 71,
-    "viewBox": "0 0 83 71",
-    "innerSvg": "<rect y=\"42\" width=\"38\" height=\"29\" fill=\"url(#pattern0_10526_3244)\"/>\r\n<rect x=\"45\" y=\"42\" width=\"38\" height=\"29\" fill=\"url(#pattern1_10526_3244)\"/>\r\n<rect x=\"45\" width=\"38\" height=\"40\" fill=\"url(#pattern2_10526_3244)\"/>\r\n<rect width=\"38\" height=\"40\" fill=\"url(#pattern3_10526_3244)\"/>\r\n<defs>\r\n<pattern id=\"pattern0_10526_3244\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\r\n<use xlink:href=\"#image0_10526_3244\" transform=\"matrix(0.000797448 0 0 0.00104493 0 -0.155172)\"/>\r\n</pattern>\r\n<pattern id=\"pattern1_10526_3244\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\r\n<use xlink:href=\"#image0_10526_3244\" transform=\"matrix(0.000797448 0 0 0.00104493 0 -0.155172)\"/>\r\n</pattern>\r\n<pattern id=\"pattern2_10526_3244\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\r\n<use xlink:href=\"#image0_10526_3244\" transform=\"matrix(0.000839419 0 0 0.000797448 -0.0263158 0)\"/>\r\n</pattern>\r\n<pattern id=\"pattern3_10526_3244\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\r\n<use xlink:href=\"#image0_10526_3244\" transform=\"matrix(0.000839419 0 0 0.000797448 -0.0263158 0)\"/>\r\n</pattern>\r\n<image id=\"image0_10526_3244\" width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\"/>\r\n</defs>"
+    "width": 80,
+    "height": 80,
+    "viewBox": "0 0 80 80",
+    "innerSvg": "<rect width=\"38\" height=\"38\" fill=\"url(#pattern0_10526_3244)\"/>\r\n<rect x=\"42\" width=\"38\" height=\"38\" fill=\"url(#pattern1_10526_3244)\"/>\r\n<rect y=\"42\" width=\"38\" height=\"38\" fill=\"url(#pattern2_10526_3244)\"/>\r\n<rect x=\"42\" y=\"42\" width=\"38\" height=\"38\" fill=\"url(#pattern3_10526_3244)\"/>\r\n<defs>\r\n<pattern id=\"pattern0_10526_3244\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\r\n<use xlink:href=\"#image0_10526_3244\" transform=\"matrix(0.000797448 0 0 0.000797448 0 0)\"/>\r\n</pattern>\r\n<pattern id=\"pattern1_10526_3244\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\r\n<use xlink:href=\"#image0_10526_3244\" transform=\"matrix(0.000797448 0 0 0.000797448 0 0)\"/>\r\n</pattern>\r\n<pattern id=\"pattern2_10526_3244\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\r\n<use xlink:href=\"#image0_10526_3244\" transform=\"matrix(0.000797448 0 0 0.000797448 0 0)\"/>\r\n</pattern>\r\n<pattern id=\"pattern3_10526_3244\" patternContentUnits=\"objectBoundingBox\" width=\"1\" height=\"1\">\r\n<use xlink:href=\"#image0_10526_3244\" transform=\"matrix(0.000797448 0 0 0.000797448 0 0)\"/>\r\n</pattern>\r\n<image id=\"image0_10526_3244\" width=\"1254\" height=\"1254\" preserveAspectRatio=\"none\" xlink:href=\"__FRAME_IMAGE__\"/>\r\n</defs>"
   },
   {
     "id": "frame-4",
@@ -628,10 +628,46 @@ const RAW_PRESETS = [
   }
 ];
 
-export const IMAGE_FRAMING_PRESETS = RAW_PRESETS.map((p) => ({
-  ...p,
-  innerSvg: p.innerSvg.replace(/__FRAME_IMAGE__/g, DEFAULT_FRAME_IMAGE)
-}));
+export const SUBTOPIC_ORDER = ['Typography Grid', 'Shapes', 'Letters', 'Numbers'];
+
+export const getPresetSubtopic = (id = '', name = '') => {
+  if (/^frame-[0-9]$/.test(id) || /^[0-9]$/.test(name)) return 'Numbers';
+  if (/^frame-[a-z]$/i.test(id) || /^[a-zA-Z]$/.test(name)) return 'Letters';
+  const shapeIds = [
+    'frame-arch', 'frame-arrow', 'frame-cloud', 'frame-heart', 'frame-house',
+    'frame-mobile', 'frame-tab', 'frame-tag', 'frame-teardrop', 'frame-ticket', 'frame-wave'
+  ];
+  if (shapeIds.includes(id)) return 'Shapes';
+  return 'Typography Grid';
+};
+
+export const IMAGE_FRAMING_PRESETS = RAW_PRESETS.map((p) => {
+  let displayName = p.name;
+  if (p.id === 'frame-z') displayName = 'Z';
+  else if (p.id === 'frame-mobile') displayName = 'Mobile';
+  else if (p.id === 'frame-tab') displayName = 'Tab';
+
+  const subtopic = getPresetSubtopic(p.id, displayName);
+
+  return {
+    ...p,
+    name: displayName,
+    subtopic,
+    innerSvg: p.innerSvg.replace(/__FRAME_IMAGE__/g, DEFAULT_FRAME_IMAGE)
+  };
+}).sort((a, b) => {
+  const orderA = SUBTOPIC_ORDER.indexOf(a.subtopic);
+  const orderB = SUBTOPIC_ORDER.indexOf(b.subtopic);
+  if (orderA !== orderB) return orderA - orderB;
+
+  if (a.subtopic === 'Numbers') {
+    return parseInt(a.name, 10) - parseInt(b.name, 10);
+  }
+  if (a.subtopic === 'Letters') {
+    return a.name.localeCompare(b.name);
+  }
+  return 0;
+});
 
 export const getFrameSvg = (preset) => {
   return `<svg width="${preset.width}" height="${preset.height}" viewBox="${preset.viewBox}" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${preset.innerSvg}</svg>`;
@@ -667,6 +703,80 @@ export const createImageFrameNode = (frameNameOrPreset, rawSvgOrCx, cxOrCy, cy) 
   const parser = new DOMParser();
   const doc = parser.parseFromString(cleanSvg, 'image/svg+xml');
   const svgEl = doc.documentElement;
+
+  // Promote <use> nodes into direct <image> nodes inside each pattern
+  doc.querySelectorAll('pattern').forEach(pattern => {
+    let imgNode = pattern.querySelector('image, img');
+    if (!imgNode) {
+      const useNode = pattern.querySelector('use');
+      if (useNode) {
+        const href = useNode.getAttribute('href') || useNode.getAttribute('xlink:href') || '';
+        const targetId = href.replace('#', '');
+        const refImg = doc.querySelector(`image[id="${targetId}"], img[id="${targetId}"]`);
+        const srcUrl = refImg ? (refImg.getAttribute('href') || refImg.getAttribute('xlink:href')) : DEFAULT_FRAME_IMAGE;
+
+        imgNode = doc.createElementNS('http://www.w3.org/2000/svg', 'image');
+        imgNode.setAttribute('href', srcUrl || DEFAULT_FRAME_IMAGE);
+        imgNode.setAttribute('xlink:href', srcUrl || DEFAULT_FRAME_IMAGE);
+
+        const useTransform = useNode.getAttribute('transform');
+        if (useTransform) {
+          imgNode.setAttribute('transform', useTransform);
+          const refW = refImg?.getAttribute('width') || '1254';
+          const refH = refImg?.getAttribute('height') || '1254';
+          imgNode.setAttribute('width', refW);
+          imgNode.setAttribute('height', refH);
+          imgNode.setAttribute('preserveAspectRatio', 'none');
+        } else {
+          const patId = pattern.getAttribute('id');
+          const slotShape = doc.querySelector(`[fill*="${patId}"]`);
+          let slotW = null;
+          let slotH = null;
+          if (slotShape) {
+            if (slotShape.hasAttribute('width') && slotShape.hasAttribute('height')) {
+              slotW = parseFloat(slotShape.getAttribute('width'));
+              slotH = parseFloat(slotShape.getAttribute('height'));
+            }
+          }
+          if (slotW && slotH && slotW > 0 && slotH > 0 && Math.abs(slotW - slotH) > 0.1) {
+            const naturalW = 1254;
+            const naturalH = 1254;
+            let scaleX, scaleY, transX, transY;
+            if (slotW < slotH) {
+              scaleY = 1 / naturalH;
+              scaleX = scaleY * (slotH / slotW);
+              transX = 0.5 - 0.5 * (slotH / slotW);
+              transY = 0;
+            } else {
+              scaleX = 1 / naturalW;
+              scaleY = scaleX * (slotW / slotH);
+              transX = 0;
+              transY = 0.5 - 0.5 * (slotW / slotH);
+            }
+            imgNode.setAttribute('transform', `matrix(${scaleX.toFixed(8)} 0 0 ${scaleY.toFixed(8)} ${transX.toFixed(6)} ${transY.toFixed(6)})`);
+            imgNode.setAttribute('width', String(naturalW));
+            imgNode.setAttribute('height', String(naturalH));
+            imgNode.setAttribute('preserveAspectRatio', 'none');
+          } else {
+            imgNode.setAttribute('preserveAspectRatio', 'none');
+            imgNode.setAttribute('width', '1');
+            imgNode.setAttribute('height', '1');
+            imgNode.setAttribute('x', '0');
+            imgNode.setAttribute('y', '0');
+          }
+        }
+        pattern.removeChild(useNode);
+        pattern.appendChild(imgNode);
+      }
+    } else {
+      const href = imgNode.getAttribute('href') || imgNode.getAttribute('xlink:href');
+      if (!href || href === '__FRAME_IMAGE__') {
+        imgNode.setAttribute('href', DEFAULT_FRAME_IMAGE);
+        imgNode.setAttribute('xlink:href', DEFAULT_FRAME_IMAGE);
+      }
+    }
+  });
+
   const width = parseFloat(svgEl.getAttribute('width') || '100');
   const height = parseFloat(svgEl.getAttribute('height') || '100');
 

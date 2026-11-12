@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = global.mongoose || require('mongoose');
 
 const customizedSettingsSchema = new mongoose.Schema(
   {
@@ -307,8 +307,7 @@ const customizedSettingsSchema = new mongoose.Schema(
     // 8. Visibility & Access Protection
     Visibility: {
       shareId: {
-        type: String,
-        index: true
+        type: String
       },
       access: {
         type: String,

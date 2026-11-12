@@ -1276,6 +1276,15 @@ const Sound = ({
         prevFlipTriggerRef.current = flipTrigger;
     }, [flipTrigger, playFlipSound]);
 
+    // Zero-render direct event listener for 60fps flips without React state churning
+    useEffect(() => {
+        const handleDirectSound = () => {
+            playFlipSound();
+        };
+        window.addEventListener('flipbook:play-flip-sound', handleDirectSound);
+        return () => window.removeEventListener('flipbook:play-flip-sound', handleDirectSound);
+    }, [playFlipSound]);
+
     const isFlipNone = otherSetupSettings?.sound?.flipSound === 'None';
     const isBgNone = otherSetupSettings?.sound?.bgSound === 'None';
     const flipSoundMasterEnabled = otherSetupSettings?.sound?.flipSoundEnabled !== false && !isFlipNone;

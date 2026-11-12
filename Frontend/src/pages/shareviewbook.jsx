@@ -875,6 +875,73 @@ const ShareViewBook = () => {
         }
     };
 
+    // Analytics tracking for viewer sessions
+    useEffect(() => {
+        if (!bookData || !bookData.v_id || accessMode !== null) return;
+
+        const backendUrl = getBackendUrl();
+        const v_id = bookData.v_id;
+        const totalPages = bookData.pages?.length || 1;
+        const flipbookName = bookData.meta?.flipbookName || bookData.flipbookName || 'Untitled Flipbook';
+
+        const storageKey = `flipi_sess_${v_id}`;
+        let sessionId = sessionStorage.getItem(storageKey);
+        if (!sessionId) {
+            sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            sessionStorage.setItem(storageKey, sessionId);
+        }
+
+        const sessionStartTime = Date.now();
+        let currentDuration = 0;
+
+        // 1. Session start
+        axios.post(`${backendUrl}/api/analytics/session-start`, {
+            sessionId,
+            v_id,
+            shareId: shareId || bookData?.Customized_Settings?.Visibility?.shareId || bookData?.Visibility?.shareId || '',
+            flipbookName,
+            userEmail: bookData.userEmail || '',
+            totalPages,
+            referrer: typeof document !== 'undefined' ? document.referrer : ''
+        }).catch(err => {
+            console.warn('[Analytics session-start warning]:', err?.message);
+        });
+
+        // 2. Periodic heartbeat
+        const intervalId = setInterval(() => {
+            currentDuration = Math.round((Date.now() - sessionStartTime) / 1000);
+            axios.post(`${backendUrl}/api/analytics/heartbeat`, {
+                sessionId,
+                durationSeconds: currentDuration,
+                currentPage: 1
+            }).catch(() => {});
+        }, 20000);
+
+        // 3. Unload / Session end
+        const handleUnload = () => {
+            const finalDuration = Math.round((Date.now() - sessionStartTime) / 1000);
+            const endPayload = JSON.stringify({
+                sessionId,
+                durationSeconds: finalDuration,
+                currentPage: 1
+            });
+            if (navigator.sendBeacon) {
+                const blob = new Blob([endPayload], { type: 'application/json' });
+                navigator.sendBeacon(`${backendUrl}/api/analytics/session-end`, blob);
+            } else {
+                axios.post(`${backendUrl}/api/analytics/session-end`, JSON.parse(endPayload)).catch(() => {});
+            }
+        };
+
+        window.addEventListener('beforeunload', handleUnload);
+
+        return () => {
+            clearInterval(intervalId);
+            window.removeEventListener('beforeunload', handleUnload);
+            handleUnload();
+        };
+    }, [bookData?.v_id, accessMode, shareId]);
+
     const isMobileDevice = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (loading) return (

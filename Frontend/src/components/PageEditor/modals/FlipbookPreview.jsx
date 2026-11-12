@@ -5,7 +5,7 @@ import { LAYOUT_DEFAULT_COLORS } from '../../CustomizedEditor/utils/layoutColors
 import { Icon } from '@iconify/react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { getFromDB, CUSTOMIZED_EDITOR_KEY, getCustomizedEditorKey } from '../../../utils/dbUtils';
+import { getFromDB, getCustomizedEditorState, CUSTOMIZED_EDITOR_KEY, getCustomizedEditorKey } from '../../../utils/dbUtils';
 import useDeviceDetection from '../hooks/useDeviceDetection';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -207,10 +207,7 @@ const FlipbookPreview = ({ pages, pageName, bookName, onClose, isMobile: isMobil
         // Try getting local unsaved state ONLY if NOT in published preview mode
         if (!isPublishedPreview) {
           try {
-            let customized = v_id ? await getFromDB(getCustomizedEditorKey(v_id)) : null;
-            if (!customized) {
-              customized = await getFromDB(CUSTOMIZED_EDITOR_KEY);
-            }
+            const customized = (v_id ? await getCustomizedEditorState(v_id) : null) || await getFromDB(CUSTOMIZED_EDITOR_KEY);
             if (customized && (!customized.v_id || customized.v_id === v_id)) {
               if (customized.Background) finalSettings.background = customized.Background;
               if (customized.BookAppearance) finalSettings.appearance = customized.BookAppearance;

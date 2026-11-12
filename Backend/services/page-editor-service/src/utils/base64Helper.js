@@ -108,22 +108,25 @@ const processAndCopyGalleryAssets = ({
 const normalizeToRelativeAssetPaths = (html) => {
   if (!html || typeof html !== 'string') return html;
 
-  // 1. Matches any absolute or root-relative URL pointing to a flipbook asset
-  const assetRegex = /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi;
-  let res = html.replace(assetRegex, '../assets/$1/$2');
+  // 0. Auto-heal any corrupted asset URLs (strip dangling base64 tails)
+  let cleanHtml = html.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[A-Za-z0-9_.-]+)(?:[\s/]+[A-Za-z0-9+/=_%-]+)+(?=["'])/g, "$1");
+
+  // 1. Matches any absolute or root-relative URL pointing to a flipbook asset (strict filename [A-Za-z0-9_.-]+)
+  const assetRegex = /(?:https?:\/\/[^\/"'\s]+(?:\/(?:storage|uploads)(?:\/[^\/"'\s]+)*|\/assets)?|\/(?:storage|uploads)(?:\/[^\/"'\s]+)*)\/assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi;
+  let res = cleanHtml.replace(assetRegex, '../assets/$1/$2');
 
   // 2. Also handle JSON-escaped backslash versions (e.g. https:\/\/testing.flipibook.com\/...)
-  const escapedAssetRegex = /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([^"&'<>)\s,\\]+)/gi;
+  const escapedAssetRegex = /(?:https?:\\\/\\\/[^\\/"'\s]+(?:\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*|\\?\/assets)?|\\?\/(?:storage|uploads)(?:\\?\/[^\\/"'\s]+)*)\\?\/assets\\?\/(Image|video|gif|audio|3D_Model|download)\\?\/([A-Za-z0-9_.-]+)/gi;
   res = res.replace(escapedAssetRegex, '../assets/$1/$2');
 
   // 3. Ensure any /assets/... without leading dot becomes ../assets/...
-  res = res.replace(/(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
+  res = res.replace(/(["'\s(])\/assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi, '$1../assets/$2/$3');
 
   // 4. Ensure any bare assets/... becomes ../assets/...
-  res = res.replace(/(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
+  res = res.replace(/(["'\s(])assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi, '$1../assets/$2/$3');
 
   // 5. Convert legacy ./assets/ to ../assets/
-  res = res.replace(/(["'\s(])\.\/assets\/(Image|video|gif|audio|3D_Model|download)\/([^"&'<>)\s,]+)/gi, '$1../assets/$2/$3');
+  res = res.replace(/(["'\s(])\.\/assets\/(Image|video|gif|audio|3D_Model|download)\/([A-Za-z0-9_.-]+)/gi, '$1../assets/$2/$3');
 
   // 6. Clean up any accidental double-dot-slashes (../../assets/ or ././assets/ -> ../assets/)
   res = res.replace(/(?:\.\.\/|\.\/)+assets\//g, '../assets/');
@@ -157,27 +160,34 @@ const processAndSaveBase64Assets = ({
   const pdfBgPlaceholders = new Map();
   let contentToProcess = htmlContent;
 
-  // 1. Protect entire <g data-name="PDF Background" ...> ... </g> groups
-  const pdfBgGroupRegex = /<g\b[^>]*data-name=["'](?:PDF Background|pdf background)["'][^>]*>/gi;
+  // 1. Protect explicitly marked PDF Background comments
+  contentToProcess = contentToProcess.replace(/<!--\s*FLIPBOOK_PDF_BG_START\s*-->[\s\S]*?<!--\s*FLIPBOOK_PDF_BG_END\s*-->/gi, (match) => {
+    const phKey = `__PDF_BG_PH_${generateId(9)}__`;
+    pdfBgPlaceholders.set(phKey, match);
+    return phKey;
+  });
+
+  // 2. Protect entire <g data-name="PDF Background" ...> ... </g> groups
+  const pdfBgGroupRegex = /<g\b[^>]*data-(?:name=["'](?:PDF Background|pdf background)["']|type=["']pdf-vector-layer["'])[^>]*>/gi;
   let gMatch;
   while ((gMatch = pdfBgGroupRegex.exec(contentToProcess)) !== null) {
     const startIdx = gMatch.index;
     let depth = 1;
     let currIdx = startIdx + gMatch[0].length;
-    const tagRegex = /<\/?g\b[^>]*\/?>/gi;
-    tagRegex.lastIndex = currIdx;
-    let tagMatch;
     let endIdx = -1;
-    while ((tagMatch = tagRegex.exec(contentToProcess)) !== null) {
-      const tagStr = tagMatch[0];
-      if (tagStr.startsWith('</')) {
+    while (currIdx < contentToProcess.length) {
+      if (contentToProcess.startsWith('<g', currIdx) && (contentToProcess[currIdx + 2] === ' ' || contentToProcess[currIdx + 2] === '>')) {
+        depth++;
+        currIdx += 2;
+      } else if (contentToProcess.startsWith('</g>', currIdx)) {
         depth--;
         if (depth === 0) {
-          endIdx = tagMatch.index + tagStr.length;
+          endIdx = currIdx + 4;
           break;
         }
-      } else if (!tagStr.endsWith('/>')) {
-        depth++;
+        currIdx += 4;
+      } else {
+        currIdx++;
       }
     }
 
@@ -193,7 +203,7 @@ const processAndSaveBase64Assets = ({
     }
   }
 
-  // 2. Protect standalone <image ... data-name="PDF Background"> tags
+  // 3. Protect standalone <image ... data-name="PDF Background"> tags
   const pdfBgTagRegex =
     /<image\b[^>]*data-name=["'](?:PDF Background|pdf background)["'][^>]*\/?>/gi;
   contentToProcess = contentToProcess.replace(pdfBgTagRegex, (tagMatch) => {
@@ -210,8 +220,10 @@ const processAndSaveBase64Assets = ({
     if (fs.existsSync(altDir)) bookDir = altDir;
   }
 
-  const base64Regex = /data:([^;]+);base64,([^"&'<>)\s]+)/g;
-  let processedHtml = contentToProcess.replace(base64Regex, (match, mimeType, base64Data) => {
+  // Safely match base64 with any linebreaks/whitespace up to closing delimiter
+  const base64Regex = /data:([a-zA-Z0-9.+_-]+\/[a-zA-Z0-9.+_-]+);base64,([A-Za-z0-9+/=\s]+?)(?=["'&<>)])/g;
+  let processedHtml = contentToProcess.replace(base64Regex, (match, mimeType, rawBase64) => {
+    const base64Data = rawBase64.replace(/\s+/g, '');
     if (savedBase64Map.has(base64Data)) {
       return savedBase64Map.get(base64Data);
     }

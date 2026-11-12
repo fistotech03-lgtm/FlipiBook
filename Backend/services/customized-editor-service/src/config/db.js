@@ -1,7 +1,8 @@
-const dns = require('node:dns');
+const dns = require('dns');
 const mongoose = require('mongoose');
+global.mongoose = mongoose;
 
-// Configure reliable DNS servers for Atlas SRV resolution
+// Configure reliable public DNS servers for Atlas SRV resolution
 try {
   dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
 } catch (_) {}

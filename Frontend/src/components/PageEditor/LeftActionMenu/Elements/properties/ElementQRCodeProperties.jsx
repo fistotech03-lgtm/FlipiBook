@@ -2,14 +2,23 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ChevronDown,
+  ChevronUp,
   Upload,
   Pencil,
   Check,
-  Copy
+  Copy,
+  Image as ImageIcon,
+  ArrowRightLeft,
+  Trash2,
+  Download,
+  ExternalLink
 } from 'lucide-react';
-import { renderQRWithFrame } from '../utils/qrFrameRenderer';
+import { renderQRWithFrame, generateStyledQRImage, drawRoundRect, loadImg, FONT_WEIGHT_MAP } from '../utils/qrFrameRenderer';
+import Color, { handleScrubHelper } from '../../../properties/Color';
 import Effect from '../../../properties/Effect';
 import ColorPicker from '../../../properties/ColorPicker';
+import MediaGalleryPopup from '../../../modals/MediaGalleryPopup';
+import ReplaceMediaModal from '../../../modals/ReplaceMediaModal';
 import { ElementToggle, ElementSlider } from './ElementUIControls';
 
 // Predefined brand logos (clean inline SVG data URIs)
@@ -111,6 +120,19 @@ const FONT_WEIGHT_OPTIONS = [
   { value: 'Medium', label: 'Medium' },
   { value: 'Semi Bold', label: 'Semi Bold' },
   { value: 'Bold', label: 'Bold' }
+];
+
+const DIMENSION_OPTIONS = [
+  { value: '200x200', label: '200 × 200 px' },
+  { value: '256x256', label: '256 × 256 px' },
+  { value: '512x512', label: '512 × 512 px' },
+  { value: 'custom', label: 'Custom' }
+];
+
+const DOWNLOAD_FORMAT_OPTIONS = [
+  { value: 'jpeg', label: 'JPEG' },
+  { value: 'png', label: 'PNG' },
+  { value: 'svg', label: 'SVG' }
 ];
 
 // Visual mini-icon representation for each style
@@ -314,19 +336,20 @@ const CustomSelect = ({ value, onChange, options, category, placeholder = 'Selec
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full h-[2.5vw] flex items-center justify-between bg-white border ${
-          isOpen ? 'border-2 border-[#E05638] shadow-xs' : 'border border-gray-200 hover:border-gray-300'
-        } rounded-[0.5vw] px-[0.6vw] text-[0.78vw] text-gray-800 transition-colors cursor-pointer shadow-2xs font-medium`}
+        className={`w-full h-[2vw] min-h-[30px] flex items-center justify-between bg-white border ${
+          isOpen ? 'border-[#4D47FF] ring-1 ring-[#4D47FF] shadow-xs' : 'border-gray-300 hover:border-gray-400'
+        } rounded-[0.4vw] px-[0.6vw] text-[0.8vw] text-gray-800 transition-colors cursor-pointer shadow-2xs font-medium`}
       >
         <div className="flex items-center gap-[0.4vw] min-w-0">
           {category && selectedOption && (
-            <TypeIcon category={category} value={selectedOption.value} className="w-[0.9vw] h-[0.9vw] text-gray-700 shrink-0" />
+            <TypeIcon category={category} value={selectedOption.value} className="w-[0.9vw] h-[0.9vw] text-gray-600 shrink-0" />
           )}
-          <span className="truncate font-medium">{selectedOption ? selectedOption.label : placeholder}</span>
+          <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
         </div>
         <ChevronDown
-          className={`w-[0.9vw] h-[0.9vw] text-gray-500 transition-transform duration-200 flex-shrink-0 ml-[0.3vw] ${
-            isOpen ? 'rotate-180 text-[#E05638]' : ''
+          size="0.8vw"
+          className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ml-[0.3vw] ${
+            isOpen ? 'rotate-180 text-[#4D47FF]' : ''
           }`}
         />
       </button>
@@ -334,7 +357,7 @@ const CustomSelect = ({ value, onChange, options, category, placeholder = 'Selec
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[90]" onClick={() => setIsOpen(false)} />
-          <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-100 rounded-[0.6vw] shadow-2xl overflow-hidden z-[100] flex flex-col py-[0.3vw] max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute left-0 right-0 top-full mt-[0.35vw] bg-white border border-gray-100 rounded-[0.5vw] shadow-2xl overflow-hidden z-[100] flex flex-col py-[0.25vw] max-h-[14vw] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
             {options.map((opt) => {
               const isSelected = String(opt.value) === String(value);
               return (
@@ -345,19 +368,19 @@ const CustomSelect = ({ value, onChange, options, category, placeholder = 'Selec
                     onChange(opt.value);
                     setIsOpen(false);
                   }}
-                  className={`px-[0.7vw] py-[0.45vw] text-[0.78vw] font-medium transition-colors text-left flex items-center justify-between cursor-pointer ${
+                  className={`px-[0.8vw] py-[0.4vw] text-[0.8vw] font-medium transition-colors text-left flex items-center justify-between cursor-pointer ${
                     isSelected
-                      ? 'text-[#E05638] bg-[#E05638]/10 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-[#E05638]'
+                      ? 'text-[#4D47FF] bg-gray-50 font-semibold'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
                   <div className="flex items-center gap-[0.45vw] min-w-0">
                     {category && (
-                      <TypeIcon category={category} value={opt.value} className={`w-[0.9vw] h-[0.9vw] shrink-0 ${isSelected ? 'text-[#E05638]' : 'text-gray-600'}`} />
+                      <TypeIcon category={category} value={opt.value} className={`w-[0.9vw] h-[0.9vw] shrink-0 ${isSelected ? 'text-[#4D47FF]' : 'text-gray-500'}`} />
                     )}
                     <span className="truncate">{opt.label}</span>
                   </div>
-                  {isSelected && <Check className="w-[0.8vw] h-[0.8vw] text-[#E05638] flex-shrink-0 ml-[0.3vw]" />}
+                  {isSelected && <Check size="0.8vw" className="text-[#4D47FF] flex-shrink-0 ml-[0.3vw]" />}
                 </button>
               );
             })}
@@ -368,48 +391,95 @@ const CustomSelect = ({ value, onChange, options, category, placeholder = 'Selec
   );
 };
 
-// Helper row with fixed-width label
+// Helper row with standard ImageProperties styling
 const PropertyRow = ({ label, children, className = '' }) => (
-  <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-700 font-medium">
-      <span className={`${label.length > 12 ? 'text-[0.68vw]' : 'text-[0.78vw]'} tracking-tight whitespace-nowrap`}>
-        {label}
-      </span>
-      <span className="text-gray-500 font-medium text-[0.8vw]">:</span>
-    </div>
+  <div className={`flex items-center justify-between gap-[0.6vw] py-[0.15vw] ${className}`}>
+    <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap min-w-[5.2vw]">
+      {label}
+    </span>
     <div className="flex-1 min-w-0">
       {children}
     </div>
   </div>
 );
 
-// Color swatch + hex input box
-const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => {
-  const displayColor = color && color.startsWith('#') ? color.toUpperCase() : color || '#000000';
+// Color Card component matching Fill Color from Color.jsx
+const FillColorCard = ({
+  label,
+  color,
+  opacity = 100,
+  onColorChange,
+  onOpacityChange,
+  onPickerToggle,
+  isPickerActive
+}) => {
+  const isNone = !color || color === 'none' || color === 'transparent' || color === '#';
+  const displayHex = isNone
+    ? '#'
+    : (String(color).startsWith('#') ? String(color).toUpperCase() : '#' + String(color).toUpperCase());
 
   return (
-    <div className="flex items-center gap-[0.4vw] w-full">
-      <div
-        onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
-          isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
-        }`}
-        style={{ backgroundColor: color || '#000000' }}
-        title="Click to open color palette"
-      />
-      <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-        <input
-          type="text"
-          value={displayColor}
-          onChange={(e) => {
-            let val = e.target.value;
-            if (!val.startsWith('#') && val.length > 0) val = '#' + val;
-            onChange(val);
-          }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-medium"
-          maxLength={7}
-        />
-        <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
+    <div className="flex flex-col gap-[0.4vw]">
+      {label && (
+        <div className="flex items-center gap-[0.8vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{label}</span>
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+      )}
+
+      <div className="flex items-center gap-[0.6vw]">
+        {/* Swatch */}
+        <div
+          className={`w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border ${
+            isPickerActive ? 'border-[#4D47FF] ring-2 ring-[#4D47FF]/20' : 'border-gray-300'
+          } shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105`}
+          onClick={onPickerToggle}
+          title={`Change ${label || 'color'}`}
+        >
+          <div
+            className="w-full h-full"
+            style={{
+              background: isNone ? 'white' : color,
+            }}
+          />
+          {isNone && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
+          )}
+        </div>
+
+        {/* Input box */}
+        <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 focus-within:border-[#4D47FF] transition-colors shadow-2xs">
+          <input
+            type="text"
+            value={displayHex}
+            onChange={(e) => {
+              const val = e.target.value.trim();
+              if (val === '' || val === '#') {
+                onColorChange('none');
+              } else {
+                const finalVal = val.startsWith('#') ? val : '#' + val;
+                onColorChange(finalVal);
+              }
+            }}
+            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            maxLength={8}
+          />
+          <div
+            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-100 rounded text-gray-500"
+            onPointerDown={(e) => {
+              if (!onOpacityChange) return;
+              const currentPct = Math.round(Number(opacity) || 100);
+              handleScrubHelper(e, currentPct, (val) => {
+                const num = parseInt(val, 10);
+                const clamped = Math.min(Math.max(isNaN(num) ? 100 : num, 0), 100);
+                onOpacityChange(clamped);
+              });
+            }}
+            title="Drag horizontally to scrub opacity"
+          >
+            <span className="text-[0.72vw] font-medium">{Math.round(Number(opacity) || 100)}%</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -522,8 +592,10 @@ const ElementQRCodeProperties = ({
   onUpdate
 }) => {
   // Content state
-  const [url, setUrl] = useState('https://');
+  const [url, setUrl] = useState('');
+  const [urlError, setUrlError] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const urlInputRef = useRef(null);
 
   // Preview & QR matrix styling
   const [previewDataUrl, setPreviewDataUrl] = useState(null);
@@ -535,12 +607,19 @@ const ElementQRCodeProperties = ({
 
   // Center logo states
   const [hasLogo, setHasLogo] = useState(true);
-  const [logoTab, setLogoTab] = useState('upload'); // 'upload' | 'predefined'
+  const [isLogoSectionOpen, setIsLogoSectionOpen] = useState(true);
+  const [logoTab, setLogoTab] = useState('upload'); // 'upload' | 'predefined' | 'gallery'
+  const [isMediaGalleryOpen, setIsMediaGalleryOpen] = useState(false);
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
   const [logoSrc, setLogoSrc] = useState(null);
-  const [logoSize, setLogoSize] = useState(80);
-  const [logoRadius, setLogoRadius] = useState(80);
+  const [logoName, setLogoName] = useState('Logo.png');
+  const [logoMeta, setLogoMeta] = useState(null);
+  const [logoSize, setLogoSize] = useState(60);
+  const [logoRadius, setLogoRadius] = useState(0);
   const [logoBgColor, setLogoBgColor] = useState('#FFFFFF');
+  const [logoAspect, setLogoAspect] = useState(null);
   const fileInputRef = useRef(null);
+  const galleryBtnRef = useRef(null);
 
   // Frames & Typography states
   const [frame, setFrame] = useState('frame-curved-arrow');
@@ -551,6 +630,193 @@ const ElementQRCodeProperties = ({
   const [textColor, setTextColor] = useState('#FFFFFF');
   const [frameBgColor, setFrameBgColor] = useState('#FFFFFF');
   const [arrowColor, setArrowColor] = useState('#000000');
+
+  // Export / Dimension & Download states
+  const [dimension, setDimension] = useState('256x256');
+  const [customWidth, setCustomWidth] = useState(256);
+  const [customHeight, setCustomHeight] = useState(256);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDimensionOpen, setIsDimensionOpen] = useState(false);
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false);
+  const dimensionRef = useRef(null);
+  const downloadRef = useRef(null);
+
+  // Close Dimension & Download dropdowns on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dimensionRef.current && !dimensionRef.current.contains(e.target)) {
+        setIsDimensionOpen(false);
+      }
+      if (downloadRef.current && !downloadRef.current.contains(e.target)) {
+        setIsDownloadOpen(false);
+      }
+    };
+    if (isDimensionOpen || isDownloadOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDimensionOpen, isDownloadOpen]);
+
+  // Handler to export / download the QR Code
+  const handleDownloadQR = async (format) => {
+    setIsDownloadOpen(false);
+
+    if (!url || !url.trim()) {
+      setUrlError(true);
+      urlInputRef.current?.focus();
+      return;
+    }
+
+    setIsDownloading(true);
+
+    try {
+      let targetW = 256;
+      let targetH = 256;
+      if (dimension === 'custom') {
+        targetW = Math.max(32, Math.min(4096, parseInt(customWidth) || 256));
+        targetH = Math.max(32, Math.min(4096, parseInt(customHeight) || 256));
+      } else {
+        const [w, h] = dimension.split('x').map(Number);
+        targetW = w || 256;
+        targetH = h || 256;
+      }
+
+      if (format === 'svg') {
+        // High quality vector SVG download
+        let svgContent = '';
+        if (previewDataUrl && previewDataUrl.startsWith('data:image/svg+xml')) {
+          if (previewDataUrl.includes(';base64,')) {
+            const base64Part = previewDataUrl.split(';base64,')[1];
+            svgContent = decodeURIComponent(escape(atob(base64Part)));
+          } else {
+            svgContent = decodeURIComponent(previewDataUrl.split(',')[1]);
+          }
+        } else {
+          // Render SVG wrapper
+          const currentDataUrl = previewDataUrl;
+          svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${targetW}" height="${targetH}" viewBox="0 0 ${targetW} ${targetH}">
+  <image width="${targetW}" height="${targetH}" href="${currentDataUrl}" xlink:href="${currentDataUrl}" preserveAspectRatio="xMidYMid meet" />
+</svg>`;
+        }
+
+        const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `qrcode_${targetW}x${targetH}.svg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      } else {
+        // Render crisp raster at requested dimensions
+        // Compute scale so the output canvas precisely matches target dimensions
+        const testRender = await renderQRWithFrame({
+          url,
+          frame,
+          text,
+          logoSrc: hasLogo ? logoSrc : null,
+          logoSize: Math.round((logoSize / 100) * 28),
+          logoRadius,
+          logoBg: true,
+          logoBgColor,
+          logoAspect,
+          qrColor,
+          backdrop,
+          patternStyle,
+          eyeFrame,
+          eyeBall,
+          fontFamily,
+          fontSize,
+          fontWeight,
+          textColor,
+          frameBgColor,
+          arrowColor,
+          scale: 1
+        });
+
+        const naturalW = testRender.totalWidth || 256;
+        const naturalH = testRender.totalHeight || 256;
+        const scaleX = targetW / naturalW;
+        const scaleY = targetH / naturalH;
+        const uniformScale = Math.max(scaleX, scaleY);
+
+        const rendered = await renderQRWithFrame({
+          url,
+          frame,
+          text,
+          logoSrc: hasLogo ? logoSrc : null,
+          logoSize: Math.round((logoSize / 100) * 28),
+          logoRadius,
+          logoBg: true,
+          logoBgColor,
+          logoAspect,
+          qrColor,
+          backdrop,
+          patternStyle,
+          eyeFrame,
+          eyeBall,
+          fontFamily,
+          fontSize,
+          fontWeight,
+          textColor,
+          frameBgColor,
+          arrowColor,
+          scale: uniformScale
+        });
+
+        // Fit onto an exact targetW x targetH canvas
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = targetW;
+        exportCanvas.height = targetH;
+        const ctx = exportCanvas.getContext('2d');
+
+        if (format === 'jpeg') {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, targetW, targetH);
+        }
+
+        const img = await loadImg(rendered.dataUrl);
+        if (img) {
+          // Draw centered / fitted
+          const imgAspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
+          const canvasAspect = targetW / targetH;
+          let drawW = targetW;
+          let drawH = targetH;
+          let drawX = 0;
+          let drawY = 0;
+
+          if (imgAspect > canvasAspect) {
+            drawW = targetW;
+            drawH = targetW / imgAspect;
+            drawY = (targetH - drawH) / 2;
+          } else {
+            drawH = targetH;
+            drawW = targetH * imgAspect;
+            drawX = (targetW - drawW) / 2;
+          }
+
+          ctx.drawImage(img, drawX, drawY, drawW, drawH);
+        }
+
+        const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const fileExt = format === 'jpeg' ? 'jpg' : 'png';
+        const exportDataUrl = exportCanvas.toDataURL(mimeType, 0.95);
+
+        const link = document.createElement('a');
+        link.href = exportDataUrl;
+        link.download = `qrcode_${targetW}x${targetH}.${fileExt}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error('Download QR Code error:', err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const renderSeqRef = useRef(0);
 
@@ -684,7 +950,14 @@ const ElementQRCodeProperties = ({
     const targetEl = (targetId ? editorDoc.getElementById(targetId) : null) || (targetId ? document.getElementById(targetId) : null) || selectedElement;
 
     if (targetEl) {
-      setUrl(targetEl.getAttribute('data-qr-url') || 'https://');
+      const storedUrl = targetEl.getAttribute('data-qr-url');
+      const resolvedUrl = storedUrl !== null ? storedUrl : '';
+      setUrl(resolvedUrl);
+      if (!resolvedUrl || !resolvedUrl.trim()) {
+        setUrlError(true);
+      } else {
+        setUrlError(false);
+      }
 
       setQrColor(targetEl.getAttribute('data-qr-color') || '#000000');
       setBackdrop(targetEl.getAttribute('data-qr-backdrop') || '#FFFFFF');
@@ -693,12 +966,35 @@ const ElementQRCodeProperties = ({
       setEyeBall(targetEl.getAttribute('data-qr-eye-ball') || 'square');
 
       const existingLogo = targetEl.getAttribute('data-qr-logo');
+      const isPredefined = PREDEFINED_LOGOS.some(item => item.src === existingLogo);
+      setLogoTab(isPredefined ? 'predefined' : 'upload');
       const hasLogoAttr = targetEl.getAttribute('data-qr-has-logo');
       setHasLogo(hasLogoAttr !== null ? hasLogoAttr === 'true' : !!existingLogo);
       setLogoSrc(existingLogo || null);
-      setLogoSize(parseInt(targetEl.getAttribute('data-qr-logo-size')) || 80);
-      setLogoRadius(parseInt(targetEl.getAttribute('data-qr-logo-radius')) || 80);
+      setLogoName(targetEl.getAttribute('data-qr-logo-name') || 'Logo.png');
+      const meta = targetEl.getAttribute('data-qr-logo-meta') || null;
+      setLogoMeta(meta);
+      setLogoSize(parseInt(targetEl.getAttribute('data-qr-logo-size')) || 60);
+      setLogoRadius(targetEl.getAttribute('data-qr-logo-radius') !== null ? parseInt(targetEl.getAttribute('data-qr-logo-radius')) : 0);
       setLogoBgColor(targetEl.getAttribute('data-qr-logo-bg-color') || '#FFFFFF');
+
+      const rawAspect = targetEl.getAttribute('data-qr-logo-aspect');
+      let initAspect = rawAspect ? parseFloat(rawAspect) : null;
+      if (!initAspect && meta) {
+        const m = meta.match(/(\d+)\s*[xX]\s*(\d+)/);
+        if (m && parseFloat(m[2]) > 0) initAspect = parseFloat(m[1]) / parseFloat(m[2]);
+      }
+      setLogoAspect(initAspect);
+
+      if (existingLogo) {
+        loadImg(existingLogo).then((img) => {
+          if (img && img.naturalWidth && img.naturalHeight) {
+            const asp = img.naturalWidth / img.naturalHeight;
+            setLogoAspect(asp);
+            updateQR({ logoAspect: asp });
+          }
+        });
+      }
 
       const currentFrame = targetEl.getAttribute('data-qr-frame') || 'frame-none';
       const isLightBg = currentFrame === 'frame-curved-arrow' || currentFrame === 'frame-simple-text';
@@ -706,7 +1002,8 @@ const ElementQRCodeProperties = ({
       const defaultFontFamily = currentFrame === 'frame-curved-arrow' ? 'Caveat' : 'Poppins';
 
       setFrame(currentFrame);
-      setText(targetEl.getAttribute('data-qr-text') ?? (currentFrame === 'frame-curved-arrow' ? 'Scan Me' : (currentFrame === 'frame-none' ? '' : 'SCAN ME')));
+      const rawText = targetEl.getAttribute('data-qr-text');
+      setText((rawText !== null ? rawText : (currentFrame === 'frame-curved-arrow' ? 'Scan Me' : (currentFrame === 'frame-none' ? '' : 'SCAN ME'))).slice(0, 30));
       setFontFamily(targetEl.getAttribute('data-qr-font-family') || defaultFontFamily);
       setFontSize(parseInt(targetEl.getAttribute('data-qr-font-size')) || 24);
       setFontWeight(targetEl.getAttribute('data-qr-font-weight') || 'Semi Bold');
@@ -715,7 +1012,7 @@ const ElementQRCodeProperties = ({
       setArrowColor(targetEl.getAttribute('data-qr-arrow-color') || '#000000');
 
       const hasDs = (targetEl.getAttribute('data-effect-drop-shadow') === 'true') ||
-                    (selectedElementProps?.['data-effect-drop-shadow'] === 'true');
+        (selectedElementProps?.['data-effect-drop-shadow'] === 'true');
       setActiveEffects(hasDs ? ['Drop Shadow'] : []);
       setEffectSettings({
         'Drop Shadow': {
@@ -728,13 +1025,63 @@ const ElementQRCodeProperties = ({
         }
       });
 
-      // Initialize preview from existing image href
-      const imgNode = targetEl.querySelector('image');
-      if (imgNode && (imgNode.getAttribute('href') || imgNode.getAttribute('xlink:href'))) {
-        setPreviewDataUrl(imgNode.getAttribute('href') || imgNode.getAttribute('xlink:href'));
-      }
+      // Initialize preview and self-heal any corrupted image on canvas
+      const seq = ++renderSeqRef.current;
+      const rawTextVal = targetEl.getAttribute('data-qr-text');
+      const textToRender = (rawTextVal !== null ? rawTextVal : (currentFrame === 'frame-curved-arrow' ? 'Scan Me' : (currentFrame === 'frame-none' ? '' : 'SCAN ME'))).slice(0, 30);
+
+      renderQRWithFrame({
+        url: resolvedUrl || 'https://example.com',
+        frame: currentFrame,
+        text: textToRender,
+        textColor: targetEl.getAttribute('data-qr-text-color') || defaultTextColor,
+        fontFamily: targetEl.getAttribute('data-qr-font-family') || defaultFontFamily,
+        fontSize: parseInt(targetEl.getAttribute('data-qr-font-size')) || 24,
+        fontWeight: targetEl.getAttribute('data-qr-font-weight') || 'Semi Bold',
+        frameBgColor: targetEl.getAttribute('data-qr-frame-bg') || '#FFFFFF',
+        arrowColor: targetEl.getAttribute('data-qr-arrow-color') || '#000000',
+        qrColor: targetEl.getAttribute('data-qr-color') || '#000000',
+        backdrop: targetEl.getAttribute('data-qr-backdrop') || '#FFFFFF',
+        patternStyle: targetEl.getAttribute('data-qr-pattern') || 'classic-square',
+        eyeFrame: targetEl.getAttribute('data-qr-eye-frame') || 'classic-square',
+        eyeBall: targetEl.getAttribute('data-qr-eye-ball') || 'square',
+        logoSrc: existingLogo || null,
+        logoSize: Math.round(((parseInt(targetEl.getAttribute('data-qr-logo-size')) || 60) / 100) * 28),
+        logoRadius: parseInt(targetEl.getAttribute('data-qr-logo-radius')) || 0,
+        logoBgColor: targetEl.getAttribute('data-qr-logo-bg-color') || '#FFFFFF',
+        logoAspect: initAspect
+      }).then(({ dataUrl }) => {
+        if (seq !== renderSeqRef.current) return;
+        setPreviewDataUrl(dataUrl);
+        const imgNode = targetEl.querySelector('image');
+        if (imgNode) {
+          const currentHref = imgNode.getAttribute('href') || imgNode.getAttribute('xlink:href') || '';
+          if (!currentHref.startsWith('data:image/svg+xml')) {
+            imgNode.setAttribute('href', dataUrl);
+            imgNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dataUrl);
+          }
+        }
+      }).catch((err) => {
+        console.warn('Initial QR preview render fallback:', err);
+      });
     }
   }, [selectedElement, selectedLayerId, selectedElementProps]);
+
+  // Handle focus event dispatched during save validation
+  useEffect(() => {
+    const handleFocusQrUrl = (e) => {
+      const targetId = selectedElementProps?.qrcodeId || selectedLayerId;
+      if (!e.detail?.elementId || e.detail.elementId === targetId) {
+        setUrlError(true);
+        if (urlInputRef.current) {
+          urlInputRef.current.focus();
+          urlInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+    };
+    window.addEventListener('focus-qr-url', handleFocusQrUrl);
+    return () => window.removeEventListener('focus-qr-url', handleFocusQrUrl);
+  }, [selectedElementProps, selectedLayerId]);
 
   // Update canvas element and refresh preview
   const updateQR = async (overrides = {}) => {
@@ -755,6 +1102,7 @@ const ElementQRCodeProperties = ({
     const currentLogoSize = overrides.logoSize !== undefined ? overrides.logoSize : logoSize;
     const currentLogoRadius = overrides.logoRadius !== undefined ? overrides.logoRadius : logoRadius;
     const currentLogoBgColor = overrides.logoBgColor !== undefined ? overrides.logoBgColor : logoBgColor;
+    const currentLogoAspect = overrides.logoAspect !== undefined ? overrides.logoAspect : logoAspect;
 
     const currentFrame = overrides.frame !== undefined ? overrides.frame : frame;
     const currentText = overrides.text !== undefined ? overrides.text : text;
@@ -775,9 +1123,18 @@ const ElementQRCodeProperties = ({
 
     targetEl.setAttribute('data-qr-has-logo', currentHasLogo ? 'true' : 'false');
     targetEl.setAttribute('data-qr-logo', currentLogoSrc || '');
+    targetEl.setAttribute('data-qr-logo-name', overrides.logoName !== undefined ? overrides.logoName : logoName);
+    if (overrides.logoMeta !== undefined || logoMeta) {
+      targetEl.setAttribute('data-qr-logo-meta', overrides.logoMeta !== undefined ? overrides.logoMeta : (logoMeta || ''));
+    }
     targetEl.setAttribute('data-qr-logo-size', currentLogoSize.toString());
     targetEl.setAttribute('data-qr-logo-radius', currentLogoRadius.toString());
     targetEl.setAttribute('data-qr-logo-bg-color', currentLogoBgColor);
+    if (currentLogoAspect) {
+      targetEl.setAttribute('data-qr-logo-aspect', currentLogoAspect.toString());
+    } else if (overrides.logoAspect === null) {
+      targetEl.removeAttribute('data-qr-logo-aspect');
+    }
 
     targetEl.setAttribute('data-qr-frame', currentFrame);
     targetEl.setAttribute('data-qr-text', currentText !== undefined && currentText !== null ? currentText : '');
@@ -799,6 +1156,7 @@ const ElementQRCodeProperties = ({
         logoRadius: currentLogoRadius,
         logoBg: true,
         logoBgColor: currentLogoBgColor,
+        logoAspect: currentLogoAspect,
         qrColor: currentQrColor,
         backdrop: currentBackdrop,
         patternStyle: currentPattern,
@@ -882,9 +1240,25 @@ const ElementQRCodeProperties = ({
   };
 
   const handleChange = (key, value) => {
-    const overrides = { [key]: value };
+    let sanitizedValue = value;
+    if (key === 'url' && typeof value === 'string') {
+      // Clean up accidental duplicate protocols like https://https:// or http://https://
+      sanitizedValue = value.replace(/^(?:https?:\/\/)+(https?:\/\/)/i, '$1');
+    }
+    if (key === 'text' && typeof value === 'string') {
+      sanitizedValue = value.slice(0, 30);
+    }
 
-    if (key === 'url') setUrl(value);
+    const overrides = { [key]: sanitizedValue };
+
+    if (key === 'url') {
+      setUrl(sanitizedValue);
+      if (sanitizedValue && sanitizedValue.trim()) {
+        setUrlError(false);
+      } else {
+        setUrlError(true);
+      }
+    }
     if (key === 'qrColor') setQrColor(value);
     if (key === 'backdrop') setBackdrop(value);
     if (key === 'patternStyle') setPatternStyle(value);
@@ -892,7 +1266,23 @@ const ElementQRCodeProperties = ({
     if (key === 'eyeBall') setEyeBall(value);
 
     if (key === 'hasLogo') setHasLogo(value);
-    if (key === 'logoSrc') setLogoSrc(value);
+    if (key === 'logoSrc') {
+      setLogoSrc(value);
+      if (value) {
+        loadImg(value).then((img) => {
+          if (img && img.naturalWidth && img.naturalHeight) {
+            const asp = img.naturalWidth / img.naturalHeight;
+            setLogoAspect(asp);
+            updateQR({ logoSrc: value, logoAspect: asp });
+          }
+        });
+      } else {
+        setLogoAspect(null);
+        overrides.logoAspect = null;
+      }
+    }
+    if (key === 'logoName') setLogoName(value);
+    if (key === 'logoMeta') setLogoMeta(value);
     if (key === 'logoSize') setLogoSize(value);
     if (key === 'logoRadius') setLogoRadius(value);
     if (key === 'logoBgColor') setLogoBgColor(value);
@@ -940,9 +1330,28 @@ const ElementQRCodeProperties = ({
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const fileName = file.name || 'Logo.png';
+    const fileSizeFormatted = file.size
+      ? (file.size >= 1024 * 1024
+        ? `${(file.size / (1024 * 1024)).toFixed(1)}MB`
+        : `${Math.max(1, Math.round(file.size / 1024))}KB`)
+      : '';
     const reader = new FileReader();
     reader.onload = (event) => {
-      handleChange('logoSrc', event.target.result);
+      const dataUrl = event.target.result;
+      const img = new Image();
+      img.onload = () => {
+        const nw = img.naturalWidth || img.width;
+        const nh = img.naturalHeight || img.height;
+        const aspect = nh > 0 ? nw / nh : 1;
+        const metaStr = `${nw} X ${nh}${fileSizeFormatted ? ' • ' + fileSizeFormatted : ''}`;
+        setLogoName(fileName);
+        setLogoMeta(metaStr);
+        setLogoAspect(aspect);
+        setLogoSrc(dataUrl);
+        updateQR({ logoSrc: dataUrl, logoName: fileName, logoMeta: metaStr, logoAspect: aspect });
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -975,7 +1384,7 @@ const ElementQRCodeProperties = ({
       onChange: (val) => handleChange('frameBgColor', val)
     },
     arrowColor: {
-      label: 'Arrow Color',
+      label: 'Frame Stroke',
       value: arrowColor,
       onChange: (val) => handleChange('arrowColor', val)
     }
@@ -989,79 +1398,295 @@ const ElementQRCodeProperties = ({
   }, [qrColor, backdrop, logoBgColor, textColor, frameBgColor, arrowColor]);
 
   return (
-    <div className="w-full flex flex-col gap-[0.6vw] font-sans text-gray-800 pt-[0.2vw] select-none overflow-x-hidden">
-      {/* 1. Header: QR Property */}
-      <div className="flex items-center gap-[0.4vw]">
-        <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">QR Property</span>
-        <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
+    <div className="w-full flex flex-col gap-[1.2vw] pb-[2vw] font-sans text-gray-800 pt-[0.2vw] select-none overflow-x-hidden">
+      {/* 1. Header: QR Properties */}
+      <div className="flex items-center gap-[0.8vw]">
+        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">QR Properties</span>
+        <div className="flex-1 h-[1px] bg-gray-200" />
       </div>
 
       {/* 2. URL */}
-      <PropertyRow label="URL">
-        <div className="flex border border-gray-200 rounded-[0.5vw] overflow-hidden focus-within:border-[#E05638] focus-within:ring-1 focus-within:ring-[#E05638] transition-all bg-white shadow-2xs">
-          <input
-            type="text"
-            placeholder="e.g. https://..."
-            value={url}
-            onChange={(e) => handleChange('url', e.target.value)}
-            className="flex-1 px-[0.6vw] py-[0.5vw] text-[0.78vw] font-normal outline-none text-gray-800 placeholder-gray-400 bg-transparent"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              if (url) {
-                navigator.clipboard.writeText(url.startsWith('http') ? url : 'https://' + url);
-                setCopiedUrl(true);
-                setTimeout(() => setCopiedUrl(false), 1500);
-              }
-            }}
-            className="px-[0.6vw] flex items-center justify-center text-gray-500 hover:text-[#E05638] transition-colors bg-gray-50 border-l border-gray-200 cursor-pointer"
-            title={copiedUrl ? 'Copied!' : 'Copy Link'}
-          >
-            {copiedUrl ? (
-              <Check className="w-[0.85vw] h-[0.85vw] text-green-600" />
-            ) : (
-              <Copy className="w-[0.85vw] h-[0.85vw]" />
-            )}
-          </button>
-        </div>
-      </PropertyRow>
-
-      {/* 3. QR Code Preview Card */}
-      <div className="flex flex-col items-center justify-center my-[0.4vw]">
-        <div className="w-[10vw] h-[10vw] max-w-[200px] max-h-[200px] min-w-[120px] min-h-[120px] bg-white rounded-[0.5vw] p-[0.4vw] border border-gray-100 shadow-2xs flex items-center justify-center overflow-hidden">
-          {previewDataUrl ? (
-            <img src={previewDataUrl} alt="QR Code Preview" className="w-full h-full object-contain" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 text-[0.62vw]">Generating...</div>
-          )}
-        </div>
-        <span className="text-[0.72vw] text-gray-700 font-normal mt-[0.3vw] text-center">QR Code Preview</span>
+      <div className="flex flex-col gap-[0.2vw]">
+        <PropertyRow label="URL">
+          <div className={`flex border rounded-[0.4vw] overflow-hidden transition-all bg-white shadow-2xs ${
+            urlError
+              ? 'border-red-500 ring-1 ring-red-500/40 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500'
+              : 'border-gray-300 focus-within:border-[#4D47FF] focus-within:ring-1 focus-within:ring-[#4D47FF]'
+          }`}>
+            <input
+              ref={urlInputRef}
+              type="text"
+              placeholder="e.g. https://..."
+              value={url}
+              onChange={(e) => handleChange('url', e.target.value)}
+              onBlur={() => {
+                if (!url || !url.trim()) {
+                  setUrlError(true);
+                }
+              }}
+              className="flex-1 px-[0.6vw] py-[0.45vw] text-[0.8vw] font-medium outline-none text-gray-800 placeholder-gray-400 bg-transparent"
+            />
+            <div className="flex items-center bg-gray-50 border-l border-gray-200">
+              <button
+                type="button"
+                onClick={() => {
+                  if (url) {
+                    navigator.clipboard.writeText(url.startsWith('http') ? url : 'https://' + url);
+                    setCopiedUrl(true);
+                    setTimeout(() => setCopiedUrl(false), 1500);
+                  }
+                }}
+                className="px-[0.6vw] py-[0.45vw] flex items-center justify-center text-gray-500 hover:text-[#4D47FF] transition-colors cursor-pointer"
+                title={copiedUrl ? 'Copied!' : 'Copy Link'}
+              >
+                {copiedUrl ? (
+                  <Check className="w-[0.85vw] h-[0.85vw] text-green-600" />
+                ) : (
+                  <Copy className="w-[0.85vw] h-[0.85vw]" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (url) {
+                    const targetUrl = (url.startsWith('http://') || url.startsWith('https://')) ? url : 'https://' + url;
+                    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                  }
+                }}
+                disabled={!url}
+                className={`px-[0.6vw] py-[0.45vw] flex items-center justify-center border-l border-gray-200 transition-colors ${
+                  url ? 'text-gray-500 hover:text-[#4D47FF] cursor-pointer' : 'text-gray-300 cursor-not-allowed'
+                }`}
+                title="Test Link (Open in New Tab)"
+              >
+                <ExternalLink className="w-[0.85vw] h-[0.85vw]" />
+              </button>
+            </div>
+          </div>
+        </PropertyRow>
+        {urlError && (
+          <div className="flex items-center gap-[0.3vw] pl-[5.8vw] text-red-500 animate-in fade-in duration-200">
+            <span className="text-[0.72vw] font-medium">Please fill the URL</span>
+          </div>
+        )}
       </div>
 
-      {/* 6. QR Color */}
-      <PropertyRow label="QR Color">
-        <ColorInput
-          color={qrColor}
-          onChange={(val) => handleChange('qrColor', val)}
-          opacity={100}
-          onOpenPicker={() => handleToggleColorPicker('qrColor')}
-          isActive={activeColorPicker === 'qrColor'}
-        />
-      </PropertyRow>
+      {/* 3. QR Code Preview with Dimension & Download */}
+      <div className="flex items-center justify-between gap-[0.8vw] my-[0.2vw] p-[0.6vw] bg-white rounded-[0.5vw] border border-gray-200 shadow-2xs">
+        {/* Left side: QR Code Preview */}
+        <div className="flex flex-col items-center">
+          <div className="w-[6.5vw] h-[6.5vw] max-w-[130px] max-h-[130px] min-w-[85px] min-h-[85px] bg-white rounded-[0.4vw] p-[0.3vw] border border-gray-200 shadow-2xs flex items-center justify-center overflow-hidden">
+            {previewDataUrl ? (
+              <img
+                src={previewDataUrl}
+                alt="QR Code Preview"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400 text-[0.65vw]">Generating...</div>
+            )}
+          </div>
+          <span className="text-[0.72vw] text-gray-600 font-medium mt-[0.3vw] text-center whitespace-nowrap">QR Preview</span>
+        </div>
 
-      {/* 7. Backdrop */}
-      <PropertyRow label="Backdrop">
-        <ColorInput
-          color={backdrop}
-          onChange={(val) => handleChange('backdrop', val)}
-          opacity={100}
-          onOpenPicker={() => handleToggleColorPicker('backdrop')}
-          isActive={activeColorPicker === 'backdrop'}
-        />
-      </PropertyRow>
+        {/* Right side: Dimension and Download Controls */}
+        <div className="flex-1 flex flex-col gap-[0.5vw] justify-center min-w-0 pr-[0.2vw]">
+          {/* Dimension Dropdown */}
+          <div ref={dimensionRef} className="relative w-full">
+            <label className="text-[0.72vw] font-medium text-gray-700 block mb-[0.15vw]">Dimension</label>
+            <button
+              type="button"
+              onClick={() => {
+                setIsDimensionOpen(!isDimensionOpen);
+                setIsDownloadOpen(false);
+              }}
+              className="w-full h-[2vw] min-h-[30px] px-[0.7vw] flex items-center justify-between bg-white border border-gray-300 hover:border-gray-400 rounded-[0.4vw] text-[0.8vw] font-medium text-gray-700 cursor-pointer transition-all shadow-2xs"
+              title="Select Dimension"
+            >
+              <span className="truncate">
+                {dimension === 'custom'
+                  ? `${customWidth} × ${customHeight} px`
+                  : (DIMENSION_OPTIONS.find(d => d.value === dimension)?.label || 'Select size...')}
+              </span>
+              <ChevronDown
+                size="0.8vw"
+                className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ml-[0.2vw] ${
+                  isDimensionOpen ? 'rotate-180 text-[#4D47FF]' : ''
+                }`}
+              />
+            </button>
 
-      {/* 8. Pattern Style */}
+            {isDimensionOpen && (
+              <div className="absolute right-0 left-0 top-full mt-[0.3vw] bg-white border border-gray-100 rounded-[0.5vw] shadow-2xl overflow-hidden z-[110] flex flex-col py-[0.25vw] animate-in fade-in zoom-in-95 duration-150">
+                {DIMENSION_OPTIONS.map((opt) => {
+                  const isSelected = dimension === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setDimension(opt.value);
+                        if (opt.value !== 'custom') {
+                          setIsDimensionOpen(false);
+                        }
+                      }}
+                      className={`px-[0.8vw] py-[0.4vw] text-[0.8vw] font-medium transition-colors text-left flex items-center justify-between cursor-pointer ${
+                        isSelected
+                          ? 'text-[#4D47FF] bg-gray-50 font-semibold'
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {isSelected && <Check size="0.8vw" className="text-[#4D47FF]" />}
+                    </button>
+                  );
+                })}
+
+                {/* Custom Size Inputs */}
+                {dimension === 'custom' && (
+                  <div className="px-[0.6vw] pt-[0.4vw] pb-[0.3vw] border-t border-gray-100 flex flex-col gap-[0.3vw] bg-gray-50/70">
+                    <div className="flex items-center gap-[0.3vw]">
+                      <div className="flex-1">
+                        <label className="text-[0.6vw] text-gray-500 block mb-[0.1vw]">Width</label>
+                        <input
+                          type="number"
+                          min="32"
+                          max="4096"
+                          value={customWidth}
+                          onChange={(e) => setCustomWidth(parseInt(e.target.value) || 256)}
+                          className="w-full h-[1.7vw] min-h-[22px] bg-white border border-gray-200 rounded-[0.3vw] px-[0.3vw] text-[0.7vw] font-medium text-gray-800 outline-none focus:border-[#4D47FF]"
+                        />
+                      </div>
+                      <span className="text-gray-400 text-[0.7vw] mt-[0.7vw]">×</span>
+                      <div className="flex-1">
+                        <label className="text-[0.6vw] text-gray-500 block mb-[0.1vw]">Height</label>
+                        <input
+                          type="number"
+                          min="32"
+                          max="4096"
+                          value={customHeight}
+                          onChange={(e) => setCustomHeight(parseInt(e.target.value) || 256)}
+                          className="w-full h-[1.7vw] min-h-[22px] bg-white border border-gray-200 rounded-[0.3vw] px-[0.3vw] text-[0.7vw] font-medium text-gray-800 outline-none focus:border-[#4D47FF]"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsDimensionOpen(false)}
+                      className="w-full mt-[0.15vw] py-[0.25vw] bg-[#4D47FF] hover:bg-[#3D37E6] text-white rounded-[0.35vw] text-[0.68vw] font-medium transition-colors cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Download Dropdown */}
+          <div ref={downloadRef} className="relative w-full">
+            <label className="text-[0.72vw] font-medium text-gray-700 block mb-[0.15vw]">Download</label>
+            <button
+              type="button"
+              disabled={isDownloading}
+              onClick={() => {
+                setIsDownloadOpen(!isDownloadOpen);
+                setIsDimensionOpen(false);
+              }}
+              className={`w-full h-[2vw] min-h-[30px] px-[0.7vw] flex items-center justify-between bg-[#4D47FF] hover:bg-[#3D37E6] text-white rounded-[0.4vw] text-[0.8vw] font-medium cursor-pointer transition-all shadow-2xs ${
+                isDownloading ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
+              title="Download QR Code"
+            >
+              <div className="flex items-center gap-[0.4vw]">
+                <Download size="0.8vw" />
+                <span>{isDownloading ? 'Downloading...' : 'Download'}</span>
+              </div>
+              <ChevronDown
+                size="0.8vw"
+                className={`text-white/90 transition-transform duration-200 ${
+                  isDownloadOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {isDownloadOpen && (
+              <div className="absolute right-0 left-0 top-full mt-[0.3vw] bg-white border border-gray-100 rounded-[0.55vw] shadow-xl overflow-hidden z-[110] flex flex-col p-[0.35vw] gap-[0.25vw] animate-in fade-in zoom-in-95 duration-150">
+                {/* JPEG Button */}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadQR('jpeg')}
+                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#4D47FF] hover:bg-gray-50 rounded-[0.4vw] text-gray-800 hover:text-[#4D47FF] text-[0.76vw] font-medium cursor-pointer transition-all group"
+                >
+                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#4D47FF] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="3" ry="3" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  <span>JPEG</span>
+                </button>
+
+                {/* PNG Button */}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadQR('png')}
+                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#4D47FF] hover:bg-gray-50 rounded-[0.4vw] text-gray-800 hover:text-[#4D47FF] text-[0.76vw] font-medium cursor-pointer transition-all group"
+                >
+                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#4D47FF] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="3" ry="3" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  <span>PNG</span>
+                </button>
+
+                {/* SVG Button */}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadQR('svg')}
+                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#4D47FF] hover:bg-gray-50 rounded-[0.4vw] text-gray-800 hover:text-[#4D47FF] text-[0.76vw] font-medium cursor-pointer transition-all group"
+                >
+                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#4D47FF] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <rect x="1" y="1" width="4" height="4" />
+                    <rect x="19" y="1" width="4" height="4" />
+                    <rect x="1" y="19" width="4" height="4" />
+                    <rect x="19" y="19" width="4" height="4" />
+                  </svg>
+                  <span>SVG</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Color Properties Section (Fill Color card style matching Color.jsx) */}
+      <FillColorCard
+        label="QR Color"
+        color={qrColor}
+        onColorChange={(val) => handleChange('qrColor', val)}
+        onPickerToggle={() => handleToggleColorPicker('qrColor')}
+        isPickerActive={activeColorPicker === 'qrColor'}
+      />
+
+      <FillColorCard
+        label="Backdrop"
+        color={backdrop}
+        onColorChange={(val) => handleChange('backdrop', val)}
+        onPickerToggle={() => handleToggleColorPicker('backdrop')}
+        isPickerActive={activeColorPicker === 'backdrop'}
+      />
+
+      {/* 5. Pattern Style & Eyes Section */}
+      <div className="flex items-center gap-[0.8vw]">
+        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Pattern & Eyes</span>
+        <div className="flex-1 h-[1px] bg-gray-200" />
+      </div>
+
       <PropertyRow label="Pattern Style">
         <CustomSelect
           value={patternStyle}
@@ -1071,7 +1696,6 @@ const ElementQRCodeProperties = ({
         />
       </PropertyRow>
 
-      {/* 9. Eye Frame */}
       <PropertyRow label="Eye Frame">
         <CustomSelect
           value={eyeFrame}
@@ -1081,7 +1705,6 @@ const ElementQRCodeProperties = ({
         />
       </PropertyRow>
 
-      {/* 10. Eye Ball */}
       <PropertyRow label="Eye Ball">
         <CustomSelect
           value={eyeBall}
@@ -1091,245 +1714,310 @@ const ElementQRCodeProperties = ({
         />
       </PropertyRow>
 
-      {/* 11. Center Logo Box (Light gray container) */}
-      <div className="bg-[#F8F9FA] px-[0.6vw] py-[0.6vw] rounded-[0.6vw] border border-gray-100 flex flex-col gap-[0.5vw] my-[0.2vw]">
-        <div className="flex items-center justify-between">
-          <span className="text-[0.8vw] font-medium text-gray-900">Add logo at center of QR</span>
-          {/* Toggle Switch */}
-          <ElementToggle
-            checked={hasLogo}
-            onChange={(checked) => handleChange('hasLogo', checked)}
-          />
-        </div>
-
-        {hasLogo && (
-          <>
-            {/* Pill Tab Switcher */}
-            <div className="flex bg-white p-[0.1vw] rounded-[0.3vw] border border-gray-200 w-fit">
-              <button
-                type="button"
-                onClick={() => setLogoTab('upload')}
-                className={`px-[0.6vw] py-[0.2vw] text-[0.62vw] font-medium rounded-[0.25vw] transition-colors cursor-pointer ${
-                  logoTab === 'upload' ? 'bg-[#E05638] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Upload
-              </button>
-              <button
-                type="button"
-                onClick={() => setLogoTab('predefined')}
-                className={`px-[0.6vw] py-[0.2vw] text-[0.62vw] font-medium rounded-[0.25vw] transition-colors cursor-pointer ${
-                  logoTab === 'predefined' ? 'bg-[#E05638] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Predefined
-              </button>
-            </div>
-
-            {logoTab === 'upload' ? (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-300 hover:border-[#E05638] rounded-[0.5vw] p-[0.8vw] flex flex-col items-center justify-center cursor-pointer transition-colors group bg-white/50 hover:bg-white"
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleLogoUpload}
-                />
-                {logoSrc ? (
-                  <div className="flex flex-col items-center gap-[0.3vw]">
-                    <img src={logoSrc} alt="Center Logo" className="w-[2vw] h-[2vw] object-contain rounded-[0.2vw]" />
-                    <div className="flex items-center gap-[0.35vw]">
-                      <span className="text-[0.62vw] text-[#E05638] font-medium hover:underline">Change Logo</span>
-                      <span className="text-gray-300">|</span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleChange('logoSrc', null);
-                        }}
-                        className="text-[0.62vw] text-rose-500 font-medium hover:underline cursor-pointer"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center">
-                    <Upload className="w-[1vw] h-[1vw] text-gray-400 group-hover:text-[#E05638] transition-colors mb-[0.3vw]" />
-                    <span className="text-[0.68vw] text-gray-600 font-normal group-hover:text-gray-800">
-                      Upload Logo
-                    </span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-5 gap-[0.35vw] p-[0.4vw] bg-white rounded-[0.4vw] border border-gray-200">
-                {PREDEFINED_LOGOS.map((item) => (
-                  <button
-                    key={item.name}
-                    type="button"
-                    onClick={() => handleChange('logoSrc', item.src)}
-                    title={item.name}
-                    className={`p-[0.3vw] rounded-[0.3vw] border flex items-center justify-center hover:border-[#E05638] transition-colors cursor-pointer ${
-                      logoSrc === item.src ? 'border-[#E05638] bg-orange-50/50' : 'border-gray-200'
-                    }`}
-                  >
-                    <img src={item.src} alt={item.name} className="w-[1vw] h-[1vw] object-contain" />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Logo Size */}
-            <PropertyRow label="Logo Size">
-              <div className="flex items-center gap-[0.4vw]">
-                <div className="flex-1">
-                  <ElementSlider
-                    min={20}
-                    max={95}
-                    value={logoSize}
-                    onChange={(e) => handleChange('logoSize', parseInt(e.target.value))}
-                  />
-                </div>
-                <div className="border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] h-[2.5vw] flex items-center justify-center text-[0.8vw] text-gray-700 min-w-[3.2vw] text-center font-mono shadow-2xs">
-                  {logoSize} %
-                </div>
-              </div>
-            </PropertyRow>
-
-            {/* Corner Radius */}
-            <PropertyRow label="Corner Radius">
-              <div className="flex items-center gap-[0.4vw]">
-                <div className="flex-1">
-                  <ElementSlider
-                    min={0}
-                    max={100}
-                    value={logoRadius}
-                    onChange={(e) => handleChange('logoRadius', parseInt(e.target.value))}
-                  />
-                </div>
-                <div className="border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] h-[2.5vw] flex items-center justify-center text-[0.8vw] text-gray-700 min-w-[3.2vw] text-center font-mono shadow-2xs">
-                  {logoRadius} %
-                </div>
-              </div>
-            </PropertyRow>
-
-            {/* Background */}
-            <PropertyRow label="Background">
-              <ColorInput
-                color={logoBgColor}
-                onChange={(val) => handleChange('logoBgColor', val)}
-                opacity={100}
-                onOpenPicker={() => handleToggleColorPicker('logoBgColor')}
-                isActive={activeColorPicker === 'logoBgColor'}
-              />
-            </PropertyRow>
-          </>
-        )}
+      {/* 6. Center Logo Section */}
+      <div className="flex items-center gap-[0.8vw]">
+        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap">Center Logo</span>
+        <div className="flex-1 h-[1px] bg-gray-200" />
       </div>
 
-      {/* 12. Frames Section */}
+      <div className="bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs overflow-hidden my-[0.1vw]">
+        {/* Card Header */}
+        <div
+          onClick={() => handleChange('hasLogo', !hasLogo)}
+          className={`flex items-center justify-between px-[0.8vw] py-[0.6vw] cursor-pointer hover:bg-gray-50/60 transition-colors select-none ${hasLogo ? 'border-b border-gray-100 rounded-t-[0.5vw]' : 'rounded-[0.5vw]'}`}
+        >
+          <div className="flex items-center gap-[0.5vw]">
+            <span className="font-medium text-[0.82vw] text-gray-900">
+              Add logo at center of QR
+            </span>
+          </div>
+          <div className="flex items-center">
+            {/* Toggle Switch */}
+            <ElementToggle
+              checked={hasLogo}
+              onChange={(checked) => handleChange('hasLogo', checked)}
+              activeColor="#4D47FF"
+            />
+          </div>
+        </div>
+
+        {/* Content (Expanded when toggle is ON) */}
+        <div className={`grid transition-all duration-300 ease-in-out ${hasLogo ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+          <div className="overflow-hidden">
+            <div className="p-[0.8vw] flex flex-col gap-[0.6vw]">
+              {/* Pill Tab Switcher */}
+              <div className="flex bg-[#F8F9FA] p-[0.25vw] rounded-[0.4vw] border border-gray-200 w-fit">
+                <button
+                  type="button"
+                  onClick={() => setLogoTab('upload')}
+                  className={`px-[0.7vw] py-[0.3vw] text-[0.75vw] font-medium rounded-[0.3vw] transition-colors cursor-pointer ${
+                    logoTab === 'upload' ? 'bg-[#4D47FF] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Upload
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogoTab('predefined')}
+                  className={`px-[0.7vw] py-[0.3vw] text-[0.75vw] font-medium rounded-[0.3vw] transition-colors cursor-pointer ${
+                    logoTab === 'predefined' ? 'bg-[#4D47FF] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Predefined
+                </button>
+              </div>
+
+              {logoTab === 'upload' ? (
+                <div className="flex flex-col gap-[0.4vw]">
+                  {/* Upload Logo Box */}
+                  <div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                    />
+                    {logoSrc ? (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full flex items-center justify-between p-[0.45vw] px-[0.6vw] bg-white border border-gray-200 rounded-[0.5vw] shadow-2xs cursor-default"
+                      >
+                        <div className="flex items-center gap-[0.55vw] min-w-0 flex-1">
+                          {/* Thumbnail */}
+                          <div className="w-[2.4vw] h-[2.2vw] rounded-[0.35vw] border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
+                            <img src={logoSrc} alt={logoName} className="w-full h-full object-contain" />
+                          </div>
+                          {/* Info */}
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="text-[0.78vw] font-medium text-gray-900 truncate" title={logoName}>
+                              {logoName}
+                            </span>
+                            {logoMeta && (
+                              <span className="text-[0.68vw] text-gray-400 font-medium truncate">
+                                {logoMeta}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-[0.25vw] shrink-0 ml-[0.4vw]">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowReplaceModal(true);
+                            }}
+                            className="p-[0.3vw] text-gray-500 hover:text-[#4D47FF] hover:bg-gray-100 rounded-[0.35vw] transition-colors cursor-pointer"
+                            title="Replace Logo"
+                          >
+                            <ArrowRightLeft size="0.9vw" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleChange('logoSrc', null);
+                            }}
+                            className="p-[0.3vw] text-[#e02424] hover:text-red-700 hover:bg-red-50 rounded-[0.35vw] transition-colors cursor-pointer"
+                            title="Remove Logo"
+                          >
+                            <Trash2 size="0.9vw" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div
+                          onClick={() => fileInputRef.current?.click()}
+                          className="border border-dashed border-gray-300 hover:border-[#4D47FF] rounded-[0.5vw] p-[0.8vw] flex flex-col items-center justify-center cursor-pointer transition-colors group bg-white hover:bg-indigo-50/20"
+                        >
+                          <Upload className="w-[1vw] h-[1vw] text-gray-400 group-hover:text-[#4D47FF] transition-colors mb-[0.3vw]" />
+                          <span className="text-[0.78vw] text-gray-800 font-medium group-hover:text-[#4D47FF] transition-colors">
+                            Upload Logo
+                          </span>
+                        </div>
+
+                        {/* OR divider */}
+                        <div className="flex items-center gap-[0.4vw] my-[0.1vw]">
+                          <div className="h-[1px] flex-1 bg-gray-200"></div>
+                          <span className="text-[0.58vw] font-semibold text-gray-400 uppercase tracking-wider">OR</span>
+                          <div className="h-[1px] flex-1 bg-gray-200"></div>
+                        </div>
+
+                        {/* Image Gallery Button */}
+                        <button
+                          ref={galleryBtnRef}
+                          type="button"
+                          onClick={() => setIsMediaGalleryOpen(true)}
+                          className="w-full h-[2.2vw] rounded-[0.4vw] border border-gray-300 bg-white hover:bg-gray-50 hover:border-gray-400 flex items-center justify-center gap-[0.5vw] cursor-pointer transition-all shadow-2xs group"
+                        >
+                          <ImageIcon className="w-[1vw] h-[1vw] text-gray-700 group-hover:text-[#4D47FF] transition-colors" />
+                          <span className="text-[0.8vw] font-medium text-gray-800 group-hover:text-[#4D47FF] transition-colors">
+                            Choose from Image Gallery
+                          </span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-5 gap-[0.35vw] p-[0.6vw] bg-white rounded-[0.4vw] border border-gray-200">
+                  {PREDEFINED_LOGOS.map((item) => (
+                    <button
+                      key={item.name}
+                      type="button"
+                      onClick={() => handleChange('logoSrc', item.src)}
+                      title={item.name}
+                      className={`p-[0.3vw] rounded-[0.3vw] border flex items-center justify-center hover:border-[#4D47FF] transition-colors cursor-pointer ${
+                        logoSrc === item.src ? 'border-[#4D47FF] bg-indigo-50/50' : 'border-gray-200'
+                      }`}
+                    >
+                      <img src={item.src} alt={item.name} className="w-[1.4vw] h-[1.4vw] object-contain" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Logo Size */}
+              <div className="flex items-center justify-between gap-[0.9vw] py-[0.15vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap min-w-[5.2vw]">Logo Size</span>
+                <div className="flex-1 flex items-center h-[1.6vw] px-[0.2vw]">
+                  <input
+                    type="range"
+                    min="20"
+                    max="95"
+                    value={logoSize}
+                    onChange={(e) => handleChange('logoSize', parseInt(e.target.value) || 60)}
+                    className="w-full cursor-pointer custom-range-slider"
+                    style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${((logoSize - 20) / 75) * 100}%, #E2E8F0 ${((logoSize - 20) / 75) * 100}%, #E2E8F0 100%)` }}
+                  />
+                </div>
+                <div className="w-[3.3vw] h-[2vw] rounded-[0.4vw] border border-gray-300 bg-white flex items-center justify-center text-[0.8vw] font-medium text-gray-700 shadow-2xs">
+                  {logoSize}%
+                </div>
+              </div>
+
+              {/* Corner Radius */}
+              <div className="flex items-center justify-between gap-[0.9vw] py-[0.15vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap min-w-[5.2vw]">Corner Radius</span>
+                <div className="flex-1 flex items-center h-[1.6vw] px-[0.2vw]">
+                  <input
+                    type="range"
+                    min="0"
+                    max="30"
+                    value={logoRadius}
+                    onChange={(e) => handleChange('logoRadius', parseInt(e.target.value) || 0)}
+                    className="w-full cursor-pointer custom-range-slider"
+                    style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${(logoRadius / 30) * 100}%, #E2E8F0 ${(logoRadius / 30) * 100}%, #E2E8F0 100%)` }}
+                  />
+                </div>
+                <div className="w-[3.3vw] h-[2vw] rounded-[0.4vw] border border-gray-300 bg-white flex items-center justify-center text-[0.8vw] font-medium text-gray-700 shadow-2xs">
+                  {logoRadius}px
+                </div>
+              </div>
+
+              {/* Background Color (Fill Color card style matching Color.jsx) */}
+              <FillColorCard
+                label="Logo Background"
+                color={logoBgColor}
+                onColorChange={(val) => handleChange('logoBgColor', val)}
+                onPickerToggle={() => handleToggleColorPicker('logoBgColor')}
+                isPickerActive={activeColorPicker === 'logoBgColor'}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 7. Frames Section */}
       {frame && frame !== 'frame-none' && (
-        <>
-          <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
-            <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">Frames</span>
-            <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
+        <div className="flex flex-col gap-[0.9vw]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-[0.8vw] flex-1">
+              <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Frame Text & Style</span>
+              <div className="flex-1 h-[1px] bg-gray-200" />
+            </div>
+            <span className="text-[0.68vw] text-gray-400 font-medium ml-[0.5vw]">
+              {(text || '').length}/30
+            </span>
           </div>
 
-          {/* Frame Text */}
-          <PropertyRow label="Frame Text">
-            <div className="relative w-full">
-              <input
-                type="text"
-                value={text}
-                onChange={(e) => handleChange('text', e.target.value)}
-                placeholder="Scan Me"
-                className="w-full h-[2.5vw] bg-white border border-gray-200 rounded-[0.5vw] px-[0.6vw] pr-[1.6vw] text-[0.7vw] text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#E05638] shadow-2xs font-medium"
-              />
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.5vw] text-gray-400">
-                <Pencil className="w-[0.8vw] h-[0.8vw]" />
-              </div>
+          {/* Frame Text (matching TextProperties.jsx input) */}
+          <div className="relative w-full">
+            <input
+              type="text"
+              value={text}
+              maxLength={30}
+              onChange={(e) => handleChange('text', e.target.value.slice(0, 30))}
+              placeholder="Scan Me"
+              className="w-full h-[2.1vw] min-h-[30px] bg-white border border-gray-300 rounded-[0.45vw] px-[0.75vw] pr-[2vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#4D47FF] shadow-2xs font-medium"
+            />
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.6vw] text-gray-400">
+              <Pencil className="w-[0.85vw] h-[0.85vw]" />
             </div>
-          </PropertyRow>
+          </div>
 
-          {/* Font Family & Size Dropdowns */}
-          <div className="flex items-center gap-[0.5vw]">
-            <div className="w-[5.6vw] shrink-0" />
-            <div className="flex-1 grid grid-cols-2 gap-[0.4vw]">
-              {/* Font Family */}
+          {/* Font Family & Size Dropdowns (matching TextProperties.jsx layout) */}
+          <div className="flex items-center gap-[0.6vw]">
+            <div className="flex-[1.6]">
               <CustomSelect
                 value={fontFamily}
                 onChange={(val) => handleChange('fontFamily', val)}
                 options={FONT_FAMILY_OPTIONS}
               />
-
-              {/* Font Size */}
+            </div>
+            <div className="flex-1">
               <CustomSelect
                 value={fontSize}
-                onChange={(val) => handleChange('fontSize', parseInt(val))}
+                onChange={(val) => handleChange('fontSize', parseInt(val, 10))}
                 options={FONT_SIZE_OPTIONS}
               />
             </div>
           </div>
 
           {/* Font Weight Dropdown */}
-          <div className="flex items-center gap-[0.5vw]">
-            <div className="w-[5.6vw] shrink-0" />
-            <div className="flex-1">
-              <CustomSelect
-                value={fontWeight}
-                onChange={(val) => handleChange('fontWeight', val)}
-                options={FONT_WEIGHT_OPTIONS}
-              />
-            </div>
+          <div className="w-full">
+            <CustomSelect
+              value={fontWeight}
+              onChange={(val) => handleChange('fontWeight', val)}
+              options={FONT_WEIGHT_OPTIONS}
+            />
           </div>
 
-          {/* Text Color */}
-          <PropertyRow label="Text Color">
-            <ColorInput
-              color={textColor}
-              onChange={(val) => handleChange('textColor', val)}
-              opacity={100}
-              onOpenPicker={() => handleToggleColorPicker('textColor')}
-              isActive={activeColorPicker === 'textColor'}
-            />
-          </PropertyRow>
+          {/* Text Color (Fill Color card style matching Color.jsx) */}
+          <FillColorCard
+            label="Text Color"
+            color={textColor}
+            onColorChange={(val) => handleChange('textColor', val)}
+            onPickerToggle={() => handleToggleColorPicker('textColor')}
+            isPickerActive={activeColorPicker === 'textColor'}
+          />
 
-          {/* Bg Color */}
-          <PropertyRow label="Bg Color">
-            <ColorInput
-              color={frameBgColor}
-              onChange={(val) => handleChange('frameBgColor', val)}
-              opacity={100}
-              onOpenPicker={() => handleToggleColorPicker('frameBgColor')}
-              isActive={activeColorPicker === 'frameBgColor'}
-            />
-          </PropertyRow>
+          {/* Frame Background Color (Fill Color card style matching Color.jsx) */}
+          <FillColorCard
+            label="Frame Background"
+            color={frameBgColor}
+            onColorChange={(val) => handleChange('frameBgColor', val)}
+            onPickerToggle={() => handleToggleColorPicker('frameBgColor')}
+            isPickerActive={activeColorPicker === 'frameBgColor'}
+          />
 
-          {/* Arrow Color / Frame Accent Color */}
-          <PropertyRow label="Arrow Color">
-            <ColorInput
-              color={arrowColor}
-              onChange={(val) => handleChange('arrowColor', val)}
-              opacity={100}
-              onOpenPicker={() => handleToggleColorPicker('arrowColor')}
-              isActive={activeColorPicker === 'arrowColor'}
-            />
-          </PropertyRow>
-        </>
+          {/* Frame Stroke / Accent Color (Fill Color card style matching Color.jsx) */}
+          <FillColorCard
+            label="Frame Stroke"
+            color={arrowColor}
+            onColorChange={(val) => handleChange('arrowColor', val)}
+            onPickerToggle={() => handleToggleColorPicker('arrowColor')}
+            isPickerActive={activeColorPicker === 'arrowColor'}
+          />
+        </div>
       )}
 
-      {/* 13. Effects Section */}
-      <div className="flex items-center gap-[0.4vw] mt-[0.3vw]">
-        <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">Effects</span>
-        <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
-      </div>
-
+      {/* 8. Reused Effect Component (matching ImageProperties.jsx with Drop Shadow only) */}
       <Effect
-        isShape={false}
+        noAccordion={true}
         openSubSection={openSubSection}
         setOpenSubSection={setOpenSubSection}
         activeEffects={activeEffects}
@@ -1342,7 +2030,6 @@ const ElementQRCodeProperties = ({
         setShowDetailedPicker={setShowDetailedPicker}
         hideBlur={true}
         hideInnerShadow={true}
-        hideHeader={true}
       />
 
       {/* ── Official ColorPicker Portal Popup ── */}
@@ -1365,7 +2052,7 @@ const ElementQRCodeProperties = ({
                 }
               }}
               opacity={100}
-              onOpacityChange={() => {}}
+              onOpacityChange={() => { }}
               onClose={() => setActiveColorPicker(null)}
               disableGradient={true}
               colorsOnPage={colorsOnPageList}
@@ -1374,6 +2061,79 @@ const ElementQRCodeProperties = ({
         </div>,
         document.body
       )}
+      {/* ── Replace Media Modal ── */}
+      <ReplaceMediaModal
+        show={showReplaceModal}
+        onClose={() => setShowReplaceModal(false)}
+        mediaType="image"
+        onReplace={(file) => {
+          setShowReplaceModal(false);
+          if (!file) return;
+          if (file.isUrl || typeof file === 'string' || (typeof file.url === 'string' && !file.type)) {
+            const rawUrl = file.url || file;
+            const fileName = file.name || (typeof rawUrl === 'string' ? rawUrl.split('/').pop().split('?')[0] : 'image.png');
+            const img = new Image();
+            img.onload = () => {
+              const nw = img.naturalWidth || img.width;
+              const nh = img.naturalHeight || img.height;
+              const aspect = nh > 0 ? nw / nh : 1;
+              const metaStr = `${nw} X ${nh}`;
+              setLogoName(fileName);
+              setLogoMeta(metaStr);
+              setLogoAspect(aspect);
+              setLogoSrc(rawUrl);
+              updateQR({ logoSrc: rawUrl, logoName: fileName, logoMeta: metaStr, logoAspect: aspect });
+            };
+            img.src = rawUrl;
+          } else {
+            const fileName = file.name || 'image.png';
+            const fileSizeFormatted = file.size
+              ? (file.size >= 1024 * 1024
+                ? `${(file.size / (1024 * 1024)).toFixed(1)}MB`
+                : `${Math.max(1, Math.round(file.size / 1024))}KB`)
+              : '';
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const dataUrl = event.target.result;
+              const img = new Image();
+              img.onload = () => {
+                const nw = img.naturalWidth || img.width;
+                const nh = img.naturalHeight || img.height;
+                const aspect = nh > 0 ? nw / nh : 1;
+                const metaStr = `${nw} X ${nh}${fileSizeFormatted ? ' • ' + fileSizeFormatted : ''}`;
+                setLogoName(fileName);
+                setLogoMeta(metaStr);
+                setLogoAspect(aspect);
+                setLogoSrc(dataUrl);
+                updateQR({ logoSrc: dataUrl, logoName: fileName, logoMeta: metaStr, logoAspect: aspect });
+              };
+              img.src = dataUrl;
+            };
+            reader.readAsDataURL(file);
+          }
+        }}
+      />
+
+      {/* ── Media Gallery Popup Portal ── */}
+      <MediaGalleryPopup
+        isOpen={isMediaGalleryOpen}
+        onClose={() => setIsMediaGalleryOpen(false)}
+        anchorRef={galleryBtnRef}
+        imageOnly={true}
+        initialGalleryType="Image Gallery"
+        onFileSelect={(file, asset) => {
+          setIsMediaGalleryOpen(false);
+          if (asset?.url) {
+            handleChange('logoSrc', asset.url);
+          } else if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              handleChange('logoSrc', e.target.result);
+            };
+            reader.readAsDataURL(file);
+          }
+        }}
+      />
     </div>
   );
 };

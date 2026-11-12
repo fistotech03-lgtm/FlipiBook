@@ -138,6 +138,754 @@ export const loadImg = (src) => new Promise((resolve) => {
 
 // Cache to store pre-rendered data URLs
 const qrImageCache = new Map();
+export const logoAspectCache = new Map();
+
+export const svgToDataUrl = (svgString) => {
+  try {
+    if (typeof btoa !== 'undefined') {
+      return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
+    }
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`;
+  } catch (e) {
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`;
+  }
+};
+
+export function getSvgPathRoundRect(x, y, w, h, radius) {
+  let r = typeof radius === 'number'
+    ? { tl: radius, tr: radius, br: radius, bl: radius }
+    : { tl: 0, tr: 0, br: 0, bl: 0, ...radius };
+
+  const maxR = Math.min(w / 2, h / 2);
+  r.tl = Math.max(0, Math.min(r.tl, maxR));
+  r.tr = Math.max(0, Math.min(r.tr, maxR));
+  r.br = Math.max(0, Math.min(r.br, maxR));
+  r.bl = Math.max(0, Math.min(r.bl, maxR));
+
+  return `M ${x + r.tl} ${y} ` +
+    `L ${x + w - r.tr} ${y} ` +
+    `Q ${x + w} ${y} ${x + w} ${y + r.tr} ` +
+    `L ${x + w} ${y + h - r.br} ` +
+    `Q ${x + w} ${y + h} ${x + w - r.br} ${y + h} ` +
+    `L ${x + r.bl} ${y + h} ` +
+    `Q ${x} ${y + h} ${x} ${y + h - r.bl} ` +
+    `L ${x} ${y + r.tl} ` +
+    `Q ${x} ${y} ${x + r.tl} ${y} Z`;
+}
+
+export function escapeXml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+export function measureTextWidth(text, fontSize, fontFamily, fontWeight = '600') {
+  if (!text) return 0;
+  if (typeof document !== 'undefined') {
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.font = `${fontWeight} ${fontSize}px "${fontFamily}", -apple-system, BlinkMacSystemFont, sans-serif`;
+        return ctx.measureText(text).width;
+      }
+    } catch (e) {
+      // ignore and fallback
+    }
+  }
+  return text.length * fontSize * 0.62;
+}
+
+export function splitTextIntoLines(text, maxCharsPerLine = 17) {
+  if (!text) return [''];
+  const trimmed = String(text).trim();
+  if (trimmed.length <= maxCharsPerLine) return [trimmed];
+
+  const words = trimmed.split(/\s+/);
+  if (words.length > 1) {
+    const halfLen = trimmed.length / 2;
+    let line1 = '';
+    let line2 = '';
+    for (const w of words) {
+      if (!line1) {
+        line1 = w;
+      } else if (Math.abs((line1.length + 1 + w.length) - halfLen) <= Math.abs(line1.length - halfLen)) {
+        line1 += ' ' + w;
+      } else {
+        line2 = line2 ? `${line2} ${w}` : w;
+      }
+    }
+    if (line1 && line2) return [line1, line2];
+  }
+  const mid = Math.ceil(trimmed.length / 2);
+  return [trimmed.slice(0, mid), trimmed.slice(mid)];
+}
+
+export function renderModuleSvg(x, y, size, style, color) {
+  const S = size;
+  const cx = x + S / 2;
+  const cy = y + S / 2;
+
+  switch (style) {
+    case 'rounded-square':
+      return `<path d="${getSvgPathRoundRect(x + 0.3, y + 0.3, S - 0.6, S - 0.6, S * 0.26)}" fill="${color}" />`;
+    case 'circular-dots':
+      return `<circle cx="${cx}" cy="${cy}" r="${S * 0.44}" fill="${color}" />`;
+    case 'extra-rounded':
+      return `<path d="${getSvgPathRoundRect(x + 0.2, y + 0.2, S - 0.4, S - 0.4, S * 0.46)}" fill="${color}" />`;
+    case 'diamond':
+      return `<polygon points="${cx},${y + 0.3} ${x + S - 0.3},${cy} ${cx},${y + S - 0.3} ${x + 0.3},${cy}" fill="${color}" />`;
+    case 'horizontal-bars':
+      return `<path d="${getSvgPathRoundRect(x, y + S * 0.16, S, S * 0.68, S * 0.22)}" fill="${color}" />`;
+    case 'vertical-bars':
+      return `<path d="${getSvgPathRoundRect(x + S * 0.16, y, S * 0.68, S, S * 0.22)}" fill="${color}" />`;
+    case 'tiny-pixel':
+      return `<rect x="${x + S * 0.22}" y="${y + S * 0.22}" width="${S * 0.56}" height="${S * 0.56}" fill="${color}" />`;
+    case 'classic-square':
+    default:
+      return `<rect x="${x}" y="${y}" width="${S + 0.05}" height="${S + 0.05}" fill="${color}" />`;
+  }
+}
+
+export function isTransparentColor(c) {
+  if (!c) return true;
+  const s = String(c).trim().toLowerCase();
+  return s === 'none' || s === 'transparent' || s === '#' || s === 'rgba(0, 0, 0, 0)' || s === 'rgba(0,0,0,0)';
+}
+
+export function renderEyeFrameSvg(x, y, size, thickness, style, color, backdrop) {
+  const S = size;
+  const T = thickness;
+  const hasBackdrop = !isTransparentColor(backdrop);
+  const bgFill = hasBackdrop ? backdrop : 'none';
+
+  switch (style) {
+    case 'circular-frame': {
+      const cx = x + S / 2;
+      const cy = y + S / 2;
+      if (!hasBackdrop) {
+        return `<circle cx="${cx}" cy="${cy}" r="${S / 2 - T / 2}" fill="none" stroke="${color}" stroke-width="${T}" />`;
+      }
+      return `<circle cx="${cx}" cy="${cy}" r="${S / 2}" fill="${color}" />` +
+             `<circle cx="${cx}" cy="${cy}" r="${S / 2 - T}" fill="${bgFill}" />`;
+    }
+    case 'rounded-square': {
+      const R = S * 0.24;
+      if (!hasBackdrop) {
+        const outer = getSvgPathRoundRect(x, y, S, S, R);
+        const inner = getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T));
+        return `<path d="${outer} ${inner}" fill="${color}" fill-rule="evenodd" />`;
+      }
+      return `<path d="${getSvgPathRoundRect(x, y, S, S, R)}" fill="${color}" />` +
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${bgFill}" />`;
+    }
+    case 'octagon': {
+      const C = T * 1.8;
+      const outerPts = `${x + C},${y} ${x + S - C},${y} ${x + S},${y + C} ${x + S},${y + S - C} ${x + S - C},${y + S} ${x + C},${y + S} ${x},${y + S - C} ${x},${y + C}`;
+      const c = Math.max(2, C - T * 0.7);
+      const innerPts = `${x + T + c},${y + T} ${x + S - T - c},${y + T} ${x + S - T},${y + T + c} ${x + S - T},${y + S - T - c} ${x + S - T - c},${y + S - T} ${x + T + c},${y + S - T} ${x + T},${y + S - T - c} ${x + T},${y + T + c}`;
+      if (!hasBackdrop) {
+        const oCoords = outerPts.split(' ').map(p => p.split(','));
+        const iCoords = innerPts.split(' ').map(p => p.split(','));
+        const d = `M ${oCoords[0][0]} ${oCoords[0][1]} ` + oCoords.slice(1).map(p => `L ${p[0]} ${p[1]}`).join(' ') + ' Z ' +
+                  `M ${iCoords[0][0]} ${iCoords[0][1]} ` + iCoords.slice(1).map(p => `L ${p[0]} ${p[1]}`).join(' ') + ' Z';
+        return `<path d="${d}" fill="${color}" fill-rule="evenodd" />`;
+      }
+      return `<polygon points="${outerPts}" fill="${color}" />` +
+             `<polygon points="${innerPts}" fill="${bgFill}" />`;
+    }
+    case 'squircle': {
+      const R = S * 0.38;
+      if (!hasBackdrop) {
+        const outer = getSvgPathRoundRect(x, y, S, S, R);
+        const inner = getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T));
+        return `<path d="${outer} ${inner}" fill="${color}" fill-rule="evenodd" />`;
+      }
+      return `<path d="${getSvgPathRoundRect(x, y, S, S, R)}" fill="${color}" />` +
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${bgFill}" />`;
+    }
+    case 'cut-corners': {
+      const R = S * 0.44;
+      if (!hasBackdrop) {
+        const outer = getSvgPathRoundRect(x, y, S, S, { tl: R, tr: 0, br: R, bl: 0 });
+        const inner = getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, { tl: Math.max(0, R - T), tr: 0, br: Math.max(0, R - T), bl: 0 });
+        return `<path d="${outer} ${inner}" fill="${color}" fill-rule="evenodd" />`;
+      }
+      return `<path d="${getSvgPathRoundRect(x, y, S, S, { tl: R, tr: 0, br: R, bl: 0 })}" fill="${color}" />` +
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, { tl: Math.max(0, R - T), tr: 0, br: Math.max(0, R - T), bl: 0 })}" fill="${bgFill}" />`;
+    }
+    case 'double-border': {
+      const b1 = T * 0.42;
+      const gap = T * 0.35;
+      const b2 = T * 0.42;
+      const x2 = x + b1 + gap;
+      const y2 = y + b1 + gap;
+      const S2 = S - 2 * (b1 + gap);
+      if (!hasBackdrop) {
+        const outer1 = `M ${x} ${y} H ${x + S} V ${y + S} H ${x} Z`;
+        const inner1 = `M ${x + b1} ${y + b1} H ${x + S - b1} V ${y + S - b1} H ${x + b1} Z`;
+        const outer2 = `M ${x2} ${y2} H ${x2 + S2} V ${y2 + S2} H ${x2} Z`;
+        const inner2 = `M ${x2 + b2} ${y2 + b2} H ${x2 + S2 - b2} V ${y2 + S2 - b2} H ${x2 + b2} Z`;
+        return `<path d="${outer1} ${inner1} ${outer2} ${inner2}" fill="${color}" fill-rule="evenodd" />`;
+      }
+      return `<rect x="${x}" y="${y}" width="${S}" height="${S}" fill="${color}" />` +
+             `<rect x="${x + b1}" y="${y + b1}" width="${S - 2 * b1}" height="${S - 2 * b1}" fill="${bgFill}" />` +
+             `<rect x="${x2}" y="${y2}" width="${S2}" height="${S2}" fill="${color}" />` +
+             `<rect x="${x2 + b2}" y="${y2 + b2}" width="${S2 - 2 * b2}" height="${S2 - 2 * b2}" fill="${bgFill}" />`;
+    }
+    case 'soft-corners': {
+      const R = S * 0.32;
+      if (!hasBackdrop) {
+        const outer = getSvgPathRoundRect(x, y, S, S, R);
+        const inner = getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T));
+        return `<path d="${outer} ${inner}" fill="${color}" fill-rule="evenodd" />`;
+      }
+      return `<path d="${getSvgPathRoundRect(x, y, S, S, R)}" fill="${color}" />` +
+             `<path d="${getSvgPathRoundRect(x + T, y + T, S - 2 * T, S - 2 * T, Math.max(0, R - T))}" fill="${bgFill}" />`;
+    }
+    case 'classic-square':
+    default: {
+      if (!hasBackdrop) {
+        const outer = `M ${x} ${y} H ${x + S} V ${y + S} H ${x} Z`;
+        const inner = `M ${x + T} ${y + T} H ${x + S - T} V ${y + S - T} H ${x + T} Z`;
+        return `<path d="${outer} ${inner}" fill="${color}" fill-rule="evenodd" />`;
+      }
+      return `<rect x="${x}" y="${y}" width="${S}" height="${S}" fill="${color}" />` +
+             `<rect x="${x + T}" y="${y + T}" width="${S - 2 * T}" height="${S - 2 * T}" fill="${bgFill}" />`;
+    }
+  }
+}
+
+export function renderEyeBallSvg(cx, cy, size, style, color, backdrop) {
+  const B = size;
+  const bx = cx - B / 2;
+  const by = cy - B / 2;
+  const hasBackdrop = !isTransparentColor(backdrop);
+  const bgFill = hasBackdrop ? backdrop : 'none';
+
+  switch (style) {
+    case 'circle':
+      return `<circle cx="${cx}" cy="${cy}" r="${B / 2}" fill="${color}" />`;
+    case 'rounded-square':
+      return `<path d="${getSvgPathRoundRect(bx, by, B, B, B * 0.28)}" fill="${color}" />`;
+    case 'diamond':
+      return `<polygon points="${cx},${by} ${bx + B},${cy} ${cx},${by + B} ${bx},${cy}" fill="${color}" />`;
+    case 'small-dot':
+      return `<circle cx="${cx}" cy="${cy}" r="${B * 0.32}" fill="${color}" />`;
+    case 'cross': {
+      const barW = B * 0.38;
+      return `<rect x="${bx}" y="${cy - barW / 2}" width="${B}" height="${barW}" fill="${color}" />` +
+             `<rect x="${cx - barW / 2}" y="${by}" width="${barW}" height="${B}" fill="${color}" />`;
+    }
+    case 'star': {
+      const rOuter = B / 2;
+      const rInner = B * 0.24;
+      let pts = [];
+      for (let i = 0; i < 8; i++) {
+        const angle = (i * Math.PI) / 4;
+        const r = i % 2 === 0 ? rOuter : rInner;
+        pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+      }
+      return `<polygon points="${pts.join(' ')}" fill="${color}" />`;
+    }
+    case 'ring':
+      if (!hasBackdrop) {
+        return `<circle cx="${cx}" cy="${cy}" r="${(B / 2 + B * 0.28) / 2}" fill="none" stroke="${color}" stroke-width="${B / 2 - B * 0.28}" />`;
+      }
+      return `<circle cx="${cx}" cy="${cy}" r="${B / 2}" fill="${color}" />` +
+             `<circle cx="${cx}" cy="${cy}" r="${B * 0.28}" fill="${bgFill}" />`;
+    case 'square':
+    default:
+      return `<rect x="${bx}" y="${by}" width="${B}" height="${B}" fill="${color}" />`;
+  }
+}
+
+/**
+ * Generates pure vector SVG XML string representing the framed QR Code.
+ */
+export function generatePureVectorQRSvg({
+  url = 'https://example.com',
+  frame = 'frame-none',
+  text = 'SCAN ME',
+  logoSrc = null,
+  logoSize = 17,
+  logoRadius = 0,
+  logoBg = true,
+  logoBgColor = '#FFFFFF',
+  logoAspect = null,
+  qrColor = '#000000',
+  backdrop = '#FFFFFF',
+  patternStyle = 'classic-square',
+  eyeFrame = 'classic-square',
+  eyeBall = 'classic-square',
+  fontFamily = 'Poppins',
+  fontSize = 24,
+  fontWeight = '600',
+  textColor = '#FFFFFF',
+  frameBgColor = '#FFFFFF',
+  arrowColor = '#000000'
+}) {
+  let effectiveFrame = frame;
+  if (frame === 'frame-badge') effectiveFrame = 'frame-bottom-bar';
+  else if (frame === 'frame-bubble') effectiveFrame = 'frame-top-bubble';
+  else if (frame === 'frame-polaroid') effectiveFrame = 'frame-simple-text';
+  else if (frame === 'frame-elegant') effectiveFrame = 'frame-top-header';
+
+  const isLightBgFrame = (effectiveFrame === 'frame-curved-arrow' || effectiveFrame === 'frame-simple-text');
+  let effectiveTextColor = textColor;
+  if (!effectiveTextColor) {
+    effectiveTextColor = isLightBgFrame ? (arrowColor || '#000000') : '#FFFFFF';
+  } else if (isLightBgFrame && (effectiveTextColor.toUpperCase() === '#FFFFFF' || effectiveTextColor.toUpperCase() === '#FFF')) {
+    effectiveTextColor = arrowColor || '#000000';
+  }
+
+  let totalW = 278;
+  let totalH = 334;
+  let qrX = 0;
+  let qrY = 0;
+  let qrRenderSize = 220;
+
+  const labelText = (text !== undefined && text !== null)
+    ? text
+    : (effectiveFrame === 'frame-curved-arrow' ? 'Scan me' : 'SCAN ME');
+
+  if (effectiveFrame === 'frame-none') {
+    totalW = 240;
+    totalH = 240;
+    qrRenderSize = 240;
+    qrX = 0;
+    qrY = 0;
+  } else if (effectiveFrame === 'frame-bottom-bar') {
+    const bw = 7;
+    const padX = 22;
+    const padTop = 22;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    const bannerH = isMultiLine ? Math.max(54, userFontSize * 2.2) : 46;
+    const gap = 12;
+    qrRenderSize = 220;
+    const innerW = qrRenderSize + padX * 2;
+    totalW = innerW + bw * 2;
+    totalH = bw * 2 + padTop + qrRenderSize + gap + bannerH;
+    qrX = bw + padX;
+    qrY = bw + padTop;
+  } else if (effectiveFrame === 'frame-top-bubble') {
+    const bw = 7;
+    const pad = 18;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    const bubbleH = isMultiLine ? Math.max(46, Math.min(24, userFontSize) * 1.6) : Math.max(34, userFontSize + 8);
+    const pointerH = 8;
+    qrRenderSize = 220;
+    const boxW = qrRenderSize + pad * 2;
+    const boxH = qrRenderSize + pad * 2;
+    totalW = boxW + bw * 2;
+    const boxY = bubbleH + pointerH + 2;
+    totalH = boxY + boxH + bw * 2;
+    qrX = bw + pad;
+    qrY = boxY + bw + pad;
+  } else if (effectiveFrame === 'frame-curved-arrow') {
+    totalW = 280;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    totalH = isMultiLine ? Math.max(340, 310 + userFontSize * 1.2) : 320;
+    qrRenderSize = 195;
+    qrX = 70;
+    qrY = 20;
+  } else if (effectiveFrame === 'frame-phone') {
+    totalW = 260;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    totalH = isMultiLine ? Math.max(375, 350 + userFontSize * 1.2) : 360;
+    qrRenderSize = 205;
+    const screenX = 14;
+    const screenY = 28;
+    const screenW = totalW - 28;
+    const screenH = 270;
+    qrX = screenX + (screenW - qrRenderSize) / 2;
+    qrY = screenY + (screenH - qrRenderSize) / 2;
+  } else if (effectiveFrame === 'frame-bottom-pointer') {
+    const bw = 7;
+    const pad = 18;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    const bannerH = isMultiLine ? Math.max(46, Math.min(24, userFontSize) * 1.6) : Math.max(34, userFontSize + 8);
+    const pointerH = 8;
+    const gap = 5;
+    qrRenderSize = 220;
+    const boxW = qrRenderSize + pad * 2;
+    const boxH = qrRenderSize + pad * 2;
+    totalW = boxW + bw * 2;
+    totalH = bw * 2 + boxH + gap + pointerH + bannerH;
+    qrX = bw + pad;
+    qrY = bw + pad;
+  } else if (effectiveFrame === 'frame-simple-text') {
+    const bw = 7;
+    const pad = 18;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    const textSectionH = isMultiLine ? Math.max(54, userFontSize * 2.2) : Math.max(42, userFontSize + 16);
+    qrRenderSize = 220;
+    const boxW = qrRenderSize + pad * 2;
+    const boxH = qrRenderSize + pad * 2;
+    totalW = boxW + bw * 2;
+    totalH = bw * 2 + boxH + textSectionH;
+    qrX = bw + pad;
+    qrY = bw + pad;
+  } else if (effectiveFrame === 'frame-top-header') {
+    const bw = 7;
+    const padX = 22;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    const headerH = isMultiLine ? Math.max(54, userFontSize * 2.2) : 46;
+    const gap = 12;
+    const padBottom = 22;
+    qrRenderSize = 220;
+    const innerW = qrRenderSize + padX * 2;
+    totalW = innerW + bw * 2;
+    totalH = bw * 2 + headerH + gap + qrRenderSize + padBottom;
+    qrX = bw + padX;
+    qrY = bw + headerH + gap;
+  }
+
+  // QR matrix generation
+  let qr;
+  for (const ecc of ['H', 'Q', 'M', 'L']) {
+    try {
+      qr = qrcode(0, ecc);
+      qr.addData(url || 'https://example.com');
+      qr.make();
+      break;
+    } catch (_) {}
+  }
+  if (!qr) {
+    qr = qrcode(4, 'L');
+    qr.addData('https://example.com');
+    qr.make();
+  }
+
+  const count = qr.getModuleCount();
+  const margin = 2;
+  const totalModules = count + margin * 2;
+  const modSize = qrRenderSize / totalModules;
+
+  let normPattern = patternStyle || 'classic-square';
+  if (normPattern === 'square') normPattern = 'classic-square';
+  if (normPattern === 'dots') normPattern = 'circular-dots';
+  if (normPattern === 'rounded') normPattern = 'rounded-square';
+
+  let normEyeFrame = eyeFrame || 'classic-square';
+  if (normEyeFrame === 'square') normEyeFrame = 'classic-square';
+  if (normEyeFrame === 'rounded') normEyeFrame = 'rounded-square';
+  if (normEyeFrame === 'circle') normEyeFrame = 'circular-frame';
+
+  let normEyeBall = eyeBall || 'square';
+  if (normEyeBall === 'rounded') normEyeBall = 'rounded-square';
+
+  const isEyeModule = (r, c) => {
+    if (r <= 7 && c <= 7) return true;
+    if (r <= 7 && c >= count - 8) return true;
+    if (r >= count - 8 && c <= 7) return true;
+    return false;
+  };
+
+  const qrElements = [];
+  const hasBackdrop = !isTransparentColor(backdrop);
+
+  // QR Backdrop
+  if (hasBackdrop) {
+    qrElements.push(`<rect x="${qrX}" y="${qrY}" width="${qrRenderSize}" height="${qrRenderSize}" fill="${backdrop}" />`);
+  }
+
+  // QR Modules
+  for (let r = 0; r < count; r++) {
+    for (let c = 0; c < count; c++) {
+      if (isEyeModule(r, c)) continue;
+      if (qr.isDark(r, c)) {
+        const mx = qrX + (c + margin) * modSize;
+        const my = qrY + (r + margin) * modSize;
+        qrElements.push(renderModuleSvg(mx, my, modSize, normPattern, qrColor || '#000000'));
+      }
+    }
+  }
+
+  // 3 Eyes
+  const eyeSize = 7 * modSize;
+  const eyeThickness = modSize;
+  const eyeBallSize = 3 * modSize;
+
+  const eyePositions = [
+    { x: qrX + margin * modSize, y: qrY + margin * modSize },
+    { x: qrX + (count - 7 + margin) * modSize, y: qrY + margin * modSize },
+    { x: qrX + margin * modSize, y: qrY + (count - 7 + margin) * modSize }
+  ];
+
+  eyePositions.forEach((pos) => {
+    if (hasBackdrop) {
+      qrElements.push(`<rect x="${pos.x}" y="${pos.y}" width="${eyeSize}" height="${eyeSize}" fill="${backdrop}" />`);
+    }
+    qrElements.push(renderEyeFrameSvg(pos.x, pos.y, eyeSize, eyeThickness, normEyeFrame, qrColor || '#000000', backdrop));
+    const cx = pos.x + eyeSize / 2;
+    const cy = pos.y + eyeSize / 2;
+    qrElements.push(renderEyeBallSvg(cx, cy, eyeBallSize, normEyeBall, qrColor || '#000000', backdrop));
+  });
+
+  // Center logo
+  if (logoSrc) {
+    const maxBoxDim = Math.round((qrRenderSize * (logoSize || 22)) / 100);
+    const aspect = Number(logoAspect) || (logoAspectCache.get(logoSrc)) || 1;
+    let drawW, drawH;
+    if (aspect >= 1) {
+      drawW = maxBoxDim;
+      drawH = Math.max(4, Math.round(maxBoxDim / aspect));
+    } else {
+      drawH = maxBoxDim;
+      drawW = Math.max(4, Math.round(maxBoxDim * aspect));
+    }
+
+    const lx = qrX + (qrRenderSize - drawW) / 2;
+    const ly = qrY + (qrRenderSize - drawH) / 2;
+    const maxAllowedR = Math.floor(Math.min(drawW, drawH) / 2);
+    const radiusPx = Math.max(0, Math.min(Number(logoRadius) || 0, maxAllowedR));
+
+    if (logoBg) {
+      const pad = 4;
+      const bgRadius = Math.max(0, Math.min(radiusPx + pad, Math.floor(Math.min(drawW + pad * 2, drawH + pad * 2) / 2)));
+      qrElements.push(`<path d="${getSvgPathRoundRect(lx - pad, ly - pad, drawW + pad * 2, drawH + pad * 2, bgRadius)}" fill="${logoBgColor || '#FFFFFF'}" />`);
+    }
+
+    const clipId = `qr-logo-clip-${Math.random().toString(36).substr(2, 6)}`;
+    qrElements.push(`<defs><clipPath id="${clipId}"><path d="${getSvgPathRoundRect(lx, ly, drawW, drawH, radiusPx)}" /></clipPath></defs>`);
+    qrElements.push(`<image x="${lx}" y="${ly}" width="${drawW}" height="${drawH}" href="${escapeXml(logoSrc)}" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid meet" />`);
+  }
+
+  // Frame Elements
+  const frameElements = [];
+  const safeFontFamily = fontFamily || 'Poppins';
+  const safeFontWeight = FONT_WEIGHT_MAP[fontWeight] || (typeof fontWeight === 'number' ? fontWeight : '600');
+  const safeFontSize = parseInt(fontSize) || 24;
+
+  if (effectiveFrame === 'frame-none') {
+    const bg = !isTransparentColor(frameBgColor) ? frameBgColor : (!isTransparentColor(backdrop) ? backdrop : null);
+    if (bg) {
+      frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${bg}" />`);
+    }
+  } else if (effectiveFrame === 'frame-bottom-bar') {
+    const bw = 7;
+    const radius = 14;
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    const bannerH = isMultiLine ? Math.max(54, safeFontSize * 2.2) : 46;
+
+    let bannerFontSize = safeFontSize;
+    const maxTextW = totalW - bw * 2 - 20;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    let measuredW = measureTextWidth(longestLine, bannerFontSize, safeFontFamily, safeFontWeight);
+    while (measuredW > maxTextW && bannerFontSize > 11) {
+      bannerFontSize--;
+      measuredW = measureTextWidth(longestLine, bannerFontSize, safeFontFamily, safeFontWeight);
+    }
+
+    const bannerCenterY = totalH - bw - bannerH / 2;
+    const cardFill = !isTransparentColor(frameBgColor) ? frameBgColor : 'none';
+
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, totalH - bw, radius)}" fill="${cardFill}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw, totalH - bw - bannerH, totalW - bw * 2, bannerH, { tl: 0, tr: 0, br: radius - bw / 2, bl: radius - bw / 2 })}" fill="${arrowColor || '#000000'}" />`);
+
+    if (lines.length === 1) {
+      frameElements.push(`<text x="${totalW / 2}" y="${bannerCenterY}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${bannerFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(lines[0])}</text>`);
+    } else {
+      const lineGap = bannerFontSize * 1.18;
+      const startY = bannerCenterY - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        frameElements.push(`<text x="${totalW / 2}" y="${startY + i * lineGap}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${bannerFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(l)}</text>`);
+      });
+    }
+  } else if (effectiveFrame === 'frame-top-bubble') {
+    const bw = 7;
+    const radius = 14;
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    const bubbleH = isMultiLine ? Math.max(46, Math.min(24, safeFontSize) * 1.6) : Math.max(34, safeFontSize + 8);
+    const pointerH = 8;
+    const boxY = bubbleH + pointerH + 2;
+    const boxH = qrRenderSize + 18 * 2;
+    const bubbleY = 2;
+
+    const maxBubbleW = totalW - 14;
+    const paddingX = 24;
+
+    let bubbleFontSize = safeFontSize;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    let measuredW = measureTextWidth(longestLine, bubbleFontSize, safeFontFamily, safeFontWeight);
+    while (measuredW + paddingX > maxBubbleW && bubbleFontSize > 11) {
+      bubbleFontSize--;
+      measuredW = measureTextWidth(longestLine, bubbleFontSize, safeFontFamily, safeFontWeight);
+    }
+
+    const bubbleW = Math.min(maxBubbleW, Math.max(120, Math.round(measuredW + paddingX)));
+    const bubbleX = totalW / 2 - bubbleW / 2;
+
+    const cardFill = !isTransparentColor(frameBgColor) ? frameBgColor : 'none';
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, boxY + bw / 2, totalW - bw, boxH + bw, radius)}" fill="${cardFill}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+    frameElements.push(`<path d="${getSvgPathRoundRect(bubbleX, bubbleY, bubbleW, bubbleH, 7)}" fill="${arrowColor || '#000000'}" />`);
+    frameElements.push(`<polygon points="${totalW / 2 - 8},${bubbleY + bubbleH} ${totalW / 2},${bubbleY + bubbleH + pointerH} ${totalW / 2 + 8},${bubbleY + bubbleH}" fill="${arrowColor || '#000000'}" />`);
+
+    if (lines.length === 1) {
+      frameElements.push(`<text x="${totalW / 2}" y="${bubbleY + bubbleH / 2}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${bubbleFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(lines[0])}</text>`);
+    } else {
+      const lineGap = bubbleFontSize * 1.18;
+      const startY = bubbleY + bubbleH / 2 - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        frameElements.push(`<text x="${totalW / 2}" y="${startY + i * lineGap}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${bubbleFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(l)}</text>`);
+      });
+    }
+  } else if (effectiveFrame === 'frame-curved-arrow') {
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    let scriptFontSize = safeFontSize;
+    const maxTextW = totalW - 20;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    let measuredW = measureTextWidth(longestLine, scriptFontSize, safeFontFamily, safeFontWeight);
+    while (measuredW > maxTextW && scriptFontSize > 11) {
+      scriptFontSize--;
+      measuredW = measureTextWidth(longestLine, scriptFontSize, safeFontFamily, safeFontWeight);
+    }
+
+    if (!isTransparentColor(frameBgColor)) {
+      frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${frameBgColor}" />`);
+    }
+    frameElements.push(`<path d="M 52 250 C 20 215, 18 140, 56 92" fill="none" stroke="${arrowColor || '#000000'}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />`);
+    const tipX = 66, tipY = 88;
+    const angle = Math.atan2(88 - 98, 66 - 54);
+    const headLen = 14;
+    const p1x = tipX - headLen * Math.cos(angle - Math.PI / 7);
+    const p1y = tipY - headLen * Math.sin(angle - Math.PI / 7);
+    const pMidX = tipX - (headLen * 0.6) * Math.cos(angle);
+    const pMidY = tipY - (headLen * 0.6) * Math.sin(angle);
+    const p2x = tipX - headLen * Math.cos(angle + Math.PI / 7);
+    const p2y = tipY - headLen * Math.sin(angle + Math.PI / 7);
+    frameElements.push(`<polygon points="${tipX},${tipY} ${p1x},${p1y} ${pMidX},${pMidY} ${p2x},${p2y}" fill="${arrowColor || '#000000'}" />`);
+
+    const textCenterY = isMultiLine ? 285 : 280;
+    const textX = (isMultiLine || labelText.length > 12) ? (totalW / 2) : 88;
+    if (lines.length === 1) {
+      frameElements.push(`<text x="${textX}" y="${textCenterY}" fill="${effectiveTextColor || arrowColor || '#000000'}" font-family="${safeFontFamily}, Caveat, cursive" font-size="${scriptFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(lines[0])}</text>`);
+    } else {
+      const lineGap = scriptFontSize * 1.18;
+      const startY = textCenterY - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        frameElements.push(`<text x="${textX}" y="${startY + i * lineGap}" fill="${effectiveTextColor || arrowColor || '#000000'}" font-family="${safeFontFamily}, Caveat, cursive" font-size="${scriptFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(l)}</text>`);
+      });
+    }
+  } else if (effectiveFrame === 'frame-phone') {
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    let phoneFontSize = safeFontSize;
+    const maxTextW = totalW - 28;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    let measuredW = measureTextWidth(longestLine, phoneFontSize, safeFontFamily, safeFontWeight);
+    while (measuredW > maxTextW && phoneFontSize > 11) {
+      phoneFontSize--;
+      measuredW = measureTextWidth(longestLine, phoneFontSize, safeFontFamily, safeFontWeight);
+    }
+
+    frameElements.push(`<path d="${getSvgPathRoundRect(4, 4, totalW - 8, totalH - 8, 24)}" fill="${arrowColor || '#000000'}" />`);
+    frameElements.push(`<path d="${getSvgPathRoundRect(totalW / 2 - 16, 14, 32, 4, 2)}" fill="#e2e8f0" />`);
+    frameElements.push(`<circle cx="${totalW / 2 - 28}" cy="16" r="2.5" fill="#475569" />`);
+    const screenX = 14, screenY = 28, screenW = totalW - 28, screenH = 270;
+    const screenFill = !isTransparentColor(frameBgColor) ? frameBgColor : 'none';
+    frameElements.push(`<path d="${getSvgPathRoundRect(screenX, screenY, screenW, screenH, 10)}" fill="${screenFill}" />`);
+
+    const textCenterY = (screenY + screenH + totalH - 8) / 2;
+    if (lines.length === 1) {
+      frameElements.push(`<text x="${totalW / 2}" y="${textCenterY}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${phoneFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(lines[0])}</text>`);
+    } else {
+      const lineGap = phoneFontSize * 1.18;
+      const startY = textCenterY - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        frameElements.push(`<text x="${totalW / 2}" y="${startY + i * lineGap}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${phoneFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(l)}</text>`);
+      });
+    }
+  } else if (effectiveFrame === 'frame-simple-text') {
+    const bw = 7;
+    const radius = 14;
+    const boxH = qrRenderSize + 18 * 2;
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    const textSectionH = isMultiLine ? Math.max(54, safeFontSize * 2.2) : Math.max(42, safeFontSize + 16);
+
+    let textFontSize = safeFontSize;
+    const maxTextW = totalW - 20;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    let measuredW = measureTextWidth(longestLine, textFontSize, safeFontFamily, safeFontWeight);
+    while (measuredW > maxTextW && textFontSize > 11) {
+      textFontSize--;
+      measuredW = measureTextWidth(longestLine, textFontSize, safeFontFamily, safeFontWeight);
+    }
+
+    const textCenterY = boxH + bw * 2 + textSectionH / 2;
+
+    if (!isTransparentColor(frameBgColor)) {
+      frameElements.push(`<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${frameBgColor}" />`);
+    }
+    const boxFill = !isTransparentColor(frameBgColor) ? frameBgColor : 'none';
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, boxH + bw, radius)}" fill="${boxFill}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+
+    if (lines.length === 1) {
+      frameElements.push(`<text x="${totalW / 2}" y="${textCenterY}" fill="${effectiveTextColor || '#000000'}" font-family="${safeFontFamily}, sans-serif" font-size="${textFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(lines[0])}</text>`);
+    } else {
+      const lineGap = textFontSize * 1.18;
+      const startY = textCenterY - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        frameElements.push(`<text x="${totalW / 2}" y="${startY + i * lineGap}" fill="${effectiveTextColor || '#000000'}" font-family="${safeFontFamily}, sans-serif" font-size="${textFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(l)}</text>`);
+      });
+    }
+  } else if (effectiveFrame === 'frame-top-header') {
+    const bw = 7;
+    const radius = 16;
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    const headerH = isMultiLine ? Math.max(54, safeFontSize * 2.2) : 46;
+
+    let headerFontSize = safeFontSize;
+    const maxTextW = totalW - bw * 2 - 20;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    let measuredW = measureTextWidth(longestLine, headerFontSize, safeFontFamily, safeFontWeight);
+    while (measuredW > maxTextW && headerFontSize > 11) {
+      headerFontSize--;
+      measuredW = measureTextWidth(longestLine, headerFontSize, safeFontFamily, safeFontWeight);
+    }
+
+    const headerCenterY = bw + headerH / 2;
+
+    const cardFill = !isTransparentColor(frameBgColor) ? frameBgColor : 'none';
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, totalH - bw, radius)}" fill="${cardFill}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw, bw, totalW - bw * 2, headerH, { tl: radius - bw / 2, tr: radius - bw / 2, br: 0, bl: 0 })}" fill="${arrowColor || '#000000'}" />`);
+
+    if (lines.length === 1) {
+      frameElements.push(`<text x="${totalW / 2}" y="${headerCenterY}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${headerFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(lines[0])}</text>`);
+    } else {
+      const lineGap = headerFontSize * 1.18;
+      const startY = headerCenterY - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        frameElements.push(`<text x="${totalW / 2}" y="${startY + i * lineGap}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${headerFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(l)}</text>`);
+      });
+    }
+  }
+
+  const svgXml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}">\n  ${frameElements.join('\n  ')}\n  ${qrElements.join('\n  ')}\n</svg>`;
+
+  return {
+    svgXml,
+    dataUrl: svgToDataUrl(svgXml),
+    totalWidth: totalW,
+    totalHeight: totalH
+  };
+}
 
 /**
  * Pre-generate default frames for instant drag-and-drop
@@ -175,6 +923,14 @@ export function getCachedFrame(frameId, url = 'https://example.com') {
         return v;
       }
     } catch (_) {}
+  }
+  const cachedPure = generatePureVectorQRSvg({
+    url,
+    frame: frameId,
+    text: frameObj.defaultText
+  });
+  if (cachedPure?.dataUrl) {
+    return cachedPure;
   }
   // Return dimensions based on ratio
   const width = 50;
@@ -474,9 +1230,11 @@ export async function generateStyledQRImage({
     canvas.height = size;
     const ctx = canvas.getContext('2d');
 
-    // Fill backdrop
-    ctx.fillStyle = backdrop || '#FFFFFF';
-    ctx.fillRect(0, 0, size, size);
+    // Fill backdrop if not transparent
+    if (!isTransparentColor(backdrop)) {
+      ctx.fillStyle = backdrop;
+      ctx.fillRect(0, 0, size, size);
+    }
 
     // Normalize legacy style names
     let normPattern = patternStyle || 'classic-square';
@@ -524,9 +1282,11 @@ export async function generateStyledQRImage({
     ];
 
     eyePositions.forEach((pos) => {
-      // Clear eye area with backdrop
-      ctx.fillStyle = backdrop || '#FFFFFF';
-      ctx.fillRect(pos.x, pos.y, eyeSize, eyeSize);
+      // Clear eye area with backdrop if not transparent
+      if (!isTransparentColor(backdrop)) {
+        ctx.fillStyle = backdrop;
+        ctx.fillRect(pos.x, pos.y, eyeSize, eyeSize);
+      }
 
       // Draw Eye Frame
       drawEyeFrame(ctx, pos.x, pos.y, eyeSize, eyeThickness, normEyeFrame, qrColor, backdrop);
@@ -556,10 +1316,11 @@ export async function renderQRWithFrame({
   frame = 'frame-bottom-bar',
   text = 'SCAN ME',
   logoSrc = null,
-  logoSize = 22,
-  logoRadius = 80,
+  logoSize = 17,
+  logoRadius = 0,
   logoBg = true,
   logoBgColor = '#FFFFFF',
+  logoAspect = null,
   qrColor = '#000000',
   backdrop = '#FFFFFF',
   patternStyle = 'square',
@@ -591,8 +1352,34 @@ export async function renderQRWithFrame({
     effectiveTextColor = arrowColor || '#000000';
   }
 
+  // Auto-resolve logo aspect ratio if logoSrc is present
+  let resolvedLogoAspect = logoAspect;
+  if (logoSrc) {
+    if (!resolvedLogoAspect && logoAspectCache.has(logoSrc)) {
+      resolvedLogoAspect = logoAspectCache.get(logoSrc);
+    }
+    if (!resolvedLogoAspect && typeof window !== 'undefined') {
+      try {
+        const img = await loadImg(logoSrc);
+        if (img) {
+          const nw = img.naturalWidth || img.width;
+          const nh = img.naturalHeight || img.height;
+          if (nw && nh && nh > 0) {
+            resolvedLogoAspect = nw / nh;
+            logoAspectCache.set(logoSrc, resolvedLogoAspect);
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  const effectiveQrData = (url && String(url).trim()) ? String(url).trim() : 'https://example.com';
+  const qrEncodedPayload = (!effectiveQrData.startsWith('http://') && !effectiveQrData.startsWith('https://') && !effectiveQrData.startsWith('mailto:') && !effectiveQrData.startsWith('tel:') && !effectiveQrData.startsWith('sms:'))
+    ? `https://${effectiveQrData}`
+    : effectiveQrData;
+
   const cacheKey = JSON.stringify({
-    url, frame: effectiveFrame, text, logoSrc, logoSize, logoRadius, logoBg, logoBgColor,
+    url: qrEncodedPayload, frame: effectiveFrame, text, logoSrc, logoSize, logoRadius, logoBg, logoBgColor, logoAspect: resolvedLogoAspect,
     qrColor, backdrop, patternStyle, eyeFrame, eyeBall,
     fontFamily, fontSize, fontWeight, textColor: effectiveTextColor, frameBgColor, arrowColor, dropShadow
   });
@@ -600,9 +1387,42 @@ export async function renderQRWithFrame({
     return qrImageCache.get(cacheKey);
   }
 
+  // Generate pure vector SVG representation
+  try {
+    const vectorResult = generatePureVectorQRSvg({
+      url: qrEncodedPayload,
+      frame: effectiveFrame,
+      text,
+      logoSrc,
+      logoSize,
+      logoRadius,
+      logoBg,
+      logoBgColor,
+      logoAspect: resolvedLogoAspect,
+      qrColor,
+      backdrop,
+      patternStyle,
+      eyeFrame,
+      eyeBall,
+      fontFamily,
+      fontSize,
+      fontWeight,
+      textColor: effectiveTextColor,
+      frameBgColor,
+      arrowColor
+    });
+
+    if (vectorResult?.dataUrl) {
+      qrImageCache.set(cacheKey, vectorResult);
+      return vectorResult;
+    }
+  } catch (vectorErr) {
+    console.warn('[QR] Vector SVG generation error, falling back to canvas:', vectorErr);
+  }
+
   const baseQRSize = 240;
   const qrImg = await generateStyledQRImage({
-    url,
+    url: qrEncodedPayload,
     qrColor,
     backdrop,
     patternStyle,
@@ -639,7 +1459,9 @@ export async function renderQRWithFrame({
     const bw = 7;
     const padX = 22;
     const padTop = 22;
-    const bannerH = 46;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    const bannerH = isMultiLine ? Math.max(54, userFontSize * 2.2) : 46;
     const gap = 12;
     qrRenderSize = 220;
     const innerW = qrRenderSize + padX * 2;
@@ -650,7 +1472,9 @@ export async function renderQRWithFrame({
   } else if (effectiveFrame === 'frame-top-bubble') {
     const bw = 7;
     const pad = 18;
-    const bubbleH = 34;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    const bubbleH = isMultiLine ? Math.max(46, Math.min(24, userFontSize) * 1.6) : Math.max(34, userFontSize + 8);
     const pointerH = 8;
     qrRenderSize = 220;
     const boxW = qrRenderSize + pad * 2;
@@ -662,13 +1486,17 @@ export async function renderQRWithFrame({
     qrY = boxY + bw + pad;
   } else if (effectiveFrame === 'frame-curved-arrow') {
     totalW = 280;
-    totalH = 320;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    totalH = isMultiLine ? Math.max(340, 310 + userFontSize * 1.2) : 320;
     qrRenderSize = 195;
     qrX = 70;
     qrY = 20;
   } else if (effectiveFrame === 'frame-phone') {
     totalW = 260;
-    totalH = 360;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    totalH = isMultiLine ? Math.max(375, 350 + userFontSize * 1.2) : 360;
     qrRenderSize = 205;
     const screenX = 14;
     const screenY = 28;
@@ -679,7 +1507,9 @@ export async function renderQRWithFrame({
   } else if (effectiveFrame === 'frame-bottom-pointer') {
     const bw = 7;
     const pad = 18;
-    const bannerH = 34;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    const bannerH = isMultiLine ? Math.max(46, Math.min(24, userFontSize) * 1.6) : Math.max(34, userFontSize + 8);
     const pointerH = 8;
     const gap = 5;
     qrRenderSize = 220;
@@ -692,17 +1522,22 @@ export async function renderQRWithFrame({
   } else if (effectiveFrame === 'frame-simple-text') {
     const bw = 7;
     const pad = 18;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    const textSectionH = isMultiLine ? Math.max(54, userFontSize * 2.2) : Math.max(42, userFontSize + 16);
     qrRenderSize = 220;
     const boxW = qrRenderSize + pad * 2;
     const boxH = qrRenderSize + pad * 2;
     totalW = boxW + bw * 2;
-    totalH = bw * 2 + boxH + 42;
+    totalH = bw * 2 + boxH + textSectionH;
     qrX = bw + pad;
     qrY = bw + pad;
   } else if (effectiveFrame === 'frame-top-header') {
     const bw = 7;
     const padX = 22;
-    const headerH = 46;
+    const isMultiLine = labelText.length > 17;
+    const userFontSize = parseInt(fontSize) || 24;
+    const headerH = isMultiLine ? Math.max(54, userFontSize * 2.2) : 46;
     const gap = 12;
     const padBottom = 22;
     qrRenderSize = 220;
@@ -736,7 +1571,9 @@ export async function renderQRWithFrame({
   } else if (effectiveFrame === 'frame-bottom-bar') {
     const bw = 7;
     const radius = 14;
-    const bannerH = 46;
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    const bannerH = isMultiLine ? Math.max(54, safeFontSize * 2.2) : 46;
 
     // Card background
     drawRoundRect(ctx, bw / 2, bw / 2, totalW - bw, totalH - bw, radius);
@@ -754,11 +1591,28 @@ export async function renderQRWithFrame({
     ctx.fill();
 
     // Banner Text
+    let bannerFontSize = safeFontSize;
+    const maxTextW = totalW - bw * 2 - 20;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    ctx.font = `${safeFontWeight} ${bannerFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+    while (ctx.measureText(longestLine).width > maxTextW && bannerFontSize > 11) {
+      bannerFontSize--;
+      ctx.font = `${safeFontWeight} ${bannerFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+    }
     ctx.fillStyle = textColor || '#ffffff';
-    ctx.font = `${safeFontWeight} ${Math.round(safeFontSize * 0.75)}px "${safeFontFamily}", -apple-system, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(labelText, totalW / 2, totalH - bw - bannerH / 2);
+
+    const bannerCenterY = totalH - bw - bannerH / 2;
+    if (lines.length === 1) {
+      ctx.fillText(lines[0], totalW / 2, bannerCenterY);
+    } else {
+      const lineGap = bannerFontSize * 1.18;
+      const startY = bannerCenterY - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        ctx.fillText(l, totalW / 2, startY + i * lineGap);
+      });
+    }
 
     // Outer thick border
     drawRoundRect(ctx, bw / 2, bw / 2, totalW - bw, totalH - bw, radius);
@@ -769,11 +1623,29 @@ export async function renderQRWithFrame({
   } else if (effectiveFrame === 'frame-top-bubble') {
     const bw = 7;
     const radius = 14;
-    const bubbleH = 34;
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    const bubbleH = isMultiLine ? Math.max(46, Math.min(24, safeFontSize) * 1.6) : Math.max(34, safeFontSize + 8);
     const pointerH = 8;
-    const bubbleW = 145;
     const boxY = bubbleH + pointerH + 2;
     const boxH = qrRenderSize + 18 * 2;
+
+    const maxBubbleW = totalW - 14;
+    const paddingX = 24;
+
+    let bubbleFontSize = safeFontSize;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    ctx.font = `${safeFontWeight} ${bubbleFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+    let measuredW = ctx.measureText(longestLine).width;
+    while (measuredW + paddingX > maxBubbleW && bubbleFontSize > 11) {
+      bubbleFontSize--;
+      ctx.font = `${safeFontWeight} ${bubbleFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+      measuredW = ctx.measureText(longestLine).width;
+    }
+
+    const bubbleW = Math.min(maxBubbleW, Math.max(120, Math.round(measuredW + paddingX)));
+    const bubbleX = totalW / 2 - bubbleW / 2;
+    const bubbleY = 2;
 
     // Main QR Box
     drawRoundRect(ctx, bw / 2, boxY + bw / 2, totalW - bw, boxH + bw, radius);
@@ -784,8 +1656,6 @@ export async function renderQRWithFrame({
     ctx.stroke();
 
     // Top speech bubble
-    const bubbleX = totalW / 2 - bubbleW / 2;
-    const bubbleY = 2;
     drawRoundRect(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 7);
     ctx.fillStyle = arrowColor || '#000000';
     ctx.fill();
@@ -800,12 +1670,32 @@ export async function renderQRWithFrame({
 
     // Speech bubble text
     ctx.fillStyle = textColor || '#ffffff';
-    ctx.font = `${safeFontWeight} ${Math.round(safeFontSize * 0.65)}px "${safeFontFamily}", -apple-system, sans-serif`;
+    ctx.font = `${safeFontWeight} ${bubbleFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(labelText, totalW / 2, bubbleY + bubbleH / 2);
+
+    if (lines.length === 1) {
+      ctx.fillText(lines[0], totalW / 2, bubbleY + bubbleH / 2);
+    } else {
+      const lineGap = bubbleFontSize * 1.18;
+      const startY = bubbleY + bubbleH / 2 - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        ctx.fillText(l, totalW / 2, startY + i * lineGap);
+      });
+    }
 
   } else if (effectiveFrame === 'frame-curved-arrow') {
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    let scriptFontSize = safeFontSize;
+    const maxTextW = totalW - 20;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    ctx.font = `${safeFontWeight} ${scriptFontSize}px "${safeFontFamily}", "Caveat", cursive`;
+    while (ctx.measureText(longestLine).width > maxTextW && scriptFontSize > 11) {
+      scriptFontSize--;
+      ctx.font = `${safeFontWeight} ${scriptFontSize}px "${safeFontFamily}", "Caveat", cursive`;
+    }
+
     // Card background
     ctx.fillStyle = frameBgColor || '#ffffff';
     ctx.fillRect(0, 0, totalW, totalH);
@@ -845,13 +1735,34 @@ export async function renderQRWithFrame({
 
     // Script text
     ctx.fillStyle = effectiveTextColor || arrowColor || '#000000';
-    ctx.font = `${safeFontWeight} ${safeFontSize}px "${safeFontFamily}", "Caveat", cursive`;
+    ctx.font = `${safeFontWeight} ${scriptFontSize}px "${safeFontFamily}", "Caveat", cursive`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const textX = labelText.length > 12 ? (totalW / 2) : 88;
-    ctx.fillText(labelText, textX, 280);
+    const textCenterY = isMultiLine ? 285 : 280;
+    const textX = (isMultiLine || labelText.length > 12) ? (totalW / 2) : 88;
+
+    if (lines.length === 1) {
+      ctx.fillText(lines[0], textX, textCenterY);
+    } else {
+      const lineGap = scriptFontSize * 1.18;
+      const startY = textCenterY - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        ctx.fillText(l, textX, startY + i * lineGap);
+      });
+    }
 
   } else if (effectiveFrame === 'frame-phone') {
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    let phoneFontSize = safeFontSize;
+    const maxTextW = totalW - 28;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    ctx.font = `${safeFontWeight} ${phoneFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+    while (ctx.measureText(longestLine).width > maxTextW && phoneFontSize > 11) {
+      phoneFontSize--;
+      ctx.font = `${safeFontWeight} ${phoneFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+    }
+
     // Phone body silhouette
     drawRoundRect(ctx, 4, 4, totalW - 8, totalH - 8, 24);
     ctx.fillStyle = arrowColor || '#000000';
@@ -879,19 +1790,45 @@ export async function renderQRWithFrame({
 
     // Bottom banner text
     ctx.fillStyle = textColor || '#ffffff';
-    ctx.font = `${safeFontWeight} ${Math.round(safeFontSize * 0.68)}px "${safeFontFamily}", -apple-system, sans-serif`;
+    ctx.font = `${safeFontWeight} ${phoneFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(labelText, totalW / 2, 328);
+
+    const textCenterY = (screenY + screenH + totalH - 8) / 2;
+    if (lines.length === 1) {
+      ctx.fillText(lines[0], totalW / 2, textCenterY);
+    } else {
+      const lineGap = phoneFontSize * 1.18;
+      const startY = textCenterY - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        ctx.fillText(l, totalW / 2, startY + i * lineGap);
+      });
+    }
 
   } else if (effectiveFrame === 'frame-bottom-pointer') {
     const bw = 7;
     const radius = 14;
-    const bannerH = 34;
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    const bannerH = isMultiLine ? Math.max(46, Math.min(24, safeFontSize) * 1.6) : Math.max(34, safeFontSize + 8);
     const pointerH = 8;
-    const bannerW = 150;
     const gap = 5;
     const boxH = qrRenderSize + 18 * 2;
+
+    const maxBannerW = totalW - 14;
+    const paddingX = 24;
+
+    let bannerFontSize = safeFontSize;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    ctx.font = `${safeFontWeight} ${bannerFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+    let measuredW = ctx.measureText(longestLine).width;
+    while (measuredW + paddingX > maxBannerW && bannerFontSize > 11) {
+      bannerFontSize--;
+      ctx.font = `${safeFontWeight} ${bannerFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+      measuredW = ctx.measureText(longestLine).width;
+    }
+
+    const bannerW = Math.min(maxBannerW, Math.max(120, Math.round(measuredW + paddingX)));
 
     // Main QR Box
     drawRoundRect(ctx, bw / 2, bw / 2, totalW - bw, boxH + bw, radius);
@@ -920,15 +1857,37 @@ export async function renderQRWithFrame({
 
     // Banner text
     ctx.fillStyle = textColor || '#ffffff';
-    ctx.font = `${safeFontWeight} ${Math.round(safeFontSize * 0.65)}px "${safeFontFamily}", -apple-system, sans-serif`;
+    ctx.font = `${safeFontWeight} ${bannerFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(labelText, totalW / 2, bannerY + bannerH / 2);
+
+    const bannerCenterY = bannerY + bannerH / 2;
+    if (lines.length === 1) {
+      ctx.fillText(lines[0], totalW / 2, bannerCenterY);
+    } else {
+      const lineGap = bannerFontSize * 1.18;
+      const startY = bannerCenterY - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        ctx.fillText(l, totalW / 2, startY + i * lineGap);
+      });
+    }
 
   } else if (effectiveFrame === 'frame-simple-text') {
     const bw = 7;
     const radius = 14;
     const boxH = qrRenderSize + 18 * 2;
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    const textSectionH = isMultiLine ? Math.max(54, safeFontSize * 2.2) : Math.max(42, safeFontSize + 16);
+
+    let textFontSize = safeFontSize;
+    const maxTextW = totalW - 20;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    ctx.font = `${safeFontWeight} ${textFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+    while (ctx.measureText(longestLine).width > maxTextW && textFontSize > 11) {
+      textFontSize--;
+      ctx.font = `${safeFontWeight} ${textFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+    }
 
     // White backdrop
     ctx.fillStyle = frameBgColor || '#ffffff';
@@ -944,15 +1903,36 @@ export async function renderQRWithFrame({
 
     // Clean text underneath
     ctx.fillStyle = effectiveTextColor || '#000000';
-    ctx.font = `${safeFontWeight} ${Math.round(safeFontSize * 0.75)}px "${safeFontFamily}", -apple-system, sans-serif`;
+    ctx.font = `${safeFontWeight} ${textFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(labelText, totalW / 2, boxH + bw * 2 + 20);
+
+    const textCenterY = boxH + bw * 2 + textSectionH / 2;
+    if (lines.length === 1) {
+      ctx.fillText(lines[0], totalW / 2, textCenterY);
+    } else {
+      const lineGap = textFontSize * 1.18;
+      const startY = textCenterY - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        ctx.fillText(l, totalW / 2, startY + i * lineGap);
+      });
+    }
 
   } else if (effectiveFrame === 'frame-top-header') {
     const bw = 7;
     const radius = 16;
-    const headerH = 46;
+    const isMultiLine = labelText.length > 17;
+    const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
+    const headerH = isMultiLine ? Math.max(54, safeFontSize * 2.2) : 46;
+
+    let headerFontSize = safeFontSize;
+    const maxTextW = totalW - bw * 2 - 20;
+    const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), '');
+    ctx.font = `${safeFontWeight} ${headerFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+    while (ctx.measureText(longestLine).width > maxTextW && headerFontSize > 11) {
+      headerFontSize--;
+      ctx.font = `${safeFontWeight} ${headerFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
+    }
 
     // White background
     drawRoundRect(ctx, bw / 2, bw / 2, totalW - bw, totalH - bw, radius);
@@ -971,10 +1951,20 @@ export async function renderQRWithFrame({
 
     // Header Text
     ctx.fillStyle = textColor || '#ffffff';
-    ctx.font = `${safeFontWeight} ${Math.round(safeFontSize * 0.75)}px "${safeFontFamily}", -apple-system, sans-serif`;
+    ctx.font = `${safeFontWeight} ${headerFontSize}px "${safeFontFamily}", -apple-system, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(labelText, totalW / 2, bw + headerH / 2);
+
+    const headerCenterY = bw + headerH / 2;
+    if (lines.length === 1) {
+      ctx.fillText(lines[0], totalW / 2, headerCenterY);
+    } else {
+      const lineGap = headerFontSize * 1.18;
+      const startY = headerCenterY - (lineGap * (lines.length - 1)) / 2;
+      lines.forEach((l, i) => {
+        ctx.fillText(l, totalW / 2, startY + i * lineGap);
+      });
+    }
 
     // Outer thick border
     drawRoundRect(ctx, bw / 2, bw / 2, totalW - bw, totalH - bw, radius);
@@ -996,24 +1986,39 @@ export async function renderQRWithFrame({
   if (logoSrc) {
     const logoImg = await loadImg(logoSrc);
     if (logoImg) {
-      const logoDim = Math.round((qrRenderSize * logoSize) / 100);
-      const logoX = qrX + (qrRenderSize - logoDim) / 2;
-      const logoY = qrY + (qrRenderSize - logoDim) / 2;
-      const radiusPx = Math.round((logoDim / 2) * ((logoRadius ?? 80) / 100));
+      const maxBoxDim = Math.round((qrRenderSize * logoSize) / 100);
+      const imgW = logoImg.naturalWidth || logoImg.width || 1;
+      const imgH = logoImg.naturalHeight || logoImg.height || 1;
+      const aspect = imgW / imgH;
+
+      let drawW, drawH;
+      if (aspect >= 1) {
+        drawW = maxBoxDim;
+        drawH = Math.max(4, Math.round(maxBoxDim / aspect));
+      } else {
+        drawH = maxBoxDim;
+        drawW = Math.max(4, Math.round(maxBoxDim * aspect));
+      }
+
+      const logoX = qrX + (qrRenderSize - drawW) / 2;
+      const logoY = qrY + (qrRenderSize - drawH) / 2;
+      // Fixed pixel radius: capped so it doesn't exceed half of the shortest edge
+      const maxAllowedR = Math.floor(Math.min(drawW, drawH) / 2);
+      const radiusPx = Math.max(0, Math.min(Number(logoRadius) || 0, maxAllowedR));
 
       if (logoBg) {
         const pad = 4;
         ctx.save();
-        drawRoundRect(ctx, logoX - pad, logoY - pad, logoDim + pad * 2, logoDim + pad * 2, radiusPx + pad);
+        drawRoundRect(ctx, logoX - pad, logoY - pad, drawW + pad * 2, drawH + pad * 2, radiusPx + pad);
         ctx.fillStyle = logoBgColor || '#ffffff';
         ctx.fill();
         ctx.restore();
       }
 
       ctx.save();
-      drawRoundRect(ctx, logoX, logoY, logoDim, logoDim, radiusPx);
+      drawRoundRect(ctx, logoX, logoY, drawW, drawH, radiusPx);
       ctx.clip();
-      ctx.drawImage(logoImg, logoX, logoY, logoDim, logoDim);
+      ctx.drawImage(logoImg, logoX, logoY, drawW, drawH);
       ctx.restore();
     }
   }

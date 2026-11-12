@@ -1,6 +1,5 @@
 export { default as ElementShapesProperties, ShapeAppearanceControls } from '../../../properties/ShapeProperties';
-export { default as TextElementEditor } from './TextElementproperties';
-export { default as TextElementproperties } from './TextElementproperties';
+export { default as ElementTitlesProperties } from './ElementTitlesProperties';
 export { default as ElementButtonProperties } from './ElementButtonProperties';
 export { default as ButtonEditor } from './ElementButtonProperties';
 export { default as ImageFramingProperties } from './ImageFramingProperties';
@@ -9,6 +8,5 @@ export { default as ElementQRCodeProperties } from './ElementQRCodeProperties';
 export { default as ElementMapProperties } from './ElementMapProperties';
 export { default as ElementEmbedProperties } from './ElementEmbedProperties';
 export { default as ElementSlideshowProperties } from './ElementSlideshowProperties';
-export { default as ElementDecoratorProperties } from './ElementDecoratorProperties';
 export { default as ElementAudioProperties } from './ElementAudioProperties';
 export * from './ElementUIControls';

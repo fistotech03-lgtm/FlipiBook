@@ -1,15 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ChevronUp,
-  ChevronLeft,
-  ChevronRight,
-  Link2,
-  Link2Off,
   Pencil,
   ArrowLeftRight,
-  Check,
-  Trash2,
+  ChevronDown,
+  Minus,
   Plus
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
@@ -17,94 +12,99 @@ import ColorPicker, { parseGradient, generateGradientString } from '../../../../
 import { IconsModal } from '../../Icons';
 import Effect from '../../../properties/Effect';
 import CornerRadius from '../../../properties/CornerRadius';
-import { ElementToggle, ElementSlider, ElementDropdown } from './ElementUIControls';
+import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIControls';
+import { handleScrubHelper } from '../../../properties/propertiesShared';
+import { BUTTON_TEMPLATES } from '../utils/buttonElementUtils';
 
 const SectionHeader = ({ title }) => (
-  <div className="flex items-center gap-[0.4vw] mt-[0.3vw] mb-[0.1vw]">
-    <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
-    <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
+  <div className="flex items-center gap-[0.8vw]">
+    <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+    <div className="flex-1 h-[1px] bg-gray-200" />
   </div>
 );
 
-// Helper row with fixed-width label ensuring all colons align vertically
-const PropertyRow = ({ label, children, className = '' }) => (
-  <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-[0.8vw] text-gray-700 font-medium">
-      <span className="whitespace-nowrap">{label}</span>
-      <span className="text-gray-500 font-medium">:</span>
-    </div>
-    <div className="flex-1 min-w-0">
-      {children}
-    </div>
-  </div>
-);
-
-// Color swatch + hex & opacity box with ColorPicker connectivity
-const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => {
-  const displayColor = (color && color.startsWith('#')) ? color.toUpperCase() : (color || '#000000');
+// Exact ColorBox matching user screenshot and Color.jsx
+const ColorBoxRow = ({
+  title,
+  color,
+  opacity = 100,
+  onOpenPicker,
+  onChange,
+  onOpacityChange,
+  isActive = false,
+  titleRight,
+}) => {
+  const isTransparent = !color || color === 'none' || color === 'transparent';
+  const displayColor = (() => {
+    if (isTransparent) return '#';
+    if (typeof color === 'string' && color.includes('gradient')) return 'Gradient';
+    return typeof color === 'string' ? (color.startsWith('#') ? color.toUpperCase() : '#' + color.toUpperCase()) : '#000000';
+  })();
 
   return (
-    <div className="flex items-center gap-[0.4vw] w-full">
-      <div
-        onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
-          isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
-        }`}
-        style={{ background: (color === 'none' || color === 'transparent') ? '#ffffff' : (color || '#000000') }}
-        title="Click to open color palette"
-      >
-        {(color === 'none' || color === 'transparent') && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
-        )}
-      </div>
-      <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-        <input
-          type="text"
-          value={color && color.includes('gradient') ? 'GRADIENT' : displayColor}
-          onChange={(e) => {
-            let val = e.target.value;
-            if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
-            onChange(val);
-          }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase"
-          maxLength={color && color.includes('gradient') ? 10 : 7}
-        />
-        <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
+    <div className="flex flex-col gap-[0.5vw]">
+      {title && (
+        <div className="flex items-center gap-[0.8vw] mb-[0.1vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+          {titleRight}
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+      )}
+      <div className="flex items-center gap-[0.6vw]">
+        {/* Swatch (3.6vw x 2.1vw rounded rectangle matching user screenshot) */}
+        <div
+          onClick={onOpenPicker}
+          className={`w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105 ${
+            isActive ? 'border-indigo-500 ring-2 ring-indigo-500/20' : ''
+          }`}
+          title={`Change ${title || 'color'}`}
+        >
+          <div
+            className="w-full h-full"
+            style={{ background: isTransparent ? '#ffffff' : color }}
+          />
+          {isTransparent && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45 pointer-events-none" />
+          )}
+        </div>
+
+        {/* Input box */}
+        <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 focus-within:border-indigo-400 transition-colors shadow-2xs">
+          <input
+            type="text"
+            value={displayColor}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || val === '#') {
+                onChange('none');
+              } else {
+                const finalVal = val.startsWith('#') ? val : '#' + val;
+                onChange(finalVal);
+              }
+            }}
+            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            maxLength={9}
+          />
+          <div
+            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+            onPointerDown={(e) => {
+              handleScrubHelper(e, opacity, (val) => {
+                const num = parseInt(val, 10);
+                const clamped = Math.min(Math.max(isNaN(num) ? 0 : num, 0), 100);
+                onOpacityChange(clamped);
+              });
+            }}
+            title="Drag horizontally to adjust opacity"
+          >
+            <span className="text-[0.8vw] font-medium text-gray-700">
+              {opacity}%
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
-
-const ColorInputWithFormat = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => (
-  <div className="flex items-center gap-[0.4vw] w-full">
-    <div
-      onClick={onOpenPicker}
-      className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
-        isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
-      }`}
-      style={{ background: (color === 'none' || color === 'transparent') ? '#ffffff' : (color || '#000000') }}
-      title="Click to open color palette"
-    >
-      {(color === 'none' || color === 'transparent') && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
-      )}
-    </div>
-    <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-      <input
-        type="text"
-        value={color && color.includes('gradient') ? 'GRADIENT' : (color?.toUpperCase() || '#000000')}
-        onChange={(e) => {
-          let val = e.target.value;
-          if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
-          onChange(val);
-        }}
-        className="w-[5.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase"
-        maxLength={color && color.includes('gradient') ? 10 : 7}
-      />
-      <span className="text-gray-400 text-[0.75vw] font-medium">{opacity}%</span>
-    </div>
-  </div>
-);
 
 const fontFamilies = [
   'Poppins', 'Arial', 'Bangers', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
@@ -130,10 +130,27 @@ const fontSizes = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 50,
 const extractColorOrGradient = (element, attrName, defaultColor) => {
   if (!element) return defaultColor;
   const buttonG = element.closest?.('[data-is-element-button="true"], [data-type="button"], g[id^="button-"]');
-  const dataColor = element.getAttribute(`data-${attrName}-color`) || buttonG?.getAttribute(`data-${attrName}-color`);
-  if (dataColor) return dataColor;
+  // First check data attribute on the element itself (e.g. data-fill-color on <text>)
+  const ownDataColor = element.getAttribute(`data-${attrName}-color`);
+  if (ownDataColor) return ownDataColor;
 
-  const rawVal = element.getAttribute(attrName) || element.style?.[attrName] || defaultColor;
+  // Next, if element is text, check for standard data-text-color
+  if (element.tagName?.toLowerCase() === 'text') {
+    const textDataColor = element.getAttribute('data-text-color') || buttonG?.getAttribute('data-text-color');
+    if (textDataColor) return textDataColor;
+  }
+
+  // Next, check the raw style or attribute on the element directly
+  const directVal = element.style?.[attrName] || element.getAttribute(attrName);
+  if (directVal && directVal !== 'none' && !directVal.startsWith('url(#')) {
+    return directVal;
+  }
+
+  // Next check container buttonG attribute if not shape fill
+  const parentDataColor = buttonG?.getAttribute(`data-${attrName}-color`);
+  if (parentDataColor && element.tagName?.toLowerCase() !== 'text') return parentDataColor;
+
+  const rawVal = directVal || defaultColor;
   if (rawVal && rawVal.startsWith('url(#')) {
     const gradId = rawVal.match(/url\(#([^)]+)\)/)?.[1];
     const svgRoot = element.closest('svg');
@@ -179,7 +196,7 @@ const lightenColor = (col, amount = 0.3) => {
       if (parsed && parsed.stops && parsed.stops.length > 0) {
         baseCol = parsed.stops[0].color;
       }
-    } catch (_) {}
+    } catch (_) { }
   }
   if (typeof baseCol !== 'string') return col;
   let r = 0, g = 0, b = 0;
@@ -271,7 +288,7 @@ export const ButtonEditor = ({
   // ─── 1. Button Content States ───────────────────────────────────
   const [buttonText, setButtonText] = useState('Button');
   const [fontFamily, setFontFamily] = useState('Poppins');
-  const [fontSize, setFontSize] = useState(14);
+  const [fontSize, setFontSize] = useState(12);
   const [fontWeight, setFontWeight] = useState('600'); // Semi Bold
   const [textFillColor, setTextFillColor] = useState('#000000');
   const [textOpacity, setTextOpacity] = useState(100);
@@ -289,9 +306,6 @@ export const ButtonEditor = ({
   const [isIconGalleryOpen, setIsIconGalleryOpen] = useState(false);
 
   // ─── 2. Size & Spacing States ───────────────────────────────────
-  const [paddingW, setPaddingW] = useState(0);
-  const [paddingH, setPaddingH] = useState(0);
-  const [isPaddingLinked, setIsPaddingLinked] = useState(true);
   const [iconGap, setIconGap] = useState(4);
 
   // ─── 3. Button Color States ─────────────────────────────────────
@@ -306,7 +320,36 @@ export const ButtonEditor = ({
   const [lineStyle, setLineStyle] = useState('Solid'); // 'Solid', 'Dashed', 'Dotted'
   const [dashL, setDashL] = useState(8);
   const [dashG, setDashG] = useState(4);
-  const [lineCorner, setLineCorner] = useState('Square'); // 'Square', 'Rounded'
+  const [lineCorner, setLineCorner] = useState(() => {
+    if (currentElement) {
+      const btnTemplate = currentElement.getAttribute('data-button-template') || '';
+      const isChevronOrRibbon = currentElement.querySelector('polygon.btn-main-poly') || currentElement.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
+      const shapeEl = currentElement.querySelector('.btn-main-poly') || currentElement.querySelector('rect.btn-bg') || currentElement.querySelector('rect') || currentElement;
+      const slc = shapeEl?.getAttribute('stroke-linecap') || shapeEl?.getAttribute('stroke-linejoin');
+      if (slc) return slc === 'round' ? 'Rounded' : 'Square';
+
+      if (!isChevronOrRibbon) {
+        const rawTl = currentElement.getAttribute('data-tl');
+        const rawTr = currentElement.getAttribute('data-tr');
+        const rawBl = currentElement.getAttribute('data-bl');
+        const rawBr = currentElement.getAttribute('data-br');
+        const rectEl = currentElement.querySelector('rect.btn-bg') || currentElement.querySelector('rect');
+        const rxVal = rectEl?.getAttribute('rx');
+        const parseR = (val, fb) => {
+          if (val === null || val === undefined || val === '') return fb;
+          const n = parseInt(val, 10);
+          return !isNaN(n) ? n : fb;
+        };
+        const tl = parseR(rawTl !== null ? rawTl : rxVal, 0);
+        const tr = parseR(rawTr !== null ? rawTr : rxVal, 0);
+        const bl = parseR(rawBl !== null ? rawBl : rxVal, 0);
+        const br = parseR(rawBr !== null ? rawBr : rxVal, 0);
+        if (Math.max(tl, tr, bl, br) > 0) return 'Rounded';
+      }
+      return 'Square';
+    }
+    return 'Square';
+  });
 
   // ─── 5. Corner Radius States ────────────────────────────────────
   const [radius, setRadius] = useState(() => {
@@ -326,10 +369,13 @@ export const ButtonEditor = ({
         const n = parseInt(val, 10);
         return !isNaN(n) ? n : fb;
       };
-      const defTl = isSlanted ? 24 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
-      const defTr = isSlanted ? 0 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
-      const defBl = isSlanted ? 0 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
-      const defBr = isSlanted ? 24 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : 12);
+      const btnTemplate = currentElement.getAttribute('data-button-template') || '';
+      const isChevronOrRibbon = currentElement.querySelector('polygon.btn-main-poly') || currentElement.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
+      const defFallback = isChevronOrRibbon ? 0 : 12;
+      const defTl = isSlanted ? 24 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : defFallback);
+      const defTr = isSlanted ? 0 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : defFallback);
+      const defBl = isSlanted ? 0 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : defFallback);
+      const defBr = isSlanted ? 24 : (rxVal !== null && !isNaN(parseInt(rxVal, 10)) ? parseInt(rxVal, 10) : defFallback);
 
       return {
         tl: parseR(rawTl !== null ? rawTl : rxVal, defTl),
@@ -359,7 +405,7 @@ export const ButtonEditor = ({
   });
 
   // ─── 6. Effects States ──────────────────────────────────────────
-  const [activeEffects, setActiveEffects] = useState(['Drop Shadow']);
+  const [activeEffects, setActiveEffects] = useState([]);
   const [effectSettings, setEffectSettings] = useState({
     'Drop Shadow': {
       x: 2,
@@ -373,6 +419,11 @@ export const ButtonEditor = ({
 
   const [openSection, setOpenSection] = useState(null);
   const [activeColorPicker, setActiveColorPicker] = useState(null);
+  const [showFontDropdown, setShowFontDropdown] = useState(false);
+  const [showFontSizeDropdown, setShowFontSizeDropdown] = useState(false);
+  const [showWeightDropdown, setShowWeightDropdown] = useState(false);
+  const [showPlacementDropdown, setShowPlacementDropdown] = useState(false);
+  const [showLineCornerDropdown, setShowLineCornerDropdown] = useState(false);
 
   const lastElementIdRef = useRef(null);
 
@@ -405,12 +456,12 @@ export const ButtonEditor = ({
       setFontWeight(fw);
 
       const fs = textEl.getAttribute('font-size') || textEl.style.fontSize;
-      parsedFs = fs ? parseInt(fs) : 14;
-      if (!parsedFs || parsedFs <= 0 || parsedFs === 12 || parsedFs === 13) {
-        parsedFs = 14;
+      parsedFs = fs ? parseInt(fs) : 12;
+      if (!parsedFs || parsedFs <= 0) {
+        parsedFs = 12;
         textWasHidden = true;
-        textEl.setAttribute('font-size', '14');
-        if (textEl.style) textEl.style.fontSize = '14px';
+        textEl.setAttribute('font-size', '12');
+        if (textEl.style) textEl.style.fontSize = '12pt';
       }
       setFontSize(parsedFs);
 
@@ -494,15 +545,7 @@ export const ButtonEditor = ({
     const savedIconGap = el.getAttribute('data-icon-gap') || '4';
     setIconGap(parseInt(savedIconGap) || 4);
 
-    // 3. Padding Properties
-    const savedPaddingW = el.getAttribute('data-padding-w');
-    const savedPaddingH = el.getAttribute('data-padding-h');
-    setPaddingW(savedPaddingW !== null ? (parseInt(savedPaddingW, 10) || 0) : 0);
-    setPaddingH(savedPaddingH !== null ? (parseInt(savedPaddingH, 10) || 0) : 0);
-    const savedPadLinked = el.getAttribute('data-padding-linked');
-    setIsPaddingLinked(savedPadLinked !== 'false');
-
-    // 4. Shape Fill & Stroke Properties
+    // Shape Fill & Stroke Properties
     const mainPoly = el.querySelector('.btn-main-poly');
     const rectEl = el.querySelector('rect.btn-bg') || el.querySelector('rect') || (el.tagName?.toLowerCase() === 'rect' ? el : null);
     const shapeEl = mainPoly || rectEl;
@@ -538,8 +581,9 @@ export const ButtonEditor = ({
         setLineStyle('Dashed');
       }
 
-      const slc = shapeEl.getAttribute('stroke-linecap') || 'round';
-      setLineCorner(slc === 'round' ? 'Rounded' : 'Square');
+      const savedCornerLine = el.getAttribute('data-line-corner');
+      const slc = savedCornerLine || shapeEl.getAttribute('stroke-linejoin') || shapeEl.getAttribute('stroke-linecap') || 'butt';
+      setLineCorner(slc === 'round' || slc === 'Rounded' ? 'Rounded' : 'Square');
 
       const savedDashL = el.getAttribute('data-dash-l') || '8';
       const savedDashG = el.getAttribute('data-dash-g') || '4';
@@ -558,10 +602,13 @@ export const ButtonEditor = ({
       return !isNaN(num) ? num : fallback;
     };
 
-    const defaultTl = isSlantedBorder ? 24 : 12;
-    const defaultTr = isSlantedBorder ? 0 : 12;
-    const defaultBl = isSlantedBorder ? 0 : 12;
-    const defaultBr = isSlantedBorder ? 24 : 12;
+    const btnTemplate = el.getAttribute('data-button-template') || '';
+    const isChevronOrRibbon = el.querySelector('polygon.btn-main-poly') || el.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
+    const defFallback = isChevronOrRibbon ? 0 : 12;
+    const defaultTl = isSlantedBorder ? 24 : defFallback;
+    const defaultTr = isSlantedBorder ? 0 : defFallback;
+    const defaultBl = isSlantedBorder ? 0 : defFallback;
+    const defaultBr = isSlantedBorder ? 24 : defFallback;
 
     const rawTl = el.getAttribute('data-tl');
     const rawTr = el.getAttribute('data-tr');
@@ -575,6 +622,44 @@ export const ButtonEditor = ({
       br: parseRadiusAttr(rawBr !== null ? rawBr : rectEl?.getAttribute('rx'), defaultBr)
     };
     setRadius(loadedRadius);
+
+    // If corner radius contains any value > 0 (and not a fixed polygon/chevron style), ensure lineCorner is Rounded.
+    // If all corner radii are 0, default to Square if not previously set.
+    const maxLoadedR = isChevronOrRibbon ? 0 : Math.max(loadedRadius.tl, loadedRadius.tr, loadedRadius.bl, loadedRadius.br);
+    if (maxLoadedR > 0) {
+      setLineCorner('Rounded');
+      el.setAttribute('data-line-corner', 'Rounded');
+      const mainPoly = el.querySelector('.btn-main-poly');
+      const targetEl = mainPoly || rectEl;
+      if (targetEl) {
+        targetEl.setAttribute('stroke-linecap', 'round');
+        targetEl.setAttribute('stroke-linejoin', 'round');
+        targetEl.style.strokeLinecap = 'round';
+        targetEl.style.strokeLinejoin = 'round';
+      }
+      const borderRect = el.querySelector('rect.btn-border');
+      if (borderRect) {
+        borderRect.setAttribute('stroke-linecap', 'round');
+        borderRect.setAttribute('stroke-linejoin', 'round');
+        borderRect.style.strokeLinecap = 'round';
+        borderRect.style.strokeLinejoin = 'round';
+      }
+    } else {
+      const savedCornerLine = el.getAttribute('data-line-corner');
+      const slc = savedCornerLine || (shapeEl?.getAttribute('stroke-linejoin')) || (shapeEl?.getAttribute('stroke-linecap')) || 'butt';
+      const resolvedCorner = (slc === 'round' || slc === 'Rounded') ? 'Rounded' : 'Square';
+      setLineCorner(resolvedCorner);
+      const mainPoly = el.querySelector('.btn-main-poly');
+      const targetEl = mainPoly || rectEl;
+      const cap = resolvedCorner === 'Rounded' ? 'round' : 'butt';
+      const join = resolvedCorner === 'Rounded' ? 'round' : 'miter';
+      if (targetEl) {
+        targetEl.setAttribute('stroke-linecap', cap);
+        targetEl.setAttribute('stroke-linejoin', join);
+        targetEl.style.strokeLinecap = cap;
+        targetEl.style.strokeLinejoin = join;
+      }
+    }
 
     if (isSlantedBorder) {
       el.setAttribute('data-tl', loadedRadius.tl.toString());
@@ -603,9 +688,9 @@ export const ButtonEditor = ({
 
     const curW = rectEl ? parseFloat(rectEl.getAttribute('width') || 0) : 0;
     const curH = rectEl ? parseFloat(rectEl.getAttribute('height') || 0) : 0;
-    const sizeNeedsFix = (curW > 0 && curW < 140) || (curH > 0 && curH < 42);
 
-    if ((textWasHidden || sizeNeedsFix) && textEl) {
+    // Only update dimensions on load if text was hidden or corrupted (never force shrink valid buttons)
+    if (textWasHidden && textEl) {
       updateButtonDimensions(
         textEl.textContent || buttonText || 'Button',
         parsedFs || 14,
@@ -614,8 +699,6 @@ export const ButtonEditor = ({
         savedIconName,
         savedIconHtml || iconHtml,
         savedIconViewBox || iconViewBox,
-        savedPaddingW !== null ? (parseInt(savedPaddingW, 10) || 0) : 0,
-        savedPaddingH !== null ? (parseInt(savedPaddingH, 10) || 0) : 0,
         parseInt(savedIconGap) || 4,
         savedPlacement,
         loadedRadius,
@@ -627,8 +710,11 @@ export const ButtonEditor = ({
 
     // 6. Effects
     const effects = [];
-    if (el.getAttribute('data-effect-drop-shadow') === 'true' || el.getAttribute('data-effect-drop-shadow') === null) {
+    const hasDs = el.getAttribute('data-effect-drop-shadow') === 'true';
+    if (hasDs) {
       effects.push('Drop Shadow');
+    } else if (el.getAttribute('filter')) {
+      el.removeAttribute('filter');
     }
     setActiveEffects(effects);
 
@@ -842,10 +928,10 @@ export const ButtonEditor = ({
       const serializer = new XMLSerializer();
       updateElementAttribute(activePageIndex, el.id || selectedLayerId, '__dom_sync__', serializer.serializeToString(svgRoot));
     }
-    window.dispatchEvent(new CustomEvent('force-update-selection-box'));
+    window.dispatchEvent(new CustomEvent('force-update-selection-box', { detail: { elementId: el.id || selectedLayerId } }));
   };
 
-  // Dynamically update button width, height, position text & icon with padding & gap
+  // Dynamically update button width, height, position text & icon with gap
   const updateButtonDimensions = (
     textVal = buttonText,
     currentFontSize = fontSize,
@@ -854,8 +940,6 @@ export const ButtonEditor = ({
     currentIconName = iconName,
     currentIconHtml = iconHtml,
     currentIconViewBox = iconViewBox,
-    currentPaddingW = paddingW,
-    currentPaddingH = paddingH,
     currentIconGap = iconGap,
     currentPlacement = iconPlacement,
     currentRadius = radius,
@@ -869,20 +953,32 @@ export const ButtonEditor = ({
     const rectEl = el.querySelector('rect.btn-bg') || el.querySelector('rect') || (el.tagName?.toLowerCase() === 'rect' ? el : null);
     if (!textEl || !rectEl) return;
 
-    // Estimate text width accurately
+    // Compute dynamic gap proportional to font size (e.g. 12pt -> 14px, 16pt -> 18px, 22pt -> 26px)
+    const effectiveGap = Math.max(12, Math.round(currentFontSize * 1.15));
+
+    // Estimate text width accurately using off-screen canvas if possible
     let measuredWidth = 0;
     try {
-      if (typeof textEl.getComputedTextLength === 'function' && textEl.getComputedTextLength() > 0) {
-        measuredWidth = textEl.getComputedTextLength();
-      }
-    } catch (_) {}
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.font = `${fontWeight || '600'} ${Math.round(currentFontSize * 1.33)}px ${currentFontFamily}, sans-serif`;
+      measuredWidth = ctx.measureText(textVal).width;
+    } catch (_) { }
+
+    if (!measuredWidth || measuredWidth < 10) {
+      try {
+        if (typeof textEl.getComputedTextLength === 'function' && textEl.getComputedTextLength() > 0) {
+          measuredWidth = textEl.getComputedTextLength();
+        }
+      } catch (_) { }
+    }
 
     if (!measuredWidth || measuredWidth < 10) {
       const charRatio = currentFontFamily.toLowerCase().includes('banger') ? 0.6 : 0.58;
       measuredWidth = (textVal.length || 1) * (currentFontSize * charRatio);
     }
 
-    const iconSize = Math.max(16, Math.round(currentFontSize * 0.9));
+    const iconSize = Math.max(12, Math.round(currentFontSize));
 
     // Check if icon has a badge circle or background
     let badgeEl = el.querySelector('.btn-badge-circle, .btn-badge-block, .btn-icon-bg') ||
@@ -895,22 +991,25 @@ export const ButtonEditor = ({
       currentIconBgColor !== 'transparent'
     );
 
-    const badgeRadius = Math.max(14, Math.round(iconSize * 0.85));
+    const badgeRadius = Math.max(14, Math.round(iconSize * 1.0));
     const effectiveIconWidth = (hasIconBg || (badgeEl && badgeEl.getAttribute('display') !== 'none' && badgeEl.getAttribute('fill') !== 'none'))
       ? Math.max(iconSize, badgeRadius * 2)
       : iconSize;
 
     const totalContentWidth = hasIconVal
-      ? measuredWidth + currentIconGap + effectiveIconWidth
+      ? measuredWidth + effectiveGap + effectiveIconWidth
       : measuredWidth;
 
-    // Padding scaling
-    const horizPad = Math.max(currentPaddingW * 4, 16);
-    const vertPad = Math.max(currentPaddingH * 3, 10);
-    const curW = parseFloat(rectEl.getAttribute('width') || 0);
-    const curH = parseFloat(rectEl.getAttribute('height') || 0);
-    const minW = curW > 0 ? Math.max(140, curW) : 140;
-    const minH = curH > 0 ? Math.max(42, curH) : 42;
+    const btnTemplate = el.getAttribute('data-button-template');
+    const isBadgeTemplate = (btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge' || btnTemplate === 'lavender-badge');
+
+    // Horizontal & Vertical padding: comfortable default matching design templates (min 20px, 12px)
+    const horizPad = Math.max(20, Math.round(currentFontSize * 1.25));
+    const vertPad = Math.max(12, Math.round(currentFontSize * 0.8));
+
+    // Baseline minimum template size (140px width x 42px height)
+    const minW = isBadgeTemplate ? 146 : 138;
+    const minH = 42;
     const newButtonWidth = Math.max(minW, Math.round(totalContentWidth + horizPad * 2));
     const newButtonHeight = Math.max(minH, Math.round(Math.max(currentFontSize, hasIconVal ? Math.max(iconSize, (hasIconBg || badgeEl) ? badgeRadius * 2 : 0) : 0) + vertPad * 2));
 
@@ -922,15 +1021,15 @@ export const ButtonEditor = ({
     rectEl.setAttribute('height', newButtonHeight.toString());
 
     // Apply corner radius & shape geometry
-    const isPill = el.getAttribute('data-button-template') === 'solid-pill' ||
-      el.getAttribute('data-button-template') === 'white-pill-badge' ||
-      el.getAttribute('data-button-template') === 'gradient-pill' ||
-      el.getAttribute('data-button-template') === 'lavender-badge' ||
-      el.getAttribute('data-button-template') === 'mint-frost' ||
-      el.getAttribute('data-button-template') === 'pearl-pill' ||
-      el.getAttribute('data-button-template') === 'diagonal-pastel';
-    const isSlanted = el.getAttribute('data-button-template') === 'slanted-border' ||
-      el.getAttribute('data-button-template') === 'slanted-pastel' ||
+    const isPill = btnTemplate === 'solid-pill' ||
+      btnTemplate === 'white-pill-badge' ||
+      btnTemplate === 'gradient-pill' ||
+      btnTemplate === 'lavender-badge' ||
+      btnTemplate === 'mint-frost' ||
+      btnTemplate === 'pearl-pill' ||
+      btnTemplate === 'diagonal-pastel';
+    const isSlanted = btnTemplate === 'slanted-border' ||
+      btnTemplate === 'slanted-pastel' ||
       (el.getAttribute('data-tl') === '24' && el.getAttribute('data-tr') === '0');
 
     const savedTl = el.getAttribute('data-tl');
@@ -961,7 +1060,6 @@ export const ButtonEditor = ({
     rectEl.setAttribute('ry', maxR.toString());
 
     let mainPoly = el.querySelector('.btn-main-poly');
-    const btnTemplate = el.getAttribute('data-button-template');
 
     if (mainPoly) {
       if (mainPoly.tagName?.toLowerCase() === 'path') {
@@ -1183,19 +1281,23 @@ export const ButtonEditor = ({
         }
       } else if ((btnTemplate === 'white-pill-badge' || btnTemplate === 'social-badge' || btnTemplate === 'lavender-badge') && (badgeCircle || (badgeEl && badgeEl.tagName?.toLowerCase() === 'circle'))) {
         const circleEl = badgeCircle || badgeEl;
-        const bRadius = Math.max(14, Math.round(newButtonHeight / 2 - 4));
+        const bRadius = Math.max(10, Math.round(newButtonHeight / 2 - 4));
+        const badgeDiameter = bRadius * 2;
+        const totalBadgeContentWidth = badgeDiameter + effectiveGap + measuredWidth;
+        const startX = rectX + (newButtonWidth - totalBadgeContentWidth) / 2;
+
         if (placement === 'Left') {
-          badgeCenterX = rectX + newButtonHeight / 2;
+          badgeCenterX = startX + bRadius;
           iconX = badgeCenterX - iconSize / 2;
           iconY = centerY - iconSize / 2;
-          textX = (rectX + newButtonHeight) + (newButtonWidth - newButtonHeight - 16) / 2;
+          textX = startX + badgeDiameter + effectiveGap + measuredWidth / 2;
           textY = centerY;
         } else {
-          badgeCenterX = rectX + newButtonWidth - newButtonHeight / 2;
+          textX = startX + measuredWidth / 2;
+          textY = centerY;
+          badgeCenterX = startX + measuredWidth + effectiveGap + bRadius;
           iconX = badgeCenterX - iconSize / 2;
           iconY = centerY - iconSize / 2;
-          textX = (rectX + 16) + (newButtonWidth - newButtonHeight - 16) / 2;
-          textY = centerY;
         }
         circleEl.setAttribute('cx', badgeCenterX.toString());
         circleEl.setAttribute('cy', centerY.toString());
@@ -1210,12 +1312,12 @@ export const ButtonEditor = ({
           badgeCenterX = badgeStartX + effectiveIconWidth / 2;
           iconX = badgeCenterX - iconSize / 2;
           iconY = centerY - iconSize / 2;
-          textX = startX + effectiveIconWidth + currentIconGap + measuredWidth / 2;
+          textX = startX + effectiveIconWidth + effectiveGap + measuredWidth / 2;
           textY = centerY;
         } else {
           textX = startX + measuredWidth / 2;
           textY = centerY;
-          const badgeStartX = startX + measuredWidth + currentIconGap;
+          const badgeStartX = startX + measuredWidth + effectiveGap;
           badgeCenterX = badgeStartX + effectiveIconWidth / 2;
           iconX = badgeCenterX - iconSize / 2;
           iconY = centerY - iconSize / 2;
@@ -1311,14 +1413,15 @@ export const ButtonEditor = ({
 
   // Text Handlers
   const handleTextChange = (newVal) => {
-    setButtonText(newVal);
+    const limitedVal = (newVal || '').slice(0, 20);
+    setButtonText(limitedVal);
     const el = resolveTargetElement();
     if (!el) return;
 
     const textEl = el.querySelector('text') || (el.tagName?.toLowerCase() === 'text' ? el : null);
     if (textEl) {
-      textEl.textContent = newVal;
-      updateButtonDimensions(newVal, fontSize, fontFamily);
+      textEl.textContent = limitedVal;
+      updateButtonDimensions(limitedVal, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1332,7 +1435,7 @@ export const ButtonEditor = ({
     if (textEl) {
       textEl.setAttribute('font-family', val);
       textEl.style.fontFamily = val;
-      updateButtonDimensions(buttonText, fontSize, val);
+      updateButtonDimensions(buttonText, fontSize, val, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, iconColor, iconBgColor);
       syncButtonToCanvas();
     }
   };
@@ -1344,10 +1447,12 @@ export const ButtonEditor = ({
 
     const textEl = el.querySelector('text') || (el.tagName?.toLowerCase() === 'text' ? el : null);
     if (textEl) {
-      textEl.setAttribute('font-size', val.toString());
-      textEl.style.fontSize = `${val}px`;
-      updateButtonDimensions(buttonText, val, fontFamily);
-      syncButtonToCanvas();
+      textEl.setAttribute('font-size', `${val}pt`);
+      textEl.style.fontSize = `${val}pt`;
+      requestAnimationFrame(() => {
+        updateButtonDimensions(buttonText, val, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, iconColor, iconBgColor);
+        syncButtonToCanvas();
+      });
     }
   };
 
@@ -1386,7 +1491,7 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-has-icon', val ? 'true' : 'false');
-    updateButtonDimensions(buttonText, fontSize, fontFamily, val);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, val, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, iconColor, iconBgColor);
     syncButtonToCanvas();
   };
 
@@ -1396,7 +1501,7 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-icon-placement', val);
-    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, val, radius, iconColor, iconBgColor);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, val, radius, iconColor, iconBgColor);
     syncButtonToCanvas();
   };
 
@@ -1406,7 +1511,7 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-icon-color', color);
-    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, radius, color, iconBgColor);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, radius, color, iconBgColor);
     syncButtonToCanvas();
   };
 
@@ -1457,8 +1562,6 @@ export const ButtonEditor = ({
       iconName,
       iconHtml,
       iconViewBox,
-      paddingW,
-      paddingH,
       iconGap,
       iconPlacement,
       radius,
@@ -1538,47 +1641,8 @@ export const ButtonEditor = ({
     if (!el) return;
 
     el.setAttribute('data-icon-gap', gap.toString());
-    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, gap);
+    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, gap, iconPlacement, radius, iconColor, iconBgColor);
     syncButtonToCanvas();
-  };
-
-  // Padding Handlers
-  const handlePaddingChange = (type, val) => {
-    const num = Math.max(0, val);
-    const el = resolveTargetElement();
-    if (type === 'w') {
-      setPaddingW(num);
-      if (isPaddingLinked) setPaddingH(num);
-      if (el) {
-        el.setAttribute('data-padding-w', num.toString());
-        if (isPaddingLinked) el.setAttribute('data-padding-h', num.toString());
-        updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, num, isPaddingLinked ? num : paddingH);
-        syncButtonToCanvas();
-      }
-    } else {
-      setPaddingH(num);
-      if (isPaddingLinked) setPaddingW(num);
-      if (el) {
-        el.setAttribute('data-padding-h', num.toString());
-        if (isPaddingLinked) el.setAttribute('data-padding-w', num.toString());
-        updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, isPaddingLinked ? num : paddingW, num);
-        syncButtonToCanvas();
-      }
-    }
-  };
-
-  const handleTogglePaddingLink = (linked) => {
-    setIsPaddingLinked(linked);
-    const el = resolveTargetElement();
-    if (el) {
-      el.setAttribute('data-padding-linked', linked ? 'true' : 'false');
-      if (linked) {
-        setPaddingH(paddingW);
-        el.setAttribute('data-padding-h', paddingW.toString());
-        updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingW);
-        syncButtonToCanvas();
-      }
-    }
   };
 
   // Button Color Handler
@@ -1659,6 +1723,14 @@ export const ButtonEditor = ({
     el.setAttribute('data-stroke-alignment', 'Outside');
     el.setAttribute('data-stroke-position', 'Outside');
 
+    const btnTemplate = el.getAttribute('data-button-template') || '';
+    const isChevronOrRibbon = el.querySelector('polygon.btn-main-poly') || el.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
+    const maxR = isChevronOrRibbon ? 0 : Math.max(radius?.tl || 0, radius?.tr || 0, radius?.bl || 0, radius?.br || 0);
+    const currentLineCorner = maxR > 0 ? 'Rounded' : lineCorner;
+    const isRound = currentLineCorner === 'Rounded';
+    const lineCap = isRound ? 'round' : 'butt';
+    const lineJoin = isRound ? 'round' : 'miter';
+
     const mainPoly = el.querySelector('.btn-main-poly');
     const rectEl = el.querySelector('rect.btn-bg') || el.querySelector('rect') || (el.tagName?.toLowerCase() === 'rect' ? el : null);
     const targetEl = mainPoly || rectEl;
@@ -1669,6 +1741,10 @@ export const ButtonEditor = ({
       targetEl.style.paintOrder = 'stroke fill';
       targetEl.setAttribute('stroke-width', (num * 2).toString());
       targetEl.style.strokeWidth = `${num * 2}px`;
+      targetEl.setAttribute('stroke-linecap', lineCap);
+      targetEl.setAttribute('stroke-linejoin', lineJoin);
+      targetEl.style.strokeLinecap = lineCap;
+      targetEl.style.strokeLinejoin = lineJoin;
     }
 
     const borderRect = el.querySelector('rect.btn-border');
@@ -1676,6 +1752,10 @@ export const ButtonEditor = ({
       borderRect.setAttribute('paint-order', 'stroke fill');
       borderRect.style.paintOrder = 'stroke fill';
       borderRect.setAttribute('stroke-width', (num * 2).toString());
+      borderRect.setAttribute('stroke-linecap', lineCap);
+      borderRect.setAttribute('stroke-linejoin', lineJoin);
+      borderRect.style.strokeLinecap = lineCap;
+      borderRect.style.strokeLinejoin = lineJoin;
     }
 
     syncButtonToCanvas();
@@ -1753,9 +1833,14 @@ export const ButtonEditor = ({
     const el = resolveTargetElement();
     if (!el) return;
 
+    el.setAttribute('data-line-corner', val);
+
     const isRound = val === 'Rounded';
     const lineCap = isRound ? 'round' : 'butt';
     const lineJoin = isRound ? 'round' : 'miter';
+
+    el.setAttribute('stroke-linecap', lineCap);
+    el.setAttribute('stroke-linejoin', lineJoin);
 
     const mainPoly = el.querySelector('.btn-main-poly');
     const rectEl = el.querySelector('rect.btn-bg') || el.querySelector('rect') || (el.tagName?.toLowerCase() === 'rect' ? el : null);
@@ -1764,12 +1849,20 @@ export const ButtonEditor = ({
     if (targetEl) {
       targetEl.setAttribute('stroke-linecap', lineCap);
       targetEl.setAttribute('stroke-linejoin', lineJoin);
+      targetEl.style.strokeLinecap = lineCap;
+      targetEl.style.strokeLinejoin = lineJoin;
     }
     const borderRect = el.querySelector('rect.btn-border');
     if (borderRect) {
       borderRect.setAttribute('stroke-linecap', lineCap);
       borderRect.setAttribute('stroke-linejoin', lineJoin);
+      borderRect.style.strokeLinecap = lineCap;
+      borderRect.style.strokeLinejoin = lineJoin;
     }
+    el.querySelectorAll('polygon, path, rect').forEach(shape => {
+      shape.setAttribute('stroke-linecap', lineCap);
+      shape.setAttribute('stroke-linejoin', lineJoin);
+    });
 
     syncButtonToCanvas();
   };
@@ -1803,7 +1896,43 @@ export const ButtonEditor = ({
       borderRect.setAttribute('ry', maxR.toString());
     }
 
-    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, newRadius);
+    if (maxR > 0) {
+      setLineCorner('Rounded');
+      el.setAttribute('data-line-corner', 'Rounded');
+      const mainPoly = el.querySelector('.btn-main-poly');
+      const targetEl = mainPoly || rectEl;
+      if (targetEl) {
+        targetEl.setAttribute('stroke-linecap', 'round');
+        targetEl.setAttribute('stroke-linejoin', 'round');
+        targetEl.style.strokeLinecap = 'round';
+        targetEl.style.strokeLinejoin = 'round';
+      }
+      if (borderRect) {
+        borderRect.setAttribute('stroke-linecap', 'round');
+        borderRect.setAttribute('stroke-linejoin', 'round');
+        borderRect.style.strokeLinecap = 'round';
+        borderRect.style.strokeLinejoin = 'round';
+      }
+    } else {
+      setLineCorner('Square');
+      el.setAttribute('data-line-corner', 'Square');
+      const mainPoly = el.querySelector('.btn-main-poly');
+      const targetEl = mainPoly || rectEl;
+      if (targetEl) {
+        targetEl.setAttribute('stroke-linecap', 'butt');
+        targetEl.setAttribute('stroke-linejoin', 'miter');
+        targetEl.style.strokeLinecap = 'butt';
+        targetEl.style.strokeLinejoin = 'miter';
+      }
+      if (borderRect) {
+        borderRect.setAttribute('stroke-linecap', 'butt');
+        borderRect.setAttribute('stroke-linejoin', 'miter');
+        borderRect.style.strokeLinecap = 'butt';
+        borderRect.style.strokeLinejoin = 'miter';
+      }
+    }
+
+    updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, newRadius);
     syncButtonToCanvas();
   };
 
@@ -1821,7 +1950,7 @@ export const ButtonEditor = ({
       el.setAttribute('data-tr', maxR.toString());
       el.setAttribute('data-bl', maxR.toString());
       el.setAttribute('data-br', maxR.toString());
-      updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, paddingW, paddingH, iconGap, iconPlacement, unifiedRadius);
+      updateButtonDimensions(buttonText, fontSize, fontFamily, hasIcon, iconName, iconHtml, iconViewBox, iconGap, iconPlacement, unifiedRadius);
     }
     syncButtonToCanvas();
   };
@@ -1908,330 +2037,430 @@ export const ButtonEditor = ({
   };
 
   return (
-    <div className="w-full flex flex-col gap-[0.6vw] font-sans text-gray-800 pt-[0.2vw] pr-[0.2vw] select-none pb-[2vw]">
-      {/* Scoped CSS for Coral Orange Range Slider */}
-      <style>{`
-        .button-icon-gap-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 0.9vw;
-          height: 0.9vw;
-          border-radius: 50%;
-          background: #ffffff;
-          border: 0.15vw solid #E05638;
-          cursor: pointer;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.15);
-        }
-        .button-icon-gap-slider::-moz-range-thumb {
-          width: 0.9vw;
-          height: 0.9vw;
-          border-radius: 50%;
-          background: #ffffff;
-          border: 0.15vw solid #E05638;
-          cursor: pointer;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.15);
-        }
-      `}</style>
+    <div className="relative flex flex-col gap-[1.7vw] w-full max-w-[25vw] pb-[2vw] font-sans select-none">
+      {/* ===================== HEADER ===================== */}
+      <div className="flex items-center gap-[0.8vw]">
+        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">Button Properties</span>
+        <div className="flex-1 h-[1px] bg-gray-200" />
+      </div>
 
-      {/* ─── 1. BUTTON CONTENT SECTION ──────────────────────────── */}
-      <SectionHeader title="Button Properties" />
-
-      {/* Row 1: Button Text */}
-      <PropertyRow label="Button Text">
+      {/* ===================== BUTTON TEXT ===================== */}
+      <div className="flex flex-col gap-[0.6vw]">
+        <SectionHeader title="Button Text" />
         <div className="relative w-full">
           <input
             type="text"
+            maxLength={20}
             value={buttonText}
             onChange={(e) => handleTextChange(e.target.value)}
             placeholder="Button"
-            className="w-full h-[2.5vw] bg-white border border-gray-200 rounded-[0.5vw] px-[0.6vw] pr-[1.8vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#E05638] shadow-2xs font-normal"
+            className="w-full h-[2.1vw] px-[0.75vw] pr-[2.2vw] text-[0.8vw] font-medium text-gray-800 bg-white border border-gray-300 rounded-[0.45vw] shadow-2xs placeholder-gray-400 focus:outline-none focus:border-indigo-400 hover:border-gray-400 transition-colors"
           />
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.6vw] text-gray-400">
-            <Pencil className="w-[0.85vw] h-[0.85vw]" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.75vw] text-gray-400">
+            <Pencil size="0.85vw" />
           </div>
         </div>
-      </PropertyRow>
-
-      {/* Row 2: Font Family & Font Size */}
-      <div className="flex items-center gap-[0.5vw]">
-        <div className="w-[5.6vw] shrink-0" />
-        <div className="flex-1 min-w-0 grid grid-cols-2 gap-[0.4vw]">
-          {/* Font Family Dropdown */}
-          <ElementDropdown
-            value={fontFamily}
-            onChange={handleFontFamilyChange}
-            options={fontFamilies}
-            isFont={true}
-          />
-
-          {/* Font Size Dropdown */}
-          <ElementDropdown
-            value={fontSize}
-            onChange={(val) => handleFontSizeChange(parseInt(val))}
-            options={fontSizes}
-          />
-        </div>
       </div>
 
-      {/* Row 3: Font Weight Dropdown */}
-      <div className="flex items-center gap-[0.5vw]">
-        <div className="w-[5.6vw] shrink-0" />
-        <div className="flex-1 min-w-0">
-          <ElementDropdown
-            value={fontWeight}
-            onChange={handleFontWeightChange}
-            options={fontWeights.map(w => ({ label: w.name, value: w.value }))}
-          />
-        </div>
-      </div>
+      {/* ===================== TYPOGRAPHY ===================== */}
+      <div className="flex flex-col gap-[0.6vw]">
+        <SectionHeader title="Typography" />
 
-      {/* Row 4: Text Color */}
-      <PropertyRow label="Text Color">
-        <ColorInput
+        {/* Row 1: Font Family & Font Size */}
+        <div className="flex items-center gap-[0.6vw]">
+          {/* Font Family */}
+          <div className="relative flex-[1.6]">
+            <button
+              type="button"
+              onClick={() => setShowFontDropdown(!showFontDropdown)}
+              className="w-full h-[2.1vw] px-[0.7vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 shadow-2xs transition-colors cursor-pointer"
+            >
+              <span className="text-[0.8vw] font-medium text-gray-800 truncate" style={{ fontFamily: `'${fontFamily}', sans-serif` }}>
+                {fontFamily === 'Designer_Signature' ? 'Designer Signature' : (fontFamily || 'Poppins')}
+              </span>
+              <ChevronDown size="0.75vw" className={`text-gray-400 transition-transform ${showFontDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showFontDropdown && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setShowFontDropdown(false)} />
+                <div className="absolute left-0 top-full mt-[0.3vw] w-full bg-white border border-gray-200 rounded-[0.45vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-40 [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                  {fontFamilies.map(font => {
+                    const isSelected = font.toLowerCase() === (fontFamily || '').toLowerCase();
+                    return (
+                      <div
+                        key={font}
+                        onClick={() => {
+                          handleFontFamilyChange(font);
+                          setShowFontDropdown(false);
+                        }}
+                        className={`px-[0.75vw] py-[0.38vw] cursor-pointer text-[0.8vw] flex items-center justify-between transition-colors ${
+                          isSelected ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
+                        style={{ fontFamily: `'${font}', sans-serif` }}
+                      >
+                        <span className="truncate">{font === 'Designer_Signature' ? 'Designer Signature' : font}</span>
+                        {isSelected && (
+                          <span className="text-indigo-600 font-bold ml-1 text-[0.8vw]">✓</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Font Size */}
+          <div className="relative flex-1">
+            <div className="w-full h-[2.1vw] px-[0.6vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 focus-within:border-indigo-400 shadow-2xs transition-colors">
+              <div className="flex items-center flex-1 min-w-0 mr-[0.2vw]">
+                <input
+                  type="text"
+                  value={fontSize}
+                  onChange={(e) => setFontSize(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val)) {
+                        handleFontSizeChange(val);
+                        setShowFontSizeDropdown(false);
+                      }
+                      e.target.blur();
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) handleFontSizeChange(val);
+                  }}
+                  onFocus={() => setShowFontSizeDropdown(true)}
+                  className="w-full bg-transparent outline-none text-[0.8vw] text-gray-800 font-medium"
+                  placeholder="14"
+                />
+                <span className="text-[0.7vw] font-medium text-gray-400 select-none uppercase tracking-wider mr-[0.1vw]">pt</span>
+              </div>
+              <ChevronDown
+                size="0.75vw"
+                className={`text-gray-400 cursor-pointer flex-shrink-0 transition-transform ${showFontSizeDropdown ? 'rotate-180' : ''}`}
+                onClick={() => setShowFontSizeDropdown(!showFontSizeDropdown)}
+              />
+            </div>
+            {showFontSizeDropdown && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setShowFontSizeDropdown(false)} />
+                <div className="absolute right-0 top-full mt-[0.3vw] w-full bg-white border border-gray-200 rounded-[0.45vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-40 [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                  {fontSizes.map(size => (
+                    <div
+                      key={size}
+                      onClick={() => {
+                        handleFontSizeChange(size);
+                        setShowFontSizeDropdown(false);
+                      }}
+                      className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] flex items-center justify-between transition-colors ${Number(fontSize) === size ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+                    >
+                      <span>{size}</span>
+                      <span className="text-[0.68vw] text-gray-400 font-normal">pt</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: Font Weight (Full Width) */}
+        <div className="relative w-full">
+          <button
+            type="button"
+            onClick={() => setShowWeightDropdown(!showWeightDropdown)}
+            className="w-full h-[2.1vw] px-[0.7vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 shadow-2xs transition-colors cursor-pointer"
+          >
+            <span className="text-[0.8vw] truncate text-gray-800 font-medium">
+              {fontWeights.find(w => w.value === fontWeight)?.name || 'Regular'}
+            </span>
+            <ChevronDown size="0.75vw" className={`text-gray-400 transition-transform ${showWeightDropdown ? 'rotate-180' : ''}`} />
+          </button>
+          {showWeightDropdown && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setShowWeightDropdown(false)} />
+              <div className="absolute left-0 top-full mt-[0.3vw] w-full bg-white border border-gray-200 rounded-[0.45vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-40 [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                {fontWeights.map(w => (
+                  <div
+                    key={w.value}
+                    onClick={() => {
+                      handleFontWeightChange(w.value);
+                      setShowWeightDropdown(false);
+                    }}
+                    className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] transition-colors ${fontWeight === w.value ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+                  >
+                    {w.name}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Row 3: Text Color (Inside Typography, full width, without separate heading) */}
+        <ColorBoxRow
           color={textFillColor}
-          onChange={handleTextFillColorChange}
           opacity={textOpacity}
           onOpenPicker={() => setActiveColorPicker('textColor')}
+          onChange={handleTextFillColorChange}
+          onOpacityChange={handleTextOpacityChange}
           isActive={activeColorPicker === 'textColor'}
-        />
-      </PropertyRow>
-
-      {/* Row 5: Add Icon Toggle */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.1vw] py-[0.2vw]">
-        <span className="text-[0.8vw] font-medium text-gray-900">Add Icon to the button</span>
-        <ElementToggle
-          checked={hasIcon}
-          onChange={handleToggleIcon}
         />
       </div>
 
-      {/* Rows when Icon is enabled */}
-      {hasIcon && (
-        <>
-          {/* Icon Card */}
-          <PropertyRow label="Icon">
+      {/* ===================== BUTTON ICON ===================== */}
+      <div className="flex flex-col gap-[0.6vw]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-[0.8vw] flex-1 mr-[0.8vw]">
+            <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Button Icon</span>
+            <div className="flex-1 h-[1px] bg-gray-200" />
+          </div>
+          <ElementToggle
+            checked={hasIcon}
+            onChange={handleToggleIcon}
+          />
+        </div>
+
+        {hasIcon && (
+          <div className="flex flex-col gap-[0.8vw] animate-in fade-in duration-150">
+            {/* Icon Preview Card */}
             <div
               onClick={() => setIsIconGalleryOpen(true)}
-              className="w-full h-[5vw] border border-gray-200 hover:border-gray-300 rounded-[0.5vw] bg-[#f8fafc] p-[0.4vw] relative flex items-center justify-center cursor-pointer group transition-all shadow-2xs hover:shadow-sm"
+              className="w-full h-[4.5vw] border border-gray-300 hover:border-gray-400 rounded-[0.45vw] bg-gray-50/70 p-[0.4vw] relative flex items-center justify-center cursor-pointer group transition-all shadow-2xs hover:shadow-sm"
               title="Click to change icon"
             >
-              {/* Swap Icon button in top-right */}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsIconGalleryOpen(true);
                 }}
-                className="absolute top-[0.35vw] right-[0.35vw] text-gray-400 group-hover:text-gray-700 transition-colors p-[0.2vw] rounded-[0.2vw] hover:bg-gray-50 cursor-pointer"
+                className="absolute top-[0.35vw] right-[0.35vw] text-gray-400 group-hover:text-gray-700 transition-colors p-[0.25vw] rounded-[0.3vw] bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer shadow-2xs"
                 title="Change icon"
               >
-                <ArrowLeftRight className="w-[0.9vw] h-[0.9vw]" />
+                <ArrowLeftRight size="0.8vw" />
               </button>
-
-              {/* Centered preview of icon */}
-              <div className="w-[4.5vw] h-[4.5vw] flex items-center justify-center group-hover:scale-105 transition-transform">
+              <div className="w-[3.6vw] h-[3.6vw] flex items-center justify-center group-hover:scale-105 transition-transform">
                 {renderIconPreview()}
               </div>
             </div>
-          </PropertyRow>
 
-          {/* Placement Dropdown */}
-          <PropertyRow label="Placement">
-            <ElementDropdown
-              value={iconPlacement}
-              onChange={handleIconPlacementChange}
-              options={['Left', 'Right']}
-            />
-          </PropertyRow>
-
-          {/* Icon Color */}
-          <PropertyRow label="Icon Color">
-            <ColorInput
-              color={iconColor}
-              onChange={handleIconColorChange}
-              opacity={iconOpacity}
-              onOpenPicker={() => setActiveColorPicker('iconColor')}
-              isActive={activeColorPicker === 'iconColor'}
-            />
-          </PropertyRow>
-
-          {/* Icon BG Color */}
-          <PropertyRow label="Icon BG Color">
-            <ColorInput
-              color={iconBgColor}
-              onChange={handleIconBgColorChange}
-              opacity={iconBgOpacity}
-              onOpenPicker={() => setActiveColorPicker('iconBgColor')}
-              isActive={activeColorPicker === 'iconBgColor'}
-            />
-          </PropertyRow>
-        </>
-      )}
-
-      {/* ─── 2. SIZE & SPACING SECTION ──────────────────────────── */}
-      <SectionHeader title="Size & Spacing" />
-
-      {/* Padding */}
-      <PropertyRow label="Padding">
-        <div className="flex items-center gap-[0.4vw] w-full">
-          {/* W input */}
-          <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-            <span className="text-[0.75vw] text-gray-400 font-medium">W</span>
-            <input
-              type="number"
-              value={paddingW}
-              onChange={(e) => handlePaddingChange('w', parseInt(e.target.value) || 0)}
-              className="w-[2.5vw] text-right text-[0.8vw] text-gray-700 outline-none bg-transparent font-medium no-spin"
-            />
-          </div>
-
-          {/* Link button */}
-          <button
-            type="button"
-            onClick={() => handleTogglePaddingLink(!isPaddingLinked)}
-            className="text-gray-400 hover:text-gray-600 p-[0.2vw] transition-colors cursor-pointer flex-shrink-0"
-            title={isPaddingLinked ? "Unlink padding" : "Link padding"}
-          >
-            {isPaddingLinked ? <Link2 size="0.95vw" className="text-gray-700" /> : <Link2Off size="0.95vw" className="text-gray-400" />}
-          </button>
-
-          {/* H input */}
-          <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-            <span className="text-[0.75vw] text-gray-400 font-medium">H</span>
-            <input
-              type="number"
-              value={paddingH}
-              onChange={(e) => handlePaddingChange('h', parseInt(e.target.value) || 0)}
-              className="w-[2.5vw] text-right text-[0.8vw] text-gray-700 outline-none bg-transparent font-medium no-spin"
-            />
-          </div>
-        </div>
-      </PropertyRow>
-
-      {/* Icon Gap */}
-      <PropertyRow label="Icon Gap">
-        <div className="flex items-center gap-[0.6vw] w-full">
-          <div className="flex-1 relative flex items-center">
-            <ElementSlider
-              min={0}
-              max={40}
-              value={iconGap}
-              onChange={(val) => handleIconGapChange(parseInt(val) || 0)}
-            />
-          </div>
-          <div className="w-[3.4vw] h-[2.5vw] border border-gray-200 rounded-[0.5vw] flex items-center justify-center bg-white text-[0.75vw] text-gray-700 font-medium shadow-2xs flex-shrink-0">
-            {iconGap}px
-          </div>
-        </div>
-      </PropertyRow>
-
-      {/* ─── 3. BUTTON COLOR SECTION ────────────────────────────── */}
-      <SectionHeader title="Button Color" />
-
-      <div className="pl-[0.5vw]">
-        <ColorInputWithFormat
-          color={shapeFillColor}
-          onChange={handleShapeFillColorChange}
-          opacity={shapeOpacity}
-          onOpenPicker={() => setActiveColorPicker('buttonColor')}
-          isActive={activeColorPicker === 'buttonColor'}
-        />
-      </div>
-
-      {/* ─── 4. STROKE COLOR SECTION ─────────────────────────────── */}
-      <SectionHeader title="Stroke Color" />
-
-      {/* Row 1: Swatch, Hex, Format */}
-      <div className="pl-[0.5vw]">
-        <ColorInputWithFormat
-          color={strokeColor}
-          onChange={handleStrokeColorChange}
-          opacity={strokeOpacity}
-          onOpenPicker={() => setActiveColorPicker('strokeColor')}
-          isActive={activeColorPicker === 'strokeColor'}
-        />
-      </div>
-
-      {/* Stroke Settings Grid */}
-      <div className="flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw]">
-        {/* Stroke Width & Line Corner */}
-        <div className="grid grid-cols-2 gap-[0.6vw]">
-          {/* Stroke Width */}
-          <div className="flex flex-col gap-[0.25vw]">
-            <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
-            <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
-              <button
-                type="button"
-                onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
-              >
-                −
-              </button>
-              <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
-                <input
-                  type="number"
-                  value={strokeWidth}
-                  onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
-                />
+            {/* Placement */}
+            <div className="flex items-center justify-between gap-[0.8vw]">
+              <span className="text-[0.82vw] font-medium text-gray-800">Placement</span>
+              <div className="relative w-[10vw]">
+                <button
+                  type="button"
+                  onClick={() => setShowPlacementDropdown(!showPlacementDropdown)}
+                  className="w-full h-[2.1vw] px-[0.7vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 shadow-2xs transition-colors cursor-pointer"
+                >
+                  <span className="text-[0.8vw] text-gray-800 font-medium">{iconPlacement}</span>
+                  <ChevronDown size="0.75vw" className={`text-gray-400 transition-transform ${showPlacementDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                {showPlacementDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setShowPlacementDropdown(false)} />
+                    <div className="absolute left-0 top-full mt-[0.3vw] w-full bg-white border border-gray-200 rounded-[0.45vw] shadow-xl py-[0.25vw] z-40 animate-in fade-in zoom-in-95 duration-150">
+                      {['Left', 'Right'].map(opt => (
+                        <div
+                          key={opt}
+                          onClick={() => {
+                            handleIconPlacementChange(opt);
+                            setShowPlacementDropdown(false);
+                          }}
+                          className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] transition-colors ${iconPlacement === opt ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          {opt}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
-              >
-                +
-              </button>
+            </div>
+
+            {/* Icon Colors */}
+            <div className="flex flex-col gap-[0.9vw]">
+              <ColorBoxRow
+                title="Icon Color"
+                color={iconColor}
+                opacity={iconOpacity}
+                onOpenPicker={() => setActiveColorPicker('iconColor')}
+                onChange={handleIconColorChange}
+                onOpacityChange={handleIconOpacityChange}
+                isActive={activeColorPicker === 'iconColor'}
+              />
+              <ColorBoxRow
+                title="Icon Background"
+                color={iconBgColor}
+                opacity={iconBgOpacity}
+                onOpenPicker={() => setActiveColorPicker('iconBgColor')}
+                onChange={handleIconBgColorChange}
+                onOpacityChange={handleIconBgOpacityChange}
+                isActive={activeColorPicker === 'iconBgColor'}
+              />
             </div>
           </div>
-
-          {/* Line Corner */}
-          <div className="flex flex-col gap-[0.25vw] relative">
-            <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
-            <ElementDropdown
-              value={lineCorner}
-              onChange={handleLineCornerChange}
-              options={['Square', 'Rounded']}
-              buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
-            />
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* ─── 5. CORNER RADIUS SECTION ───────────────────────────── */}
-      <CornerRadius
-        radius={radius}
-        onCornerChange={handleCornerChange}
-        isRadiusLinked={isRadiusLinked}
-        onToggleLinked={handleToggleRadiusLink}
-        className="pl-[0.5vw]"
+      {/* ===================== APPEARANCE: COLOR ===================== */}
+      <div className="flex flex-col gap-[1.1vw]">
+        {/* Fill Color */}
+        <ColorBoxRow
+          title="Fill Color"
+          color={shapeFillColor}
+          opacity={shapeOpacity}
+          onOpenPicker={() => setActiveColorPicker('buttonColor')}
+          onChange={handleShapeFillColorChange}
+          onOpacityChange={handleShapeOpacityChange}
+          isActive={activeColorPicker === 'buttonColor'}
+        />
+
+        {/* Stoke Color */}
+        <ColorBoxRow
+          title="Stoke Color"
+          color={strokeColor}
+          opacity={strokeOpacity}
+          onOpenPicker={() => setActiveColorPicker('strokeColor')}
+          onChange={handleStrokeColorChange}
+          onOpacityChange={handleStrokeOpacityChange}
+          isActive={activeColorPicker === 'strokeColor'}
+        />
+
+        {/* Stroke Width & Line Corner */}
+        {(() => {
+          const isStrokeDisabled = !strokeColor || strokeColor === 'none' || strokeColor === 'transparent';
+          const el = resolveTargetElement();
+          const btnTemplate = el?.getAttribute('data-button-template') || '';
+          const isChevronOrRibbon = el?.querySelector('polygon.btn-main-poly') || el?.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
+
+          const maxCurrentRadius = isChevronOrRibbon ? 0 : Math.max(radius?.tl || 0, radius?.tr || 0, radius?.bl || 0, radius?.br || 0);
+          const hasCornerRadius = maxCurrentRadius > 0;
+          const isLineCornerDisabled = isStrokeDisabled || hasCornerRadius;
+          const effectiveLineCorner = hasCornerRadius ? 'Rounded' : lineCorner;
+
+          return (
+            <div className={`flex items-center gap-[1vw] mt-[0.2vw] transition-opacity duration-200 ${isStrokeDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
+              {/* Stroke Width */}
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Stroke width</span>
+                <div className="flex items-center gap-[0.3vw] h-[2.1vw]">
+                  <button
+                    type="button"
+                    disabled={isStrokeDisabled}
+                    onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
+                    className="w-[2.1vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <span className="text-[1vw] leading-none mb-[0.1vw]">-</span>
+                  </button>
+                  <div
+                    className="flex-grow h-full bg-white border border-gray-300 rounded-[0.45vw] flex items-center cursor-ew-resize shadow-2xs hover:border-gray-400 transition-colors"
+                    onPointerDown={(e) => {
+                      if (isStrokeDisabled) return;
+                      handleScrubHelper(e, strokeWidth, (v) => handleStrokeWidthChange(Math.max(0, parseInt(v) || 0)));
+                    }}
+                  >
+                    <input
+                      type="number"
+                      disabled={isStrokeDisabled}
+                      value={strokeWidth}
+                      onChange={(e) => handleStrokeWidthChange(Math.max(0, parseInt(e.target.value || 0)))}
+                      className="w-full text-center text-[0.8vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isStrokeDisabled}
+                    onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
+                    className="w-[2.1vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <span className="text-[0.9vw] leading-none mb-[0.1vw]">+</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Line Corner */}
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Line Corner</span>
+                <div className="relative">
+                  <button
+                    type="button"
+                    disabled={isLineCornerDisabled}
+                    onClick={() => setShowLineCornerDropdown(!showLineCornerDropdown)}
+                    className="w-full h-[2.1vw] px-[0.7vw] border border-gray-300 rounded-[0.45vw] flex items-center justify-between bg-white text-[0.8vw] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-2xs cursor-pointer transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span>{effectiveLineCorner}</span>
+                    <ChevronDown size="0.75vw" className="text-gray-400" />
+                  </button>
+                  {showLineCornerDropdown && !isLineCornerDisabled && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setShowLineCornerDropdown(false)} />
+                      <div className="absolute top-[110%] left-0 right-0 bg-white border border-gray-200 rounded-[0.4vw] shadow-xl z-40 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                        {['Square', 'Rounded'].map((corner) => (
+                          <div
+                            key={corner}
+                            onClick={() => {
+                              handleLineCornerChange(corner);
+                              setShowLineCornerDropdown(false);
+                            }}
+                            className={`px-[0.75vw] py-[0.35vw] text-[0.8vw] cursor-pointer transition-colors ${effectiveLineCorner === corner ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700 hover:bg-gray-50'}`}
+                          >
+                            {corner}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* ===================== APPEARANCE: CORNER RADIUS ===================== */}
+      {(() => {
+        const el = resolveTargetElement();
+        const btnTemplate = el?.getAttribute('data-button-template') || '';
+        const isChevronOrRibbon = el?.querySelector('polygon.btn-main-poly') || el?.querySelector('.btn-ribbon-poly');
+        const isFixedShape = isChevronOrRibbon || btnTemplate === 'like-chevron';
+
+        if (isFixedShape) return null;
+
+        return (
+          <CornerRadius
+            radius={radius}
+            onCornerChange={handleCornerChange}
+            isRadiusLinked={isRadiusLinked}
+            onToggleLinked={handleToggleRadiusLink}
+            noAccordion={true}
+          />
+        );
+      })()}
+
+      {/* ===================== APPEARANCE: EFFECTS ===================== */}
+      <Effect
+        isShape={true}
+        hideBlur={true}
+        hideInnerShadow={true}
+        openSubSection={openSection === 'effect' ? 'effect' : null}
+        setOpenSubSection={(s) => setOpenSection(s === 'effect' ? 'effect' : null)}
+        activeEffects={activeEffects}
+        setActiveEffects={handleSetActiveEffects}
+        effectSettings={effectSettings}
+        setEffectSettings={handleSetEffectSettings}
+        activeColorPicker={activeColorPicker}
+        setActiveColorPicker={setActiveColorPicker}
+        showDetailedPicker={false}
+        setShowDetailedPicker={() => { }}
+        noAccordion={true}
       />
 
-      {/* ─── 6. EFFECTS SECTION ─────────────────────────────────── */}
-      <SectionHeader title="Effects" />
-
-      <div className="pl-[0.5vw]">
-        <Effect
-          isShape={true}
-          hideBlur={true}
-          hideInnerShadow={true}
-          hideHeader={true}
-          openSubSection={openSection === 'effect' ? 'effect' : null}
-          setOpenSubSection={(s) => setOpenSection(s === 'effect' ? 'effect' : null)}
-          activeEffects={activeEffects}
-          setActiveEffects={handleSetActiveEffects}
-          effectSettings={effectSettings}
-          setEffectSettings={handleSetEffectSettings}
-          activeColorPicker={activeColorPicker}
-          setActiveColorPicker={setActiveColorPicker}
-          showDetailedPicker={false}
-          setShowDetailedPicker={() => {}}
-        />
-      </div>
-
-      {/* ─── PORTALS ────────────────────────────────────────────── */}
-
-      {/* Color Picker Portal */}
+      {/* ===================== COLOR PICKER PORTAL ===================== */}
       {activeColorPicker && createPortal(
         <div
           className="fixed z-[5000]"
@@ -2240,17 +2469,17 @@ export const ButtonEditor = ({
           <ColorPicker
             color={
               activeColorPicker === 'textColor' ? textFillColor :
-              activeColorPicker === 'iconColor' ? iconColor :
-              activeColorPicker === 'iconBgColor' ? iconBgColor :
-              activeColorPicker === 'buttonColor' ? shapeFillColor :
-              activeColorPicker === 'strokeColor' ? strokeColor : '#000000'
+                activeColorPicker === 'iconColor' ? iconColor :
+                  activeColorPicker === 'iconBgColor' ? iconBgColor :
+                    activeColorPicker === 'buttonColor' ? shapeFillColor :
+                      activeColorPicker === 'strokeColor' ? strokeColor : '#000000'
             }
             opacity={
               activeColorPicker === 'textColor' ? textOpacity :
-              activeColorPicker === 'iconColor' ? iconOpacity :
-              activeColorPicker === 'iconBgColor' ? iconBgOpacity :
-              activeColorPicker === 'buttonColor' ? shapeOpacity :
-              activeColorPicker === 'strokeColor' ? strokeOpacity : 100
+                activeColorPicker === 'iconColor' ? iconOpacity :
+                  activeColorPicker === 'iconBgColor' ? iconBgOpacity :
+                    activeColorPicker === 'buttonColor' ? shapeOpacity :
+                      activeColorPicker === 'strokeColor' ? strokeOpacity : 100
             }
             onOpacityChange={(op) => {
               if (activeColorPicker === 'textColor') handleTextOpacityChange(op);
@@ -2273,7 +2502,7 @@ export const ButtonEditor = ({
         document.body
       )}
 
-      {/* Icon Gallery Portal */}
+      {/* ===================== ICON GALLERY PORTAL ===================== */}
       {isIconGalleryOpen && createPortal(
         <IconsModal
           isOpen={isIconGalleryOpen}
@@ -2297,6 +2526,34 @@ export const ButtonEditor = ({
         />,
         document.body
       )}
+
+      {/* CUSTOM CSS matching ShapeProperties */}
+      <style>{`
+        .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        body.is-scrubbing, body.is-scrubbing * {
+          cursor: none !important;
+          user-select: none !important;
+        }
+        .hide-cursor, .hide-cursor * {
+          cursor: none !important;
+        }
+        .virtual-scrub-cursor {
+          position: fixed;
+          pointer-events: none;
+          z-index: 100000;
+          width: 2vw;
+          height: 2vw;
+          margin-left: -1vw;
+          margin-top: -1vw;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          filter: drop-shadow(0 0.1vw 0.2vw rgba(0,0,0,0.3));
+        }
+      `}</style>
     </div>
   );
 };

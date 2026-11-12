@@ -1,18 +1,21 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Folder, Plus, ArrowLeft, Search, MoreVertical, Trash2, Edit2, Copy, Eye, Wrench, PenTool, BarChart2, Share2, Download, FolderInput, SlidersHorizontal, CheckSquare, Check, X, Home, Library, ArrowRight, UploadCloud, Upload, ChevronLeft, ChevronRight, ChevronDown, ArrowDownUp, Globe, Lock, Settings, CloudUpload, GripVertical, RotateCcw, Heart } from 'lucide-react';
+import { BookOpen, Folder, Plus, ArrowLeft, Search, MoreVertical, Trash2, Edit2, Copy, Eye, Wrench, PenTool, BarChart2, Share2, Download, FolderInput, SlidersHorizontal, CheckSquare, Check, X, Home, Library, ArrowRight, UploadCloud, Upload, ChevronLeft, ChevronRight, ChevronDown, ArrowDownUp, Globe, Lock, Settings, CloudUpload, GripVertical, RotateCcw, Heart, Monitor, Laptop } from 'lucide-react';
 import { Icon } from '@iconify/react';
 
 import AlertModal from '../components/AlertModal';
 import CreateBookLayout from '../Layouts/CreateBookLayout';
-import { convertPdfToImages, convertPdfWithInkscape, getPdfPageCount, getDocumentDetails, generatePdfPageSvg, getOfficeDocType, svgToDataUrl } from '../utils/pdfUtils';
+import { convertPdfToImages, convertPdfWithInkscape, getPdfPageCount, getDocumentDetails, generatePdfPageSvg, generateSkeletonPageSvg, getOfficeDocType, svgToDataUrl } from '../utils/pdfUtils';
 import PdfProcessingLoader from '../components/PdfProcessingLoader';
 import StorageLimitModal from '../components/StorageLimitModal';
 import LegacyFormatModal from '../components/LegacyFormatModal';
 import { validateStorageBeforeUpload } from '../utils/storageValidation';
-import { saveCustomizedEditorState, savePageEditorState } from '../utils/dbUtils';
+import { saveCustomizedEditorState, savePageEditorState, deleteBookEditorState } from '../utils/dbUtils';
+import { saveAllPagesToIDB } from '../utils/pageWindowStore';
 import { backgroundSyncManager } from '../utils/backgroundSyncManager';
+import { backgroundExtractionManager } from '../utils/backgroundExtractionManager';
 import { preloadEditorComponents } from '../utils/preloadUtils';
 const ShareModal = React.lazy(() => import('../components/ShareModal'));
 const ExportModal = React.lazy(() => import('../components/ExportModal'));
@@ -80,6 +83,39 @@ const templates = [
 export default function MyFlipbooks() {
     const navigate = useNavigate();
 
+    // Block Mobile and Tablet Devices from Application
+    const isMobileOrTablet = typeof window !== 'undefined' && (
+      window.innerWidth < 1024 ||
+      (typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+    );
+
+    if (isMobileOrTablet) {
+      return (
+        <div className="w-full h-full min-h-[85vh] flex flex-col items-center justify-center p-6 text-center bg-white font-sans select-none">
+          <div className="w-16 h-16 rounded-2xl bg-orange-50 border border-orange-200/80 flex items-center justify-center text-[#ec5137] mb-4 shadow-xs">
+            <Monitor className="w-8 h-8" />
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 text-[#ec5137] border border-orange-200 text-xs font-semibold mb-3">
+            <Laptop className="w-3.5 h-3.5" />
+            <span>Desktop Only Application</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 max-w-md leading-snug">
+            Try Application on Your Desktop for Best Experience
+          </h1>
+          <p className="text-gray-500 text-xs sm:text-sm mt-2 mb-6 max-w-sm leading-relaxed">
+            FlipiBook Application (Studio, 3D Canvas, and Page Editors) is designed exclusively for desktop and laptop computers. Mobile and tablet devices are not supported for editing and managing flipbooks.
+          </p>
+          <button
+            onClick={() => navigate('/home')}
+            className="px-6 py-2.5 rounded-xl bg-[#ec5137] hover:bg-[#d5452e] text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+          >
+            <Home className="w-4 h-4" />
+            <span>Back to Home</span>
+          </button>
+        </div>
+      );
+    }
+
     // User Data from Redux Auth
     const { user } = useAuth();
     const emailId = user?.emailId || user?.email;
@@ -137,6 +173,35 @@ export default function MyFlipbooks() {
 
     const [active3dFolder, setActive3dFolder] = useState('All Models');
     const [threeDCounts, setThreeDCounts] = useState({ allCount: 0, recentCount: 0 });
+
+    // Shelf folders & selection states shared between FlipbooksSidebar and MyShelf
+    const [shelfFolders, setShelfFolders] = useState([]);
+    const [selectedShelfFolder, setSelectedShelfFolder] = useState('');
+    const [shelfCurrentView, setShelfCurrentView] = useState('overview'); // 'overview' | 'shelf_detail'
+    const [isShelfAddModalOpen, setIsShelfAddModalOpen] = useState(false);
+
+    // Initial background preview fetch for shelf folders so sidebar displays them immediately
+    useEffect(() => {
+        if (!emailId) return;
+        const fetchShelfFoldersPreview = async () => {
+            try {
+                const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books`, {
+                    withCredentials: true,
+                    params: { t: Date.now(), emailId }
+                });
+                const actualMyShelf = res.data?.shelfCustomizations || res.data?.myShelf;
+                if (actualMyShelf && actualMyShelf.folders && actualMyShelf.folders.length > 0) {
+                    const previewFolders = actualMyShelf.folders.map(f => ({
+                        name: f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : (f.folderName || 'My Flipbooks'),
+                        books: f.books || [],
+                        shelf_design: f.shelf_design || 'customize4'
+                    }));
+                    setShelfFolders(prev => prev.length === 0 ? previewFolders : prev);
+                }
+            } catch (e) { }
+        };
+        fetchShelfFoldersPreview();
+    }, [emailId, backendUrl]);
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All Categories');
     const [statusFilter, setStatusFilter] = useState('All Status');
@@ -434,7 +499,12 @@ export default function MyFlipbooks() {
                     fileName: file.name,
                     stage: 'converting'
                 });
-                const images = await convertPdfWithInkscape(file, Infinity, backendUrl, (currOrObj, total, pct, stage, msg) => {
+                // 50% Fast-Launch: For large documents (>6 pages), extract first 50% for instant editor launch,
+                // and stream remaining balance pages in background Web Workers with zero UI latency.
+                const isSingleLargeDoc = files.length === 1 && detectedCount > 6;
+                const earlyExtractLimit = isSingleLargeDoc ? Math.max(4, Math.ceil(detectedCount * 0.5)) : Infinity;
+
+                const images = await convertPdfWithInkscape(file, earlyExtractLimit, backendUrl, (currOrObj, total, pct, stage, msg) => {
                     let current, pageCount, percent, message, currentStage;
                     if (typeof currOrObj === 'object' && currOrObj !== null) {
                         percent = currOrObj.percent ?? currOrObj.pct;
@@ -468,6 +538,9 @@ export default function MyFlipbooks() {
                 });
                 if (isUploadCancelledRef.current) return;
                 allImages = [...allImages, ...images];
+                allImages.totalPages = images.totalPages || detectedCount;
+                allImages.isPartial = !!images.isPartial;
+                allImages.arrayBuffer = images.arrayBuffer;
             }
 
             if (isUploadCancelledRef.current) return;
@@ -491,8 +564,9 @@ export default function MyFlipbooks() {
             const maxHeight = firstH;
 
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
-            const matchedFolder = folders.find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
-            const targetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'fol_default';
+            const matchedFolder = folders.find(f => (f.name || '').trim().toLowerCase() === targetFolder.trim().toLowerCase() || (targetFolder === 'My Flipbooks' && f.isDefault));
+            const rawTargetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'default';
+            const targetFolderVId = String(rawTargetFolderVId).replace(/^fol_/, '');
 
             const now = new Date();
             const timeString = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
@@ -519,21 +593,26 @@ export default function MyFlipbooks() {
             }
             uniqueName = candidateBookName;
 
-            // Step 2 — Encode pages and save flipbook in a single high-speed request
-            setProcessingProgress({
-                current: 0,
-                total: allImages.length,
+            const isProgressive = !!allImages.isPartial && (allImages.totalPages > allImages.length);
+            const totalDocPages = isProgressive ? allImages.totalPages : allImages.length;
+            const extractedCount = allImages.length;
+
+            // Step 3 — Processing & saving flipbook
+            setProcessingProgress(prev => ({
+                ...(prev || {}),
+                current: totalDocPages,
+                total: totalDocPages,
                 totalFiles: files.length,
-                pageCount: allImages.length,
-                percent: 88,
+                pageCount: totalDocPages,
+                percent: 92,
                 message: 'Saving pages & preparing flipbook...',
                 fileName: uniqueName,
                 stage: 'saving'
-            });
+            }));
             // Yield to event loop so Step 3 spinner runs with 0 stutter
             await new Promise(r => setTimeout(r, 0));
 
-            const allPages = await Promise.all(allImages.map(async (img, idx) => {
+            const extractedPages = await Promise.all(allImages.map(async (img, idx) => {
                 const pageIndex = idx + 1;
                 const base64Url = img.dataUrl || (img.content ? svgToDataUrl(img.content) : "") || (img.blob ? await blobToBase64(img.blob) : "");
                 let html = img.content || generatePdfPageSvg(base64Url, `Page ${pageIndex}`, maxWidth, maxHeight, true);
@@ -547,9 +626,27 @@ export default function MyFlipbooks() {
                 return {
                     pageName: `Page ${pageIndex}`,
                     content: html,
-                    pageNumber: pageIndex
+                    html: html,
+                    pageNumber: pageIndex,
+                    isPlaceholder: false
                 };
             }));
+
+            let allPages = extractedPages;
+            if (isProgressive && totalDocPages > extractedCount) {
+                const placeholderPages = [];
+                for (let pIdx = extractedCount + 1; pIdx <= totalDocPages; pIdx++) {
+                    const skeletonSvg = generateSkeletonPageSvg(pIdx, maxWidth, maxHeight);
+                    placeholderPages.push({
+                        pageName: `Page ${pIdx}`,
+                        content: skeletonSvg,
+                        html: skeletonSvg,
+                        pageNumber: pIdx,
+                        isPlaceholder: true
+                    });
+                }
+                allPages = [...extractedPages, ...placeholderPages];
+            }
 
             if (isUploadCancelledRef.current) return;
 
@@ -563,18 +660,19 @@ export default function MyFlipbooks() {
             // Save initial 2 pages to create the book record on server in <200ms
             const initialBatchSize = Math.min(allPages.length, 2);
             const initialBatch = allPages.slice(0, initialBatchSize);
-            const remainingPages = allPages.slice(initialBatchSize);
+            const readyRemainingPages = allPages.slice(initialBatchSize).filter(p => !p.isPlaceholder);
 
-            setProcessingProgress({
-                current: allPages.length,
-                total: allPages.length,
+            setProcessingProgress(prev => ({
+                ...(prev || {}),
+                current: totalDocPages,
+                total: totalDocPages,
                 totalFiles: files.length,
-                pageCount: allPages.length,
+                pageCount: totalDocPages,
                 percent: 94,
-                message: 'Preparing flipbook...',
+                message: isProgressive ? 'Fast-launching editor...' : 'Preparing flipbook...',
                 fileName: uniqueName,
                 stage: 'saving'
-            });
+            }));
 
             // Pre-cache ALL pages in IndexedDB for BOTH CustomizedEditor and PageEditor immediately
             await Promise.all([
@@ -616,6 +714,8 @@ export default function MyFlipbooks() {
                 pages: initialBatch,
                 overwrite: false,
                 folderName: targetFolder,
+                folder_id: targetFolderVId,
+                fol_v_id: targetFolderVId,
                 keepBase64: true,
                 v_id: cryptoVId,
                 bookType: resolvedBookType,
@@ -628,6 +728,7 @@ export default function MyFlipbooks() {
             });
             const v_id = createRes.data?.v_id || cryptoVId;
             createdFlipbookVIdRef.current = v_id;
+            saveAllPagesToIDB(v_id, allPages).catch(e => console.warn('[MyFlipbooks] saveAllPagesToIDB error:', e));
 
             if (isUploadCancelledRef.current) {
                 flipbookApi.deleteBook(v_id).catch(() => {});
@@ -667,20 +768,39 @@ export default function MyFlipbooks() {
                 ]).catch(() => {});
             }
 
-            // Queue remaining pages for non-blocking asynchronous cloud sync
-            if (remainingPages.length > 0) {
-                backgroundSyncManager.enqueue(v_id, emailId, remainingPages, extractedPagesBytes > 0 ? extractedPagesBytes : totalPdfSize);
+            // Queue remaining already-extracted pages for non-blocking asynchronous cloud sync
+            if (readyRemainingPages.length > 0) {
+                backgroundSyncManager.enqueue(v_id, emailId, readyRemainingPages, extractedPagesBytes > 0 ? extractedPagesBytes : totalPdfSize);
             }
 
-            setProcessingProgress({
-                current: allPages.length,
-                total: allPages.length,
+            // Launch background vector extraction for balance placeholder pages (e.g. pages 51..100)
+            if (isProgressive && allImages.arrayBuffer) {
+                backgroundExtractionManager.start({
+                    arrayBuffer: allImages.arrayBuffer,
+                    v_id,
+                    emailId,
+                    startIndex: extractedCount,
+                    totalPages: totalDocPages,
+                    width: maxWidth,
+                    height: maxHeight,
+                    orientation,
+                    totalPdfSize,
+                    bookName: uniqueName,
+                    folderName: targetFolder
+                });
+            }
+
+            setProcessingProgress(prev => ({
+                ...(prev || {}),
+                current: totalDocPages,
+                total: totalDocPages,
                 totalFiles: files.length,
+                pageCount: totalDocPages,
                 percent: 100,
-                message: 'Opening flipbook...',
+                message: isProgressive ? 'Editor ready! Streaming balance pages in background...' : 'Opening flipbook...',
                 fileName: uniqueName,
                 stage: 'done'
-            });
+            }));
 
             // Invalidate React Query cache so newly created book appears immediately
             queryClient.invalidateQueries({ queryKey: ['flipbook-books'] });
@@ -688,15 +808,17 @@ export default function MyFlipbooks() {
             fetchLiveStorageSettings();
             window.dispatchEvent(new CustomEvent('flipibook_storage_updated'));
 
-            // Smooth transition: small delay to let progress hit 100% cleanly
-            await new Promise(res => setTimeout(res, 80));
+            // Smooth transition: brief delay to let spring physics smoothly glide to 100%
+            await new Promise(res => setTimeout(res, 220));
 
-            // Navigate to the customized editor IMMEDIATELY with all in-memory pages
+            // Navigate to the customized editor IMMEDIATELY (pass initial pages to stay within history quota)
+            const safeStatePages = allPages.length > 20 ? allPages.slice(0, 10) : allPages;
+
             navigate(`/editor/customized_editor/${encodeURIComponent(targetFolderVId)}/${v_id}`, {
                 state: { 
                     flipbookName: uniqueName, 
                     pageCount: allPages.length,
-                    pages: allPages,
+                    pages: safeStatePages,
                     width: maxWidth,
                     height: maxHeight,
                     orientation,
@@ -750,6 +872,7 @@ export default function MyFlipbooks() {
         setIsLoading(false);
         setProcessingProgress(null);
         if (createdFlipbookVIdRef.current) {
+            deleteBookEditorState(createdFlipbookVIdRef.current);
             flipbookApi.deleteBook(createdFlipbookVIdRef.current).catch(() => {});
             createdFlipbookVIdRef.current = null;
         }
@@ -795,10 +918,10 @@ export default function MyFlipbooks() {
         }
 
         const matchedFolder = (folders || []).find(f => f.name === targetFolder || (targetFolder === 'My Flipbooks' && f.isDefault));
-        const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
         const finalFolderVId = (isFolId(matchedFolder?.fol_v_id) ? matchedFolder.fol_v_id : null) ||
             (isFolId(matchedFolder?.id) ? matchedFolder.id : null) ||
-            'fol_default';
+            'default';
 
         const redirectUrl = `/editor/${encodeURIComponent(finalFolderVId)}/${generatedVId}`;
         console.log("Instantly opening editor with v_id:", redirectUrl);
@@ -843,12 +966,12 @@ export default function MyFlipbooks() {
         setCreatingFolderName(trimmed);
         try {
             const res = await flipbookApi.createFolder(emailId, trimmed);
-            const createdId = res.data?.id || trimmed;
+            const createdId = res.data?.id || res.data?.fol_v_id || trimmed;
             
             // Instantly update folder list locally without heavy fetchData() flipbook reloads
             setFolders(prev => {
                 const existing = prev.filter(f => f.name.toLowerCase() !== trimmed.toLowerCase());
-                const updated = [...existing, { id: createdId, name: trimmed }];
+                const updated = [...existing, { id: createdId, fol_v_id: createdId, name: trimmed, isDefault: false }];
                 saveFolderOrder(updated);
                 return updated;
             });
@@ -1209,7 +1332,10 @@ export default function MyFlipbooks() {
             const trashedBooks = books.filter(b => b.trash || b.folder === 'Trash');
             const freedBytes = trashedBooks.reduce((sum, b) => sum + (b.sizeBytes || b.fileSize || 0), 0);
 
-            // Optimistically remove all trashed books
+            // Optimistically remove all trashed books and clear their local IndexedDB cache
+            trashedBooks.forEach(b => {
+                if (b.v_id) deleteBookEditorState(b.v_id);
+            });
             setBooks(prev => prev.filter(b => !b.trash && b.folder !== 'Trash'));
             setSelectedBooks([]);
             setDeleteBookConfirmation({ isOpen: false, bookId: null, bookTitle: '' });
@@ -1355,6 +1481,7 @@ export default function MyFlipbooks() {
                 if (isRecent) {
                     return flipbookApi.removeRecent({ emailId, bookName: book.realName, v_id: book.v_id });
                 } else {
+                    if (book.v_id) deleteBookEditorState(book.v_id);
                     return flipbookApi.deleteBookPermanently({
                         emailId,
                         folderName: book.originalFolder || book.folder,
@@ -1561,7 +1688,7 @@ export default function MyFlipbooks() {
         const name = newMoveFolderName.trim();
         setFolders(prev => {
             const existing = prev.filter(f => f.name.toLowerCase() !== name.toLowerCase());
-            const updated = [...existing, { id: name, name }];
+            const updated = [...existing, { id: name, fol_v_id: name, name, isDefault: false }];
             return updated.sort((a, b) => a.name.localeCompare(b.name));
         });
         try {
@@ -1835,6 +1962,19 @@ export default function MyFlipbooks() {
                     active3dFolder={active3dFolder}
                     setActive3dFolder={setActive3dFolder}
                     threeDCounts={threeDCounts}
+                    shelfFolders={shelfFolders}
+                    selectedShelfFolder={selectedShelfFolder}
+                    shelfCurrentView={shelfCurrentView}
+                    onSelectShelfFolder={(folderName) => {
+                        if (!folderName || folderName === '__overview__') {
+                            setShelfCurrentView('overview');
+                            setSelectedShelfFolder('');
+                        } else {
+                            setSelectedShelfFolder(folderName);
+                            setShelfCurrentView('shelf_detail');
+                        }
+                    }}
+                    onAddShelf={() => setIsShelfAddModalOpen(true)}
                 />
 
             {/* Main Content */}
@@ -1849,7 +1989,15 @@ export default function MyFlipbooks() {
                     />
                 ) : dashboardMode === 'shelf' ? (
                     <div className="flex-1 w-full h-full overflow-hidden min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs flex flex-col">
-                        <MyShelf />
+                        <MyShelf
+                            onFoldersChange={setShelfFolders}
+                            selectedFolder={selectedShelfFolder}
+                            onSelectFolder={setSelectedShelfFolder}
+                            currentView={shelfCurrentView}
+                            onViewChange={setShelfCurrentView}
+                            isShelfAddModalOpen={isShelfAddModalOpen}
+                            setIsShelfAddModalOpen={setIsShelfAddModalOpen}
+                        />
                     </div>
                 ) : dashboardMode === 'gallery' ? (
                     <div className="flex-1 w-full h-full overflow-y-auto min-h-0 bg-[#f7f8fa] rounded-[1vw] shadow-xs">
@@ -1954,17 +2102,19 @@ export default function MyFlipbooks() {
                         onScroll={() => setActiveBookMenu(null)}
                     >
                         {filteredBooks.map((book) => {
-                            let actualFolder = book.folder;
-                            if (actualFolder === 'Recent Book' || actualFolder === 'Recent book') {
-                                const physicalBook = books.find(b => b.realName === book.realName && b.folder !== 'Recent Book' && b.folder !== 'Recent book');
+                            const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'all flipbook', 'favorites', 'trash']);
+                            let actualFolder = book.actualFolder || book.folder;
+                            if (!actualFolder || VIRTUAL_FOLDERS.has(String(actualFolder).trim().toLowerCase())) {
+                                const physicalBook = books.find(b => b.realName === book.realName && b.folder && !VIRTUAL_FOLDERS.has(String(b.folder).trim().toLowerCase()));
                                 if (physicalBook) actualFolder = physicalBook.folder;
                             }
+                            if (!actualFolder) actualFolder = book.folderName || 'default';
 
                             const userFolder = book.userID || book.userId || emailId?.replace(/[@.]/g, "_");
                             const iframeBaseUrl = getAssetBaseUrl(
                                 userFolder,
                                 actualFolder,
-                                book.realName
+                                book.realName || book.title || book.flipbookName
                             );
 
                             return (

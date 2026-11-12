@@ -20,6 +20,106 @@ import {
   clearSmartGuides
 } from '../utils/smartGuides';
 import { convertTextToForeignObject } from '../utils/textConversionUtils';
+import { isPageRootElement as fallbackIsPageRootElement } from '../utils/frameHierarchyUtils';
+
+/**
+ * Synchronizes the visual cell selection overlay box (.table-cell-selection-overlay)
+ * with the actual DOM positions of the selected cells inside a table element.
+ */
+export const syncTableCellSelectionOverlay = (tableEl) => {
+  if (!tableEl) return;
+  const table = tableEl.querySelector ? tableEl.querySelector('table') : null;
+  const wrapper = tableEl.querySelector ? tableEl.querySelector('.table-card-wrapper') : table?.parentElement;
+  if (!table || !wrapper) return;
+
+  const selectedCells = Array.from(table.querySelectorAll('td[data-cell-selected="true"], th[data-cell-selected="true"]'));
+  const overlays = wrapper.querySelectorAll('.table-cell-selection-overlay');
+
+  if (selectedCells.length === 0) {
+    overlays.forEach(n => n.remove());
+    return;
+  }
+
+  if (wrapper.style.position !== 'relative') {
+    wrapper.style.position = 'relative';
+  }
+
+  const bWidth = parseFloat(tableEl.getAttribute('data-border-width') || '1') || 1;
+  const highlightColor = '#EA543A';
+
+  const getCellLocalRect = (cell) => {
+    if (cell && wrapper) {
+      let l = 0;
+      let t = 0;
+      let curr = cell;
+      while (curr && curr !== wrapper && curr !== document.body && curr !== document.documentElement) {
+        l += curr.offsetLeft || 0;
+        t += curr.offsetTop || 0;
+        if (curr.offsetParent === wrapper) {
+          break;
+        }
+        curr = curr.offsetParent;
+      }
+      const w = cell.offsetWidth || cell.clientWidth || 0;
+      const h = cell.offsetHeight || cell.clientHeight || 0;
+      if (w > 0 && h > 0) {
+        return { left: l, top: t, right: l + w, bottom: t + h, width: w, height: h };
+      }
+    }
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const cRect = cell.getBoundingClientRect();
+    const sX = (wrapperRect.width > 0 && wrapper.offsetWidth > 0) ? (wrapperRect.width / wrapper.offsetWidth) : 1;
+    const sY = (wrapperRect.height > 0 && wrapper.offsetHeight > 0) ? (wrapperRect.height / wrapper.offsetHeight) : sX;
+    const l = (cRect.left - wrapperRect.left) / sX;
+    const t = (cRect.top - wrapperRect.top) / sY;
+    const w = cRect.width / sX;
+    const h = cRect.height / sY;
+    return { left: l, top: t, right: l + w, bottom: t + h, width: w, height: h };
+  };
+
+  const entries = selectedCells.map(cell => ({
+    r: parseInt(cell.getAttribute('data-row') || '0', 10),
+    c: parseInt(cell.getAttribute('data-col') || '0', 10),
+    cell
+  }));
+  const minR = Math.min(...entries.map(e => e.r));
+  const maxR = Math.max(...entries.map(e => e.r));
+  const minC = Math.min(...entries.map(e => e.c));
+  const maxC = Math.max(...entries.map(e => e.c));
+  const isSingleRect = (maxR - minR + 1) * (maxC - minC + 1) === entries.length;
+
+  if (isSingleRect || entries.length === 1) {
+    let minLeft = Infinity, minTop = Infinity, maxRight = -Infinity, maxBottom = -Infinity;
+    selectedCells.forEach(cell => {
+      const rect = getCellLocalRect(cell);
+      if (rect.left < minLeft) minLeft = rect.left;
+      if (rect.top < minTop) minTop = rect.top;
+      if (rect.right > maxRight) maxRight = rect.right;
+      if (rect.bottom > maxBottom) maxBottom = rect.bottom;
+    });
+
+    overlays.forEach((o, idx) => { if (idx > 0) o.remove(); });
+    let overlay = wrapper.querySelector('.table-cell-selection-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'table-cell-selection-overlay';
+      wrapper.appendChild(overlay);
+    }
+    const oWidth = Math.max(1, maxRight - minLeft);
+    const oHeight = Math.max(1, maxBottom - minTop);
+    overlay.style.cssText = `position:absolute;left:${minLeft}px;top:${minTop}px;width:${oWidth}px;height:${oHeight}px;border:${bWidth}px solid ${highlightColor};box-sizing:border-box;pointer-events:none;z-index:9999;border-radius:0px;`;
+  } else {
+    overlays.forEach(n => n.remove());
+    selectedCells.forEach(cell => {
+      const cellBWidth = parseFloat(cell.getAttribute('data-cell-border-width') || bWidth) || bWidth;
+      const rect = getCellLocalRect(cell);
+      const overlay = document.createElement('div');
+      overlay.className = 'table-cell-selection-overlay';
+      overlay.style.cssText = `position:absolute;left:${rect.left}px;top:${rect.top}px;width:${Math.max(1, rect.width)}px;height:${Math.max(1, rect.height)}px;border:${cellBWidth}px solid ${highlightColor};box-sizing:border-box;pointer-events:none;z-index:9999;border-radius:0px;`;
+      wrapper.appendChild(overlay);
+    });
+  }
+};
 
 /**
  * Custom hook encapsulating the Interact.js pointer drag and resize engine
@@ -38,6 +138,7 @@ export const useInteractEngine = ({
   saveModifiedPageHtml,
   getDraggableElement,
   getTopLevelFrames,
+  isPageRootElement,
   hitTest,
   selectedLayerIdRef,
   multiSelectedIdsRef,
@@ -56,6 +157,8 @@ export const useInteractEngine = ({
   useEffect(() => {
     localTrimViewRef.current = localTrimView;
   }, [localTrimView]);
+
+  const isPageRoot = typeof isPageRootElement === 'function' ? isPageRootElement : fallbackIsPageRootElement;
 
   const safeRectChecker = (element) => {
     if (element && typeof element.getBoundingClientRect === 'function') {
@@ -97,7 +200,7 @@ export const useInteractEngine = ({
       .styleCursor(false) // Prevents interact.js from dynamically setting cursors on hover
       .rectChecker(safeRectChecker)
       .draggable({
-        ignoreFrom: '.resize-handle, .text-edit-box, [data-editing="true"]',
+        ignoreFrom: '.resize-handle, .text-edit-box, [data-editing="true"], .table-cell-selection-overlay, .swiper-button-prev, .swiper-button-prev *, .swiper-button-next, .swiper-button-next *, .swiper-pagination, .swiper-pagination *, .swiper-pagination-bullet, [data-slideshow-nav], [data-slideshow-nav] *',
         cursorChecker: () => null, // Second layer of prevention just in case
         inertia: false, // Disable inertia for perfect cursor sync
         autoScroll: true,
@@ -112,13 +215,18 @@ export const useInteractEngine = ({
             if (!svgElement) return;
 
             const isEditing = target.closest('[data-editing="true"]') || (document.activeElement && document.activeElement.getAttribute('contenteditable') === 'true');
+            const tableParent = target.closest('[data-type="table-frame"], [data-type="table"], g[id^="table-"]');
+            const isTableSelected = tableParent && tableParent.getAttribute('data-table-selected') === 'true';
+            const hitCellWhileSelected = Boolean(isTableSelected && target.closest('td, th, .table-cell-selection-overlay'));
+            const isTableCellEditing = tableParent && tableParent.getAttribute('data-table-mode') === 'cell-edit';
+            const isResizingDivider = Boolean(window.__isResizingTableDivider) || Boolean(window.__isHoveringTableDivider);
             // If adjusting shape image mask/crop, stop interact.js drag so user can pan the inner image
             if (window.__isAdjustingShapeImage || document.body.classList.contains("shape-adjust-active")) {
               safeStopInteraction(event.interaction);
               return;
             }
-            // If Ctrl is held, not in selection mode, or node edit mode is active, stop interact.js drag
-            if (!['select', 'upload'].includes(activeMainToolRef.current) || isEditing || event.ctrlKey || nodeEditModeRef.current) {
+            // If Ctrl is held, not in selection mode, node edit mode is active, table is in cell-edit mode, hit a table cell while selected, or resizing divider, stop interact.js drag
+            if (!['select', 'upload'].includes(activeMainToolRef.current) || isEditing || isTableCellEditing || hitCellWhileSelected || isResizingDivider || event.ctrlKey || nodeEditModeRef.current) {
               safeStopInteraction(event.interaction);
               return;
             }
@@ -290,7 +398,9 @@ export const useInteractEngine = ({
                           selEl.getAttribute('data-type') === 'map' ||
                           selEl.getAttribute('data-type') === 'embed-frame' ||
                           selEl.getAttribute('data-type') === 'slideshow' ||
-                          selEl.getAttribute('data-type') === 'audio-frame';
+                          selEl.getAttribute('data-type') === 'audio-frame' ||
+                          selEl.getAttribute('data-type') === 'table-frame' ||
+                          (selEl.id && selEl.id.startsWith('table-'));
 
                         const isChildOfSelected = !isCompoundGroup && target && target !== selEl && selEl.contains(target) && target.id && target.getAttribute('data-name') !== 'Overlay';
                         elementToDrag = isChildOfSelected ? target : selEl;
@@ -356,20 +466,48 @@ export const useInteractEngine = ({
               'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"], ' +
               'g[data-is-element-shape="true"], g[data-type="shape"], g[data-shape-type], g[id^="shape-"], ' +
               'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
-              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"]'
+              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"], g[data-type="table-frame"], g[id^="table-"]'
             ) || (elementToDrag?.tagName?.toLowerCase() === 'g' && elementToDrag?.matches?.(
               '[data-is-element-button="true"], [data-type="button"], g[id^="button-"], ' +
               '[data-is-element-shape="true"], [data-type="shape"], [data-shape-type], g[id^="shape-"], ' +
               '[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"], ' +
-              '[data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="audio-frame"]'
+              '[data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="audio-frame"], [data-type="table-frame"], g[id^="table-"]'
             ) ? elementToDrag : null) || elementToDrag?.closest?.(
               'g[data-is-element-button="true"], g[data-type="button"], g[id^="button-"], ' +
               'g[data-is-element-shape="true"], g[data-type="shape"], g[data-shape-type], g[id^="shape-"], ' +
               'g[data-is-image-group="true"], g[data-is-video-group="true"], g[data-is-gif-group="true"], ' +
-              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"]'
+              'g[data-type="qrcode"], g[data-type="map"], g[data-type="embed-frame"], g[data-type="slideshow"], g[data-type="audio-frame"], g[data-type="table-frame"], g[id^="table-"]'
             );
             if (compoundParent) {
               elementToDrag = compoundParent;
+            }
+
+            // If dragging a table, immediately clear any cell selection highlight and stop it from returning
+            const isTableElem = elementToDrag?.getAttribute?.('data-type') === 'table-frame' || (elementToDrag?.id && elementToDrag.id.startsWith('table-'));
+            if (isTableElem) {
+              window.dispatchEvent(new CustomEvent('clear-table-cell-selection', { detail: { elementId: elementToDrag.id } }));
+              const table = elementToDrag.querySelector('table');
+              if (table) {
+                const normalBorder = elementToDrag.getAttribute('data-border-color') || '#cbd5e1';
+                table.querySelectorAll('[data-neighbor-highlighted]').forEach(td => {
+                  td.removeAttribute('data-neighbor-highlighted');
+                  td.style.removeProperty('border-top-color');
+                  td.style.removeProperty('border-bottom-color');
+                  td.style.removeProperty('border-left-color');
+                  td.style.removeProperty('border-right-color');
+                  td.style.borderColor = td.getAttribute('data-cell-border-color') || normalBorder;
+                });
+                table.querySelectorAll('td[data-cell-selected], th[data-cell-selected]').forEach(td => {
+                  td.removeAttribute('data-cell-selected');
+                  td.style.removeProperty('box-shadow');
+                  td.style.borderColor = td.getAttribute('data-cell-border-color') || normalBorder;
+                });
+                elementToDrag.querySelectorAll('.table-cell-selection-overlay').forEach(n => n.remove());
+                table.style.removeProperty('border-top-color');
+                table.style.removeProperty('border-bottom-color');
+                table.style.removeProperty('border-left-color');
+                table.style.removeProperty('border-right-color');
+              }
             }
 
             // Safety check for metadata-based 'locked' or 'hidden'
@@ -411,13 +549,47 @@ export const useInteractEngine = ({
             }
 
             // 2. AUTO-SELECT if not already selected
+            const isMultiKey = Boolean(event.shiftKey || event.metaKey || (event.ctrlKey && !event.altKey));
             const isSelected = (selectedLayerIdRef.current === elementToDrag.id) ||
               (multiSelectedIdsRef.current && multiSelectedIdsRef.current.has(elementToDrag.id));
 
-            if (!isSelected) {
+            if (isMultiKey) {
+              if (isPageRoot(elementToDrag, svgElement)) {
+                return;
+              }
+              const nextSet = new Set(multiSelectedIdsRef.current);
+              const primaryId = selectedLayerIdRef.current;
+              const primaryEl = primaryId ? svgElement.querySelector(`[id="${primaryId}"]`) : null;
+              if (primaryId && !isPageRoot(primaryEl, svgElement)) {
+                nextSet.add(primaryId);
+              }
+              // Purge any root elements
+              for (const id of Array.from(nextSet)) {
+                const el = svgElement.querySelector(`[id="${id}"]`);
+                if (isPageRoot(el, svgElement)) {
+                  nextSet.delete(id);
+                }
+              }
+              if (nextSet.has(elementToDrag.id)) {
+                nextSet.delete(elementToDrag.id);
+                const remaining = [...nextSet];
+                selectedLayerIdRef.current = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+              } else {
+                nextSet.add(elementToDrag.id);
+                selectedLayerIdRef.current = elementToDrag.id;
+              }
+              multiSelectedIdsRef.current = nextSet;
+              const idToSelect = selectedLayerIdRef.current;
+              queueMicrotask(() => {
+                if (setSelectedLayerId) setSelectedLayerId(idToSelect);
+                if (setMultiSelectedIds) setMultiSelectedIds(nextSet);
+              });
+            } else if (!isSelected) {
               // Force update refs immediately so drag logic sees the selection
+              const isRoot = isPageRoot(elementToDrag, svgElement);
               selectedLayerIdRef.current = elementToDrag.id;
-              multiSelectedIdsRef.current = new Set([elementToDrag.id]);
+              const nextMulti = isRoot ? new Set() : new Set([elementToDrag.id]);
+              multiSelectedIdsRef.current = nextMulti;
 
               // Clear previous stale selection overlays immediately before drawing new one
               clearOverlayType('selected');
@@ -432,7 +604,7 @@ export const useInteractEngine = ({
               const idToSelect = elementToDrag.id;
               queueMicrotask(() => {
                 if (setSelectedLayerId) setSelectedLayerId(idToSelect);
-                if (setMultiSelectedIds) setMultiSelectedIds(new Set([idToSelect]));
+                if (setMultiSelectedIds) setMultiSelectedIds(nextMulti);
               });
             }
 
@@ -545,6 +717,19 @@ export const useInteractEngine = ({
                 }
               } else {
                 dragState.element.setAttribute('data-dragging', 'true');
+                if (dragState.element?.getAttribute('data-type') === 'table-frame' || dragState.element?.id?.startsWith('table-')) {
+                  const bColor = dragState.element.getAttribute('data-border-color') || '#cbd5e1';
+                  dragState.element.querySelectorAll('td[data-cell-selected], th[data-cell-selected]').forEach(td => {
+                    td.removeAttribute('data-cell-selected');
+                    td.style.removeProperty('outline');
+                    td.style.removeProperty('outline-offset');
+                    td.style.removeProperty('box-shadow');
+                    td.style.removeProperty('position');
+                    td.style.removeProperty('z-index');
+                    td.style.borderColor = td.getAttribute('data-cell-border-color') || bColor;
+                  });
+                  dragState.element.querySelectorAll('rect.svg-table-overlay, rect.svg-image-stroke-overlay, rect.table-fill-layer, .table-cell-selection-overlay').forEach(r => r.remove());
+                }
               }
 
               // Purge lingering ghost selection boxes for other elements across all overlay layers
@@ -801,6 +986,10 @@ export const useInteractEngine = ({
               if (dragState.element) {
                 dragState.element.removeAttribute('data-dragging');
                 delete dragState.element._dragLocalBBox;
+                if (dragState.element?.getAttribute('data-type') === 'table-frame' || dragState.element?.id?.startsWith('table-')) {
+                  window.__lastTableDragEndTime = Date.now();
+                  dragState.element.__lastTableDragEndTime = Date.now();
+                }
               }
               delete event.interaction.dragState;
               return;
@@ -830,6 +1019,10 @@ export const useInteractEngine = ({
               if (dragState.element) {
                 dragState.element.removeAttribute('data-dragging');
                 delete dragState.element._dragLocalBBox;
+                if (dragState.element?.getAttribute('data-type') === 'table-frame' || dragState.element?.id?.startsWith('table-')) {
+                  window.__lastTableDragEndTime = Date.now();
+                  dragState.element.__lastTableDragEndTime = Date.now();
+                }
               }
               if (dragState.multiDragItems) {
                 dragState.multiDragItems.forEach(item => {
@@ -1383,8 +1576,9 @@ export const useInteractEngine = ({
               if (overlay) {
                 const attrsToSync = ['x', 'y', 'width', 'height', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'transform', 'points'];
                 const svg = targetEl.ownerSVGElement;
-                const clip = svg?.querySelector(`clipPath[id="clip-shape-${targetEl.id}"]`);
-                const mask = svg?.querySelector(`mask[id="mask-shape-${targetEl.id}"]`);
+                const safeId = (targetEl.id || '').replace(/[^a-zA-Z0-9-_]/g, '_');
+                const clip = svg?.querySelector(`clipPath[id="clip-shape-${safeId}"]`);
+                const mask = svg?.querySelector(`mask[id="mask-shape-${safeId}"]`);
                 const refShape = clip ? clip.firstChild : (mask ? mask.lastChild : null);
 
                 attrsToSync.forEach(attr => {
@@ -1562,6 +1756,11 @@ export const useInteractEngine = ({
             const isEmbed = el.getAttribute?.('data-type') === 'embed-frame' ||
                             (el.id && el.id.startsWith('embed-'));
 
+            const isTable = el.getAttribute?.('data-type') === 'table-frame' ||
+                            el.getAttribute?.('data-type') === 'table' ||
+                            (el.id && el.id.startsWith('table-')) ||
+                            Boolean(el.querySelector?.('table'));
+
             if (isButton || isSlideshow || isQRCode || isMap || isAudio || isEmbed) {
               if (isCorner) {
                 const dot = vCurrentLocal.x * vOriginalLocal.x + vCurrentLocal.y * vOriginalLocal.y;
@@ -1642,7 +1841,7 @@ export const useInteractEngine = ({
                   }
                 }
               }
-            } else if (!isInteractiveButton && ((isCorner && (isScaledImage || isShape || isHotspotPreset || (isText && !isForeignObject))) || (!isCorner && ((isText && !isForeignObject) || isHotspotPreset)))) {
+            } else if (!isInteractiveButton && !isTable && ((isCorner && (isScaledImage || isShape || isHotspotPreset || (isText && !isForeignObject))) || (!isCorner && ((isText && !isForeignObject) || isHotspotPreset)))) {
               const s = Math.max(Math.abs(scaleX), Math.abs(scaleY)) * (Math.sign(scaleX) || 1);
               if (!isCorner && ((isText && !isForeignObject) || isHotspotPreset)) {
                 const sSide = (dir === 'n' || dir === 's') ? scaleY : scaleX;
@@ -2155,10 +2354,122 @@ export const useInteractEngine = ({
                           }
                         }
 
+                        if (tag === 'foreignobject') {
+                          const tableInside = child.querySelector('table');
+                          const isTable = (el.getAttribute?.('data-type') === 'table-frame') || (el.id && el.id.startsWith('table-')) || Boolean(tableInside);
+                          if (isTable && tableInside) {
+                            const trs = tableInside.querySelectorAll('tr');
+                            const rowCount = trs.length || 1;
+                            const colCount = trs[0]?.children?.length || 1;
+
+                            // Ensure cells never have inline heights so rows scale cleanly, and allow text clipping for small tables
+                            tableInside.querySelectorAll('td, th').forEach(cell => {
+                              cell.style.removeProperty('height');
+                              cell.style.overflow = 'hidden';
+                              cell.style.textOverflow = 'ellipsis';
+                              cell.style.boxSizing = 'border-box';
+                            });
+
+                            // Self-heal: if row 0 became blown up (>= 70% with multiple rows), reset all rows to equal percentages
+                            const r0H = parseFloat(trs[0]?.style?.height) || 0;
+                            if (r0H >= 70 && rowCount > 1) {
+                              const eqPct = (100 / rowCount).toFixed(3);
+                              trs.forEach(tr => {
+                                tr.style.height = `${eqPct}%`;
+                                tr.style.boxSizing = 'border-box';
+                              });
+                            }
+
+                            // If side handles: strictly keep the orthogonal axis fixed!
+                            const isCorner = ['nw', 'ne', 'sw', 'se'].includes(dir);
+                            if (dir === 'e' || dir === 'w') {
+                              imgH = bound.height;
+                              imgY = bound.y;
+                            } else if (dir === 'n' || dir === 's') {
+                              imgW = bound.width;
+                              imgX = bound.x;
+                            }
+
+                            // Keep table and rows strictly fitted to 100% of foreignObject
+                            tableInside.style.width = '100%';
+                            tableInside.style.height = '100%';
+                            tableInside.style.tableLayout = 'fixed';
+                            const eqPct = (100 / rowCount).toFixed(3);
+                            trs.forEach(r => {
+                              r.style.height = `${eqPct}%`;
+                              r.style.boxSizing = 'border-box';
+                            });
+
+                            if (!state.initialTableFontSize) {
+                              state.initialTableFontSize = parseFloat(el.getAttribute('data-font-size') || tableInside.style.fontSize) || 9;
+                            }
+                            if (state.initialTablePadY === undefined) {
+                              state.initialTablePadY = parseFloat(el.getAttribute('data-padding-y')) || 4;
+                            }
+                            if (state.initialTablePadX === undefined) {
+                              state.initialTablePadX = parseFloat(el.getAttribute('data-padding-x')) || 6;
+                            }
+
+                            // Do NOT blow up font-size or padding when expanding width/height.
+                            // Only scale down gracefully if the user shrinks the table very small.
+                            const maxRowH = Math.max(1, imgH / rowCount);
+                            const maxColW = Math.max(1, imgW / colCount);
+                            const newPadY = Math.min(state.initialTablePadY, Math.max(0, Math.floor((maxRowH - 12) / 2)));
+                            const newPadX = Math.min(state.initialTablePadX, Math.max(0, Math.floor(maxColW / 6)));
+                            const newFs = Math.min(state.initialTableFontSize, Math.max(4, Math.floor(maxRowH - (newPadY * 2))));
+
+                            tableInside.style.fontSize = `${newFs}pt`;
+                            el.setAttribute('data-font-size', String(newFs));
+
+                            trs.forEach(r => {
+                              Array.from(r.children).forEach(c => {
+                                c.style.paddingTop = `${newPadY}px`;
+                                c.style.paddingBottom = `${newPadY}px`;
+                                c.style.paddingLeft = `${newPadX}px`;
+                                c.style.paddingRight = `${newPadX}px`;
+                              });
+                            });
+
+                            // Real-time dispatch to update properties panel
+                            window.dispatchEvent(new CustomEvent('table-properties-sync', {
+                              detail: { elementId: el.id, fontSize: newFs, paddingY: newPadY, paddingX: newPadX }
+                            }));
+
+                            // Allow table to resize even very small without artificial blocking
+                            const minTableH = Math.max(12, rowCount * 4);
+                            const minTableW = Math.max(16, colCount * 6);
+
+                            if ((dir === 'n' || dir === 's' || isCorner) && imgH < minTableH) {
+                              if (dir === 'n' || dir === 'nw' || dir === 'ne') {
+                                imgY = imgY + (imgH - minTableH);
+                              }
+                              imgH = minTableH;
+                            }
+
+                            if ((dir === 'e' || dir === 'w' || isCorner) && imgW < minTableW) {
+                              if (dir === 'w' || dir === 'nw' || dir === 'sw') {
+                                imgX = imgX + (imgW - minTableW);
+                              }
+                              imgW = minTableW;
+                            }
+
+                            const wrapper = child.querySelector('.table-card-wrapper');
+                            if (wrapper) {
+                              wrapper.style.overflow = 'visible';
+                              wrapper.style.width = '100%';
+                              wrapper.style.height = '100%';
+                            }
+                          }
+                        }
+
                         child.setAttribute('x', imgX);
                         child.setAttribute('y', imgY);
                         child.setAttribute('width', imgW);
                         child.setAttribute('height', imgH);
+
+                        if (tag === 'foreignobject' && ((el.getAttribute?.('data-type') === 'table-frame') || (el.id && el.id.startsWith('table-')) || Boolean(child.querySelector('table')))) {
+                          syncTableCellSelectionOverlay(el);
+                        }
 
                         if (isRectPath) {
                           const defR = parseFloat(child.getAttribute('rx') || 0);
@@ -2679,6 +2990,23 @@ export const useInteractEngine = ({
                 if (rectChild) {
                   const curRx = rectChild.child.getAttribute('rx');
                   if (curRx) rectChild.child.setAttribute('data-base-rx', curRx);
+                }
+                const isTable = state.el?.getAttribute?.('data-type') === 'table-frame' || (state.el?.id && state.el.id.startsWith('table-'));
+                if (isTable) {
+                  const fo = state.el.querySelector ? state.el.querySelector('foreignObject') : null;
+                  const tbl = fo ? fo.querySelector('table') : null;
+                  if (fo && tbl) {
+                    const curFs = parseInt(state.el.getAttribute('data-font-size') || '13', 10);
+                    const curPadY = parseInt(state.el.getAttribute('data-padding-y') || '6', 10);
+                    const curPadX = parseInt(state.el.getAttribute('data-padding-x') || '8', 10);
+                    window.dispatchEvent(new CustomEvent('table-properties-sync', {
+                      detail: { elementId: state.el.id, fontSize: curFs, paddingY: curPadY, paddingX: curPadX }
+                    }));
+                  }
+                  syncTableCellSelectionOverlay(state.el);
+                  window.dispatchEvent(new CustomEvent('sync-table-cell-selection', {
+                    detail: { elementId: state.el.id }
+                  }));
                 }
               }
               if (updatePageHtmlRef.current) {

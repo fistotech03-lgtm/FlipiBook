@@ -29,7 +29,9 @@ import pageCacheManager from "./utils/PageCacheManager";
 import { useToast } from "../CustomToast";
 import { getSupabaseBaseUrl, resolveUploadsPath } from "../../utils/assetUtils";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmationContext";
 import { queryClient } from "../../queryClient";
+import { sanitizeSvgXml, safeSerializeSvg } from "./utils/editorUtils";
 
 import {
   parseLayersFromSVG,
@@ -43,6 +45,7 @@ import {
   use3DPreviewManager,
   useKeyboardShortcuts,
 } from "./PageEditorModule";
+import { normalizeForeignObjectNamespaces, healTableElementNode } from "./LeftActionMenu/Elements/utils/tableElementUtils";
 
 export { parseLayersFromSVG };
 
@@ -126,10 +129,20 @@ const PageEditor = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [selectedLayerId, setSelectedLayerIdRaw] = useState(null);
 
+  const confirm = useConfirm();
+  const currentUrlRef = useRef(window.location.href);
+  useEffect(() => {
+    currentUrlRef.current = window.location.href;
+  }, [location.pathname, location.search]);
+  const isConfirmingBackRef = useRef(false);
+
   // Clear previous book from IndexedDB when opening a new book
   useEffect(() => {
     if (v_id) {
       ensureCleanBook(v_id);
+      try {
+        localStorage.removeItem(`emergency_editor_${v_id}`);
+      } catch (_) {}
     }
   }, [v_id]);
   const [multiSelectedIds, setMultiSelectedIds] = useState(new Set());
@@ -206,7 +219,10 @@ const PageEditor = () => {
     ) {
       pageCacheManager.prioritizePage(activePageIndex);
       const parser = new DOMParser();
-      const doc = parser.parseFromString(curPage.html, "image/svg+xml");
+      let doc = parser.parseFromString(curPage.html, "image/svg+xml");
+      if (doc.querySelector("parsererror")) {
+        doc = parser.parseFromString(curPage.html, "text/html");
+      }
       const svgEl = doc.querySelector("svg");
       const layers = svgEl ? parseLayersFromSVG(svgEl) : [];
       pageCacheManager.setCachedLayers(curPage.id, curPage.html, layers);
@@ -257,6 +273,43 @@ const PageEditor = () => {
       setActiveMainTool((prev) => (prev === "upload" ? "select" : prev));
     }
   }, [selectedLayerId]);
+
+  // Live listener for background-extracted pages streamed by backgroundExtractionManager
+  useEffect(() => {
+    const handlePageExtracted = (e) => {
+      const { v_id: eventVId, pageNumber, content, html } = e.detail || {};
+      const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
+      if (!eventVId || (activeVId && eventVId !== activeVId)) return;
+      const rawHtml = html || content || '';
+      if (!rawHtml) return;
+
+      setPages((prevPages) => {
+        if (!Array.isArray(prevPages) || prevPages.length === 0) return prevPages;
+        const targetIdx = prevPages.findIndex(
+          (p, i) =>
+            p.pageNumber === pageNumber ||
+            p.name === `Page ${pageNumber}` ||
+            (p.id !== undefined && p.id === `page_${pageNumber}`) ||
+            i === pageNumber - 1,
+        );
+        if (targetIdx === -1) return prevPages;
+        const current = prevPages[targetIdx];
+        if (current.html === rawHtml && !current.isPlaceholder) return prevPages;
+
+        const next = [...prevPages];
+        next[targetIdx] = {
+          ...current,
+          html: rawHtml,
+          content: rawHtml,
+          isPlaceholder: false,
+        };
+        return next;
+      });
+    };
+
+    window.addEventListener("flipbook-page-extracted", handlePageExtracted);
+    return () => window.removeEventListener("flipbook-page-extracted", handlePageExtracted);
+  }, [v_id, currentBook?.v_id, location.state?.v_id]);
 
   // ── Dimensions & Default Page Data ─────────────────────────────────────────
   const getFlipbookDimensions = useCallback(() => {
@@ -544,12 +597,14 @@ const PageEditor = () => {
       setIsSaving,
       triggerSaveSuccess,
       getFlipbookDimensions,
+      activePageIndex,
       setActivePageIndex,
       toast,
       location,
       navigate,
       setActiveTopTool,
       setSelectedLayerId,
+      isAutoSaveEnabled,
     });
 
   // ── Hook 7: 3D Preview Manager ─────────────────────────────────────────────
@@ -632,9 +687,9 @@ const PageEditor = () => {
   useEffect(() => {
     if (setSaveHandler) {
       setSaveHandler(
-        () => () =>
+        () => (isManual = true) =>
           saveFlipbook(
-            true,
+            isManual,
             popupEditContext ? popupEditContext.backup.pages : pages,
           ),
       );
@@ -657,6 +712,35 @@ const PageEditor = () => {
       if (setClearHandler) setClearHandler(null);
     };
   }, [setClearHandler, handleClearEditorWithDB]);
+
+  const handleOpenInlinePreview = useCallback(() => {
+    // Synchronize the active canvas SVG DOM into page state so Preview receives current element states and active slides
+    setPages(currentPages => {
+      const updated = [...currentPages];
+      const pageSvg = document.querySelector(`.page-svg-container[data-page-index="${activePageIndex}"] svg`);
+      if (pageSvg && updated[activePageIndex]) {
+        const clone = pageSvg.cloneNode(true);
+        clone.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer').forEach(e => e.remove());
+        const serializer = new XMLSerializer();
+        const liveHtml = safeSerializeSvg(clone) || serializer.serializeToString(clone);
+        updated[activePageIndex] = { ...updated[activePageIndex], html: liveHtml };
+      }
+      return updated;
+    });
+    setShowPreview(true);
+  }, [activePageIndex]);
+
+  const handleCloseInlinePreview = useCallback(() => {
+    setShowPreview(false);
+    // Auto-heal slideshow and canvas components upon returning to Editor
+    window.dispatchEvent(new CustomEvent('slideshow-reinit-needed'));
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('slideshow-reinit-needed'));
+    }, 120);
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('slideshow-reinit-needed'));
+    }, 350);
+  }, []);
 
   const stablePreviewHandler = useCallback(async () => {
     if (document.activeElement && document.activeElement.blur) {
@@ -732,30 +816,127 @@ const PageEditor = () => {
     }
   }, [pages, currentBook, isLoading, setHasUnsavedChanges, justSavedRef]);
 
-  // Auto-Save Mechanism
+  // Listen for direct canvas edits (e.g. pen drawing points, element drops, shape draws)
+  useEffect(() => {
+    const handleContentChanged = () => {
+      setHasUnsavedChanges(true);
+    };
+    window.addEventListener('editor-content-changed', handleContentChanged);
+    return () => window.removeEventListener('editor-content-changed', handleContentChanged);
+  }, [setHasUnsavedChanges]);
+
+  // Global mouse/pointer tracking for canvas interactions to avoid interrupting drawing strokes
+  useEffect(() => {
+    const handleDown = (e) => {
+      if (e.target?.closest?.('.page-svg-container, #main-zoom-container, #node-edit-overlay-group, [id^="highlight-overlay"]')) {
+        window.__isCanvasPointerDown = true;
+      }
+    };
+    const handleUp = () => {
+      window.__isCanvasPointerDown = false;
+    };
+    window.addEventListener('pointerdown', handleDown, true);
+    window.addEventListener('mousedown', handleDown, true);
+    window.addEventListener('pointerup', handleUp, true);
+    window.addEventListener('mouseup', handleUp, true);
+    return () => {
+      window.removeEventListener('pointerdown', handleDown, true);
+      window.removeEventListener('mousedown', handleDown, true);
+      window.removeEventListener('pointerup', handleUp, true);
+      window.removeEventListener('mouseup', handleUp, true);
+    };
+  }, []);
+
+  // Refs for zero-data-loss handlers
+  const isAutoSaveEnabledRef = useRef(isAutoSaveEnabled);
+  useEffect(() => {
+    isAutoSaveEnabledRef.current = isAutoSaveEnabled;
+  }, [isAutoSaveEnabled]);
+
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+
+  // Auto-Save Mechanism (Strictly respects isAutoSaveEnabled; never interrupts active typing or interactions)
   useEffect(() => {
     if (
-      isAutoSaveEnabled &&
-      hasUnsavedChanges &&
-      pages.length > 0 &&
-      !isLoading &&
-      !isSaving &&
-      !isFirstLoadRef.current
+      !isAutoSaveEnabled ||
+      !hasUnsavedChanges ||
+      pages.length === 0 ||
+      isLoading ||
+      isSaving ||
+      isFirstLoadRef.current
     ) {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-      autoSaveTimerRef.current = setTimeout(() => {
-        const isUserInteracting =
-          !!document.querySelector('[data-dragging="true"]') ||
-          document.body.classList.contains("resizing-active");
-        if (isUserInteracting) {
-          return;
-        }
-        saveFlipbook(
-          false,
-          popupEditContext ? popupEditContext.backup.pages : pages,
-        );
-      }, 2500);
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      return;
     }
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      // 1. Never save while user is actively pressing mouse down or dragging/resizing elements
+      const isActivelyInteracting =
+        window.__isCanvasPointerDown === true ||
+        document.body.classList.contains("resizing-active") ||
+        document.body.classList.contains("drawing-active") ||
+        !!document.querySelector('[data-dragging="true"]') ||
+        !!document.querySelector('[data-drawing="true"]') ||
+        !!document.querySelector('.node-handle-active');
+
+      if (isActivelyInteracting) {
+        // Defer auto-save until active mouse gesture completes
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(() => {
+          if (
+            isAutoSaveEnabledRef.current &&
+            hasUnsavedChangesRef.current &&
+            !isSaving
+          ) {
+            saveFlipbook(
+              false,
+              popupEditContext ? popupEditContext.backup.pages : pages,
+            );
+          }
+        }, 1500);
+        return;
+      }
+
+      // 2. Never interrupt the user while typing in an input, textarea, or contentEditable element
+      const activeEl = document.activeElement;
+      const isTyping =
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.isContentEditable ||
+          activeEl.getAttribute("contenteditable") === "true");
+
+      if (isTyping) {
+        // Defer auto-save until typing has ceased
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(() => {
+          if (
+            isAutoSaveEnabledRef.current &&
+            hasUnsavedChangesRef.current &&
+            !isSaving
+          ) {
+            saveFlipbook(
+              false,
+              popupEditContext ? popupEditContext.backup.pages : pages,
+            );
+          }
+        }, 2000);
+        return;
+      }
+
+      saveFlipbook(
+        false,
+        popupEditContext ? popupEditContext.backup.pages : pages,
+      );
+    }, 2500);
+
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
@@ -768,25 +949,52 @@ const PageEditor = () => {
     popupEditContext,
     saveFlipbook,
     autoSaveTimerRef,
+    activeMainTool,
   ]);
 
   // Sync state to IndexedDB for Preview / Customized Editor / Refresh Retention
+  const latestPagesRef = useRef(pages);
+  const latestActiveIndexRef = useRef(activePageIndex);
+  useEffect(() => {
+    latestPagesRef.current = popupEditContext ? popupEditContext.backup.pages : pages;
+    latestActiveIndexRef.current = popupEditContext ? popupEditContext.backup.activePageIndex : activePageIndex;
+  }, [pages, popupEditContext, activePageIndex]);
+
+  const flushPageEditorToDB = useCallback(() => {
+    const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
+    const pagesToSave = latestPagesRef.current;
+    if (!activeVId || !pagesToSave || pagesToSave.length === 0) return;
+    try {
+      savePageEditorState({
+        v_id: activeVId,
+        pages: pagesToSave,
+        activePageIndex: latestActiveIndexRef.current || 0,
+        pageName:
+          currentBook?.flipbookName ||
+          location.state?.flipbookName ||
+          "Untitled Flipbook",
+        timestamp: Date.now(),
+      });
+    } catch (err) {
+      console.warn("[PageEditor] DB flush error:", err);
+    }
+  }, [v_id, currentBook, location.state]);
+
+  const flushPageEditorToDBRef = useRef(flushPageEditorToDB);
+  useEffect(() => {
+    flushPageEditorToDBRef.current = flushPageEditorToDB;
+  }, [flushPageEditorToDB]);
+
+  const saveFlipbookRef = useRef(saveFlipbook);
+  useEffect(() => {
+    saveFlipbookRef.current = saveFlipbook;
+  }, [saveFlipbook]);
+
   useEffect(() => {
     const activeVId = v_id || currentBook?.v_id || location.state?.v_id;
     if (pages.length > 0 && !isLoading && activeVId) {
       const timer = setTimeout(() => {
-        savePageEditorState({
-          v_id: activeVId,
-          pages: popupEditContext ? popupEditContext.backup.pages : pages,
-          activePageIndex: popupEditContext
-            ? popupEditContext.backup.activePageIndex
-            : activePageIndex,
-          pageName:
-            currentBook?.flipbookName ||
-            location.state?.flipbookName ||
-            "Untitled Flipbook",
-          timestamp: Date.now(),
-        });
+        flushPageEditorToDB();
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -798,7 +1006,86 @@ const PageEditor = () => {
     location.state,
     isLoading,
     popupEditContext,
+    flushPageEditorToDB,
   ]);
+
+  // Zero-Data-Loss Lifecycle Handlers: Backbutton, Refresh, Tab Close, Backgrounding, Offline Reconnect
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      flushPageEditorToDBRef.current?.();
+      if (!isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    const handlePageHide = () => {
+      flushPageEditorToDBRef.current?.();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushPageEditorToDBRef.current?.();
+      }
+    };
+
+    const handlePopState = async () => {
+      flushPageEditorToDBRef.current?.();
+      if (isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current && latestPagesRef.current?.length > 0) {
+        saveFlipbookRef.current?.(false, latestPagesRef.current);
+        return;
+      }
+
+      if (!isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current) {
+        if (isConfirmingBackRef.current) return;
+        isConfirmingBackRef.current = true;
+
+        // Restore URL so the user stays on the editor while the confirm modal is open
+        window.history.pushState(null, '', currentUrlRef.current);
+
+        const ok = await confirm({
+          title: "Leave Site?",
+          message: "Changes you made may not be saved.",
+          confirmText: "Leave",
+          cancelText: "Stay",
+          type: "danger",
+        });
+
+        if (ok) {
+          hasUnsavedChangesRef.current = false;
+          setHasUnsavedChanges(false);
+          isConfirmingBackRef.current = false;
+          window.history.back();
+        } else {
+          isConfirmingBackRef.current = false;
+        }
+      }
+    };
+
+    const handleOnline = () => {
+      if (isAutoSaveEnabledRef.current && hasUnsavedChangesRef.current && latestPagesRef.current?.length > 0) {
+        saveFlipbookRef.current?.(false, latestPagesRef.current);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      // Synchronously flush to local IndexedDB on component unmount only
+      flushPageEditorToDBRef.current?.();
+
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
 
   // Live swap listener for uploaded images/videos
   useEffect(() => {
@@ -921,12 +1208,13 @@ const PageEditor = () => {
   useEffect(() => {
     const initializeEditor = async () => {
       const activeVId = v_id || location.state?.v_id;
+      const isFolderId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
       // Auto-heal: If page editor was navigated to without any book id, auto-generate one immediately and redirect to stable route
       if (!activeVId) {
         const generatedVId = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
-        const targetFolderVId = (location.state?.folder_v_id && String(location.state.folder_v_id).startsWith('fol_'))
+        const targetFolderVId = (location.state?.folder_v_id && isFolderId(location.state.folder_v_id))
           ? location.state.folder_v_id
-          : (folder && folder.startsWith('fol_') ? folder : 'fol_default');
+          : (folder && isFolderId(folder) ? folder : 'default');
         navigate(`/editor/${encodeURIComponent(targetFolderVId)}/${generatedVId}`, {
           replace: true,
           state: { ...(location.state || {}), v_id: generatedVId, folder_v_id: targetFolderVId }
@@ -935,10 +1223,10 @@ const PageEditor = () => {
       }
 
       // Auto-heal: If folder in URL contains folder name (e.g. "My Flipbooks") instead of folder_v_id, normalize URL
-      if (activeVId && folder && !folder.startsWith('fol_')) {
-        const initialFolderVId = (location.state?.folder_v_id && String(location.state.folder_v_id).startsWith('fol_'))
+      if (activeVId && folder && !isFolderId(folder)) {
+        const initialFolderVId = (location.state?.folder_v_id && isFolderId(location.state.folder_v_id))
           ? location.state.folder_v_id
-          : 'fol_default';
+          : 'default';
         navigate(`/editor/${encodeURIComponent(initialFolderVId)}/${activeVId}`, {
           replace: true,
           state: { ...(location.state || {}), folder_v_id: initialFolderVId }
@@ -1075,12 +1363,12 @@ const PageEditor = () => {
                   folder ||
                   location.state?.folderName,
               );
-              const isFolId = (val) => Boolean(val && typeof val === 'string' && val.startsWith('fol_'));
+              const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
               const resolvedFolderVId =
                 (isFolId(res.data.meta?.folder_v_id) ? res.data.meta.folder_v_id : null) ||
                 (isFolId(res.data.meta?.folder_id) ? res.data.meta.folder_id : null) ||
                 (isFolId(location.state?.folder_v_id) ? location.state.folder_v_id : null) ||
-                (isFolId(folder) ? folder : 'fol_default');
+                (isFolId(folder) ? folder : 'default');
               const bookName =
                 res.data.meta?.flipbookName ||
                 location.state?.flipbookName ||
@@ -1138,7 +1426,7 @@ const PageEditor = () => {
               }));
 
               // Auto-normalize URL to show folder_v_id instead of folder name in address bar
-              if (!folder || !folder.startsWith('fol_') || folder !== resolvedFolderVId) {
+              if (!folder || !isFolId(folder) || folder !== resolvedFolderVId) {
                 navigate(`/editor/${encodeURIComponent(resolvedFolderVId)}/${activeVId}`, {
                   replace: true,
                   state: { ...(location.state || {}), folder_v_id: resolvedFolderVId }
@@ -1205,6 +1493,10 @@ const PageEditor = () => {
                 }
 
                 let updatedHtml = pageHtml;
+                // Auto-heal any previously corrupted asset URLs (strip dangling base64 tails)
+                if (updatedHtml) {
+                  updatedHtml = updatedHtml.replace(/(assets\/(?:Image|video|gif|audio|3D_Model|download)\/[A-Za-z0-9_.-]+)(?:[\s/]+[A-Za-z0-9+/=_%-]+)+(?=["'])/g, "$1");
+                }
                 if (updatedHtml.includes("My_Flipbooks/")) {
                   updatedHtml = updatedHtml.split("My_Flipbooks/").join("books/");
                 }
@@ -1219,23 +1511,10 @@ const PageEditor = () => {
                     .join(`${projectBaseUrl}assets/`);
                 }
 
-                if (
-                  updatedHtml.includes("parsererror") ||
-                  updatedHtml.includes('id="custom-ctrl-')
-                ) {
-                  updatedHtml = updatedHtml.replace(
-                    /<parsererror[\s\S]*?<\/parsererror>/gi,
-                    "",
-                  );
-                  updatedHtml = updatedHtml.replace(
-                    /<[^>]*id="custom-ctrl-[^>]*>.*?<\/[^>]*>/gi,
-                    "",
-                  );
-                }
-                updatedHtml = updatedHtml.replace(
-                  /&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g,
-                  "&amp;",
-                );
+                updatedHtml = sanitizeSvgXml(updatedHtml);
+
+                // Normalize any foreignObject so XHTML namespace is preserved before XML parsing
+                updatedHtml = normalizeForeignObjectNamespaces(updatedHtml);
 
                 const cachedLayers = pageCacheManager.getCachedLayers(
                   pageUniqueId,
@@ -1391,7 +1670,12 @@ const PageEditor = () => {
                   }
                 });
 
-                updatedHtml = new XMLSerializer().serializeToString(doc);
+                // Auto-heal Table elements on load if inner table was stripped or missing
+                const tableElements = doc.querySelectorAll('[data-type="table-frame"], g[id^="table-"]');
+                tableElements.forEach((tblEl) => healTableElementNode(tblEl));
+
+                const rawSvg = safeSerializeSvg(doc) || new XMLSerializer().serializeToString(doc);
+                updatedHtml = normalizeForeignObjectNamespaces(rawSvg) || updatedHtml;
 
                 const svgEl = doc.querySelector("svg");
                 const filterLayers = (layers) => {
@@ -1955,7 +2239,7 @@ const PageEditor = () => {
           setMultiSelectedIds={setMultiSelectedIds}
           updateElementAttribute={updateElementAttribute}
           deleteLayer={deleteLayer}
-          onPreview={() => setShowPreview(true)}
+          onPreview={handleOpenInlinePreview}
           flipbookDimensions={getFlipbookDimensions()}
           isPopupEditor={!!popupEditContext}
           onCustomizePopup={onCustomizePopup}
@@ -2051,7 +2335,7 @@ const PageEditor = () => {
                 .filter((p) => !p.isHidden)
                 .map((p) => ({ ...p, content: p.html || "" }))}
               pageName={currentBook?.flipbookName || "Preview"}
-              onClose={() => setShowPreview(false)}
+              onClose={handleCloseInlinePreview}
               isMobile={false}
               isDoublePage={isDoublePage}
               targetPage={0}

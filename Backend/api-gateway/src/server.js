@@ -291,7 +291,7 @@ const pdfConversionProxy = createProxyMiddleware({
 
 // Proxy Page Editor routes to Page Editor Service (port 5003)
 const isPageEditorRoute = (pathname) => {
-  return /^\/api\/flipbook\/(save-page|save-pages-batch|get-page|rename-page|delete-page|upload-asset|upload-3d-model|delete-asset|get-gallery-assets|rename-gallery-asset|delete-gallery-asset|use-gallery-asset|inline-svgs)(\/|$|\?)/i.test(pathname);
+  return /^\/api\/flipbook\/(save-page|save-pages-batch|get-page|rename-page|delete-page|upload-asset|upload-3d-model|delete-asset|get-gallery-assets|rename-gallery-asset|delete-gallery-asset|use-gallery-asset|inline-svgs|resolve-map-url)(\/|$|\?)/i.test(pathname);
 };
 
 const pageEditorProxy = createProxyMiddleware({
@@ -380,6 +380,44 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Proxy /api/analytics requests to MyFlipibook Service
+app.use(
+  '/api/analytics',
+  createProxyMiddleware({
+    target: `${MYFLIPIBOOK_SERVICE_URL}/api/analytics`,
+    changeOrigin: true,
+    xfwd: true,
+    timeout: 300000,
+    proxyTimeout: 300000,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to myflipibook-service for analytics:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'Analytics Service unavailable.'
+          });
+        }
+      }
+    }
+  })
+);
 
 // Proxy /api/flipbook requests to MyFlipibook Service
 app.use(

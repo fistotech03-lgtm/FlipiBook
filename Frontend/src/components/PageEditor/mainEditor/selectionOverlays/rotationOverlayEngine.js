@@ -61,12 +61,25 @@ export const createRotationOverlayEngine = ({
   }) => {
     if (!htmlOverlay || !cornersMap) return;
     const targetEl = targetIds[0] ? document.getElementById(targetIds[0]) : document.getElementById(targetKey);
-    if (
+    const isPageLevelBackground = (
       targetEl?.getAttribute('data-name') === 'Overlay' ||
       targetEl?.getAttribute('data-type') === 'background' ||
-      targetEl?.getAttribute('data-name')?.startsWith('Page ') ||
-      targetEl?.parentElement?.tagName.toLowerCase() === 'svg'
-    ) {
+      targetEl?.getAttribute('data-name')?.startsWith('Page ')
+    );
+    const isCanvasElement = Boolean(
+      targetEl && (
+        targetEl.getAttribute('data-type') === 'table-frame' ||
+        targetEl.getAttribute('data-type') === 'table' ||
+        targetEl.id?.startsWith('table-') ||
+        targetEl.getAttribute('data-type') === 'embed-frame' ||
+        targetEl.getAttribute('data-type') === 'audio-frame' ||
+        targetEl.getAttribute('data-type') === 'slideshow' ||
+        targetEl.getAttribute('data-type') === 'shape' ||
+        targetEl.getAttribute('data-type') === 'text' ||
+        targetEl.getAttribute('data-type') === 'image'
+      )
+    );
+    if (isPageLevelBackground || (!isCanvasElement && targetEl?.parentElement?.tagName.toLowerCase() === 'svg')) {
       const staleUI = htmlOverlay.querySelectorAll(`[id^="rotate-handle-${targetKey}"], [id^="rotate-hotspot-${targetKey}"]`);
       staleUI.forEach(el => el.remove());
       return;

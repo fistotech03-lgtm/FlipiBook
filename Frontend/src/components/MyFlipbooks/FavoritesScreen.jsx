@@ -345,24 +345,19 @@ export default function FavoritesScreen({
     };
 
     const handleViewBook = (book) => {
-        const shareId =
+        const v_id = book.v_id || book.id;
+        const candidateShareId =
             book.Visibility?.shareId ||
             book.Customized_Settings?.Visibility?.shareId ||
             book.shareId ||
-            book.share?.shareId ||
-            book.v_id ||
-            encodeURIComponent(book.realName);
-        const rawAcc = String(
-            book.Visibility?.access || book.Customized_Settings?.Visibility?.access || book.share?.access || 'public'
-        ).toLowerCase();
-        const accessPrefix = rawAcc.includes('private')
-            ? 'share=private'
-            : rawAcc.includes('password')
-            ? 'share=password'
-            : rawAcc.includes('invite')
-            ? 'share=invite'
-            : 'share=public';
-        window.open(`/${accessPrefix}/${shareId}`, '_blank');
+            book.share?.shareId;
+        const visibilityShareId = (candidateShareId && candidateShareId !== v_id) ? candidateShareId : null;
+
+        const previewUrl = visibilityShareId
+            ? `/preview?shareId=${visibilityShareId}${v_id ? `&v_id=${v_id}` : ''}`
+            : (v_id ? `/preview?v_id=${v_id}` : '/preview');
+
+        window.open(previewUrl, '_blank');
     };
 
     const handleCustomize = (book) => {
@@ -385,7 +380,9 @@ export default function FavoritesScreen({
             ? book.pages
             : undefined;
 
-        const folderVId = book.folder_v_id || (book.folder_id && String(book.folder_id).startsWith('fol_') ? book.folder_id : null) || 'fol_default';
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
+        const rawFolderVId = book.folder_v_id || (book.folder_id && isFolId(String(book.folder_id)) ? book.folder_id : null) || 'default';
+        const folderVId = String(rawFolderVId).replace(/^fol_/, '');
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(
             `/editor/customized_editor/${encodeURIComponent(folderVId)}/${identifier}`,
@@ -419,7 +416,9 @@ export default function FavoritesScreen({
             ? book.pages
             : undefined;
 
-        const folderVId = book.folder_v_id || (book.folder_id && String(book.folder_id).startsWith('fol_') ? book.folder_id : null) || 'fol_default';
+        const isFolId = (val) => Boolean(val && typeof val === 'string' && (val.startsWith('fol_') || /^[0-9a-fA-F]{12,24}$/.test(val) || val === 'fol_default' || val === 'default'));
+        const rawFolderVId = book.folder_v_id || (book.folder_id && isFolId(String(book.folder_id)) ? book.folder_id : null) || 'default';
+        const folderVId = String(rawFolderVId).replace(/^fol_/, '');
         const identifier = book.v_id || encodeURIComponent(book.realName);
         navigate?.(`/editor/${encodeURIComponent(folderVId)}/${identifier}`, {
             state: {

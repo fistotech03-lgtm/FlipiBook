@@ -1,5 +1,6 @@
 import sanitizeHtmlForPreview from './sanitizeHtml';
 import { rewriteHtmlUploads } from '../../../../utils/assetUtils';
+import { getCachedRaster } from '../../../../utils/pageRasterCache';
 import getSlideshowScript from './slideshowScript';
 import getAnimationScript from './animationScript';
 import getInteractionScript from './interactionScript';
@@ -24,7 +25,8 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
     } else {
         rawCleanHtml = rawCleanHtml.replace(/(src|href|xlink:href)=(['"])(?:\.\.\/|\.\/)?assets\//gi, '$1=$2/assets/');
     }
-    const cleanHtml = rewriteHtmlUploads(rawCleanHtml);
+    let cleanHtml = rewriteHtmlUploads(rawCleanHtml);
+
     // Extract and dynamically load Google Fonts found in the SVG
     const fontsToLoad = new Set();
     if (cleanHtml) {
@@ -117,20 +119,33 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                     .text-edit-box,
                     [contenteditable="true"],
                     [data-scrollable="true"],
-                    foreignObject div {
+                    foreignObject:not([data-type="map"]) div:not(.map-root-container):not(.map-card-overlay):not(.map-card-overlay *) {
                         white-space: pre-wrap !important;
                         word-wrap: break-word !important;
                         word-break: normal !important;
                         overflow-wrap: anywhere !important;
                     }
 
-                    foreignObject {
+                    .map-nowrap,
+                    [data-nowrap="true"],
+                    .map-card-overlay .map-nowrap {
+                        white-space: nowrap !important;
+                        word-break: normal !important;
+                        overflow-wrap: normal !important;
+                    }
+
+                    foreignObject:not([data-type="map"]):not([data-type="embed-frame"]) {
                         overflow: visible !important;
                         clip-path: none !important;
                     }
 
-                    foreignObject * {
+                    foreignObject:not([data-type="map"]):not([data-type="embed-frame"]) * {
                         clip-path: none !important;
+                    }
+
+                    foreignObject[data-type="map"],
+                    g[data-type="map"] foreignObject {
+                        overflow: hidden !important;
                     }
 
                     foreignObject video {
@@ -228,10 +243,37 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
                         pointer-events: none !important;
                     }
 
-                    /* Enable pointer events on map controls & embeds in preview */
-                    .map-root-container,
-                    .map-root-container iframe,
-                    .map-overlay-wrapper,
+                    /* Map element strict isolation in preview */
+                    g[data-type="map"] foreignObject,
+                    foreignObject[data-type="map"],
+                    .map-root-container {
+                        overflow: hidden !important;
+                    }
+                    g[data-type="map"] foreignObject * {
+                        -webkit-user-select: auto !important;
+                        user-select: auto !important;
+                    }
+                    .map-stage {
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        overflow: hidden !important;
+                    }
+                    .map-stage iframe,
+                    .map-root-container iframe {
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        border: 0 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        display: block !important;
+                        pointer-events: none !important;
+                    }
+
+                    /* Enable pointer events only on interactive action buttons and overlay cards */
                     .map-open-maps-btn,
                     .map-action-btn-circle,
                     .map-card-overlay,

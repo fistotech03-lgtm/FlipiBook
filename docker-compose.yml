@@ -1,3 +1,4 @@
+# Docker Compose configuration for TESTING (https://testing.flipibook.com)
 services:
   frontend:
     build:
@@ -22,7 +23,7 @@ services:
       - "8000"
       - "5001"
     volumes:
-      - ${STORAGE_PATH:-/home/flipibook/storage/testing}:/app/storage
+      - /home/flipibook/storage/testing:/app/storage
     environment:
       - MONGO_URI=${MONGO_URI}
       - EMAIL_USER=${EMAIL_USER}
@@ -52,6 +53,7 @@ services:
       - RSA_PRIVATE_KEY=${RSA_PRIVATE_KEY}
       - RSA_PUBLIC_KEY=${RSA_PUBLIC_KEY}
       - STORAGE_PATH=/app/storage
+      - REDIS_URL=${REDIS_URL:-redis://default:Flipibook123@flipibook-redis-vatxsj:6379}
     env_file:
       - path: ./Backend/.env
         required: false

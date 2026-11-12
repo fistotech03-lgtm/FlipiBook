@@ -80,6 +80,10 @@ const Color = ({
   selectedElement = null,
   onUpdate = null,
   isText = false,
+  isTable = false,
+  hideAlignment = false,
+  hideLineCorner = false,
+  disableStroke = false,
   sizingMode = 'auto-width',
   isScrollable = false,
   selectedElementProps = null
@@ -389,9 +393,18 @@ const Color = ({
             defs.querySelector(`mask[id="mask-shape-${el.id}"]`)?.remove();
           }
 
+          const isMaskedShape = Boolean(
+            el.getAttribute('data-mask-enabled') === 'true' ||
+            el.getAttribute('data-masked-image-url') ||
+            (el.getAttribute('fill') && el.getAttribute('fill').includes('url(#pattern-'))
+          );
+
           if (isEligibleShape) {
             if (!isStrokeGradient) {
               el.setAttribute('stroke', backgroundColor.stroke);
+            }
+            if (el.hasAttribute('data-original-stroke')) {
+              el.removeAttribute('data-original-stroke');
             }
 
             // Outside stroke: stroke-width is sw * 2 with paint-order: stroke fill (inner half is covered by fill)
@@ -664,9 +677,10 @@ const Color = ({
           )}
 
           {/* ── Stoke Color ── */}
-          <div className="flex flex-col gap-[1.1vw]">
+          <div className={`flex flex-col gap-[1.1vw] ${disableStroke ? 'opacity-40 pointer-events-none select-none cursor-not-allowed' : ''}`}>
             <div className="flex items-center gap-[0.8vw] mb-[0.25vw]">
               <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Stoke Color</span>
+              {disableStroke && <span className="text-[0.62vw] text-gray-400 font-normal ml-auto">(Global mode only)</span>}
               <div className="flex-1 h-[1px] bg-gray-200" />
             </div>
 
@@ -742,42 +756,44 @@ const Color = ({
 
             {/* Row 2: Alignment & Stoke Width */}
             <div className="flex items-center gap-[1vw]">
-              {/* Alignment */}
-              <div className="flex-1 flex flex-col gap-[0.35vw]">
-                <span className="text-[0.82vw] font-medium text-gray-800">Alignment</span>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsAlignOpen(!isAlignOpen)}
-                    className="w-full h-[2.1vw] px-[0.7vw] border border-gray-300 rounded-[0.45vw] flex items-center justify-between bg-white text-[0.8vw] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-2xs cursor-pointer transition-colors"
-                  >
-                    <span className="capitalize">{pseudoProps['data-stroke-position'] || 'Center'}</span>
-                    <ChevronDown size="0.75vw" className="text-gray-400" />
-                  </button>
-                  {isAlignOpen && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setIsAlignOpen(false)} />
-                      <div className="absolute top-full left-0 right-0 mt-[0.2vw] bg-white border border-gray-200 rounded-[0.45vw] shadow-lg z-40 py-1">
-                        {['Inside', 'Center', 'Outside'].map((pos) => (
-                          <div
-                            key={pos}
-                            onClick={() => {
-                              updateAttr('data-stroke-position', pos);
-                              setIsAlignOpen(false);
-                            }}
-                            className="px-[0.75vw] py-[0.35vw] text-[0.78vw] font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
-                          >
-                            {pos}
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
+              {!isTable && !hideAlignment && (
+                /* Alignment */
+                <div className="flex-1 flex flex-col gap-[0.35vw]">
+                  <span className="text-[0.82vw] font-medium text-gray-800">Alignment</span>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsAlignOpen(!isAlignOpen)}
+                      className="w-full h-[2.1vw] px-[0.7vw] border border-gray-300 rounded-[0.45vw] flex items-center justify-between bg-white text-[0.8vw] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-2xs cursor-pointer transition-colors"
+                    >
+                      <span className="capitalize">{pseudoProps['data-stroke-position'] || 'Center'}</span>
+                      <ChevronDown size="0.75vw" className="text-gray-400" />
+                    </button>
+                    {isAlignOpen && (
+                      <>
+                        <div className="fixed inset-0 z-30" onClick={() => setIsAlignOpen(false)} />
+                        <div className="absolute top-full left-0 right-0 mt-[0.2vw] bg-white border border-gray-200 rounded-[0.45vw] shadow-lg z-40 py-1">
+                          {['Inside', 'Center', 'Outside'].map((pos) => (
+                            <div
+                              key={pos}
+                              onClick={() => {
+                                updateAttr('data-stroke-position', pos);
+                                setIsAlignOpen(false);
+                              }}
+                              className="px-[0.75vw] py-[0.35vw] text-[0.78vw] font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
+                            >
+                              {pos}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Stoke Width */}
-              <div className="flex-1 flex flex-col gap-[0.35vw]">
+              <div className={`${(isTable || hideAlignment) ? 'w-full' : 'flex-1'} flex flex-col gap-[0.35vw]`}>
                 <span className="text-[0.82vw] font-medium text-gray-800">Stoke Width</span>
                 <div className="flex items-center gap-[0.25vw] h-[2.1vw]">
                   <button
@@ -913,43 +929,45 @@ const Color = ({
             </div>
 
             {/* Row 4: Line Corner */}
-            <div className="flex items-center gap-[1vw]">
-              <div className="flex-1 flex flex-col gap-[0.35vw]">
-                <span className="text-[0.82vw] font-medium text-gray-800">Line Corner</span>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsCornerOpen(!isCornerOpen)}
-                    className="w-full h-[2.1vw] px-[0.7vw] border border-gray-300 rounded-[0.45vw] flex items-center justify-between bg-white text-[0.8vw] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-2xs cursor-pointer transition-colors"
-                  >
-                    <span>{(pseudoProps.strokeLinecap === 'round' || pseudoProps['stroke-linecap'] === 'round') ? 'Rounded' : 'Square'}</span>
-                    <ChevronDown size="0.75vw" className="text-gray-400" />
-                  </button>
-                  {isCornerOpen && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setIsCornerOpen(false)} />
-                      <div className="absolute bottom-[110%] left-0 right-0 bg-white border border-gray-200 rounded-[0.4vw] shadow-xl z-40 py-1 overflow-hidden">
-                        {['Square', 'Rounded'].map((corner) => (
-                          <div
-                            key={corner}
-                            onClick={() => {
-                              const isRound = corner === 'Rounded';
-                              updateAttr('stroke-linecap', isRound ? 'round' : 'butt');
-                              updateAttr('stroke-linejoin', isRound ? 'round' : 'miter');
-                              setIsCornerOpen(false);
-                            }}
-                            className="px-[0.75vw] py-[0.35vw] text-[0.78vw] font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer"
-                          >
-                            {corner}
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
+            {!isTable && !hideLineCorner && (
+              <div className="flex items-center gap-[1vw]">
+                <div className="flex-1 flex flex-col gap-[0.35vw]">
+                  <span className="text-[0.82vw] font-medium text-gray-800">Line Corner</span>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsCornerOpen(!isCornerOpen)}
+                      className="w-full h-[2.1vw] px-[0.7vw] border border-gray-300 rounded-[0.45vw] flex items-center justify-between bg-white text-[0.8vw] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-2xs cursor-pointer transition-colors"
+                    >
+                      <span>{(pseudoProps.strokeLinecap === 'round' || pseudoProps['stroke-linecap'] === 'round') ? 'Rounded' : 'Square'}</span>
+                      <ChevronDown size="0.75vw" className="text-gray-400" />
+                    </button>
+                    {isCornerOpen && (
+                      <>
+                        <div className="fixed inset-0 z-30" onClick={() => setIsCornerOpen(false)} />
+                        <div className="absolute bottom-[110%] left-0 right-0 bg-white border border-gray-200 rounded-[0.4vw] shadow-xl z-40 py-1 overflow-hidden">
+                          {['Square', 'Rounded'].map((corner) => (
+                            <div
+                              key={corner}
+                              onClick={() => {
+                                const isRound = corner === 'Rounded';
+                                updateAttr('stroke-linecap', isRound ? 'round' : 'butt');
+                                updateAttr('stroke-linejoin', isRound ? 'round' : 'miter');
+                                setIsCornerOpen(false);
+                              }}
+                              className="px-[0.75vw] py-[0.35vw] text-[0.78vw] font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer"
+                            >
+                              {corner}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
+                <div className="flex-1" />
               </div>
-              <div className="flex-1" />
-            </div>
+            )}
           </div>
 
           {/* ── Background & Scrollbar (Scrollable Text) ── */}
@@ -1583,7 +1601,7 @@ const Color = ({
               </div>
 
               {/* Stroke Properties */}
-              <div className={`flex flex-col gap-[0.75vw] ${(!pseudoProps.stroke || pseudoProps.stroke === 'none' || pseudoProps.stroke === '#' || pseudoProps.stroke === 'transparent') ? 'opacity-50' : ''}`}>
+              <div className={`flex flex-col gap-[0.75vw] ${disableStroke ? 'opacity-40 pointer-events-none select-none cursor-not-allowed' : (!pseudoProps.stroke || pseudoProps.stroke === 'none' || pseudoProps.stroke === '#' || pseudoProps.stroke === 'transparent') ? 'opacity-50' : ''}`}>
                 {/* Row 2: Alignment and Stroke Width */}
                 <div className="flex items-center gap-[1vw]">
                   {/* Alignment */}

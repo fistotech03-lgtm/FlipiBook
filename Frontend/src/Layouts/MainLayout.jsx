@@ -5,11 +5,11 @@ import HomeNav from '../components/NavBar/HomeNav';
 
 export default function MainLayout({ children }) {
   const location = useLocation();
-  const isDashboard = location.pathname.startsWith('/my-flipbooks');
+  const isDashboard = location.pathname.startsWith('/my-flipbooks') || location.pathname.startsWith('/guide');
 
   return (
     <div className="w-screen h-screen max-w-full max-h-screen overflow-hidden bg-[#F8FAFC] flex flex-col font-sans">
-      <header className="w-full flex-none bg-white z-[100]" style={{ height: '7vh' }}>
+      <header className="w-full flex-none bg-white z-[100] h-14 sm:h-16 md:h-[7vh] min-h-[52px]">
         <HomeNav />
       </header>
       {/* EditorNav will be included later */}

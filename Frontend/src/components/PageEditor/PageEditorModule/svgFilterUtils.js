@@ -135,14 +135,57 @@ export const parseLayersFromSVG = (element) => {
         const subLayers = parseLayersFromSVG(child);
         if (subLayers.length > 0) layer.children = subLayers;
       } else if (isGroup) {
-        // Strip IDs from all descendants of an Image Group so they can't be selected individually
-        const stripIds = (node) => {
-          Array.from(node.children).forEach(descendant => {
-            descendant.removeAttribute('id');
-            stripIds(descendant);
-          });
-        };
-        stripIds(child);
+        // Strip IDs from internal helper elements of a generic compound Group so they can't be selected individually,
+        // but never touch dedicated element containers (image-frame, qrcode, audio-frame, etc.) or SVG definition tags (defs, pattern, clipPath, mask, filter, grad)
+        const isElementPresetContainer =
+          isImageFrame || isQRCode || isAudioFrame || isEmbedGroup ||
+          isButton || isMap || isSlideshow || isTable || isTypography || isShape || isDecorator;
+
+        if (!isElementPresetContainer) {
+          const stripIds = (node) => {
+            Array.from(node.children).forEach(descendant => {
+              const tag = (descendant.tagName || '').toLowerCase();
+              if (['defs', 'clippath', 'pattern', 'mask', 'filter', 'lineargradient', 'radialgradient', 'symbol', 'marker', 'style'].includes(tag)) {
+                return;
+              }
+              if (descendant.closest && descendant.closest('defs, clipPath, pattern, mask, filter')) {
+                return;
+              }
+
+              const dId = (descendant.getAttribute('id') || '').toLowerCase();
+              if (
+                dId.startsWith('pattern') ||
+                dId.startsWith('clip') ||
+                dId.startsWith('filter') ||
+                dId.startsWith('mask') ||
+                dId.startsWith('grad') ||
+                dId.startsWith('image-frame') ||
+                dId.startsWith('imageframe')
+              ) {
+                return;
+              }
+
+              const isProtected =
+                descendant.getAttribute('data-is-element-typography') === 'true' ||
+                descendant.getAttribute('data-is-element-shape') === 'true' ||
+                descendant.getAttribute('data-is-element-button') === 'true' ||
+                descendant.getAttribute('data-is-image-frame') === 'true' ||
+                descendant.getAttribute('data-typography-type') ||
+                descendant.getAttribute('data-type') ||
+                dId.startsWith('typography-') ||
+                dId.startsWith('embed-') ||
+                dId.startsWith('audio-') ||
+                dId.startsWith('qrcode-') ||
+                dId.startsWith('shape-') ||
+                dId.startsWith('button-');
+              if (!isProtected) {
+                descendant.removeAttribute('id');
+                stripIds(descendant);
+              }
+            });
+          };
+          stripIds(child);
+        }
       }
 
       const isText = child.tagName.toLowerCase() === 'text' ||

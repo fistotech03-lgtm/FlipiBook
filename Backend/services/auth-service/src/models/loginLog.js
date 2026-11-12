@@ -84,7 +84,7 @@ const loginLogSchema = new mongoose.Schema(
     },
     loginMethod: {
       type: String,
-      enum: ['EMAIL_PASSWORD', 'GOOGLE'],
+      enum: ['EMAIL_PASSWORD', 'GOOGLE', 'TOKEN_AUTH', 'OTP', 'OTHER'],
       default: 'EMAIL_PASSWORD'
     }
   },

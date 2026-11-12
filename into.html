@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coming Soon</title>
+<meta name="description" content="An immersive, interactive digital catalogue is on its way. Follow us to be the first to know.">
+<meta name="theme-color" content="#EC5137">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================================
+   Base + theme
+   ========================================================================== */
+:root {
+  --orange: #EC5137;
+  --orange-light: #FF8A4C;
+  --orange-deep: #C9371F;
+  --ink: #3b2a25;
+  --muted: #7d625a;
+
+  /* flip clock colours */
+  --rotor-top-a: #2A2A2A;
+  --rotor-top-b: #151515;
+  --rotor-bot-a: #1E1E1E;
+  --rotor-bot-b: #0E0E0E;
+  --rotor-hinge: #000000;
+  --rotor-digit: #FFFFFF;
+  --rotor-digit-bottom: #EFEFEF;
+  --rotor-shadow: rgba(0, 0, 0, .28);
+  --heading: #373435;
+  --dot: #8E8988;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  background: #fff;
+  color: var(--ink);
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ==========================================================================
+   Page layout (vertical stack)
+   ========================================================================== */
+.page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(1.75rem, 5vh, 3.5rem) 1rem;
+  overflow: hidden;
+}
+
+.content {
+  width: 100%;
+  max-width: 920px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1 0 auto;
+  gap: clamp(1.6rem, 4.2vh, 2.9rem);
+  text-align: center;
+}
+
+/* 1. Logo */
+.logo {
+  width: clamp(88px, 13vw, 132px);
+  height: auto;
+  display: block;
+}
+
+/* 3. Coming soon text */
+.title {
+  margin: 0;
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: clamp(1.6rem, 5.2vw, 3.3rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: .14em;
+  padding-left: .14em; /* balances the trailing letter-spacing so the text stays centred */
+  text-transform: uppercase;
+  color: #000;
+}
+
+.tagline {
+  margin: .75rem auto 0;
+  max-width: 34ch;
+  font-size: clamp(.95rem, 2.1vw, 1.15rem);
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* 4. Social links */
+.social {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(.65rem, 2vw, 1rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.social a {
+  display: grid;
+  place-items: center;
+  width: clamp(42px, 6vw, 52px);
+  height: clamp(42px, 6vw, 52px);
+  border-radius: 50%;
+  color: var(--orange);
+  background: #fff;
+  border: 1.5px solid #F6B9A8;
+  transition: transform .2s ease, background-color .2s ease, color .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.social a svg { width: 46%; height: 46%; }
+
+.social a:hover,
+.social a:focus-visible {
+  color: #fff;
+  background: linear-gradient(135deg, var(--orange-light), var(--orange));
+  border-color: transparent;
+  transform: translateY(-4px);
+}
+
+.social a:focus-visible { outline: 3px solid rgba(236, 81, 55, .35); outline-offset: 3px; }
+
+.footer {
+  width: 100%;
+  padding-top: 1.5rem;
+  text-align: center;
+  font-size: clamp(.78rem, 1.8vw, .9rem);
+  color: var(--muted);
+  letter-spacing: .01em;
+}
+.footer strong { color: var(--ink); font-weight: 600; }
+
+/* ==========================================================================
+   Motion
+   ========================================================================== */
+@media (prefers-reduced-motion: no-preference) {
+  .logo { animation: float 5s ease-in-out infinite; }
+
+  .content > * { animation: rise .8s cubic-bezier(.2, .7, .2, 1) both; }
+  .content > :nth-child(2) { animation-delay: .1s; }
+  .content > :nth-child(3) { animation-delay: .2s; }
+  .content > :nth-child(4) { animation-delay: .3s; }
+}
+
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+/* ==========================================================================
+   FlipDown countdown (flip-clock UI from PButcher/flipdown, MIT)
+   Re-themed in orange and made fluid: every size is in em, and the
+   font-size on .flipdown scales with the viewport so it fits any screen.
+   ========================================================================== */
+.countdown { padding: .5rem .25rem 1rem; }
+
+.flipdown {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1;
+  /* ~8 rotor-widths of content (+0.86em per extra day digit) must fit the viewport */
+  font-size: min(4.4rem, calc((100vw - 2.5rem) / (8.3 + (var(--day-digits, 2) - 2) * .86)));
+}
+
+.flipdown .rotor-group {
+  position: relative;
+  padding-right: .47em;
+}
+.flipdown .rotor-group:last-child { padding-right: 0; }
+
+.flipdown .rotor-group-heading {
+  height: .62em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flipdown .rotor-group-heading::before {
+  content: attr(data-before);
+  font-size: clamp(.62rem, .2em, .9rem);
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--heading);
+}
+
+.flipdown .rotor-row { display: flex; gap: .08em; }
+
+/* delimiter dots between hours | minutes | seconds */
+.flipdown .rotor-group:nth-child(n+2):nth-child(-n+3)::before,
+.flipdown .rotor-group:nth-child(n+2):nth-child(-n+3)::after {
+  content: '';
+  position: absolute;
+  left: calc(100% - .313em);
+  width: .156em;
+  height: .156em;
+  border-radius: 50%;
+  background-color: var(--dot);
+}
+.flipdown .rotor-group:nth-child(n+2):nth-child(-n+3)::before { bottom: .3125em; }
+.flipdown .rotor-group:nth-child(n+2):nth-child(-n+3)::after  { bottom: .78em; }
+
+.flipdown .rotor {
+  position: relative;
+  width: .78em;
+  height: 1.25em;
+  border-radius: .0625em;
+  font-size: 1em;
+  text-align: center;
+  perspective: 3.1em;
+  color: var(--rotor-digit);
+  background-color: var(--rotor-top-b);
+  box-shadow: 0 .12em .3em var(--rotor-shadow);
+}
+
+.flipdown .rotor-top,
+.flipdown .rotor-bottom {
+  overflow: hidden;
+  position: absolute;
+  width: 100%;
+  height: 50%;
+}
+
+.flipdown .rotor-leaf {
+  z-index: 1;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0s;
+}
+.flipdown .rotor-leaf.flipped {
+  transform: rotateX(-180deg);
+  transition: all .5s ease-in-out;
+}
+
+.flipdown .rotor-leaf-front,
+.flipdown .rotor-leaf-rear {
+  overflow: hidden;
+  position: absolute;
+  width: 100%;
+  height: 50%;
+  margin: 0;
+  transform: rotateX(0deg);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flipdown .rotor-leaf-front { line-height: 1.25em; border-radius: .0625em .0625em 0 0; }
+.flipdown .rotor-leaf-rear  { line-height: 0;       border-radius: 0 0 .0625em .0625em; transform: rotateX(-180deg); }
+.flipdown .rotor-top        { line-height: 1.25em; border-radius: .0625em .0625em 0 0; }
+.flipdown .rotor-bottom     { bottom: 0; line-height: 0; border-radius: 0 0 .0625em .0625em; }
+
+/* top halves */
+.flipdown .rotor-top,
+.flipdown .rotor-leaf-front {
+  color: var(--rotor-digit);
+  background: linear-gradient(180deg, var(--rotor-top-a), var(--rotor-top-b));
+}
+/* bottom halves */
+.flipdown .rotor-bottom,
+.flipdown .rotor-leaf-rear {
+  color: var(--rotor-digit-bottom);
+  background: linear-gradient(180deg, var(--rotor-bot-a), var(--rotor-bot-b));
+}
+
+/* hinge */
+.flipdown .rotor::after {
+  content: '';
+  z-index: 2;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  border-top: solid 1px var(--rotor-hinge);
+  border-radius: 0 0 .0625em .0625em;
+}
+
+/* ==========================================================================
+   Breakpoints (mostly fluid already; these tune spacing)
+   ========================================================================== */
+@media (max-width: 900px) {
+  .content { max-width: 680px; }
+}
+
+@media (max-width: 480px) {
+  .page { padding-left: .75rem; padding-right: .75rem; }
+  .flipdown .rotor-group { padding-right: .4em; }
+  .flipdown .rotor-group:nth-child(n+2):nth-child(-n+3)::before,
+  .flipdown .rotor-group:nth-child(n+2):nth-child(-n+3)::after { left: calc(100% - .28em); }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .content { gap: 1.1rem; }
+  .logo { width: 72px; }
+  .tagline { display: none; }
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+
+  <main class="content">
+
+    <!-- 1. Logo -->
+    <img class="logo" src="relicon.svg" alt="Logo" width="168" height="168">
+
+    <!-- 2. Countdown -->
+    <section class="countdown" role="timer" aria-label="Time remaining until launch">
+      <div id="flipdown" class="flipdown"></div>
+      <span class="sr-only" id="sr-time"></span>
+    </section>
+
+    <!-- 3. Coming soon text -->
+    <div>
+      <h1 class="title" id="title">Coming Soon</h1>
+      <p class="tagline" id="tagline">Immersive interactive digital catalogue.</p>
+    </div>
+
+    <!-- 4. Social links -->
+    <ul class="social" aria-label="Social media">
+      <li>
+        <a href="https://www.linkedin.com/company/143968295" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" title="LinkedIn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </a>
+      </li>
+      <li>
+        <a href="https://www.instagram.com/flipibookofficial/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </a>
+      </li>
+      <li>
+        <a href="https://www.youtube.com/@Flipibookofficial" target="_blank" rel="noopener noreferrer" aria-label="YouTube" title="YouTube">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>
+        </a>
+      </li>
+      <li>
+        <a href="https://in.pinterest.com/flipibook/" target="_blank" rel="noopener noreferrer" aria-label="Pinterest" title="Pinterest">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.39 18.592.026 11.985.026L12.017 0z"/></svg>
+        </a>
+      </li>
+      <li>
+        <a href="https://www.facebook.com/people/Flipibook/61595286834761/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" title="Facebook">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+        </a>
+      </li>
+    </ul>
+
+  </main>
+
+  <footer class="footer">
+    &copy; <span id="year">2026</span> All rights are reserved by <strong>flipibook.com</strong>
+  </footer>
+</div>
+
+<script>
+/*!
+ * FlipDown (flip-style countdown clock)
+ * Original library: https://github.com/PButcher/flipdown
+ * Copyright (c) 2018 Peter Butcher. MIT License.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+ *
+ * Adapted here: rotor groups wrap their rotors in a flex row, and the number of
+ * day digits is exposed as the --day-digits CSS variable so the clock can scale.
+ */
+class FlipDown {
+  constructor(uts, el = 'flipdown', opt = {}) {
+    if (typeof uts !== 'number') {
+      throw new Error(`FlipDown: Constructor expected unix timestamp, got ${typeof uts} instead.`);
+    }
+    if (typeof el === 'object') { opt = el; el = 'flipdown'; }
+
+    this.initialised = false;
+    this.now = this._getTime();
+    this.epoch = uts;
+    this.countdownEnded = false;
+    this.hasEndedCallback = null;
+    this.element = document.getElementById(el);
+    this.rotors = [];
+    this.rotorLeafFront = [];
+    this.rotorLeafRear = [];
+    this.rotorTop = [];
+    this.rotorBottom = [];
+    this.countdown = null;
+    this.clockValues = {};
+    this.clockStrings = {};
+    this.clockValuesAsString = [];
+    this.prevClockValuesAsString = [];
+    this.opts = this._parseOptions(opt);
+    this.element.classList.add(`flipdown__theme-${this.opts.theme}`);
+  }
+
+  start() {
+    if (!this.initialised) this._init();
+    this.countdown = setInterval(this._tick.bind(this), 1000);
+    return this;
+  }
+
+  ifEnded(cb) {
+    this.hasEndedCallback = function () { cb(); this.hasEndedCallback = null; };
+    return this;
+  }
+
+  _getTime() { return new Date().getTime() / 1000; }
+
+  _hasCountdownEnded() {
+    if (this.epoch - this.now < 0) {
+      this.countdownEnded = true;
+      if (this.hasEndedCallback != null) {
+        this.hasEndedCallback();
+        this.hasEndedCallback = null;
+      }
+      return true;
+    }
+    this.countdownEnded = false;
+    return false;
+  }
+
+  _parseOptions(opt) {
+    let headings = ['Days', 'Hours', 'Minutes', 'Seconds'];
+    if (opt.headings && opt.headings.length === 4) headings = opt.headings;
+    return { theme: opt.hasOwnProperty('theme') ? opt.theme : 'dark', headings };
+  }
+
+  _init() {
+    this.initialised = true;
+
+    let daysRemaining;
+    if (this._hasCountdownEnded()) {
+      daysRemaining = 0;
+    } else {
+      daysRemaining = Math.floor((this.epoch - this.now) / 86400).toString().length;
+    }
+    const dayRotorCount = daysRemaining <= 2 ? 2 : daysRemaining;
+    this.element.style.setProperty('--day-digits', dayRotorCount);
+
+    for (let i = 0; i < dayRotorCount + 6; i++) this.rotors.push(this._createRotor(0));
+
+    const dayRotors = [];
+    for (let i = 0; i < dayRotorCount; i++) dayRotors.push(this.rotors[i]);
+    this.element.appendChild(this._createRotorGroup(dayRotors, 0));
+
+    let count = dayRotorCount;
+    for (let i = 0; i < 3; i++) {
+      const otherRotors = [];
+      for (let j = 0; j < 2; j++) { otherRotors.push(this.rotors[count]); count++; }
+      this.element.appendChild(this._createRotorGroup(otherRotors, i + 1));
+    }
+
+    const q = (cls) => Array.prototype.slice.call(this.element.getElementsByClassName(cls));
+    this.rotorLeafFront = q('rotor-leaf-front');
+    this.rotorLeafRear = q('rotor-leaf-rear');
+    this.rotorTop = q('rotor-top');
+    this.rotorBottom = q('rotor-bottom');
+
+    this._tick();
+    this._updateClockValues(true);
+    return this;
+  }
+
+  _createRotorGroup(rotors, rotorIndex) {
+    const group = document.createElement('div');
+    group.className = 'rotor-group';
+    const heading = document.createElement('div');
+    heading.className = 'rotor-group-heading';
+    heading.setAttribute('data-before', this.opts.headings[rotorIndex]);
+    const row = document.createElement('div');
+    row.className = 'rotor-row';
+    rotors.forEach((r) => row.appendChild(r));
+    group.appendChild(heading);
+    group.appendChild(row);
+    return group;
+  }
+
+  _createRotor(v = 0) {
+    const rotor = document.createElement('div');
+    const leaf = document.createElement('div');
+    const leafRear = document.createElement('figure');
+    const leafFront = document.createElement('figure');
+    const top = document.createElement('div');
+    const bottom = document.createElement('div');
+    rotor.className = 'rotor';
+    leaf.className = 'rotor-leaf';
+    leafRear.className = 'rotor-leaf-rear';
+    leafFront.className = 'rotor-leaf-front';
+    top.className = 'rotor-top';
+    bottom.className = 'rotor-bottom';
+    leafRear.textContent = v;
+    top.textContent = v;
+    bottom.textContent = v;
+    [leaf, top, bottom].forEach((n) => rotor.appendChild(n));
+    [leafRear, leafFront].forEach((n) => leaf.appendChild(n));
+    return rotor;
+  }
+
+  _tick() {
+    this.now = this._getTime();
+    let diff = this.epoch - this.now <= 0 ? 0 : this.epoch - this.now;
+
+    this.clockValues.d = Math.floor(diff / 86400); diff -= this.clockValues.d * 86400;
+    this.clockValues.h = Math.floor(diff / 3600);  diff -= this.clockValues.h * 3600;
+    this.clockValues.m = Math.floor(diff / 60);    diff -= this.clockValues.m * 60;
+    this.clockValues.s = Math.floor(diff);
+
+    this._updateClockValues();
+    this._hasCountdownEnded();
+  }
+
+  _updateClockValues(init = false) {
+    this.clockStrings.d = pad(this.clockValues.d, 2);
+    this.clockStrings.h = pad(this.clockValues.h, 2);
+    this.clockStrings.m = pad(this.clockValues.m, 2);
+    this.clockStrings.s = pad(this.clockValues.s, 2);
+
+    this.clockValuesAsString = (
+      this.clockStrings.d + this.clockStrings.h + this.clockStrings.m + this.clockStrings.s
+    ).split('');
+
+    // Visible faces: leaf-front (top of current) + bottom (bottom of current)
+    this.rotorLeafFront.forEach((el, i) => { el.textContent = this.prevClockValuesAsString[i]; });
+    this.rotorBottom.forEach((el, i) => { el.textContent = this.prevClockValuesAsString[i]; });
+
+    function rotorTopFlip() {
+      this.rotorTop.forEach((el, i) => {
+        if (el.textContent != this.clockValuesAsString[i]) el.textContent = this.clockValuesAsString[i];
+      });
+    }
+
+    function rotorLeafRearFlip() {
+      this.rotorLeafRear.forEach((el, i) => {
+        if (el.textContent != this.clockValuesAsString[i]) {
+          el.textContent = this.clockValuesAsString[i];
+          el.parentElement.classList.add('flipped');
+          setTimeout(() => el.parentElement.classList.remove('flipped'), 500);
+        }
+      });
+    }
+
+    if (!init) {
+      setTimeout(rotorTopFlip.bind(this), 500);
+      setTimeout(rotorLeafRearFlip.bind(this), 500);
+    } else {
+      rotorTopFlip.call(this);
+      rotorLeafRearFlip.call(this);
+    }
+
+    this.prevClockValuesAsString = this.clockValuesAsString;
+  }
+}
+
+function pad(n, len) {
+  n = n.toString();
+  return n.length < len ? pad('0' + n, len) : n;
+}
+
+/* ------------------------------------------------------------------
+   Page setup
+   Change LAUNCH_DATE to your real launch moment (ISO 8601 with offset).
+   ------------------------------------------------------------------ */
+(function () {
+  var LAUNCH_DATE = '2026-11-30T09:00:00+05:30';
+  var launchTs = new Date(LAUNCH_DATE).getTime() / 1000;
+
+  var flip = new FlipDown(launchTs, 'flipdown', {
+    theme: 'orange',
+    headings: ['Days', 'Hours', 'Minutes', 'Seconds']
+  })
+    .start()
+    .ifEnded(function () {
+      document.getElementById('title').textContent = "We're Live!";
+      document.getElementById('tagline').textContent = 'Thanks for waiting. Come explore our immersive interactive digital catalogue.';
+    });
+
+  // Screen-reader friendly time text (role="timer" is not announced automatically)
+  var sr = document.getElementById('sr-time');
+  function updateSr() {
+    var v = flip.clockValues;
+    if (v.d === undefined) return;
+    sr.textContent = v.d + ' days, ' + v.h + ' hours, ' + v.m + ' minutes, ' + v.s + ' seconds remaining';
+  }
+  updateSr();
+  setInterval(updateSr, 1000);
+})();
+
+document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>

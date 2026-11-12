@@ -7,26 +7,23 @@ import { QR_ITEMS } from './categories/qrCodeCatalog.jsx';
 import { MAP_ITEMS } from './categories/mapCatalog.jsx';
 import { EMBED_ITEMS } from './categories/embedsCatalog.jsx';
 import { SLIDESHOW_ITEMS } from './categories/slideshowCatalog.jsx';
-import { DECORATOR_ITEMS } from './categories/decoratorsCatalog.jsx';
 import { AUDIO_ITEMS } from './categories/audioCatalog.jsx';
 import React from 'react';
 import { Icon } from '@iconify/react';
 
 // Categories matching editor design
 export const ELEMENT_CATEGORIES = [
-  { id: 'all', name: 'All', icon: 'lucide:layout-grid' },
+  { id: 'recent', name: 'Recent', icon: 'lucide:clock' },
   { id: 'shapes', name: 'Shapes', icon: 'lucide:shapes' },
+  { id: 'masking', name: 'TypoGrid', icon: 'tabler:mask' },
   { id: 'buttons', name: 'Buttons', icon: 'lucide:mouse-pointer-click' },
-  { id: 'masking', name: 'Image Framing & Masking', icon: 'tabler:mask' },
-  { id: 'qr-code', name: 'QR Code', icon: 'lucide:qr-code' },
+  { id: 'text', name: 'Typography', icon: 'lucide:type' },
   { id: 'audio', name: 'Audio', icon: 'lucide:music' },
-  { id: 'embeds', name: '3rd-Party Embeds', icon: 'lucide:code-2' },
-  { id: 'text', name: 'Text', icon: 'lucide:type' },
-  { id: 'slideshow', name: 'Slideshow', icon: 'lucide:presentation' },
-  { id: 'google-maps', name: 'Google Maps', icon: 'lucide:map-pin' },
   { id: 'tables', name: 'Tables', icon: 'lucide:table' },
-  { id: 'decorators', name: 'Decorators', icon: 'lucide:sparkles' },
-
+  { id: 'slideshow', name: 'Slideshow', icon: 'lucide:presentation' },
+  { id: 'google-maps', name: 'Map Embed', icon: 'lucide:map-pin' },
+  { id: 'qr-code', name: 'QR Code', icon: 'lucide:qr-code' },
+  { id: 'embeds', name: '3rd-Party Embeds', icon: 'lucide:code-2' },
 ];
 
 /**
@@ -95,9 +92,6 @@ export const ELEMENT_ITEMS = [
 
   // --- Slideshow & Interactive Carousels ---
   ...SLIDESHOW_ITEMS,
-
-  // --- Animated Motion Decorators ---
-  ...DECORATOR_ITEMS,
 
   // --- Interactive Audio Players ---
   ...AUDIO_ITEMS,

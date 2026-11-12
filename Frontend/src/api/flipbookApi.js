@@ -43,7 +43,7 @@ export const flipbookApi = {
     },
 
     // Flipbooks API
-    getBooks: () => api.get('/api/flipbook/list'),
+    getBooks: (params) => api.get('/api/flipbook/list', params ? { params: typeof params === 'string' ? { emailId: params } : params } : undefined),
     getPreview: (v_id, arg2, arg3) => {
         const signal = (arg2 && arg2.aborted !== undefined) ? arg2 : arg3;
         return api.get(`/api/flipbook/preview/${v_id}`, signal ? { signal } : undefined);

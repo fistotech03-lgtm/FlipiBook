@@ -78,9 +78,14 @@ const AccountOverview = ({
       const netInfo = await getPublicClientIpAndLocation();
       const headers = {
         'x-device-id': deviceInfo.deviceId,
+        'x-client-browser': deviceInfo.browser,
+        'x-client-os': deviceInfo.operatingSystem,
       };
       if (netInfo?.ip) {
         headers['x-client-ip'] = netInfo.ip;
+      }
+      if (netInfo?.location) {
+        headers['x-client-location'] = netInfo.location;
       }
 
       const res = await axios.get(`${backendUrl}/api/auth/recent-activity`, {
@@ -228,27 +233,29 @@ const AccountOverview = ({
     return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
   };
   return (
-    <div className="w-full flex flex-col p-[1.5vw] font-sans">
-      {/* Page Title & Subtitle */}
-      <div className="mb-[1.8vw]">
-        <h1 className="text-[1.35vw] font-semibold text-gray-800 tracking-tight leading-tight">
-          Account Settings
-        </h1>
-        <p className="text-[0.74vw] text-gray-500 mt-[0.25vw] font-normal">
-          Manage your credentials, active sessions and account security
-        </p>
+    <div className="w-full flex flex-col font-sans">
+      {/* Top Header matching Notifications.jsx */}
+      <div className="flex items-start justify-between pb-[1.4vw] border-b border-gray-100 mb-[1.5vw]">
+        <div>
+          <h1 className="text-[1.35vw] font-bold text-gray-900 tracking-tight leading-none">
+            Account Settings
+          </h1>
+          <p className="text-[0.78vw] text-gray-400 mt-[0.35vw]">
+            Manage your credentials, active sessions and account security
+          </p>
+        </div>
       </div>
 
       {/* Account Overview Card */}
-      <div className="w-full bg-white border border-gray-200 rounded-[1vw] p-[1.5vw] shadow-sm mb-[1.5vw]">
+      <div className="w-full bg-white border border-gray-200/80 rounded-[0.8vw] p-[1.2vw] shadow-xs mb-[1.2vw]">
         {/* Card Header */}
-        <div className="flex items-center gap-[0.55vw] mb-[0.2vw]">
+        <div className="flex items-center gap-[0.55vw] mb-[0.15vw]">
           <Icon icon="solar:user-bold" className="w-[1.1vw] h-[1.1vw] text-[#4b5563]" />
-          <h2 className="text-[0.98vw] font-medium text-gray-800">
+          <h2 className="text-[0.92vw] font-bold text-gray-900 leading-tight">
             Account Overview
           </h2>
         </div>
-        <p className="text-[0.72vw] text-gray-500 mb-[1.5vw] pl-[1.65vw] font-normal">
+        <p className="text-[0.72vw] text-gray-400 mb-[1.2vw] pl-[1.65vw]">
           Key profile details and account verification status
         </p>
 
@@ -257,7 +264,7 @@ const AccountOverview = ({
           {/* User Profile Block */}
           <div className="flex items-center gap-[0.9vw]">
             <div
-              className="w-[3.8vw] h-[3.8vw] rounded-full overflow-hidden flex items-center justify-center shrink-0 shadow-xs border border-gray-100"
+              className="w-[3.6vw] h-[3.6vw] rounded-full overflow-hidden flex items-center justify-center shrink-0 shadow-xs border border-gray-100"
               style={{
                 backgroundColor: avatarSrc
                   ? '#ffffff'
@@ -275,7 +282,7 @@ const AccountOverview = ({
                   }}
                 />
               ) : (
-                <span className="text-white text-[1.5vw] font-semibold">
+                <span className="text-white text-[1.4vw] font-semibold">
                   {userName.charAt(0).toUpperCase()}
                 </span>
               )}
@@ -283,7 +290,7 @@ const AccountOverview = ({
 
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-[0.4vw]">
-                <h3 className="text-[1.05vw] font-medium text-gray-900 truncate leading-none">
+                <h3 className="text-[1.05vw] font-semibold text-gray-900 truncate leading-none">
                   {userName}
                 </h3>
                 {/* Green Verified Badge */}
@@ -292,12 +299,12 @@ const AccountOverview = ({
                   className="w-[0.95vw] h-[0.95vw] text-[#22c55e] shrink-0"
                 />
               </div>
-              <p className="text-[0.74vw] text-gray-500 truncate mt-[0.3vw] mb-[0.4vw] font-normal">
+              <p className="text-[0.74vw] text-gray-400 truncate mt-[0.25vw] mb-[0.35vw] font-normal">
                 {userEmail}
               </p>
               {/* Email Verified Pill */}
               <div>
-                <span className="inline-flex items-center gap-[0.3vw] bg-[#DCFCE7] text-[#16A34A] text-[0.66vw] font-medium px-[0.6vw] py-[0.15vw] rounded-full">
+                <span className="inline-flex items-center gap-[0.3vw] bg-[#DCFCE7] text-[#16A34A] text-[0.68vw] font-medium px-[0.65vw] py-[0.18vw] rounded-full">
                   <span className="w-[0.35vw] h-[0.35vw] rounded-full bg-[#16A34A]"></span>
                   Email Verified
                 </span>
@@ -307,16 +314,16 @@ const AccountOverview = ({
 
           {/* Account Type */}
           <div className="flex flex-col pl-[1.2vw] border-l border-gray-100">
-            <span className="text-[0.74vw] font-medium text-gray-700 mb-[0.45vw]">
+            <span className="text-[0.72vw] text-gray-400 font-normal mb-[0.35vw]">
               Account type
             </span>
             <div className="flex items-center gap-[0.45vw] text-gray-600">
               <Icon
                 icon="lucide:user"
-                className="w-[0.9vw] h-[0.9vw] text-[#4b5563]"
+                className="w-[0.9vw] h-[0.9vw] text-gray-500"
                 strokeWidth="2"
               />
-              <span className="text-[0.76vw] text-[#555962] font-normal">
+              <span className="text-[0.82vw] font-semibold text-gray-800">
                 {contextUser?.profileType || 'Individual Creator'}
               </span>
             </div>
@@ -324,16 +331,16 @@ const AccountOverview = ({
 
           {/* Member Since */}
           <div className="flex flex-col pl-[1.2vw] border-l border-gray-100">
-            <span className="text-[0.74vw] font-medium text-gray-700 mb-[0.45vw]">
+            <span className="text-[0.72vw] text-gray-400 font-normal mb-[0.35vw]">
               Member Since
             </span>
             <div className="flex items-center gap-[0.45vw] text-gray-600">
               <Icon
                 icon="lucide:calendar"
-                className="w-[0.9vw] h-[0.9vw] text-[#4b5563]"
+                className="w-[0.9vw] h-[0.9vw] text-gray-500"
                 strokeWidth="2"
               />
-              <span className="text-[0.76vw] text-[#555962] font-normal">
+              <span className="text-[0.82vw] font-semibold text-gray-800">
                 {contextUser?.createdAt
                   ? new Date(contextUser.createdAt).toLocaleDateString('en-US', {
                       month: 'short',
@@ -347,16 +354,16 @@ const AccountOverview = ({
 
           {/* Last Login */}
           <div className="flex flex-col pl-[1.2vw] border-l border-gray-100">
-            <span className="text-[0.74vw] font-medium text-gray-700 mb-[0.45vw]">
+            <span className="text-[0.72vw] text-gray-400 font-normal mb-[0.35vw]">
               Last Login
             </span>
             <div className="flex items-center gap-[0.45vw] text-gray-600">
               <Icon
                 icon="lucide:clock"
-                className="w-[0.9vw] h-[0.9vw] text-[#4b5563]"
+                className="w-[0.9vw] h-[0.9vw] text-gray-500"
                 strokeWidth="2"
               />
-              <span className="text-[0.76vw] text-[#555962] font-normal">
+              <span className="text-[0.82vw] font-semibold text-gray-800">
                 {sessions[0]?.loginTime
                   ? formatDateTime(sessions[0].loginTime)
                   : formatDateTime(new Date())}
@@ -367,27 +374,27 @@ const AccountOverview = ({
       </div>
 
       {/* Sign-in & Security Card */}
-      <div className="w-full bg-white border border-gray-200 rounded-[1vw] p-[1.5vw] shadow-sm mb-[1.5vw]">
+      <div className="w-full bg-white border border-gray-200/80 rounded-[0.8vw] p-[1.2vw] shadow-xs mb-[1.2vw]">
         {/* Card Header */}
-        <div className="flex items-center gap-[0.55vw] mb-[0.2vw]">
+        <div className="flex items-center gap-[0.55vw] mb-[0.15vw]">
           <Icon icon="solar:lock-keyhole-bold" className="w-[1.1vw] h-[1.1vw] text-[#4b5563]" />
-          <h2 className="text-[0.98vw] font-medium text-gray-800">
+          <h2 className="text-[0.92vw] font-bold text-gray-900 leading-tight">
             Sign-in & Security
           </h2>
         </div>
-        <p className="text-[0.72vw] text-gray-500 mb-[1.3vw] pl-[1.65vw] font-normal">
+        <p className="text-[0.72vw] text-gray-400 mb-[1.2vw] pl-[1.65vw]">
           Manage your password and authentication safeguards
         </p>
 
         {/* Password Row Box */}
-        <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] p-[1vw] flex items-center justify-between">
+        <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] p-[1.1vw] flex items-center justify-between hover:bg-gray-50/70 transition-colors">
           <div className="flex items-center gap-[0.9vw]">
-            {/* Key Icon in circle */}
+            {/* Key Icon Box */}
             <div
-              className={`w-[2.5vw] h-[2.5vw] rounded-full flex items-center justify-center shadow-xs border ${
+              className={`w-[2.4vw] h-[2.4vw] rounded-[0.55vw] flex items-center justify-center shrink-0 shadow-xs border ${
                 hasPassword
-                  ? 'bg-white border-gray-200 text-gray-600'
-                  : 'bg-amber-50 border-amber-200 text-amber-600'
+                  ? 'bg-white border-gray-200/80 text-gray-700'
+                  : 'bg-[#FFF8ED] border-[#FDE68A]/60 text-[#F59E0B]'
               }`}
             >
               <Icon icon="lucide:key" className="w-[1.05vw] h-[1.05vw] -rotate-45" strokeWidth="2" />
@@ -395,16 +402,16 @@ const AccountOverview = ({
 
             <div className="flex flex-col">
               <div className="flex items-center gap-[0.5vw]">
-                <span className="text-[0.88vw] font-medium text-gray-800">
+                <span className="text-[0.85vw] font-semibold text-gray-800 leading-tight">
                   {hasPassword ? 'Password' : 'Password not Yet Added'}
                 </span>
                 {!hasPassword && (
-                  <span className="bg-amber-100 text-amber-800 text-[0.64vw] font-medium px-[0.5vw] py-[0.12vw] rounded-full">
+                  <span className="bg-[#FFF8ED] text-[#D97706] border border-[#FDE68A]/60 text-[0.68vw] font-medium px-[0.6vw] py-[0.15vw] rounded-full">
                     Action Needed
                   </span>
                 )}
               </div>
-              <span className="text-[0.72vw] text-gray-400 mt-[0.1vw] font-normal">
+              <span className="text-[0.72vw] text-gray-400 mt-[0.15vw]">
                 {hasPassword
                   ? 'Your account is secured with a password'
                   : 'You signed in via Google. Add a password to enable email & password login.'}
@@ -417,7 +424,7 @@ const AccountOverview = ({
             <button
               type="button"
               onClick={onChangePasswordClick}
-              className="flex items-center gap-[0.45vw] bg-white hover:bg-gray-50 text-gray-700 hover:text-gray-900 border border-gray-300 text-[0.8vw] font-medium px-[1vw] py-[0.5vw] rounded-[0.5vw] shadow-xs transition-colors cursor-pointer active:scale-[0.98]"
+              className="flex items-center gap-[0.4vw] bg-white hover:bg-gray-50 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 text-[0.78vw] font-medium px-[1vw] py-[0.45vw] rounded-[0.5vw] shadow-xs transition-colors cursor-pointer active:scale-95"
             >
               <Icon icon="lucide:repeat" className="w-[0.85vw] h-[0.85vw] text-gray-500" strokeWidth="2" />
               <span>Change Password</span>
@@ -426,7 +433,7 @@ const AccountOverview = ({
             <button
               type="button"
               onClick={onAddPasswordClick}
-              className="flex items-center gap-[0.45vw] bg-[#4c5add] hover:bg-[#3f4bb8] text-white text-[0.8vw] font-medium px-[1.1vw] py-[0.5vw] rounded-[0.5vw] shadow-xs transition-all cursor-pointer active:scale-[0.98]"
+              className="flex items-center gap-[0.4vw] bg-[#EC5137] hover:bg-[#d94128] text-white text-[0.78vw] font-medium px-[1.1vw] py-[0.45vw] rounded-[0.5vw] shadow-xs transition-colors cursor-pointer active:scale-95"
             >
               <Icon icon="lucide:plus" className="w-[0.85vw] h-[0.85vw]" strokeWidth="2.2" />
               <span>Add Password</span>
@@ -436,33 +443,33 @@ const AccountOverview = ({
       </div>
 
       {/* Active Sessions Card */}
-      <div className="w-full bg-white border border-gray-200 rounded-[1vw] p-[1.5vw] shadow-sm mb-[1.5vw]">
+      <div className="w-full bg-white border border-gray-200/80 rounded-[0.8vw] p-[1.2vw] shadow-xs mb-[1.2vw]">
         {/* Card Header with Top-Right Action Buttons */}
-        <div className="flex items-start justify-between mb-[1.3vw]">
+        <div className="flex items-start justify-between mb-[1.2vw]">
           <div>
-            <div className="flex items-center gap-[0.55vw] mb-[0.2vw]">
+            <div className="flex items-center gap-[0.55vw] mb-[0.15vw]">
               <Icon icon="solar:devices-bold" className="w-[1.1vw] h-[1.1vw] text-[#4b5563]" />
-              <h2 className="text-[0.98vw] font-medium text-gray-800">
+              <h2 className="text-[0.92vw] font-bold text-gray-900 leading-tight">
                 Active Sessions
               </h2>
             </div>
-            <p className="text-[0.72vw] text-gray-500 pl-[1.65vw] font-normal">
+            <p className="text-[0.72vw] text-gray-400 pl-[1.65vw]">
               Devices currently signed in and authorized for this account ({sessions.length})
             </p>
           </div>
 
-          <div className="flex items-center gap-[0.7vw]">
+          <div className="flex items-center gap-[0.6vw]">
             {/* Refresh sessions button */}
             <button
               type="button"
               onClick={fetchActiveSessions}
-              className="flex items-center gap-[0.35vw] text-gray-600 hover:text-gray-900 text-[0.78vw] font-medium px-[0.75vw] py-[0.45vw] transition-colors cursor-pointer"
+              className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.45vw] bg-[#FFF2EE] hover:bg-[#FEE5DF] border border-[#FDEEE9] rounded-[0.5vw] text-[0.78vw] font-medium text-[#EC5137] transition-colors cursor-pointer shadow-xs active:scale-95"
               title="Refresh sessions"
             >
               <Icon
                 icon="lucide:refresh-cw"
-                className={`w-[0.85vw] h-[0.85vw] text-gray-500 ${loadingSessions ? 'animate-spin' : ''}`}
-                strokeWidth="2"
+                className={`w-[0.85vw] h-[0.85vw] ${loadingSessions ? 'animate-spin' : ''}`}
+                strokeWidth="2.2"
               />
               <span>Refresh</span>
             </button>
@@ -473,7 +480,7 @@ const AccountOverview = ({
                 type="button"
                 onClick={handleRevokeOtherSessions}
                 disabled={isRevokingAll}
-                className="flex items-center gap-[0.35vw] bg-[#FEF2F2] hover:bg-[#FEE2E2] text-[#EF4444] border border-[#FCA5A5]/30 text-[0.78vw] font-medium px-[0.9vw] py-[0.45vw] rounded-[0.5vw] transition-colors cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-[0.4vw] bg-[#FEF2F2] hover:bg-[#FEE2E2] text-[#EF4444] border border-[#FCA5A5]/30 text-[0.78vw] font-medium px-[0.9vw] py-[0.45vw] rounded-[0.5vw] transition-colors cursor-pointer active:scale-95 disabled:opacity-50"
               >
                 <Icon icon="lucide:log-out" className="w-[0.85vw] h-[0.85vw]" strokeWidth="2" />
                 <span>{isRevokingAll ? 'Logging out...' : 'Logout other devices'}</span>
@@ -484,33 +491,33 @@ const AccountOverview = ({
 
         {/* Sessions List */}
         {loadingSessions ? (
-          <div className="py-[2vw] flex items-center justify-center text-gray-400 text-[0.8vw]">
-            <Icon icon="lucide:loader-2" className="w-[1.2vw] h-[1.2vw] animate-spin text-[#4c5add] mr-[0.5vw]" />
+          <div className="py-[2vw] flex items-center justify-center text-gray-400 text-[0.78vw]">
+            <Icon icon="lucide:loader-2" className="w-[1.1vw] h-[1.1vw] animate-spin text-[#EC5137] mr-[0.5vw]" />
             <span>Loading active sessions...</span>
           </div>
         ) : sessions.length === 0 ? (
-          <div className="py-[2vw] text-center text-gray-400 text-[0.8vw]">
+          <div className="py-[2vw] text-center text-gray-400 text-[0.78vw]">
             No active sessions found.
           </div>
         ) : (
-          <div className="flex flex-col gap-[0.75vw]">
+          <div className="flex flex-col gap-[0.7vw]">
             {(() => {
               const hasOtherDevices = sessions.some((s) => !s.isCurrent);
               return sessions.map((session) => (
                 <div
                   key={session.sessionId || session.id}
-                  className={`w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] px-[1.2vw] py-[0.9vw] grid ${
+                  className={`w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] px-[1.1vw] py-[0.85vw] grid ${
                     hasOtherDevices ? 'grid-cols-5' : 'grid-cols-4'
-                  } items-center shadow-xs`}
+                  } items-center shadow-xs hover:bg-gray-50/70 transition-colors`}
                 >
                   {/* Col 1: Device icon + Browser & OS + Location/Activity */}
                   <div className="flex items-center gap-[0.85vw] min-w-0 pr-[0.5vw]">
                     {getDeviceIcon(session.operatingSystem, session.browser)}
                     <div className="flex flex-col min-w-0">
-                      <span className="text-[0.85vw] font-medium text-gray-800 leading-none truncate">
+                      <span className="text-[0.85vw] font-semibold text-gray-800 leading-tight truncate">
                         {session.browser} on {session.operatingSystem}
                       </span>
-                      <span className="text-[0.72vw] text-gray-500 mt-[0.3vw] font-normal truncate">
+                      <span className="text-[0.72vw] text-gray-400 mt-[0.2vw] truncate">
                         {session.location} <span className="text-gray-300">•</span>{' '}
                         {session.isCurrent ? (
                           <span className="text-emerald-600 font-medium">Active Now</span>
@@ -535,7 +542,7 @@ const AccountOverview = ({
                     <span className="text-[0.68vw] text-gray-400 font-normal">
                       IP Address
                     </span>
-                    <span className="text-[0.74vw] text-gray-700 font-mono font-medium mt-[0.1vw] truncate">
+                    <span className="text-[0.76vw] text-gray-700 font-mono font-medium mt-[0.1vw] truncate">
                       {session.ipAddress}
                     </span>
                   </div>
@@ -545,7 +552,7 @@ const AccountOverview = ({
                     <span className="text-[0.68vw] text-gray-400 font-normal">
                       Last Activated
                     </span>
-                    <span className="text-[0.74vw] text-gray-600 font-medium mt-[0.1vw] whitespace-nowrap">
+                    <span className="text-[0.76vw] text-gray-700 font-medium mt-[0.1vw] whitespace-nowrap">
                       {formatDateTime(session.lastActiveAt)}
                     </span>
                   </div>
@@ -558,7 +565,7 @@ const AccountOverview = ({
                           type="button"
                           onClick={() => handleRevokeSession(session.sessionId)}
                           disabled={revokingSessionId === session.sessionId}
-                          className="flex items-center gap-[0.3vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-[0.74vw] font-medium px-[0.85vw] py-[0.4vw] rounded-[0.45vw] shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                          className="flex items-center gap-[0.35vw] bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 text-[0.74vw] font-medium px-[0.85vw] py-[0.4vw] rounded-[0.45vw] shadow-xs transition-colors cursor-pointer disabled:opacity-50 active:scale-95"
                         >
                           <Icon icon="lucide:log-out" className="w-[0.8vw] h-[0.8vw] text-gray-500" strokeWidth="2" />
                           <span>{revokingSessionId === session.sessionId ? '...' : 'Logout'}</span>
@@ -574,17 +581,17 @@ const AccountOverview = ({
       </div>
 
       {/* Recent Login Activities Card */}
-      <div className="w-full bg-white border border-gray-200 rounded-[1vw] p-[1.5vw] shadow-sm mb-[1.5vw]">
+      <div className="w-full bg-white border border-gray-200/80 rounded-[0.8vw] p-[1.2vw] shadow-xs mb-[1.2vw]">
         {/* Card Header with Refresh Button */}
-        <div className="flex items-start justify-between mb-[1.3vw]">
+        <div className="flex items-start justify-between mb-[1.2vw]">
           <div>
-            <div className="flex items-center gap-[0.55vw] mb-[0.2vw]">
+            <div className="flex items-center gap-[0.55vw] mb-[0.15vw]">
               <Icon icon="solar:history-bold" className="w-[1.1vw] h-[1.1vw] text-[#4b5563]" />
-              <h2 className="text-[0.98vw] font-medium text-gray-800">
+              <h2 className="text-[0.92vw] font-bold text-gray-900 leading-tight">
                 Recent Login Activities
               </h2>
             </div>
-            <p className="text-[0.72vw] text-gray-500 pl-[1.65vw] font-normal">
+            <p className="text-[0.72vw] text-gray-400 pl-[1.65vw]">
               Your recent sign-in attempts, security events and device logins
             </p>
           </div>
@@ -592,20 +599,20 @@ const AccountOverview = ({
           <button
             type="button"
             onClick={fetchRecentActivities}
-            className="p-[0.3vw] text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-[0.4vw] transition-colors cursor-pointer"
+            className="p-[0.35vw] text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-[0.4vw] transition-colors cursor-pointer"
             title="Refresh history"
           >
             <Icon
               icon="lucide:refresh-cw"
-              className={`w-[1vw] h-[1vw] ${loadingActivities ? 'animate-spin' : ''}`}
+              className={`w-[0.95vw] h-[0.95vw] ${loadingActivities ? 'animate-spin' : ''}`}
             />
           </button>
         </div>
 
         {/* Table Container */}
-        <div className="w-full border border-gray-200 rounded-[0.75vw] overflow-hidden">
+        <div className="w-full border border-gray-200/80 rounded-[0.75vw] overflow-hidden">
           {/* Table Header */}
-          <div className="grid grid-cols-6 bg-[#f8f9fa] border-b border-gray-200 px-[1.2vw] py-[0.75vw] text-[0.76vw] font-medium text-gray-700">
+          <div className="grid grid-cols-6 bg-[#f8f9fa] border-b border-gray-200 px-[1.2vw] py-[0.75vw] text-[0.76vw] font-semibold text-gray-700">
             <div>Device</div>
             <div>Location</div>
             <div>Date & Time</div>
@@ -616,12 +623,12 @@ const AccountOverview = ({
 
           {/* Table Rows */}
           {loadingActivities ? (
-            <div className="py-[2vw] flex items-center justify-center text-gray-400 text-[0.8vw]">
-              <Icon icon="lucide:loader-2" className="w-[1.2vw] h-[1.2vw] animate-spin text-[#4c5add] mr-[0.5vw]" />
+            <div className="py-[2vw] flex items-center justify-center text-gray-400 text-[0.78vw]">
+              <Icon icon="lucide:loader-2" className="w-[1.1vw] h-[1.1vw] animate-spin text-[#EC5137] mr-[0.5vw]" />
               <span>Loading activities...</span>
             </div>
           ) : recentActivities.length === 0 ? (
-            <div className="py-[2vw] text-center text-gray-400 text-[0.8vw]">
+            <div className="py-[2vw] text-center text-gray-400 text-[0.78vw]">
               No recent login records found.
             </div>
           ) : (
@@ -631,12 +638,12 @@ const AccountOverview = ({
                   key={act.id || act.sessionId + act.date}
                   className="grid grid-cols-6 items-center px-[1.2vw] py-[0.95vw] hover:bg-gray-50/50 transition-colors"
                 >
-                  <div className="flex items-center gap-[0.6vw] font-medium text-gray-800 min-w-0">
+                  <div className="flex items-center gap-[0.6vw] font-semibold text-gray-800 min-w-0">
                     {getDeviceIcon(act.operatingSystem, act.browser)}
                     <span className="truncate">{act.device || `${act.browser} on ${act.operatingSystem}`}</span>
                   </div>
-                  <div className="text-gray-500 font-normal truncate">{act.location}</div>
-                  <div className="text-gray-500 font-normal">{formatDateTime(act.date)}</div>
+                  <div className="text-gray-400 font-normal truncate">{act.location}</div>
+                  <div className="text-gray-400 font-normal">{formatDateTime(act.date)}</div>
                   <div className="text-gray-700 font-normal font-mono text-[0.74vw]">{act.ipAddress}</div>
                   <div>
                     {act.isCurrent ? (
@@ -666,7 +673,7 @@ const AccountOverview = ({
                       <button
                         type="button"
                         onClick={onChangePasswordClick}
-                        className="text-[#EF4444] hover:underline font-normal cursor-pointer"
+                        className="text-[#EF4444] hover:underline font-medium cursor-pointer"
                       >
                         It's Not you?
                       </button>
@@ -700,31 +707,31 @@ const AccountOverview = ({
       </div>
 
       {/* Account Management Card */}
-      <div className="w-full bg-white border border-gray-200 rounded-[1vw] p-[1.5vw] shadow-sm mb-[1.5vw]">
+      <div className="w-full bg-white border border-gray-200/80 rounded-[0.8vw] p-[1.2vw] shadow-xs mb-[1.2vw]">
         {/* Card Header */}
-        <div className="flex items-center gap-[0.55vw] mb-[0.2vw]">
+        <div className="flex items-center gap-[0.55vw] mb-[0.15vw]">
           <Icon icon="solar:settings-bold" className="w-[1.1vw] h-[1.1vw] text-[#4b5563]" />
-          <h2 className="text-[0.98vw] font-medium text-gray-800">
+          <h2 className="text-[0.92vw] font-bold text-gray-900 leading-tight">
             Account Management
           </h2>
         </div>
-        <p className="text-[0.72vw] text-gray-500 mb-[1.3vw] pl-[1.65vw] font-normal">
+        <p className="text-[0.72vw] text-gray-400 mb-[1.2vw] pl-[1.65vw]">
           Manage your account access and deletion
         </p>
 
         {/* Options List */}
         <div className="flex flex-col gap-[0.75vw]">
           {/* Option 1: Delete Account */}
-          <div className="w-full bg-[#f8f9fa] hover:bg-gray-100/70 border border-[#f0f2f5] rounded-[0.75vw] p-[1vw] flex items-center justify-between cursor-pointer transition-colors group">
+          <div className="w-full bg-[#f8f9fa] hover:bg-gray-100/70 border border-[#f0f2f5] rounded-[0.75vw] p-[1.1vw] flex items-center justify-between cursor-pointer transition-colors group">
             <div className="flex items-center gap-[0.85vw]">
-              <div className="w-[2.5vw] h-[2.5vw] rounded-full bg-white border border-red-200 flex items-center justify-center shadow-xs">
-                <Icon icon="lucide:trash-2" className="w-[1.05vw] h-[1.05vw] text-[#EF4444]" strokeWidth="2" />
+              <div className="w-[2.4vw] h-[2.4vw] rounded-[0.55vw] bg-red-50 text-red-500 border border-red-100 flex items-center justify-center shrink-0">
+                <Icon icon="lucide:trash-2" className="w-[1.05vw] h-[1.05vw]" strokeWidth="2" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[0.85vw] font-medium text-gray-800">
+                <span className="text-[0.85vw] font-semibold text-gray-800 leading-tight">
                   Delete Account
                 </span>
-                <span className="text-[0.72vw] text-gray-400 mt-[0.1vw] font-normal">
+                <span className="text-[0.72vw] text-gray-400 mt-[0.15vw]">
                   Permanently delete your account and all associated flipbooks & data
                 </span>
               </div>
@@ -734,10 +741,10 @@ const AccountOverview = ({
           </div>
 
           {/* Option 2: Logout */}
-          <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] p-[1vw] flex items-center justify-between">
+          <div className="w-full bg-[#f8f9fa] border border-[#f0f2f5] rounded-[0.75vw] p-[1.1vw] flex items-center justify-between">
             <div className="flex items-center gap-[0.85vw]">
               <div
-                className="w-[2.5vw] h-[2.5vw] rounded-full overflow-hidden flex items-center justify-center shadow-xs border border-gray-100"
+                className="w-[2.4vw] h-[2.4vw] rounded-[0.55vw] overflow-hidden flex items-center justify-center shrink-0 shadow-xs border border-gray-100"
                 style={{
                   backgroundColor: avatarSrc
                     ? '#ffffff'
@@ -762,10 +769,10 @@ const AccountOverview = ({
               </div>
 
               <div className="flex flex-col">
-                <span className="text-[0.85vw] font-medium text-gray-800">
+                <span className="text-[0.85vw] font-semibold text-gray-800 leading-tight">
                   Logout
                 </span>
-                <span className="text-[0.72vw] text-gray-400 mt-[0.1vw] font-normal">
+                <span className="text-[0.72vw] text-gray-400 mt-[0.15vw]">
                   Securely sign out from your current active session
                 </span>
               </div>
@@ -785,7 +792,7 @@ const AccountOverview = ({
                 }
                 window.location.href = '/';
               }}
-              className="flex items-center gap-[0.35vw] bg-[#FEF2F2] hover:bg-[#FEE2E2] text-[#EF4444] border border-[#FCA5A5]/30 text-[0.78vw] font-medium px-[0.9vw] py-[0.45vw] rounded-[0.5vw] transition-colors cursor-pointer"
+              className="flex items-center gap-[0.4vw] bg-[#FEF2F2] hover:bg-[#FEE2E2] text-[#EF4444] border border-[#FCA5A5]/30 text-[0.78vw] font-medium px-[0.9vw] py-[0.45vw] rounded-[0.5vw] transition-colors cursor-pointer active:scale-95"
             >
               <Icon icon="lucide:log-out" className="w-[0.85vw] h-[0.85vw]" strokeWidth="2" />
               <span>Logout Current Account</span>

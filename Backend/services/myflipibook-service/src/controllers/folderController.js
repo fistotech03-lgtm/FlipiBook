@@ -52,7 +52,8 @@ exports.getFolders = async (req, res) => {
         const low = trimmedName.toLowerCase();
         if (!seenNames.has(low)) {
           seenNames.add(low);
-          const fol_v_id = item.fol_v_id || ('fol_' + (item._id ? item._id.toString() : crypto.randomBytes(6).toString('hex')));
+          const rawFolId = item.fol_v_id || (item._id ? item._id.toString() : crypto.randomBytes(6).toString('hex'));
+          const fol_v_id = String(rawFolId).replace(/^fol_/, '');
           customItems.push({
             id: fol_v_id,
             fol_v_id,
@@ -64,9 +65,11 @@ exports.getFolders = async (req, res) => {
     }
 
     // Ensure default folder item exists with a generated unique fol_v_id
-    const defaultFolId = (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== 'fol_default')
-      ? defaultItem.fol_v_id
-      : ('fol_' + crypto.randomBytes(6).toString('hex'));
+    const defaultFolId = String(
+      (defaultItem && defaultItem.fol_v_id && defaultItem.fol_v_id !== 'fol_default' && defaultItem.fol_v_id !== 'default')
+        ? defaultItem.fol_v_id
+        : crypto.randomBytes(6).toString('hex')
+    ).replace(/^fol_/, '');
     if (!defaultItem) {
       defaultItem = {
         fol_v_id: defaultFolId,
@@ -108,7 +111,7 @@ exports.getFolders = async (req, res) => {
             );
             if (!isSystem && !isDef && !seenNames.has(low)) {
               seenNames.add(low);
-              const fol_v_id = 'fol_' + crypto.randomBytes(6).toString('hex');
+              const fol_v_id = crypto.randomBytes(6).toString('hex');
               customItems.push({
                 id: fol_v_id,
                 fol_v_id,
@@ -147,17 +150,30 @@ exports.getFolders = async (req, res) => {
       }))
     ];
 
-    if (userFolderDoc) {
-      if (objectId) userFolderDoc.userObjectID = objectId;
-      if (customUserId && !userFolderDoc.userID) userFolderDoc.userID = customUserId;
-      userFolderDoc.folders = formattedSubdocs;
-      await userFolderDoc.save().catch(() => {});
-    } else {
-      await UserFolder.create({
-        ...(objectId ? { userObjectID: objectId } : {}),
-        ...(customUserId ? { userID: customUserId } : {}),
-        folders: formattedSubdocs
-      }).catch(() => {});
+    const needsSync = !userFolderDoc ||
+      !Array.isArray(userFolderDoc.folders) ||
+      userFolderDoc.folders.length !== formattedSubdocs.length ||
+      userFolderDoc.folders.some((f, idx) => !f.fol_v_id || f.name !== formattedSubdocs[idx]?.name || Boolean(f.isDefault) !== Boolean(formattedSubdocs[idx]?.isDefault));
+
+    if (needsSync) {
+      if (userFolderDoc) {
+        await UserFolder.updateOne(
+          { _id: userFolderDoc._id },
+          {
+            $set: {
+              ...(objectId ? { userObjectID: objectId } : {}),
+              ...(customUserId && !userFolderDoc.userID ? { userID: customUserId } : {}),
+              folders: formattedSubdocs
+            }
+          }
+        ).catch(() => {});
+      } else {
+        await UserFolder.create({
+          ...(objectId ? { userObjectID: objectId } : {}),
+          ...(customUserId ? { userID: customUserId } : {}),
+          folders: formattedSubdocs
+        }).catch(() => {});
+      }
     }
 
     res.status(200).json({ success: true, folders: orderedFolders });
@@ -194,7 +210,7 @@ exports.createFolder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'This is a reserved folder name' });
     }
 
-    const newFolId = 'fol_' + crypto.randomBytes(6).toString('hex');
+    const newFolId = crypto.randomBytes(6).toString('hex');
     let userFolderDoc = await UserFolder.findOne(userQuery);
 
     if (userFolderDoc && Array.isArray(userFolderDoc.folders)) {
@@ -212,9 +228,25 @@ exports.createFolder = async (req, res) => {
       if (objectId) userFolderDoc.userObjectID = objectId;
       if (customUserId && !userFolderDoc.userID) userFolderDoc.userID = customUserId;
       userFolderDoc.folders.push({ fol_v_id: newFolId, name: safeFolderName, isDefault: false });
-      await userFolderDoc.save();
+      try {
+        await userFolderDoc.save();
+      } catch (saveErr) {
+        if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+          console.warn(`[Folder Controller] Version conflict in createFolder for doc ${userFolderDoc._id}. Performing atomic update fallback...`);
+          await UserFolder.updateOne(
+            { _id: userFolderDoc._id },
+            {
+              $push: { folders: { fol_v_id: newFolId, name: safeFolderName, isDefault: false } },
+              ...(objectId ? { userObjectID: objectId } : {}),
+              ...(customUserId && !userFolderDoc.userID ? { userID: customUserId } : {})
+            }
+          );
+        } else {
+          throw saveErr;
+        }
+      }
     } else {
-      const defaultFolId = 'fol_' + crypto.randomBytes(6).toString('hex');
+      const defaultFolId = crypto.randomBytes(6).toString('hex');
       await UserFolder.create({
         ...(objectId ? { userObjectID: objectId } : {}),
         ...(customUserId ? { userID: customUserId } : {}),
@@ -323,7 +355,19 @@ exports.renameFolder = async (req, res) => {
     if (isDefault) {
       targetFolder.isDefault = true;
     }
-    await userFolderDoc.save();
+    try {
+      await userFolderDoc.save();
+    } catch (saveErr) {
+      if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+        console.warn(`[Folder Controller] Version conflict in renameFolder for doc ${userFolderDoc._id}. Performing atomic update fallback...`);
+        await UserFolder.updateOne(
+          { _id: userFolderDoc._id },
+          { $set: { folders: userFolderDoc.folders } }
+        );
+      } else {
+        throw saveErr;
+      }
+    }
 
     // 2. Cascade rename across user's flipbooks
     if (flipQuery) {
@@ -407,7 +451,7 @@ exports.reorderFolders = async (req, res) => {
         const mongoId = (rawId && mongoose.Types.ObjectId.isValid(rawId) && /^[0-9a-fA-F]{24}$/.test(String(rawId)))
           ? new mongoose.Types.ObjectId(rawId)
           : (matched?._id || new mongoose.Types.ObjectId());
-        const fol_v_id = matched?.fol_v_id || (rawId && String(rawId).startsWith('fol_') ? String(rawId) : ('fol_' + crypto.randomBytes(6).toString('hex')));
+        const fol_v_id = matched?.fol_v_id || (rawId ? String(rawId) : crypto.randomBytes(6).toString('hex'));
         return {
           _id: mongoId,
           fol_v_id,
@@ -424,7 +468,25 @@ exports.reorderFolders = async (req, res) => {
       if (customUserId && !currentDoc.userID) currentDoc.userID = customUserId;
       if (emailId && !currentDoc.emailId) currentDoc.emailId = emailId;
       currentDoc.folders = safeFolders;
-      await currentDoc.save();
+      try {
+        await currentDoc.save();
+      } catch (saveErr) {
+        if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+          console.warn(`[Folder Controller] Version conflict in reorderFolders for doc ${currentDoc._id}. Performing atomic update fallback...`);
+          await UserFolder.updateOne(
+            { _id: currentDoc._id },
+            {
+              $set: {
+                folders: safeFolders,
+                ...(objectId && !currentDoc.userObjectID ? { userObjectID: objectId } : {}),
+                ...(customUserId && !currentDoc.userID ? { userID: customUserId } : {})
+              }
+            }
+          );
+        } else {
+          throw saveErr;
+        }
+      }
     } else {
       currentDoc = await UserFolder.create({
         ...(objectId ? { userId: objectId, userObjectID: objectId } : {}),
@@ -495,14 +557,27 @@ exports.deleteFolder = async (req, res) => {
 
     const resolvedName = targetFolder ? targetFolder.name : folderName;
 
-    // 1. Remove from UserFolder document
+    // 1. Remove from UserFolder document atomically
     if (userFolderDoc) {
-      userFolderDoc.folders = userFolderDoc.folders.filter((f) => {
-        if (folderId && ((f.fol_v_id === String(folderId)) || (f._id ? f._id.toString() : String(f.id)) === String(folderId))) return false;
+      const remainingFolders = userFolderDoc.folders.filter((f) => {
+        if (folderId && (f.fol_v_id === String(folderId) || (f._id && f._id.toString() === String(folderId)) || String(f.id) === String(folderId))) return false;
         if (resolvedName && f.name.toLowerCase() === resolvedName.toLowerCase()) return false;
         return true;
       });
-      await userFolderDoc.save();
+
+      try {
+        await userFolderDoc.save();
+      } catch (saveErr) {
+        if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+          console.warn(`[Folder Controller] Version conflict in deleteFolder for doc ${userFolderDoc._id}. Performing atomic update fallback...`);
+          await UserFolder.updateOne(
+            { _id: userFolderDoc._id },
+            { $set: { folders: remainingFolders } }
+          );
+        } else {
+          throw saveErr;
+        }
+      }
     }
 
     // Record folder deletion in backup DB
@@ -596,12 +671,24 @@ exports.duplicateFolder = async (req, res) => {
     const newId = new mongoose.Types.ObjectId();
 
     let userFolderDoc = await UserFolder.findOne(userQuery);
-    const newFolVId = 'fol_' + crypto.randomBytes(6).toString('hex');
+    const newFolVId = crypto.randomBytes(6).toString('hex');
     if (userFolderDoc) {
       userFolderDoc.folders.push({ fol_v_id: newFolVId, name: newFolderName, isDefault: false });
-      await userFolderDoc.save();
+      try {
+        await userFolderDoc.save();
+      } catch (saveErr) {
+        if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
+          console.warn(`[Folder Controller] Version conflict in duplicateFolder for doc ${userFolderDoc._id}. Performing atomic update fallback...`);
+          await UserFolder.updateOne(
+            { _id: userFolderDoc._id },
+            { $push: { folders: { fol_v_id: newFolVId, name: newFolderName, isDefault: false } } }
+          );
+        } else {
+          throw saveErr;
+        }
+      }
     } else {
-      const defaultFolId = 'fol_' + crypto.randomBytes(6).toString('hex');
+      const defaultFolId = crypto.randomBytes(6).toString('hex');
       userFolderDoc = await UserFolder.create({
         ...(objectId ? { userObjectID: objectId } : {}),
         ...(customUserId ? { userID: customUserId } : {}),

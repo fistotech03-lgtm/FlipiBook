@@ -2,12 +2,106 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import {
   Copy,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import ColorPicker from '../../../properties/ColorPicker';
 import Effect from '../../../properties/Effect';
 import { ElementToggle, ElementDropdown } from './ElementUIControls';
 import { getEmbedOverlayHtml } from '../utils/embedElementUtils';
+import { handleScrubHelper } from '../../../properties/propertiesShared';
+
+const SectionHeader = ({ title, rightElement }) => (
+  <div className="flex items-center gap-[0.8vw]">
+    <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+    {rightElement}
+    <div className="flex-1 h-[1px] bg-gray-200" />
+  </div>
+);
+
+// Exact ColorBox matching user screenshot and Color.jsx
+const ColorBoxRow = ({
+  title,
+  color,
+  opacity = 100,
+  onOpenPicker,
+  onChange,
+  onOpacityChange,
+  isActive = false,
+  titleRight,
+}) => {
+  const isTransparent = !color || color === 'none' || color === 'transparent';
+  const displayColor = (() => {
+    if (isTransparent) return '#';
+    if (typeof color === 'string' && color.includes('gradient')) return 'Gradient';
+    return typeof color === 'string' ? (color.startsWith('#') ? color.toUpperCase() : '#' + color.toUpperCase()) : '#000000';
+  })();
+
+  return (
+    <div className="flex flex-col gap-[0.5vw]">
+      {title && (
+        <div className="flex items-center gap-[0.8vw] mb-[0.1vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+          {titleRight}
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+      )}
+      <div className="flex items-center gap-[0.6vw]">
+        {/* Swatch (3.6vw x 2.1vw rounded rectangle matching user screenshot) */}
+        <div
+          onClick={onOpenPicker}
+          className={`w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105 ${
+            isActive ? 'border-indigo-500 ring-2 ring-indigo-500/20' : ''
+          }`}
+          title={`Change ${title || 'color'}`}
+        >
+          <div
+            className="w-full h-full"
+            style={{ background: isTransparent ? '#ffffff' : color }}
+          />
+          {isTransparent && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45 pointer-events-none" />
+          )}
+        </div>
+
+        {/* Input box */}
+        <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 focus-within:border-indigo-400 transition-colors shadow-2xs">
+          <input
+            type="text"
+            value={displayColor}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || val === '#') {
+                onChange('none');
+              } else {
+                const finalVal = val.startsWith('#') ? val : '#' + val;
+                onChange(finalVal);
+              }
+            }}
+            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            maxLength={9}
+          />
+          <div
+            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+            onPointerDown={(e) => {
+              const currentPct = Math.round(parseFloat(opacity !== undefined ? opacity : 100));
+              handleScrubHelper(e, currentPct, (val) => {
+                const num = parseInt(val);
+                const clamped = Math.min(Math.max(num, 0), 100);
+                onOpacityChange(clamped);
+              });
+            }}
+            title="Drag horizontally to adjust opacity"
+          >
+            <span className="text-[0.8vw] font-medium text-gray-700">
+              {Math.round(parseFloat(opacity !== undefined ? opacity : 100))}%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Section header matching editor design standards
 // Helper to sync live SVG filters on the DOM element for Drop Shadow
@@ -132,80 +226,7 @@ const syncLiveFilters = (el) => {
   el.setAttribute('filter', `url(#${filterId})`);
 };
 
-const SectionHeader = ({ title }) => (
-  <div className="flex items-center gap-[0.4vw] mt-[0.3vw] mb-[0.5vw]">
-    <span className="text-[0.9vw] font-medium text-black whitespace-nowrap">{title}</span>
-    <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
-  </div>
-);
-
-// PropertyRow matching editor alignment
-const PropertyRow = ({ label, children, className = '' }) => (
-  <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.6vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-700 font-medium">
-      <span className={`${label.length > 12 ? 'text-[0.68vw]' : 'text-[0.78vw]'} tracking-tight whitespace-nowrap`}>
-        {label}
-      </span>
-      <span className="text-gray-500 font-medium text-[0.8vw]">:</span>
-    </div>
-    <div className="flex-1 min-w-0">
-      {children}
-    </div>
-  </div>
-);
-
-// Custom Dropdown matching exact reference design
 const CustomSelect = ElementDropdown;
-
-// Color Swatch + Hex Input Box
-const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => {
-  const displayColor = color && color.startsWith('#') ? color.toUpperCase() : color || '#000000';
-
-  return (
-    <div className="flex items-center gap-[0.4vw] w-full">
-      <div
-        onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${
-          isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
-        }`}
-        style={{ backgroundColor: color === 'none' || color === 'transparent' ? '#ffffff' : color }}
-        title="Click to open color palette"
-      >
-        {(color === 'none' || color === 'transparent') && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
-        )}
-      </div>
-      <div className="flex-1 h-[2.4vw] min-h-[32px] flex items-center justify-between border border-gray-200 rounded-[0.45vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-        <input
-          type="text"
-          value={color && color.includes('gradient') ? 'GRADIENT' : displayColor}
-          onChange={(e) => {
-            let val = e.target.value;
-            if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
-            onChange(val);
-          }}
-          className="w-[6.2vw] font-mono text-[0.8vw] text-gray-800 bg-transparent focus:outline-none uppercase font-medium"
-          maxLength={color && color.includes('gradient') ? 10 : 9}
-        />
-        <span className="text-gray-500 text-[0.75vw] font-medium">{opacity}%</span>
-      </div>
-    </div>
-  );
-};
-
-// RadioButton component with signature accent
-const RadioButton = ({ label, checked, onChange }) => (
-  <label onClick={onChange} className="flex items-center gap-[0.4vw] cursor-pointer select-none">
-    <div
-      className={`w-[1.05vw] h-[1.05vw] rounded-full border-2 flex items-center justify-center transition-all ${
-        checked ? 'border-[#E05638]' : 'border-gray-400 hover:border-gray-600'
-      }`}
-    >
-      {checked && <div className="w-[0.5vw] h-[0.5vw] rounded-full bg-[#E05638]" />}
-    </div>
-    <span className="text-[0.78vw] text-gray-700 font-medium">{label}</span>
-  </label>
-);
 
 const escapeHtml = (unsafe) => {
   return (unsafe || '')
@@ -251,7 +272,7 @@ const formatEmbedUrl = (rawUrl, allowFs = true) => {
 
 const getEmbedIframeContent = ({ via, targetUrl, code, allowFs }) => {
   const defaultPlaceholderHtml = `
-    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#64748b; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border-radius:0px; border:2px dashed #cbd5e1;">
+    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#64748b; font-family:system-ui, -apple-system, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border-radius:0px; border:2px dashed #cbd5e1;">
       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px;">
         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
@@ -263,7 +284,7 @@ const getEmbedIframeContent = ({ via, targetUrl, code, allowFs }) => {
 
   const placeholderDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;}</style></head><body>${defaultPlaceholderHtml}</body></html>`;
 
-  const fsAttrs = allowFs ? 'allowfullscreen' : '';
+  const fsAttrs = allowFs ? 'allowfullscreen="true"' : '';
   const allowPolicy = `accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture${allowFs ? '; fullscreen' : ''}`;
 
   if (via === 'URL') {
@@ -294,17 +315,22 @@ const getEmbedIframeContent = ({ via, targetUrl, code, allowFs }) => {
       };
     }
 
+    // Only allow HTML embed code (tags like <iframe>, <div>, <script>, etc.) - do not parse plain URLs as embeds
+    if (!trimmedCode.startsWith('<')) {
+      const invalidEmbedDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;}</style></head><body><div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#ef4444; font-family:system-ui, -apple-system, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border:2px dashed #fca5a5;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg><div style="font-size:16px; font-weight:600; color:#b91c1c; margin-bottom:4px;">Invalid Embed Code</div><div style="font-size:12px; color:#64748b;">Please enter valid HTML embed code (e.g. &lt;iframe...&gt;), or switch to URL mode.</div></div></body></html>`;
+      return {
+        type: 'placeholder',
+        src: '',
+        srcdoc: invalidEmbedDoc,
+        html: `<iframe srcdoc="${escapeHtml(invalidEmbedDoc)}" width="100%" height="100%" style="display:block; width:100%; height:100%; border:none; margin:0; padding:0; background:transparent; border-radius:0px;" scrolling="auto"></iframe>`
+      };
+    }
+
     let processedContent = trimmedCode;
-    if (trimmedCode.startsWith('<')) {
-      if (!allowFs) {
-        processedContent = processedContent.replace(/\sallowfullscreen(="[^"]*")?/gi, '');
-      } else if (!processedContent.includes('allowfullscreen')) {
-        processedContent = processedContent.replace(/<iframe/i, '<iframe allowfullscreen');
-      }
-    } else {
-      // If user pasted a URL in embed code mode
-      const formatted = formatEmbedUrl(trimmedCode, allowFs);
-      processedContent = `<iframe src="${escapeHtml(formatted)}" width="100%" height="100%" frameborder="0" allow="${allowPolicy}" ${fsAttrs} allowtransparency="true" style="display:block; width:100%; height:100%; border:none; margin:0; padding:0;"></iframe>`;
+    if (!allowFs) {
+      processedContent = processedContent.replace(/\sallowfullscreen(="[^"]*")?/gi, '');
+    } else if (!processedContent.includes('allowfullscreen')) {
+      processedContent = processedContent.replace(/<iframe/i, '<iframe allowfullscreen="true"');
     }
 
     const rawHtmlDocument = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;} video::-webkit-media-controls { zoom: 1.5; } video, iframe, img { width: 100%; height: 100%; border: none; display: block; border-radius:0px; }</style></head><body>${processedContent}</body></html>`;
@@ -343,6 +369,7 @@ const ElementEmbedProperties = ({
   const [url, setUrl] = useState('');
   const [customCode, setCustomCode] = useState('');
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // --- 2. Embed Controls ---
   const [openWebsiteBtn, setOpenWebsiteBtn] = useState(true);
@@ -570,6 +597,33 @@ const ElementEmbedProperties = ({
     // Make sure live canvas element has filter properly rendered
     syncLiveFilters(frameGroup);
 
+    // Guarantee that embed overlay buttons are rendered in the DOM if enabled
+    const rootContainer = frameGroup.querySelector('.embed-root-container');
+    if (rootContainer) {
+      const shouldHaveOverlay = (savedOpenBtn !== null ? savedOpenBtn === 'true' : true) || (savedAllowFs !== null ? savedAllowFs === 'true' : true);
+      const existingOverlay = rootContainer.querySelector('.embed-overlay-wrapper');
+      if (shouldHaveOverlay) {
+        const effectiveUrl = savedVia === 'URL' ? currentUrl : (currentCode?.trim().startsWith('<') ? currentCode : '');
+        const overlayHtml = getEmbedOverlayHtml({
+          targetUrl: effectiveUrl,
+          openWebsiteBtn: savedOpenBtn !== null ? savedOpenBtn === 'true' : true,
+          allowFullscreen: savedAllowFs !== null ? savedAllowFs === 'true' : true,
+          behavior: savedBehavior || 'Open in - Current Tab'
+        });
+        if (!existingOverlay && overlayHtml) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = overlayHtml;
+          rootContainer.appendChild(tempDiv.firstElementChild);
+        } else if (existingOverlay && overlayHtml && !existingOverlay.querySelector('.svg-icon-override')) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = overlayHtml;
+          existingOverlay.replaceWith(tempDiv.firstElementChild);
+        }
+      } else if (existingOverlay) {
+        existingOverlay.remove();
+      }
+    }
+
     // Record hydrated snapshot to prevent redundant sync effects from modifying DOM
     lastAppliedSnapshotRef.current = {
       code: currentCode,
@@ -603,7 +657,7 @@ const ElementEmbedProperties = ({
 
     const snap = lastAppliedSnapshotRef.current;
     const hasOverlayInDom = !!frameGroup.querySelector('.embed-overlay-wrapper');
-    const shouldHaveOverlay = (openWebsiteBtn || allowFullscreen) && !!(url || customCode);
+    const shouldHaveOverlay = openWebsiteBtn || allowFullscreen;
     const hasCorrectOverlay = !!frameGroup.querySelector('.embed-overlay-wrapper .svg-icon-override');
     const overlayNeedsUpdate = hasOverlayInDom !== shouldHaveOverlay || (shouldHaveOverlay && !hasCorrectOverlay);
 
@@ -644,8 +698,11 @@ const ElementEmbedProperties = ({
       frameGroup.setAttribute('data-line-corner', lineCorner);
       frameGroup.setAttribute('data-stroke-alignment', 'Outside');
       frameGroup.setAttribute('data-stroke-position', 'Outside');
-      frameGroup.setAttribute('stroke-linecap', lineCorner === 'Rounded' ? 'round' : 'square');
-      frameGroup.setAttribute('stroke-linejoin', lineCorner === 'Rounded' ? 'round' : 'miter');
+      frameGroup.removeAttribute('stroke');
+      frameGroup.removeAttribute('stroke-width');
+      frameGroup.removeAttribute('stroke-opacity');
+      frameGroup.removeAttribute('stroke-linecap');
+      frameGroup.removeAttribute('stroke-linejoin');
       frameGroup.removeAttribute('data-tl');
       frameGroup.removeAttribute('data-tr');
       frameGroup.removeAttribute('data-bl');
@@ -660,42 +717,50 @@ const ElementEmbedProperties = ({
       const strokeOp = strokeOpacity / 100;
       const strokeCap = lineCorner === 'Rounded' ? 'round' : 'square';
       const strokeJoin = lineCorner === 'Rounded' ? 'round' : 'miter';
-
-      const sHalf = strokeW > 0 ? strokeW / 2 : 0;
-      const sRectX = strokeW > 0 ? -sHalf : 0;
-      const sRectY = strokeW > 0 ? -sHalf : 0;
-      const sRectW = strokeW > 0 ? w + strokeW : w;
-      const sRectH = strokeW > 0 ? h + strokeW : h;
+      const cornerR = lineCorner === 'Rounded' ? Math.max(0, Math.min(strokeW, 16)) : 0;
 
       // 1. Update Stroke Layer in-place (without wiping innerHTML)
       let strokeLayer = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeLayer) {
         if (strokeLayer.tagName.toLowerCase() === 'rect') {
-          strokeLayer.setAttribute('x', sRectX.toString());
-          strokeLayer.setAttribute('y', sRectY.toString());
-          strokeLayer.setAttribute('width', sRectW.toString());
-          strokeLayer.setAttribute('height', sRectH.toString());
-          strokeLayer.removeAttribute('rx');
-          strokeLayer.removeAttribute('ry');
+          strokeLayer.setAttribute('x', '0');
+          strokeLayer.setAttribute('y', '0');
+          strokeLayer.setAttribute('width', w.toString());
+          strokeLayer.setAttribute('height', h.toString());
+          if (cornerR > 0) {
+            strokeLayer.setAttribute('rx', cornerR.toString());
+            strokeLayer.setAttribute('ry', cornerR.toString());
+          } else {
+            strokeLayer.removeAttribute('rx');
+            strokeLayer.removeAttribute('ry');
+          }
           strokeLayer.setAttribute('stroke', strokeCol);
-          strokeLayer.setAttribute('stroke-width', strokeW.toString());
+          strokeLayer.setAttribute('stroke-width', (strokeW * 2).toString());
           strokeLayer.setAttribute('stroke-opacity', strokeOp.toString());
           strokeLayer.setAttribute('stroke-linecap', strokeCap);
           strokeLayer.setAttribute('stroke-linejoin', strokeJoin);
+          strokeLayer.setAttribute('paint-order', 'stroke fill');
+          strokeLayer.style.paintOrder = 'stroke fill';
         } else {
           const newStrokeEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           newStrokeEl.setAttribute('class', 'svg-image-stroke-overlay');
           newStrokeEl.setAttribute('fill', 'transparent');
           newStrokeEl.setAttribute('pointer-events', 'all');
           newStrokeEl.setAttribute('stroke', strokeCol);
-          newStrokeEl.setAttribute('stroke-width', strokeW.toString());
+          newStrokeEl.setAttribute('stroke-width', (strokeW * 2).toString());
           newStrokeEl.setAttribute('stroke-opacity', strokeOp.toString());
           newStrokeEl.setAttribute('stroke-linecap', strokeCap);
           newStrokeEl.setAttribute('stroke-linejoin', strokeJoin);
-          newStrokeEl.setAttribute('x', sRectX.toString());
-          newStrokeEl.setAttribute('y', sRectY.toString());
-          newStrokeEl.setAttribute('width', sRectW.toString());
-          newStrokeEl.setAttribute('height', sRectH.toString());
+          newStrokeEl.setAttribute('paint-order', 'stroke fill');
+          newStrokeEl.style.paintOrder = 'stroke fill';
+          newStrokeEl.setAttribute('x', '0');
+          newStrokeEl.setAttribute('y', '0');
+          newStrokeEl.setAttribute('width', w.toString());
+          newStrokeEl.setAttribute('height', h.toString());
+          if (cornerR > 0) {
+            newStrokeEl.setAttribute('rx', cornerR.toString());
+            newStrokeEl.setAttribute('ry', cornerR.toString());
+          }
           strokeLayer.replaceWith(newStrokeEl);
         }
       }
@@ -732,7 +797,7 @@ const ElementEmbedProperties = ({
         allowFs: allowFullscreen
       });
 
-      const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+      const effectiveUrl = embedVia === 'URL' ? url : (customCode?.trim().startsWith('<') ? customCode : '');
       const overlayHtml = getEmbedOverlayHtml({
         targetUrl: effectiveUrl,
         openWebsiteBtn,
@@ -807,9 +872,9 @@ const ElementEmbedProperties = ({
           rootContainer.appendChild(tempDiv.firstElementChild);
         }
       } else {
-        const strokeAttrs = `stroke="${strokeCol}" stroke-width="${strokeW}" stroke-opacity="${strokeOp}" stroke-linecap="${strokeCap}" stroke-linejoin="${strokeJoin}"`;
+        const strokeAttrs = `stroke="${strokeCol}" stroke-width="${strokeW * 2}" stroke-opacity="${strokeOp}" stroke-linecap="${strokeCap}" stroke-linejoin="${strokeJoin}" style="paint-order: stroke fill;" paint-order="stroke fill"${cornerR > 0 ? ` rx="${cornerR}" ry="${cornerR}"` : ''}`;
         const fillLayerHtml = `<rect class="embed-fill-layer" x="0" y="0" width="${w}" height="${h}" fill="${fillColor}" opacity="${fillOpacity}" pointer-events="none" />`;
-        const strokeLayerHtml = `<rect class="svg-image-stroke-overlay" x="${sRectX}" y="${sRectY}" width="${sRectW}" height="${sRectH}" fill="transparent" pointer-events="all" ${strokeAttrs} />`;
+        const strokeLayerHtml = `<rect class="svg-image-stroke-overlay" x="0" y="0" width="${w}" height="${h}" fill="transparent" pointer-events="all" ${strokeAttrs} />`;
 
         frameGroup.innerHTML = `
           ${fillLayerHtml}
@@ -889,10 +954,26 @@ const ElementEmbedProperties = ({
 
   const handleUrlChange = (val) => {
     setUrl(val);
+    if (val.trim()) {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 600);
+    } else {
+      setIsLoading(false);
+    }
   };
 
   const handleCustomCodeChange = (val) => {
     setCustomCode(val);
+    if (val.trim()) {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 600);
+    } else {
+      setIsLoading(false);
+    }
   };
 
   // Handlers for Embed Controls
@@ -904,7 +985,7 @@ const ElementEmbedProperties = ({
       frameGroup.setAttribute('data-open-website-btn', val ? 'true' : 'false');
       const rootContainer = frameGroup.querySelector('.embed-root-container');
       if (rootContainer) {
-        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode?.trim().startsWith('<') ? customCode : '');
         const nextOverlayHtml = getEmbedOverlayHtml({
           targetUrl: effectiveUrl,
           openWebsiteBtn: val,
@@ -938,7 +1019,7 @@ const ElementEmbedProperties = ({
       frameGroup.setAttribute('data-allow-fullscreen', val ? 'true' : 'false');
       const rootContainer = frameGroup.querySelector('.embed-root-container');
       if (rootContainer) {
-        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode?.trim().startsWith('<') ? customCode : '');
         const nextOverlayHtml = getEmbedOverlayHtml({
           targetUrl: effectiveUrl,
           openWebsiteBtn,
@@ -972,7 +1053,7 @@ const ElementEmbedProperties = ({
       frameGroup.setAttribute('data-behavior', val);
       const rootContainer = frameGroup.querySelector('.embed-root-container');
       if (rootContainer) {
-        const effectiveUrl = embedVia === 'URL' ? url : (customCode || url);
+        const effectiveUrl = embedVia === 'URL' ? url : (customCode?.trim().startsWith('<') ? customCode : '');
         const nextOverlayHtml = getEmbedOverlayHtml({
           targetUrl: effectiveUrl,
           openWebsiteBtn,
@@ -1005,7 +1086,7 @@ const ElementEmbedProperties = ({
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (frameGroup) {
       frameGroup.setAttribute('data-stroke-color', newColor);
-      frameGroup.setAttribute('stroke', newColor);
+      frameGroup.removeAttribute('stroke');
       frameGroup.setAttribute('data-stroke-alignment', 'Outside');
       frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
@@ -1015,7 +1096,6 @@ const ElementEmbedProperties = ({
     }
     if (updateElementAttribute) {
       updateElementAttribute(activePageIndex, selectedLayerId, {
-        'stroke': newColor,
         'data-stroke-color': newColor,
         'data-stroke-alignment': 'Outside',
         'data-stroke-position': 'Outside'
@@ -1029,7 +1109,7 @@ const ElementEmbedProperties = ({
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (frameGroup) {
       frameGroup.setAttribute('data-stroke-opacity', (newOpacity / 100).toString());
-      frameGroup.setAttribute('stroke-opacity', (newOpacity / 100).toString());
+      frameGroup.removeAttribute('stroke-opacity');
       frameGroup.setAttribute('data-stroke-alignment', 'Outside');
       frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
@@ -1039,7 +1119,6 @@ const ElementEmbedProperties = ({
     }
     if (updateElementAttribute) {
       updateElementAttribute(activePageIndex, selectedLayerId, {
-        'stroke-opacity': (newOpacity / 100).toString(),
         'data-stroke-opacity': (newOpacity / 100).toString(),
         'data-stroke-alignment': 'Outside',
         'data-stroke-position': 'Outside'
@@ -1054,32 +1133,39 @@ const ElementEmbedProperties = ({
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (frameGroup) {
       frameGroup.setAttribute('data-stroke-width', val.toString());
-      frameGroup.setAttribute('stroke-width', val.toString());
+      frameGroup.removeAttribute('stroke-width');
       frameGroup.setAttribute('data-stroke-alignment', 'Outside');
       frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeOverlay) {
-        strokeOverlay.setAttribute('stroke-width', val.toString());
+        strokeOverlay.setAttribute('stroke-width', (val * 2).toString());
+        strokeOverlay.setAttribute('paint-order', 'stroke fill');
+        strokeOverlay.style.paintOrder = 'stroke fill';
         const fo = frameGroup.querySelector('foreignObject');
         const fillLayer = frameGroup.querySelector('.embed-fill-layer');
         const baseW = fo ? parseFloat(fo.getAttribute('width')) : (fillLayer ? parseFloat(fillLayer.getAttribute('width')) : parseFloat(frameGroup.getAttribute('width') || '650'));
         const baseH = fo ? parseFloat(fo.getAttribute('height')) : (fillLayer ? parseFloat(fillLayer.getAttribute('height')) : parseFloat(frameGroup.getAttribute('height') || '400'));
         if (baseW && baseH) {
-          const sHalf = val > 0 ? val / 2 : 0;
-          const sX = val > 0 ? -sHalf : 0;
-          const sY = val > 0 ? -sHalf : 0;
-          const sW = val > 0 ? baseW + val : baseW;
-          const sH = val > 0 ? baseH + val : baseH;
-          strokeOverlay.setAttribute('x', sX.toString());
-          strokeOverlay.setAttribute('y', sY.toString());
-          strokeOverlay.setAttribute('width', sW.toString());
-          strokeOverlay.setAttribute('height', sH.toString());
+          strokeOverlay.setAttribute('x', '0');
+          strokeOverlay.setAttribute('y', '0');
+          strokeOverlay.setAttribute('width', baseW.toString());
+          strokeOverlay.setAttribute('height', baseH.toString());
+        }
+        const cornerR = lineCorner === 'Rounded' ? Math.max(0, Math.min(val, 16)) : 0;
+        if (cornerR > 0) {
+          strokeOverlay.setAttribute('rx', cornerR.toString());
+          strokeOverlay.setAttribute('ry', cornerR.toString());
+        } else {
+          strokeOverlay.removeAttribute('rx');
+          strokeOverlay.removeAttribute('ry');
         }
       }
+      window.dispatchEvent(new CustomEvent('force-update-selection-box', {
+        detail: { elementId: frameGroup.id || selectedLayerId }
+      }));
     }
     if (updateElementAttribute) {
       updateElementAttribute(activePageIndex, selectedLayerId, {
-        'stroke-width': val.toString(),
         'data-stroke-width': val.toString(),
         'data-stroke-alignment': 'Outside',
         'data-stroke-position': 'Outside'
@@ -1095,21 +1181,30 @@ const ElementEmbedProperties = ({
     const frameGroup = selectedElement.querySelector('[data-type="embed-frame"]') || (selectedElement.getAttribute('data-type') === 'embed-frame' ? selectedElement : null);
     if (frameGroup) {
       frameGroup.setAttribute('data-line-corner', corner);
-      frameGroup.setAttribute('stroke-linecap', linecap);
-      frameGroup.setAttribute('stroke-linejoin', linejoin);
+      frameGroup.removeAttribute('stroke-linecap');
+      frameGroup.removeAttribute('stroke-linejoin');
       frameGroup.setAttribute('data-stroke-alignment', 'Outside');
       frameGroup.setAttribute('data-stroke-position', 'Outside');
       const strokeOverlay = frameGroup.querySelector('.svg-image-stroke-overlay');
       if (strokeOverlay) {
         strokeOverlay.setAttribute('stroke-linecap', linecap);
         strokeOverlay.setAttribute('stroke-linejoin', linejoin);
+        const cornerR = corner === 'Rounded' ? Math.max(0, Math.min(strokeWidth, 16)) : 0;
+        if (cornerR > 0) {
+          strokeOverlay.setAttribute('rx', cornerR.toString());
+          strokeOverlay.setAttribute('ry', cornerR.toString());
+        } else {
+          strokeOverlay.removeAttribute('rx');
+          strokeOverlay.removeAttribute('ry');
+        }
       }
+      window.dispatchEvent(new CustomEvent('force-update-selection-box', {
+        detail: { elementId: frameGroup.id || selectedLayerId }
+      }));
     }
     if (updateElementAttribute) {
       updateElementAttribute(activePageIndex, selectedLayerId, {
         'data-line-corner': corner,
-        'stroke-linecap': linecap,
-        'stroke-linejoin': linejoin,
         'data-stroke-alignment': 'Outside',
         'data-stroke-position': 'Outside'
       });
@@ -1117,212 +1212,269 @@ const ElementEmbedProperties = ({
   };
 
   return (
-    <div className="w-full flex flex-col gap-[0.6vw] font-sans text-gray-800 pt-[0.2vw] pr-[0.2vw] select-none">
+    <div className="relative flex flex-col gap-[1.7vw] w-full max-w-[25vw] pb-[2vw] font-sans select-none">
+      {/* ===================== HEADER ===================== */}
+      <div className="flex items-center gap-[0.8vw]">
+        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">Embed Properties</span>
+        <div className="flex-1 h-[1px] bg-gray-200" />
+      </div>
 
-      {/* ─── 1. 3RD PARTY EMBED PROPERTY ─── */}
-      <SectionHeader title="3rd Party Embed Property" />
+      {/* ===================== 1. 3RD PARTY EMBED ===================== */}
+      <div className="flex flex-col gap-[0.6vw]">
+        <SectionHeader title="3rd Party Embed" />
 
-      {/* Embed Via row */}
-      <PropertyRow label="Embed Via">
-        <div className="flex items-center gap-[1.2vw]">
-          <RadioButton
-            label="URL"
-            checked={embedVia === 'URL'}
-            onChange={() => handleEmbedViaChange('URL')}
-          />
-          <RadioButton
-            label="Embed Code"
-            checked={embedVia === 'Embed Code'}
-            onChange={() => handleEmbedViaChange('Embed Code')}
-          />
+        {/* Embed Via Switcher */}
+        <div className="grid grid-cols-2 gap-[0.4vw] p-[0.2vw] bg-gray-100 rounded-[0.45vw]">
+          <button
+            type="button"
+            onClick={() => handleEmbedViaChange('URL')}
+            className={`h-[1.9vw] rounded-[0.35vw] text-[0.8vw] font-medium transition-all ${
+              embedVia === 'URL' ? 'bg-white text-gray-900 shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Embed Link
+          </button>
+          <button
+            type="button"
+            onClick={() => handleEmbedViaChange('Embed Code')}
+            className={`h-[1.9vw] rounded-[0.35vw] text-[0.8vw] font-medium transition-all ${
+              embedVia === 'Embed Code' ? 'bg-white text-gray-900 shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Embed Code
+          </button>
         </div>
-      </PropertyRow>
 
-      <div className="flex flex-col gap-[0.25vw] pl-[0.5vw] pr-[0.2vw]">
-        <span className="text-[0.7vw] text-gray-500 font-medium">
-          {embedVia === 'Embed Code' ? 'Code' : 'Source URL'}
-        </span>
+        {/* Input / Code Area */}
+        <div className="flex flex-col gap-[0.3vw] mt-[0.1vw]">
+          <span className="text-[0.72vw] text-gray-500 font-medium">
+            {embedVia === 'Embed Code' ? 'HTML Embed Code' : 'Source URL'}
+          </span>
 
-        {embedVia === 'Embed Code' ? (
-          <textarea
-            placeholder="Paste HTML code here"
-            value={customCode}
-            onChange={(e) => handleCustomCodeChange(e.target.value)}
-            rows={3}
-            className="w-full border border-gray-200 rounded-[0.5vw] p-[0.6vw] text-[0.78vw] font-normal text-gray-800 placeholder-gray-400 outline-none focus:border-[#E05638] focus:ring-1 focus:ring-[#E05638] bg-white h-[5.5vw] resize-none shadow-2xs font-mono"
-          />
-        ) : (
-          <div className="flex border border-gray-200 rounded-[0.5vw] overflow-hidden focus-within:border-[#E05638] focus-within:ring-1 focus-within:ring-[#E05638] transition-all bg-white shadow-2xs">
-            <input
-              type="text"
-              placeholder="e.g. https://..."
-              value={url}
-              onChange={(e) => handleUrlChange(e.target.value)}
-              className="flex-1 px-[0.6vw] py-[0.5vw] text-[0.78vw] font-normal outline-none text-gray-800 placeholder-gray-400 bg-transparent"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                if (url) {
-                  navigator.clipboard.writeText(url.startsWith('http') ? url : 'https://' + url);
-                  setCopiedUrl(true);
-                  setTimeout(() => setCopiedUrl(false), 1500);
-                }
-              }}
-              className="px-[0.6vw] flex items-center justify-center text-gray-500 hover:text-[#E05638] transition-colors bg-gray-50 border-l border-gray-200 cursor-pointer"
-              title={copiedUrl ? 'Copied!' : 'Copy Link'}
-            >
-              {copiedUrl ? (
-                <Check className="w-[0.85vw] h-[0.85vw] text-green-600" />
-              ) : (
-                <Copy className="w-[0.85vw] h-[0.85vw]" />
+          {embedVia === 'Embed Code' ? (
+            <div className="relative w-full">
+              <textarea
+                placeholder="Paste HTML code here (e.g. <iframe ...>)"
+                value={customCode}
+                onChange={(e) => handleCustomCodeChange(e.target.value)}
+                rows={3}
+                className="w-full border border-gray-300 rounded-[0.45vw] p-[0.6vw] pr-[2.2vw] text-[0.8vw] font-mono text-gray-800 placeholder-gray-400 outline-none focus:border-indigo-400 bg-white h-[5.5vw] resize-none shadow-2xs transition-colors"
+              />
+              {isLoading && (
+                <div className="absolute top-[0.6vw] right-[0.6vw] flex items-center justify-center pointer-events-none z-10">
+                  <Loader2 className="w-[0.9vw] h-[0.9vw] animate-spin text-indigo-600" />
+                </div>
               )}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ─── 2. EMBED CONTROLS ─── */}
-      <SectionHeader title="Embed Controls" />
-
-      {/* Open website button */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-medium whitespace-nowrap">Open website button</span>
-        <ToggleSwitch
-          checked={openWebsiteBtn}
-          onChange={handleOpenWebsiteBtnChange}
-        />
-      </div>
-
-      {/* Allow Fullscreen */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <div className="flex items-center gap-[0.25vw]">
-          <span className="text-[0.78vw] text-gray-700 font-medium">Allow Fullscreen</span>
-         </div>
-        <ToggleSwitch
-          checked={allowFullscreen}
-          onChange={handleAllowFullscreenChange}
-        />
-      </div>
-
-      {/* Behavior */}
-      <PropertyRow label="Behavior">
-        <CustomSelect
-          value={behavior}
-          onChange={handleBehaviorChange}
-          options={BEHAVIOR_OPTIONS}
-        />
-      </PropertyRow>
-
-      {/* ─── 3. STROKE COLOR ─── */}
-      <SectionHeader title="Stroke Color" />
-
-      {/* Row 1: Swatch, Hex, Opacity */}
-      <div className="pl-[0.5vw]">
-        <ColorInput
-          color={strokeColor}
-          onChange={handleStrokeColorChange}
-          opacity={strokeOpacity}
-          onOpenPicker={() => setActiveColorPicker(activeColorPicker === 'strokeColor' ? null : 'strokeColor')}
-          isActive={activeColorPicker === 'strokeColor'}
-        />
-      </div>
-
-      {/* Stroke Settings Grid */}
-      <div className="flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw]">
-        {/* Stroke Width & Line Corner */}
-        <div className="grid grid-cols-2 gap-[0.6vw]">
-          {/* Stroke Width */}
-          <div className="flex flex-col gap-[0.25vw]">
-            <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
-            <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
+            </div>
+          ) : (
+            <div className="flex h-[2.1vw] border border-gray-300 rounded-[0.45vw] overflow-hidden focus-within:border-indigo-400 transition-colors bg-white shadow-2xs">
+              <input
+                type="text"
+                placeholder="e.g. https://..."
+                value={url}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                className="flex-1 px-[0.75vw] text-[0.8vw] font-medium outline-none text-gray-800 placeholder-gray-400 bg-transparent"
+              />
+              {isLoading && (
+                <div className="flex items-center px-[0.4vw]">
+                  <Loader2 className="w-[0.85vw] h-[0.85vw] animate-spin text-indigo-600" />
+                </div>
+              )}
               <button
                 type="button"
-                onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
+                onClick={() => {
+                  if (url) {
+                    navigator.clipboard.writeText(url.startsWith('http') ? url : 'https://' + url);
+                    setCopiedUrl(true);
+                    setTimeout(() => setCopiedUrl(false), 1500);
+                  }
+                }}
+                className="px-[0.6vw] flex items-center justify-center text-gray-500 hover:text-indigo-600 transition-colors bg-gray-50 border-l border-gray-200 cursor-pointer"
+                title={copiedUrl ? 'Copied!' : 'Copy Link'}
               >
-                −
-              </button>
-              <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
-                <input
-                  type="number"
-                  value={strokeWidth}
-                  onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full text-center text-[0.8vw] font-medium text-slate-800 outline-none bg-transparent no-spin"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-                className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-bold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none"
-              >
-                +
+                {copiedUrl ? (
+                  <Check className="w-[0.85vw] h-[0.85vw] text-green-600" />
+                ) : (
+                  <Copy className="w-[0.85vw] h-[0.85vw]" />
+                )}
               </button>
             </div>
-          </div>
-
-          {/* Line Corner */}
-          <div className="flex flex-col gap-[0.25vw] relative">
-            <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
-            <ElementDropdown
-              value={lineCorner}
-              onChange={handleLineCornerChange}
-              options={['Square', 'Rounded']}
-              buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
-            />
-          </div>
+          )}
         </div>
       </div>
 
-      {/* ─── 4. EFFECTS ─── */}
-      <SectionHeader title="Effects" />
+      {/* ===================== 2. EMBED CONTROLS ===================== */}
+      <div className="flex flex-col gap-[0.6vw]">
+        <SectionHeader title="Embed Controls" />
 
-      <div>
-        <Effect
-          isShape={false}
-          openSubSection={openSection}
-          setOpenSubSection={setOpenSection}
-          activeEffects={activeEffects}
-          setActiveEffects={handleSetActiveEffects}
-          effectSettings={effectSettings}
-          setEffectSettings={handleSetEffectSettings}
-          activeColorPicker={activeColorPicker}
-          setActiveColorPicker={setActiveColorPicker}
-          showDetailedPicker={showDetailedPicker}
-          setShowDetailedPicker={setShowDetailedPicker}
-          hideBlur={true}
-          hideInnerShadow={true}
-          hideHeader={true}
-        />
+        {/* Open website button */}
+        <div className="flex items-center justify-between h-[2.1vw]">
+          <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Open website button</span>
+          <ToggleSwitch
+            checked={openWebsiteBtn}
+            onChange={handleOpenWebsiteBtnChange}
+          />
+        </div>
+
+        {/* Behavior (only visible when Open website button is enabled) */}
+        {openWebsiteBtn && (
+          <div className="flex items-center justify-between gap-[0.8vw]">
+            <span className="text-[0.82vw] font-medium text-gray-800">Behavior</span>
+            <div className="relative flex-1">
+              <CustomSelect
+                value={behavior}
+                onChange={handleBehaviorChange}
+                options={BEHAVIOR_OPTIONS}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Allow Fullscreen */}
+        <div className="flex items-center justify-between h-[2.1vw]">
+          <span className="text-[0.82vw] font-medium text-gray-800">Allow Fullscreen</span>
+          <ToggleSwitch
+            checked={allowFullscreen}
+            onChange={handleAllowFullscreenChange}
+          />
+        </div>
       </div>
 
-      {/* ─── PORTALS ─── */}
-      {/* Official ColorPicker Portal Popup */}
-      {activeColorPicker === 'strokeColor' && createPortal(
+      {/* ===================== 3. STROKE COLOR & WIDTH ===================== */}
+      <div className="flex flex-col gap-[1.1vw]">
+        <ColorBoxRow
+          title="Stoke Color"
+          color={strokeColor}
+          opacity={strokeOpacity}
+          onOpenPicker={() => setActiveColorPicker(activeColorPicker === 'strokeColor' ? null : 'strokeColor')}
+          onChange={handleStrokeColorChange}
+          onOpacityChange={handleStrokeOpacityChange}
+          isActive={activeColorPicker === 'strokeColor'}
+        />
+
+        {/* Stroke Width & Line Corner */}
+        {(() => {
+          const isStrokeDisabled = !strokeColor || strokeColor === 'none' || strokeColor === 'transparent';
+          return (
+            <div className={`flex items-center gap-[1vw] mt-[0.2vw] transition-opacity duration-200 ${isStrokeDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
+              {/* Stroke Width */}
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Stroke width</span>
+                <div className="flex items-center gap-[0.3vw] h-[2.1vw]">
+                  <button
+                    type="button"
+                    disabled={isStrokeDisabled}
+                    onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
+                    className="w-[2.1vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <span className="text-[1vw] leading-none mb-[0.1vw]">-</span>
+                  </button>
+                  <div
+                    className="flex-grow h-full bg-white border border-gray-300 rounded-[0.45vw] flex items-center cursor-ew-resize shadow-2xs hover:border-gray-400 transition-colors"
+                    onPointerDown={(e) => {
+                      if (isStrokeDisabled) return;
+                      handleScrubHelper(e, strokeWidth, (v) => handleStrokeWidthChange(Math.max(0, parseInt(v) || 0)));
+                    }}
+                  >
+                    <input
+                      type="number"
+                      disabled={isStrokeDisabled}
+                      value={strokeWidth}
+                      onChange={(e) => handleStrokeWidthChange(Math.max(0, parseInt(e.target.value || 0)))}
+                      className="w-full text-center text-[0.8vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isStrokeDisabled}
+                    onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
+                    className="w-[2.1vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <span className="text-[0.9vw] leading-none mb-[0.1vw]">+</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Line Corner */}
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Line Corner</span>
+                <div className="relative">
+                  <CustomSelect
+                    value={lineCorner}
+                    onChange={handleLineCornerChange}
+                    options={LINE_CORNER_OPTIONS}
+                    disabled={isStrokeDisabled}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* ===================== 4. EFFECTS ===================== */}
+      <Effect
+        isShape={false}
+        openSubSection={openSection}
+        setOpenSubSection={setOpenSection}
+        activeEffects={activeEffects}
+        setActiveEffects={handleSetActiveEffects}
+        effectSettings={effectSettings}
+        setEffectSettings={handleSetEffectSettings}
+        activeColorPicker={activeColorPicker}
+        setActiveColorPicker={setActiveColorPicker}
+        showDetailedPicker={showDetailedPicker}
+        setShowDetailedPicker={setShowDetailedPicker}
+        hideBlur={true}
+        hideInnerShadow={true}
+        noAccordion={true}
+      />
+
+      {/* ===================== COLOR PICKER PORTAL ===================== */}
+      {activeColorPicker && typeof document !== 'undefined' && createPortal(
         <div
           className="fixed z-[5000]"
-          style={{
-            top: '50%',
-            right: '19.5vw',
-            transform: 'translateY(-50%)'
-          }}
-          onClick={(e) => e.stopPropagation()}
+          style={{ top: '50%', right: '19.5vw', transform: 'translateY(-50%)' }}
         >
-          <div className="animate-in fade-in zoom-in-95 duration-200">
-            <ColorPicker
-              color={strokeColor}
-              opacity={strokeOpacity}
-              onOpacityChange={handleStrokeOpacityChange}
-              onChange={handleStrokeColorChange}
-              onClose={() => setActiveColorPicker(null)}
-              disableGradient={false}
-              colorsOnPage={colorsOnPageList}
-            />
-          </div>
+          <ColorPicker
+            color={strokeColor}
+            opacity={strokeOpacity}
+            onOpacityChange={handleStrokeOpacityChange}
+            onChange={handleStrokeColorChange}
+            onClose={() => setActiveColorPicker(null)}
+            disableGradient={false}
+          />
         </div>,
         document.body
       )}
 
+      {/* CUSTOM CSS matching ShapeProperties */}
+      <style>{`
+        .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        body.is-scrubbing, body.is-scrubbing * {
+          cursor: none !important;
+          user-select: none !important;
+        }
+        .hide-cursor, .hide-cursor * {
+          cursor: none !important;
+        }
+        .virtual-scrub-cursor {
+          position: fixed;
+          pointer-events: none;
+          z-index: 100000;
+          width: 2vw;
+          height: 2vw;
+          margin-left: -1vw;
+          margin-top: -1vw;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          filter: drop-shadow(0 0.1vw 0.2vw rgba(0,0,0,0.3));
+        }
+      `}</style>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import { renderTemplateBooks, getShadowRgba } from './FlipbookInfoModal';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ChevronDown, Plus, Info, Upload } from 'lucide-react';
@@ -176,54 +177,19 @@ const PublishModal = ({ isOpen, onClose, currentBook, onPublishSuccess }) => {
           {/* Left Column */}
           <div className="flex flex-col justify-between gap-[0.9vw]">
             {/* Book Preview Image Card */}
-            <div className="relative rounded-[0.9vw] bg-gray-50 h-[17.5vw] flex items-center justify-center shadow-inner overflow-hidden border border-gray-200/50" style={{ backgroundColor: coverPicture?.bgColor || '#edd8cd' }}>
+            <div className="relative rounded-[0.9vw] bg-gray-50 w-full aspect-[4/3] flex items-center justify-center shadow-inner overflow-hidden border border-gray-200/50" style={{ backgroundColor: coverPicture?.bgColor || '#edd8cd' }}>
               {coverPicture?.type === 'template' ? (
                 <div className="w-full h-[25vw] flex flex-col items-center justify-center p-[1vw] text-center relative overflow-hidden bg-[#F2F2F2] rounded-[1.2vw] shadow-inner" style={{ backgroundColor: coverPicture.bgColor || '#D7D8E8' }}>
-                  {coverPicture.selectedTemplate?.id === 1 ? (
-                     <div className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none" style={{ opacity: (coverPicture.bgOpacity !== undefined ? coverPicture.bgOpacity : 100) / 100, filter: `drop-shadow(${coverPicture.shadowX || 0}px ${coverPicture.shadowY || 0}px ${(coverPicture.shadowBlur || 35) / 10}px ${coverPicture.shadowColor || '#000000'})` }}>
-                        {/* Back book */}
-                        <div className={`absolute w-[14vw] h-[18.9vw] ${coverPicture.selectedPages?.length > 0 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-orange-500 to-amber-600 border-orange-400 p-[1vw]'} rounded-[0.8vw] shadow-xl transform -rotate-6 border flex flex-col justify-between text-white overflow-hidden`}>
-                           <div className="absolute top-0 right-0 w-[5.6vw] h-[19.6vw] bg-white opacity-10 transform rotate-12 -translate-y-[1.4vw] translate-x-[1.4vw] z-10 pointer-events-none"></div>
-                           {coverPicture.selectedPages?.length > 0 && currentBook?.pages?.[coverPicture.selectedPages[0] - 1] ? (
-                               <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                                  <div dangerouslySetInnerHTML={{ __html: currentBook.pages[coverPicture.selectedPages[0] - 1].html }} />
-                               </div>
-                           ) : (
-                               <>
-                                   <span className="text-[0.98vw] font-bold tracking-widest uppercase opacity-85 relative z-10">HARD.COVER</span>
-                                   <div className="relative z-10">
-                                      <h3 className="text-[1.19vw] font-black leading-tight">Hard.Cover Book</h3>
-                                      <p className="text-[0.84vw] opacity-90 mt-[0.14vw]">Free .psd Mockup</p>
-                                   </div>
-                               </>
-                           )}
-                        </div>
-                        
-                        {/* Front book */}
-                        <div className={`absolute w-[14vw] h-[18.9vw] ${coverPicture.selectedPages?.length > 0 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-amber-600 to-orange-500 border-amber-400 p-[1vw]'} rounded-[0.8vw] shadow-2xl transform rotate-6 border flex flex-col justify-between text-white overflow-hidden`}>
-                           <div className="absolute top-0 left-0 w-[4.2vw] h-[19.6vw] bg-black opacity-10 filter blur-[0.28vw] -translate-x-[0.7vw] z-10 pointer-events-none"></div>
-                           <div className="absolute top-0 right-0 w-[7vw] h-[19.6vw] bg-white opacity-20 transform rotate-12 -translate-y-[1.4vw] translate-x-[2.8vw] z-10 pointer-events-none"></div>
-                           {coverPicture.selectedPages?.length > 0 && currentBook?.pages?.[coverPicture.selectedPages[1] ? coverPicture.selectedPages[1] - 1 : coverPicture.selectedPages[0] - 1] ? (
-                               <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                                  <div dangerouslySetInnerHTML={{ __html: currentBook.pages[coverPicture.selectedPages[1] ? coverPicture.selectedPages[1] - 1 : coverPicture.selectedPages[0] - 1].html }} />
-                               </div>
-                           ) : (
-                               <>
-                                   <span className="text-[0.98vw] font-bold tracking-widest uppercase opacity-85 relative z-10">HARD.COVER</span>
-                                   <div className="relative z-10">
-                                      <h3 className="text-[1.19vw] font-black leading-tight">Hard.Cover Book</h3>
-                                      <p className="text-[0.84vw] opacity-90 mt-[0.14vw]">Free .psd Mockup</p>
-                                   </div>
-                               </>
-                           )}
-                        </div>
+                  {coverPicture.selectedTemplate?.id ? (
+                     <div className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none" style={{ opacity: (coverPicture.bgOpacity !== undefined ? coverPicture.bgOpacity : 100) / 100, filter: `drop-shadow(${coverPicture.shadowX || 0}px ${coverPicture.shadowY || 0}px ${(coverPicture.shadowBlur !== undefined ? coverPicture.shadowBlur : 35) / 10}px ${getShadowRgba(coverPicture.shadowColor, coverPicture.shadowOpacity)})` }}>
+                        {renderTemplateBooks(coverPicture.selectedTemplate.id, coverPicture.selectedPages, currentBook?.pages || [], [2, 4].includes(coverPicture.selectedTemplate?.id) ? "scale-[1.2] -translate-y-[0.8vw]" : "scale-[1.35]", coverPicture.text1, coverPicture.text2)}
                      </div>
                   ) : coverPicture.selectedTemplate?.src && (
                     <img 
                       src={coverPicture.selectedTemplate.src} 
                       alt="Cover Background" 
                       className="absolute inset-0 w-full h-full object-cover pointer-events-none" 
-                      style={{ opacity: (coverPicture.bgOpacity !== undefined ? coverPicture.bgOpacity : 100) / 100, filter: `drop-shadow(${coverPicture.shadowX || 0}px ${coverPicture.shadowY || 0}px ${(coverPicture.shadowBlur || 35) / 10}px ${coverPicture.shadowColor || '#000000'})` }}
+                      style={{ opacity: (coverPicture.bgOpacity !== undefined ? coverPicture.bgOpacity : 100) / 100, filter: `drop-shadow(${coverPicture.shadowX || 0}px ${coverPicture.shadowY || 0}px ${(coverPicture.shadowBlur !== undefined ? coverPicture.shadowBlur : 35) / 10}px ${getShadowRgba(coverPicture.shadowColor, coverPicture.shadowOpacity)})` }}
                     />
                   )}
 
@@ -236,7 +202,7 @@ const PublishModal = ({ isOpen, onClose, currentBook, onPublishSuccess }) => {
                       />
                   )}
 
-                  <div className="absolute left-0 right-0 text-center z-10 flex flex-col items-center" style={{ bottom: '2vw', paddingLeft: '1vw', paddingRight: '1vw' }}>
+                  <div className={`absolute left-0 right-0 text-center z-10 flex flex-col items-center ${coverPicture.selectedTemplate?.id && (!coverPicture.selectedPages || coverPicture.selectedPages.length === 0) ? 'hidden' : ''}`} style={{ bottom: '2vw', paddingLeft: '1vw', paddingRight: '1vw' }}>
                     <h3 className="leading-tight break-words w-full" style={{
                       fontFamily: coverPicture.text1FontFamily || 'Poppins',
                       fontSize: coverPicture.text1FontSize ? `${(coverPicture.text1FontSize / 16) * 1.5}vw` : '1.2vw',

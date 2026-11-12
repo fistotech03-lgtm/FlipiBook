@@ -21,6 +21,26 @@ export const formatSmoothPathD = (pts) => {
 export const getVisualBBox = (el) => {
   if (!el || typeof el.getBBox !== 'function') return { x: 0, y: 0, width: 0, height: 0 };
 
+  // ── TABLE ELEMENT BOUNDING BOX ──
+  const isTableElement = el.getAttribute?.('data-type') === 'table-frame' ||
+                         el.getAttribute?.('data-type') === 'table' ||
+                         (el.id && el.id.startsWith('table-')) ||
+                         !!el.querySelector?.('[data-type="table-frame"], .table-card-wrapper, table');
+  if (isTableElement) {
+    const fo = el.querySelector?.('foreignObject');
+    const overlay = el.querySelector?.('.svg-table-overlay, .svg-image-stroke-overlay');
+    const targetEl = fo || overlay;
+    if (targetEl) {
+      const tw = parseFloat(targetEl.getAttribute('width')) || 0;
+      const th = parseFloat(targetEl.getAttribute('height')) || 0;
+      const tx = parseFloat(targetEl.getAttribute('x') || '0');
+      const ty = parseFloat(targetEl.getAttribute('y') || '0');
+      if (tw > 0 && th > 0) {
+        return { x: tx, y: ty, width: tw, height: th };
+      }
+    }
+  }
+
   // ── TYPOGRAPHY BOUNDING BOX (Kinetic & Motion Graphic) ──
   const isTypography = el.getAttribute?.('data-is-element-typography') === 'true' ||
                        el.getAttribute?.('data-typography-type') === 'kinetic' ||
@@ -189,15 +209,32 @@ export const getVisualBBox = (el) => {
                   (el.id && el.id.startsWith('embed-')) ||
                   !!el.querySelector?.('[data-type="embed-frame"]');
   if (isEmbed) {
-    const bgRect = el.querySelector?.('rect.embed-fill-layer, foreignObject, rect:not(.svg-image-stroke-overlay)');
-    if (bgRect) {
-      const rw = parseFloat(bgRect.getAttribute('width')) || 0;
-      const rh = parseFloat(bgRect.getAttribute('height')) || 0;
-      const rx = parseFloat(bgRect.getAttribute('x') || '0');
-      const ry = parseFloat(bgRect.getAttribute('y') || '0');
-      if (rw > 0 && rh > 0) {
-        return { x: rx, y: ry, width: rw, height: rh };
+    const fo = el.querySelector?.('foreignObject');
+    const fillLayer = el.querySelector?.('rect.embed-fill-layer');
+    const strokeOverlay = el.querySelector?.('.svg-image-stroke-overlay');
+    const baseEl = fo || fillLayer || strokeOverlay || el.querySelector?.('rect');
+
+    let rw = baseEl ? (parseFloat(baseEl.getAttribute('width')) || 650) : 650;
+    let rh = baseEl ? (parseFloat(baseEl.getAttribute('height')) || 400) : 400;
+    let rx = baseEl ? (parseFloat(baseEl.getAttribute('x') || '0')) : 0;
+    let ry = baseEl ? (parseFloat(baseEl.getAttribute('y') || '0')) : 0;
+
+    // Check if stroke overlay defines outer visual bounds
+    if (strokeOverlay) {
+      const sw = parseFloat(strokeOverlay.getAttribute('width')) || 0;
+      const sh = parseFloat(strokeOverlay.getAttribute('height')) || 0;
+      const sx = parseFloat(strokeOverlay.getAttribute('x') || '0');
+      const sy = parseFloat(strokeOverlay.getAttribute('y') || '0');
+      if (sw > rw || sx < rx) {
+        rx = sx;
+        ry = sy;
+        rw = sw;
+        rh = sh;
       }
+    }
+
+    if (rw > 0 && rh > 0) {
+      return { x: rx, y: ry, width: rw, height: rh };
     }
     return { x: 0, y: 0, width: 650, height: 400 };
   }

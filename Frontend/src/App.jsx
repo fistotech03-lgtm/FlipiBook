@@ -37,7 +37,7 @@ const Converter = lazy(() => import("./pages/Converter"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Forum = lazy(() => import("./pages/Forum"));
 const Overview = lazy(() => import("./pages/Overview"));
-const Guide = lazy(() => import("./pages/Guide"));
+const Guide = lazy(() => import("./pages/Guide/Guide"));
 
 // Preview & Share Pages
 const PreviewPage = lazy(() => import("./pages/PreviewPage"));

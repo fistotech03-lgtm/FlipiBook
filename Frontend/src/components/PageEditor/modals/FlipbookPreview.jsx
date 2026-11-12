@@ -5,7 +5,7 @@ import { LAYOUT_DEFAULT_COLORS } from '../../CustomizedEditor/utils/layoutColors
 import { Icon } from '@iconify/react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { getFromDB, getCustomizedEditorState, CUSTOMIZED_EDITOR_KEY } from '../../../utils/dbUtils';
+import { getFromDB, getCustomizedEditorState, CUSTOMIZED_EDITOR_KEY, getCustomizedEditorKey } from '../../../utils/dbUtils';
 import useDeviceDetection from '../hooks/useDeviceDetection';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -72,6 +72,7 @@ const parseInitialSettings = (inputSettings, v_id, isPublishedPreview) => {
   const bObj = inputSettings?.Branding || inputSettings?.Customized_Settings?.Branding || {};
   const appObj = inputSettings?.appearance || inputSettings?.bookAppearanceSettings || inputSettings?.BookAppearance || inputSettings?.Customized_Settings?.BookAppearance || inputSettings?.Customized_Settings?.Appearance || cachedAppearance || {};
   const otherObj = inputSettings?.othersetup || inputSettings?.otherSetupSettings || inputSettings?.otherSetup || inputSettings?.Customized_Settings?.otherSetup || {};
+  const lfObj = inputSettings?.leadform || inputSettings?.leadFormSettings || inputSettings?.leadForm || inputSettings?.Customized_Settings?.leadForm || inputSettings?.settings?.leadForm || {};
 
   return {
     ...(inputSettings || {}),
@@ -84,7 +85,9 @@ const parseInitialSettings = (inputSettings, v_id, isPublishedPreview) => {
     BookAppearance: appObj,
     othersetup: otherObj,
     otherSetupSettings: otherObj,
-    otherSetup: otherObj
+    otherSetup: otherObj,
+    leadForm: lfObj,
+    leadform: lfObj
   };
 };
 
@@ -223,7 +226,10 @@ const FlipbookPreview = ({ pages, pageName, bookName, onClose, isMobile: isMobil
                 finalSettings.menuBarSettings = customized.MenuBar;
               }
               if (customized.otherSetup) finalSettings.othersetup = customized.otherSetup;
-              if (customized.leadForm) finalSettings.leadform = customized.leadForm;
+              if (customized.leadForm) {
+                finalSettings.leadForm = customized.leadForm;
+                finalSettings.leadform = customized.leadForm;
+              }
               if (customized.Visibility) finalSettings.visibility = customized.Visibility;
             }
           } catch (e) {
@@ -244,6 +250,7 @@ const FlipbookPreview = ({ pages, pageName, bookName, onClose, isMobile: isMobil
 
             if (res.data) {
               const backendBranding = res.data.Customized_Settings?.Branding || res.data.settings?.Branding || {};
+              const backendLeadForm = res.data.Customized_Settings?.leadForm || res.data.settings?.leadForm || res.data.leadForm;
               finalSettings = {
                 ...finalSettings,
                 ...(res.data.meta || {}),
@@ -251,7 +258,9 @@ const FlipbookPreview = ({ pages, pageName, bookName, onClose, isMobile: isMobil
                 logo: finalSettings.logo || backendBranding.logoSettings || res.data.settings?.logo || res.data.settings?.logoSettings,
                 watermark: finalSettings.watermark || backendBranding.watermarkSettings || res.data.settings?.watermark || res.data.settings?.watermarkSettings,
                 preloader: finalSettings.preloader || backendBranding.preloaderSettings || res.data.Customized_Settings?.Branding?.preloaderSettings || res.data.settings?.preloader || res.data.settings?.preloaderSettings,
-                profile: finalSettings.profile || backendBranding.profileSettings || res.data.settings?.profile || res.data.settings?.profileSettings
+                profile: finalSettings.profile || backendBranding.profileSettings || res.data.settings?.profile || res.data.settings?.profileSettings,
+                leadForm: finalSettings.leadForm || backendLeadForm || finalSettings.leadform,
+                leadform: finalSettings.leadform || backendLeadForm || finalSettings.leadForm
               };
             }
           }

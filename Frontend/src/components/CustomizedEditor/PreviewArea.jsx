@@ -151,7 +151,10 @@ const PreviewArea = React.memo(({
     }, [incomingOtherSetupSettings, incomingSettings, currentBook]);
 
     const leadFormSettings = React.useMemo(() => {
-        return incomingLeadFormSettings || incomingSettings?.leadForm || incomingSettings?.leadform || incomingSettings?.Customized_Settings?.leadForm || currentBook?.Customized_Settings?.leadForm || null;
+        const candidate = incomingLeadFormSettings || incomingSettings?.leadForm || incomingSettings?.leadform || incomingSettings?.Customized_Settings?.leadForm || currentBook?.Customized_Settings?.leadForm || null;
+        if (candidate && candidate.enabled !== undefined) return candidate;
+        const fallback = incomingSettings?.leadForm || incomingSettings?.leadform || incomingSettings?.Customized_Settings?.leadForm || currentBook?.Customized_Settings?.leadForm || null;
+        return fallback || candidate;
     }, [incomingLeadFormSettings, incomingSettings, currentBook]);
 
     const resolvedVId = React.useMemo(() => {
@@ -1779,7 +1782,7 @@ const PreviewArea = React.memo(({
         }
 
         const isLeadFormTabActive = (activeSubView || '').toLowerCase() === 'leadform';
-        if (isLeadFormTabActive) {
+        if (isLeadFormTabActive && !leadFormSubmitted) {
             setShowLeadForm(true);
             return;
         }
@@ -2357,6 +2360,8 @@ const PreviewArea = React.memo(({
             bookmarks={bookmarks}
             notes={notes}
             isMobileLandscape={isMobileLandscape}
+            leadFormSettings={leadFormSettings}
+            onOpenLeadForm={() => setShowLeadForm(true)}
         />
     );
 
@@ -2584,15 +2589,7 @@ const PreviewArea = React.memo(({
                 />
             )}
 
-            {/* Centered Screen Lead Form Modal Overlay */}
-            {showLeadForm && (
-                <LeadFormPopup
-                    leadFormSettings={leadFormSettings}
-                    isTablet={isTablet}
-                    isMobile={activeDevice === 'Mobile'}
-                    onClose={() => setLeadFormSubmitted(true)}
-                />
-            )}
+
         </div>
     );
 });

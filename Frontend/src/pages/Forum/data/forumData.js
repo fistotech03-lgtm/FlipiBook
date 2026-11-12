@@ -7,7 +7,7 @@ export const FORUM_MODULES = [
     shortName: 'Flipbooks',
     tagline: 'PDF conversion, page flip rendering, shelf management & exports',
     description: 'Discussions and feedback related to uploading PDFs, generating SVG/Canvas previews, flip animations, shelf organization, and public/private book sharing.',
-    icon: 'BookOpen',
+    iconify: 'basil:book-open-outline',
     color: '#ec5137'
   },
   {
@@ -16,7 +16,7 @@ export const FORUM_MODULES = [
     shortName: 'Page Editor',
     tagline: 'Canvas layout, text elements, stickers, shapes & layers',
     description: 'Inquiries and suggestions regarding 2D template canvas, font rendering, graphic assets, multi-page layout templates, and vector exporting.',
-    icon: 'FileText',
+    iconify: 'heroicons:document-duplicate',
     color: '#f97316'
   },
   {
@@ -25,7 +25,7 @@ export const FORUM_MODULES = [
     shortName: 'Custom Editor',
     tagline: 'Branding logos, background audio, themes & security',
     description: 'Topics regarding custom reader skins, navbar and toolbar visibility, background music autoplay, password protection, and branding assets.',
-    icon: 'Settings',
+    iconify: 'ant-design:control-outlined',
     color: '#ea580c'
   },
   {
@@ -34,7 +34,7 @@ export const FORUM_MODULES = [
     shortName: '3D Editor',
     tagline: '3D glTF/GLB models, PBR textures, Rapier physics & AR View',
     description: 'Discussions on importing 3D models, Blender GLB exports, texture roughness/metallic channels, Rapier rigid bodies, camera views, and AR mobile streaming.',
-    icon: 'Box',
+    iconify: 'f7:cube',
     color: '#0d9488'
   },
   {
@@ -43,7 +43,7 @@ export const FORUM_MODULES = [
     shortName: 'Converter',
     tagline: 'PDF, Word, EPUB & PowerPoint conversion pipeline',
     description: 'Questions and troubleshooting for converting documents into interactive flipbook pages.',
-    icon: 'Repeat',
+    iconify: 'lucide:repeat',
     color: '#0284c7'
   },
   {
@@ -52,7 +52,7 @@ export const FORUM_MODULES = [
     shortName: 'Workspace',
     tagline: 'Profile settings, cloud storage, billing & integrations',
     description: 'Questions and suggestions regarding user authentication, cloud storage quotas, API keys, webhook integrations, and subscription billing.',
-    icon: 'User',
+    iconify: 'iconamoon:profile',
     color: '#d97706'
   }
 ];

@@ -209,6 +209,19 @@ const DEFAULT_LEAD_FORM = {
     btnFill: '#4A3AFF',
     btnStroke: '#',
     btnText: '#FFFFFF'
+  },
+  enquiryButton: {
+    enabled: true,
+    showText: true,
+    text: 'Enquiry Now',
+    icon: 'lucide:message-square',
+    bgFill: '#E05638',
+    bgOpacity: 100,
+    textColor: '#FFFFFF',
+    textOpacity: 100,
+    iconColor: '#FFFFFF',
+    iconOpacity: 100,
+    position: 'bottom-right'
   }
 };
 

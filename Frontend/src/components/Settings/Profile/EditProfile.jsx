@@ -224,13 +224,11 @@ const ProfilePhoneField = ({ value, countryCode, onChange, onBlur, placeholder =
 const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
   const { setUser: setAuthUser } = useAuth();
   const [editedUser, setEditedUser] = useState(() => {
-    const rawServices = Array.isArray(user?.services) && user.services.length > 0
+    const rawServices = Array.isArray(user?.services)
       ? user.services
-      : (Array.isArray(user?.skills) && user.skills.length > 0 ? user.skills : null);
+      : (Array.isArray(user?.skills) ? user.skills : []);
 
-    const initialServices = rawServices !== null
-      ? rawServices
-      : ['Software Development', '3D / AR'];
+    const initialServices = rawServices;
 
     return {
       ...user,

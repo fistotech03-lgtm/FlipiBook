@@ -23,10 +23,10 @@ const Pricing = () => {
   // State to track clicked/active column in comparison table ('free' | 'basic' | 'premium' | 'pro')
   const [selectedCol, setSelectedCol] = useState('premium');
 
-  // Helper for active column background highlight (soft peach/orange #fff1ee)
+  // Helper for active column background highlight: slightly deeper visible warm orange tint #eeeeee
   const getColBg = (colKey, isHeader = false) => {
     if (selectedCol === colKey) {
-      return 'bg-[#fff1ee] transition-colors duration-200';
+      return 'bg-[#fff0ed] transition-colors duration-200';
     }
     return isHeader ? 'bg-[#f8f9fa] transition-colors duration-200' : 'transition-colors duration-200';
   };
@@ -220,7 +220,7 @@ const Pricing = () => {
 
               {/* Features List */}
               <div className="space-y-[0.55vw] pt-[0.6vw] border-t border-gray-100">
-                <p className="text-[0.74vw] font-semibold text-gray-900">Everything you need to get started</p>
+                <p className="text-[0.86vw] font-semibold text-gray-900">Everything you need to get started</p>
                 <ul className="space-y-[0.5vw] text-[0.72vw] text-gray-600 font-normal">
                   <li className="flex items-start gap-[0.45vw]">
                     <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'free' ? 'text-[#ec5137]' : 'text-gray-500'}`} />
@@ -319,7 +319,7 @@ const Pricing = () => {
 
               {/* Features List */}
               <div className="space-y-[0.55vw] pt-[0.6vw] border-t border-gray-100">
-                <p className="text-[0.74vw] font-semibold text-gray-900">Your brand, front and centre</p>
+                <p className="text-[0.86vw] font-semibold text-gray-900">Your brand, front and centre</p>
                 <ul className="space-y-[0.5vw] text-[0.72vw] text-gray-700 font-normal">
                   <li className="flex items-start gap-[0.45vw]">
                     <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'basic' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
@@ -427,7 +427,7 @@ const Pricing = () => {
 
               {/* Features List */}
               <div className="space-y-[0.55vw] pt-[0.6vw] border-t border-orange-100">
-                <p className="text-[0.74vw] font-semibold text-gray-900">Everything in Basic, plus</p>
+                <p className="text-[0.86vw] font-semibold text-gray-900">Everything in Basic, plus</p>
                 <ul className="space-y-[0.5vw] text-[0.72vw] text-gray-700 font-normal">
                   <li className="flex items-start gap-[0.45vw]">
                     <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'premium' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
@@ -478,7 +478,7 @@ const Pricing = () => {
             <div>
               {/* Top Icon */}
               <div className={`w-[2.6vw] h-[2.6vw] rounded-[0.6vw] border flex items-center justify-center mb-[0.9vw] ${
-                selectedCol === 'pro' ? 'bg-[#fff1ee] border-[#fecaca] text-[#ec5137]' : 'bg-gray-900 border-gray-800 text-white'
+                selectedCol === 'pro' ? 'bg-[#fff1ee] border-[#fecaca] text-[#ec5137]' : 'bg-gray-100 border-gray-200 text-gray-700'
               }`}>
                 <Icon icon="carbon:enterprise" className="w-[1.3vw] h-[1.3vw]" />
               </div>
@@ -509,7 +509,7 @@ const Pricing = () => {
                 <button type="button"
                   onClick={() => setSelectedCol('pro')}
                   className={`w-full py-[0.5vw] px-[0.8vw] rounded-[0.5vw] font-medium text-[0.8vw] text-center block shadow-xs transition-all flex items-center justify-center gap-[0.3vw] ${
-                    selectedCol === 'pro' ? 'bg-[#ec5137] hover:bg-[#d94229] text-white' : 'bg-gray-900 hover:bg-black text-white'
+                    selectedCol === 'pro' ? 'bg-[#ec5137] hover:bg-[#d94229] text-white' : 'border border-gray-300 hover:bg-gray-50 text-gray-700'
                   }`}
                 >
                   <span>Choose Pro</span>
@@ -527,7 +527,7 @@ const Pricing = () => {
 
               {/* Features List */}
               <div className="space-y-[0.55vw] pt-[0.6vw] border-t border-gray-100">
-                <p className="text-[0.74vw] font-semibold text-gray-900">Everything in Premium, plus</p>
+                <p className="text-[0.86vw] font-semibold text-gray-900">Everything in Premium, plus</p>
                 <ul className="space-y-[0.5vw] text-[0.72vw] text-gray-600 font-normal">
                   <li className="flex items-start gap-[0.45vw]">
                     <Icon icon="teenyicons:tick-circle-solid" className={`w-[0.9vw] h-[0.9vw] shrink-0 mt-[0.1vw] ${selectedCol === 'pro' ? 'text-[#ec5137]' : 'text-gray-600'}`} />
@@ -588,40 +588,48 @@ const Pricing = () => {
           <table className="w-full text-left border-collapse">
             {/* Table Header */}
             <thead>
-              <tr className="border-b border-gray-200 divide-x divide-gray-200">
-                <th className="w-[32%] bg-[#f8f9fa] text-gray-700 font-bold py-[1.1vw] px-[1.5vw] text-[0.88vw]">
+              <tr className="bg-[#333333] border-b border-[#222222] divide-x divide-[#444444]">
+                <th className="w-[32%] bg-[#333333] text-white font-bold py-[1.1vw] px-[1.5vw] text-[1vw]">
                   Features
                 </th>
                 <th 
                   onClick={() => setSelectedCol('free')}
-                  className={`w-[17%] font-bold text-center py-[1.1vw] px-[1.2vw] text-[0.88vw] cursor-pointer select-none ${getColBg('free', true)}`}
+                  className={`w-[17%] font-bold text-center py-[1.1vw] px-[1.2vw] text-[1vw] cursor-pointer select-none transition-colors duration-200 ${
+                    selectedCol === 'free' ? 'bg-[#444444] text-white' : 'bg-[#333333] text-white hover:bg-[#3d3d3d]'
+                  }`}
                 >
-                  <div className={selectedCol === 'free' ? 'text-[#ec5137]' : 'text-gray-800'}>Free</div>
+                  <div className="text-white">Free</div>
                 </th>
                 <th 
                   onClick={() => setSelectedCol('basic')}
-                  className={`w-[17%] text-center py-[1.1vw] px-[1.2vw] cursor-pointer select-none ${getColBg('basic', true)}`}
+                  className={`w-[17%] text-center py-[1.1vw] px-[1.2vw] cursor-pointer select-none transition-colors duration-200 ${
+                    selectedCol === 'basic' ? 'bg-[#444444] text-white' : 'bg-[#333333] text-white hover:bg-[#3d3d3d]'
+                  }`}
                 >
-                  <div className={`font-bold text-[0.85vw] ${selectedCol === 'basic' ? 'text-[#ec5137]' : 'text-gray-800'}`}>Basic</div>
-                  <div className="text-[0.66vw] text-gray-400 font-normal mt-[0.1vw]">
+                  <div className="font-bold text-[0.98vw] text-white">Basic</div>
+                  <div className={`text-[0.76vw] font-normal mt-[0.1vw] ${selectedCol === 'basic' ? 'text-gray-200' : 'text-gray-400'}`}>
                     {isAnnual ? '$31.99 /mo' : '$39.99 /mo'}
                   </div>
                 </th>
                 <th 
                   onClick={() => setSelectedCol('premium')}
-                  className={`w-[17%] text-center py-[1.1vw] px-[1.2vw] cursor-pointer select-none ${getColBg('premium', true)}`}
+                  className={`w-[17%] text-center py-[1.1vw] px-[1.2vw] cursor-pointer select-none transition-colors duration-200 ${
+                    selectedCol === 'premium' ? 'bg-[#444444] text-white' : 'bg-[#333333] text-white hover:bg-[#3d3d3d]'
+                  }`}
                 >
-                  <div className={`font-bold text-[0.85vw] ${selectedCol === 'premium' ? 'text-[#ec5137]' : 'text-gray-800'}`}>Premium</div>
-                  <div className="text-[0.66vw] text-gray-400 font-normal mt-[0.1vw]">
+                  <div className="font-bold text-[0.98vw] text-white">Premium</div>
+                  <div className={`text-[0.76vw] font-normal mt-[0.1vw] ${selectedCol === 'premium' ? 'text-gray-200' : 'text-gray-400'}`}>
                     {isAnnual ? '$79.99 /mo' : '$99.99 /mo'}
                   </div>
                 </th>
                 <th 
                   onClick={() => setSelectedCol('pro')}
-                  className={`w-[17%] text-center py-[1.1vw] px-[1.2vw] cursor-pointer select-none ${getColBg('pro', true)}`}
+                  className={`w-[17%] text-center py-[1.1vw] px-[1.2vw] cursor-pointer select-none transition-colors duration-200 ${
+                    selectedCol === 'pro' ? 'bg-[#444444] text-white' : 'bg-[#333333] text-white hover:bg-[#3d3d3d]'
+                  }`}
                 >
-                  <div className={`font-bold text-[0.85vw] ${selectedCol === 'pro' ? 'text-[#ec5137]' : 'text-gray-800'}`}>Pro</div>
-                  <div className="text-[0.66vw] text-gray-400 font-normal mt-[0.1vw]">
+                  <div className="font-bold text-[0.98vw] text-white">Pro</div>
+                  <div className={`text-[0.76vw] font-normal mt-[0.1vw] ${selectedCol === 'pro' ? 'text-gray-200' : 'text-gray-400'}`}>
                     {isAnnual ? '$159.99 /mo' : '$199.99 /mo'}
                   </div>
                 </th>
@@ -629,44 +637,128 @@ const Pricing = () => {
             </thead>
 
             {/* Table Body */}
-            <tbody className="divide-y divide-gray-100 text-[0.74vw] text-gray-600 font-normal">
+            <tbody className=" text-[0.86vw] text-gray-600 font-normal">
 
               {/* ---------------- SECTION 1 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   1. General &amp; Storage
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Storage Capacity</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Storage Capacity</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Storage Capacity.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>500 MB</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>5 GB</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>25 GB</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>100 GB</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Number of Flipbooks</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Number of Flipbooks</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Number of Flipbooks.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>5</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>25</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>75</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>250</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Maximum Pages per Flipbook</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Maximum Pages per Flipbook</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Maximum Pages per Flipbook.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>50 pages</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>200 pages</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>500 pages</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>1,000 pages</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Maximum File Upload Size</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Maximum File Upload Size</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Maximum File Upload Size.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>25 MB</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>100 MB</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>500 MB</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>2 GB</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Number of Devices</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Number of Devices</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Number of Devices.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>1</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>3</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>5</td>
@@ -674,55 +766,171 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 2 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   2. File Creation &amp; Publishing
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">PDF, Word, and PowerPoint File Conversion</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>PDF, Word, and PowerPoint File Conversion</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for PDF, Word, and PowerPoint File Conversion.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Bulk File Conversion</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Bulk File Conversion</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Bulk File Conversion.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Up to 5 files</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Import Files from Google Drive and Dropbox</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Import Files from Google Drive and Dropbox</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Import Files from Google Drive and Dropbox.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Automatic Link Detection in PDF Files</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Automatic Link Detection in PDF Files</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Automatic Link Detection in PDF Files.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Flipbook Preview and Publishing</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Flipbook Preview and Publishing</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Flipbook Preview and Publishing.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Create Flipbooks from Scratch</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Create Flipbooks from Scratch</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Create Flipbooks from Scratch.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Branded and Locked Templates for Teams</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Branded and Locked Templates for Teams</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Branded and Locked Templates for Teams.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
@@ -730,34 +938,102 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 3 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   3. Templates &amp; Design Library
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Number of Available Templates</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Number of Available Templates</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Number of Available Templates.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>10 free</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>50+</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>150+</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>All (300+)</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Easy Template Customization</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Easy Template Customization</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Easy Template Customization.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Custom Colour Settings</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Custom Colour Settings</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Custom Colour Settings.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>Basic</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">High-Quality PDF Export</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>High-Quality PDF Export</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for High-Quality PDF Export.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Standard</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>Print-Ready (300 DPI)</td>
@@ -765,48 +1041,148 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 4 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   4. Branding &amp; Sharing
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Custom Subdomains</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Custom Subdomains</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Custom Subdomains.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>1 subdomain</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>3 subdomains</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>Custom domain (CNAME)</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Custom Logo &amp; Company Profile</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Custom Logo &amp; Company Profile</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Custom Logo &amp; Company Profile.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Custom Branding Watermark</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Custom Branding Watermark</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Custom Branding Watermark.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Remove Flipbook Watermark</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Remove Flipbook Watermark</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Remove Flipbook Watermark.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Website Embedding</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Website Embedding</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Website Embedding.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>Standard embed</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Sharing (Social Media, QR Code, Direct Link)</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Sharing (Social Media, QR Code, Direct Link)</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Sharing (Social Media, QR Code, Direct Link).
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
@@ -814,41 +1190,125 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 5 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   5. Layout &amp; Design Customization
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Themes and Layouts</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Themes and Layouts</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Themes and Layouts.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>Basic themes</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>All standard</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>Custom CSS</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Customizable Lead Capture Forms</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Customizable Lead Capture Forms</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Customizable Lead Capture Forms.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Image Gallery Pop-ups</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Image Gallery Pop-ups</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Image Gallery Pop-ups.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Page Flip Effects (Hard Cover, Soft Cover)</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Page Flip Effects (Hard Cover, Soft Cover)</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Page Flip Effects (Hard Cover, Soft Cover).
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>Soft Cover</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Customizable Auto-Turn, Thumbnail Navigation, Zoom Settings, etc.</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Customizable Auto-Turn, Thumbnail Navigation, Zoom Settings, etc.</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Customizable Auto-Turn, Thumbnail Navigation, Zoom Settings, etc..
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>Basic</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
@@ -856,41 +1316,125 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 6 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   6. Interactive Editor &amp; Multimedia
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Interactive Multimedia Elements (Videos, Audio, Images, GIFs, Icons)</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Interactive Multimedia Elements (Videos, Audio, Images, GIFs, Icons)</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Interactive Multimedia Elements (Videos, Audio, Images, GIFs, Icons).
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>Images only</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Image, Video, and Audio Embedding</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Image, Video, and Audio Embedding</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Image, Video, and Audio Embedding.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>YouTube only</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>YouTube/Vimeo</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>Direct upload</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Customizable Pop-up Templates</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Customizable Pop-up Templates</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Customizable Pop-up Templates.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Standard</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Interactivity Elements (Frames, QR Code, Shapes, Grid, Text, Tables)</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Interactivity Elements (Frames, QR Code, Shapes, Grid, Text, Tables)</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Interactivity Elements (Frames, QR Code, Shapes, Grid, Text, Tables).
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>Basic shapes</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Interactive Hotspots</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Interactive Hotspots</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Interactive Hotspots.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>Up to 3 / book</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Up to 25 / book</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>Unlimited</td>
@@ -898,41 +1442,125 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 7 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   7. Analytics, Marketing &amp; Sales
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Total Flipbook Views</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Total Flipbook Views</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Total Flipbook Views.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>1,000 views</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>50,000 views</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>250,000 views</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>Unlimited</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Average Time Spent per Page</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Average Time Spent per Page</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Average Time Spent per Page.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Lead Capture Forms and Data Export</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Lead Capture Forms and Data Export</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Lead Capture Forms and Data Export.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>CSV Export</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>CSV, CRM, Webhooks</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Google Tag Manager</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Google Tag Manager</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Google Tag Manager.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Geolocation and Device Tracking</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Geolocation and Device Tracking</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Geolocation and Device Tracking.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Basic</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
@@ -940,34 +1568,102 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 8 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   8. Security, Privacy &amp; Compliance
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Password-Protected Flipbooks</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Password-Protected Flipbooks</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Password-Protected Flipbooks.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Public and Unlisted (Link-Only) Publishing</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Public and Unlisted (Link-Only) Publishing</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Public and Unlisted (Link-Only) Publishing.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Private Sharing with Specific Email Addresses</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Private Sharing with Specific Email Addresses</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Private Sharing with Specific Email Addresses.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Flipbook Deactivation</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Flipbook Deactivation</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Flipbook Deactivation.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
@@ -975,48 +1671,148 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 9 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   9. Team Collaboration &amp; Workspaces
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Viewer and Editor Seat Management</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Viewer and Editor Seat Management</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Viewer and Editor Seat Management.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>1 seat</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Up to 3 seats</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>Up to 5 seats</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>15 seats included</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Role-Based Access Control &amp; Permissions</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Role-Based Access Control &amp; Permissions</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Role-Based Access Control &amp; Permissions.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Basic</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>Custom Roles</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Shared Team Folders &amp; Collaborative Workspaces</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Shared Team Folders &amp; Collaborative Workspaces</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Shared Team Folders &amp; Collaborative Workspaces.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>2 folders</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>10 folders</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>Unlimited</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Branded and Locked Team Templates</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Branded and Locked Team Templates</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Branded and Locked Team Templates.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Team Member Activity Logs</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Team Member Activity Logs</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Team Member Activity Logs.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>30 days</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>Unlimited logs</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Single Sign-On (SSO) with SAML</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Single Sign-On (SSO) with SAML</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Single Sign-On (SSO) with SAML.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
@@ -1024,41 +1820,125 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 10 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   10. 3D Editor Studio
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Number of 3D Model Uploads &amp; Storage</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Number of 3D Model Uploads &amp; Storage</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Number of 3D Model Uploads &amp; Storage.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>5 models</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>25 models</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>100 models</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">3D Material Customization &amp; Custom Texture Upload</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>3D Material Customization &amp; Custom Texture Upload</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for 3D Material Customization &amp; Custom Texture Upload.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Basic</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>Advanced PBR</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Lighting, Environment Settings &amp; Realistic Shadow Rendering</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Lighting, Environment Settings &amp; Realistic Shadow Rendering</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Lighting, Environment Settings &amp; Realistic Shadow Rendering.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Standard HDRI</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>Full Studio Controls</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">3D Scene Export and Publishing</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>3D Scene Export and Publishing</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for 3D Scene Export and Publishing.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Multiple Export Formats (PNG, JPG, PDF, GLB, glTF)</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Multiple Export Formats (PNG, JPG, PDF, GLB, glTF)</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Multiple Export Formats (PNG, JPG, PDF, GLB, glTF).
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('basic')}`}>PNG, JPG</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>PNG, JPG, PDF, GLB</td>
@@ -1066,41 +1946,125 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 11 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   11. Augmented Reality (AR)
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">QR Code-Based AR Access</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>QR Code-Based AR Access</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for QR Code-Based AR Access.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Real-World 3D Model Placement</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Real-World 3D Model Placement</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Real-World 3D Model Placement.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">3D Model Rotation and Zoom</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>3D Model Rotation and Zoom</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for 3D Model Rotation and Zoom.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Interactive AR Hotspots</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Interactive AR Hotspots</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Interactive AR Hotspots.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('pro')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Real-Time Shadow &amp; AR Occlusion</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Real-Time Shadow &amp; AR Occlusion</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Real-Time Shadow &amp; AR Occlusion.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
@@ -1108,27 +2072,79 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 12 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   12. My Shelf – Digital Bookshelf
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Private &amp; Shared Folders</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Private &amp; Shared Folders</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Private &amp; Shared Folders.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>1 private folder</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>5 folders</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>20 folders</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>Unlimited</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Customized Digital Bookshelf</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Customized Digital Bookshelf</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Customized Digital Bookshelf.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>Standard theme</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Custom textures</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Check className="w-[1vw] h-[1vw] text-[#16A34A] mx-auto stroke-[2.5]" /></td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>White-label shelf</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Flipbook Count</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Flipbook Count</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Flipbook Count.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>Up to 5</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Up to 25</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>Up to 75</td>
@@ -1136,27 +2152,79 @@ const Pricing = () => {
               </tr>
 
               {/* ---------------- SECTION 13 ---------------- */}
-              <tr className="bg-[#f3f5ee] border-y border-[#e2e7d7] text-gray-800">
-                <td colSpan={5} className="py-[0.85vw] px-[1.5vw] font-bold text-[0.82vw] tracking-wide">
+              <tr className="text-gray-800">
+                <td className="py-[0.85vw] px-[1.5vw] font-bold text-[0.95vw] tracking-wide bg-[#eeeeee]">
                   13. Support &amp; Professional Services
                 </td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
+                <td className="bg-[#eeeeee]"></td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Chat Support</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Chat Support</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Chat Support.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('free')}`}>Community</td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('basic')}`}>Standard</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>Priority</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-gray-900 cursor-pointer ${getColBg('pro')}`}>24/7 Live Chat</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Priority Ticket Support</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Priority Ticket Support</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Priority Ticket Support.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center text-gray-600 cursor-pointer ${getColBg('basic')}`}>Standard response</td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center font-medium text-gray-800 cursor-pointer ${getColBg('premium')}`}>&lt; 4 hours SLA</td>
                 <td onClick={() => setSelectedCol('pro')} className={`py-[0.85vw] px-[1.2vw] text-center font-semibold text-[#16A34A] cursor-pointer ${getColBg('pro')}`}>&lt; 1 hour SLA</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors divide-x divide-gray-100">
-                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800">Dedicated Technical Support</td>
+              <tr className="hover:bg-transparent transition-colors divide-x divide-gray-100">
+                <td className="py-[0.85vw] px-[1.5vw] font-medium text-gray-800 border-b border-gray-100 text-[0.86vw]">
+                  <div className="flex items-center justify-between gap-[0.5vw] group relative">
+                    <span>Dedicated Technical Support</span>
+                    <div className="relative inline-flex items-center shrink-0 group/tip">
+                      <span className="w-[1.05vw] h-[1.05vw] rounded-full border border-gray-300 text-gray-400 group-hover/tip:border-gray-600 group-hover/tip:text-gray-700 flex items-center justify-center text-[0.65vw] font-medium italic cursor-default transition-colors select-none">
+                        i
+                      </span>
+                      {/* Tooltip Popup on Hover */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[0.4vw] hidden group-hover/tip:flex flex-col z-50 pointer-events-none">
+                        <div className="bg-[#222222] text-white text-[0.72vw] font-normal px-[0.75vw] py-[0.45vw] rounded-[0.35vw] shadow-xl whitespace-normal w-max max-w-[18vw] leading-relaxed text-left">
+                          Detailed feature specifications and usage limits for Dedicated Technical Support.
+                        </div>
+                        <div className="w-0 h-0 border-x-[0.35vw] border-x-transparent border-t-[0.35vw] border-t-[#222222] self-center"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
                 <td onClick={() => setSelectedCol('free')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('free')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('basic')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('basic')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
                 <td onClick={() => setSelectedCol('premium')} className={`py-[0.85vw] px-[1.2vw] text-center cursor-pointer ${getColBg('premium')}`}><Minus className="w-[0.9vw] h-[0.9vw] text-gray-300 mx-auto" /></td>
@@ -1245,7 +2313,7 @@ const Pricing = () => {
                     }`} />
                   </div>
                   {isOpen && (
-                    <p className="mt-[0.55vw] pt-[0.45vw] border-t border-gray-100 text-gray-600 text-[0.74vw] font-normal leading-relaxed">
+                    <p className="mt-[0.55vw] pt-[0.45vw] border-t border-gray-100 text-gray-600 text-[0.86vw] font-normal leading-relaxed">
                       {item.a}
                     </p>
                   )}
@@ -1275,13 +2343,13 @@ const Pricing = () => {
               Ready to <span className="text-[#ec5137]">get started?</span>
             </h2>
 
-            <p className="text-gray-600 text-[0.82vw] font-normal leading-relaxed max-w-[28vw] mx-auto">
+            <p className="text-gray-600 text-[0.95vw] font-normal leading-relaxed max-w-[28vw] mx-auto">
               Create engaging, interactive publications and catalogs, and bring your designs to life today.
             </p>
 
             <div className="pt-[0.4vw] flex justify-center">
               <button type="button"
-                className="bg-[#ec5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.82vw] px-[1.4vw] py-[0.52vw] rounded-full shadow-xs transition-all flex items-center gap-[0.4vw]"
+                className="bg-[#ec5137] hover:bg-[#d94229] active:scale-[0.98] text-white font-medium text-[0.95vw] px-[1.4vw] py-[0.52vw] rounded-full shadow-xs transition-all flex items-center gap-[0.4vw]"
               >
                 <span>Get Started Now</span>
                 <ArrowRight className="w-[0.85vw] h-[0.85vw]" />

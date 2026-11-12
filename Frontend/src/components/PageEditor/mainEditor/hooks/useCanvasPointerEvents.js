@@ -240,7 +240,7 @@ export const useCanvasPointerEvents = ({
   const handleSvgMouseDown = (pageIndex, e) => {
     window.__isCanvasPointerDown = true;
     if (e._handledMarquee) return;
-    if (e.button !== 0 || e.target.closest('.resize-handle')) return;
+    if (e.button !== 0 || e.target.closest('.resize-handle') || window.__isHoveringTableDivider || window.__isResizingTableDivider) return;
 
     // Allow native text selection/interaction inside actively edited text boxes
     if (e.target.closest('[contenteditable="true"]')) {
@@ -1138,8 +1138,9 @@ export const useCanvasPointerEvents = ({
     // Start marquee if user holds Ctrl (unless clicking a selected image) OR if they clicked on the background/base frame
     // (Also start if Shift is held so Shift+Drag can draw marquee over elements without Ctrl)
     // Converted flipbooks / Interaction & Animation modules: NEVER start marquee drag-selection
+    const isInsideTable = Boolean(e.target?.closest?.('td, th, table, [data-type="table-frame"], [data-type="table"], g[id^="table-"]'));
     const isModuleWithoutMarquee = activeTopTool === 'interaction' || activeTopTool === 'animation' || activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
-    const shouldStartMarquee = !isModuleWithoutMarquee && !isConvertedFlipbook && (((e.ctrlKey || e.shiftKey) && !hitSelectedImage) || ((!hitCandidate || hitBaseFrame) && selectedSelectToolRef.current !== 'direct' && !isEditingTextRef.current));
+    const shouldStartMarquee = !isInsideTable && !isModuleWithoutMarquee && !isConvertedFlipbook && (((e.ctrlKey || e.shiftKey) && !hitSelectedImage) || ((!hitCandidate || hitBaseFrame) && selectedSelectToolRef.current !== 'direct' && !isEditingTextRef.current));
 
     if (shouldStartMarquee) {
       const rect = container.getBoundingClientRect();
@@ -2183,6 +2184,10 @@ export const useCanvasPointerEvents = ({
       if (audioParent && audioParent.id) {
         resolvedId = audioParent.id;
       }
+      const tableParent = el?.closest?.('[data-type="table-frame"], [data-type="table"], g[id^="table-"]');
+      if (tableParent && tableParent.id) {
+        resolvedId = tableParent.id;
+      }
       const mediaParent = el?.closest?.('[data-is-image-group="true"], [data-is-video-group="true"], [data-is-gif-group="true"]');
       if (mediaParent && mediaParent.id) {
         resolvedId = mediaParent.id;
@@ -2219,6 +2224,42 @@ export const useCanvasPointerEvents = ({
       if (mbOld) mbOld.remove();
     }
 
+    const clearAllTableHighlights = (targetTableEl = null) => {
+      const tables = targetTableEl ? [targetTableEl] : Array.from(document.querySelectorAll('[data-type="table-frame"], [data-type="table"], g[id^="table-"]'));
+      tables.forEach(tParent => {
+        tParent.removeAttribute('data-table-selected');
+        tParent.removeAttribute('data-table-mode');
+        tParent.querySelectorAll('.table-cell-selection-overlay').forEach(n => n.remove());
+        const table = tParent.querySelector('table');
+        if (table) {
+          const normalBorder = tParent.getAttribute('data-border-color') || '#cbd5e1';
+          table.querySelectorAll('[data-neighbor-highlighted]').forEach(td => {
+            td.removeAttribute('data-neighbor-highlighted');
+            td.style.removeProperty('border-top-color');
+            td.style.removeProperty('border-bottom-color');
+            td.style.removeProperty('border-left-color');
+            td.style.removeProperty('border-right-color');
+            td.style.borderColor = td.getAttribute('data-cell-border-color') || normalBorder;
+          });
+          table.querySelectorAll('td[data-cell-selected], th[data-cell-selected], td[contenteditable="true"], th[contenteditable="true"]').forEach(td => {
+            td.removeAttribute('data-cell-selected');
+            td.removeAttribute('contenteditable');
+            td.style.removeProperty('outline');
+            td.style.removeProperty('outline-offset');
+            td.style.removeProperty('box-shadow');
+            td.style.cursor = 'default';
+            td.style.userSelect = 'none';
+            td.style.borderColor = td.getAttribute('data-cell-border-color') || normalBorder;
+          });
+          table.style.removeProperty('border-top-color');
+          table.style.removeProperty('border-bottom-color');
+          table.style.removeProperty('border-left-color');
+          table.style.removeProperty('border-right-color');
+        }
+      });
+      window.dispatchEvent(new CustomEvent('clear-table-cell-selection', { detail: { elementId: targetTableEl ? targetTableEl.id : null } }));
+    };
+
     if (id) {
       // Purge selection overlays for other elements across all overlay layers
       document.querySelectorAll('.selection-overlay-layer').forEach(overlay => {
@@ -2227,6 +2268,17 @@ export const useCanvasPointerEvents = ({
             node.remove();
           }
         });
+      });
+      // Clear data-table-selected and cell selections for any table that is not the newly selected element
+      document.querySelectorAll('[data-type="table-frame"], [data-type="table"], g[id^="table-"]').forEach(tbl => {
+        if (tbl.id !== id) {
+          clearAllTableHighlights(tbl);
+        } else {
+          tbl.setAttribute('data-table-selected', 'true');
+          if (!tbl.getAttribute('data-table-mode')) {
+            tbl.setAttribute('data-table-mode', 'global');
+          }
+        }
       });
       document.querySelectorAll('[id^="highlight-overlay-html-"]').forEach(htmlOverlay => {
         htmlOverlay.querySelectorAll('.resize-handle, .corner-value-badge, [id^="rotation-degree-badge-"], [id^="rotate-handle-"], [id^="rotate-hotspot-"]').forEach(node => {
@@ -2238,6 +2290,7 @@ export const useCanvasPointerEvents = ({
     } else {
       clearOverlayType('selected');
       clearOverlayType('child-selected');
+      clearAllTableHighlights();
     }
     clearSmartGuides();
   };
@@ -2265,7 +2318,7 @@ export const useCanvasPointerEvents = ({
   // ── FIGMA-STYLE CLICK: hierarchical frame drill-down selection ─────────────────
   const handleSvgClick = (e) => {
     clearSmartGuides();
-    if (e.target.closest('.resize-handle')) return;
+    if (e.target.closest('.resize-handle') || window.__isHoveringTableDivider || window.__isResizingTableDivider) return;
 
     // Allow native text selection/interaction inside actively edited text boxes
     if (e.target.closest('[contenteditable="true"]')) {
@@ -2481,6 +2534,11 @@ export const useCanvasPointerEvents = ({
           }
 
           if (currentSet.has(polySelectionId)) {
+            const clickedTable = clickedEl?.closest?.('[data-type="table-frame"], [data-type="table"]') || (polySelectionId?.startsWith('table-') ? clickedEl : null);
+            if (clickedTable) {
+              // Clicking on the selected table with Shift/Ctrl/Cmd is intended for cell selection/range, keep table selected!
+              return;
+            }
             currentSet.delete(polySelectionId);
             if (primaryId === polySelectionId) {
               const remaining = [...currentSet];
@@ -2588,6 +2646,12 @@ export const useCanvasPointerEvents = ({
     // Works at top-level OR inside an entered frame, but does NOT enter frames.
     const isMultiSelectClick = Boolean(e.shiftKey || e.metaKey || (e.ctrlKey && !e.altKey));
     if (isMultiSelectClick) {
+      // If clicking inside a table cell/element, do not toggle off the table from selection!
+      const isInsideTable = Boolean(e.target?.closest?.('td, th, table, [data-type="table-frame"], [data-type="table"], g[id^="table-"]'));
+      if (isInsideTable) {
+        return;
+      }
+
       const frameId = currentFrameIdRef.current;
 
       // Determine candidate element pool (same as current navigation level)
@@ -3117,10 +3181,12 @@ export const useCanvasPointerEvents = ({
       }
 
       const compoundParent = effectiveTarget?.closest?.(
-        '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"]'
+        '[data-is-element-typography="true"], [data-typography-type], [data-subtopic="Titles"], g[id^="typography-"], [data-is-element-shape="true"], [data-shape-type], [data-type="shape"], g[id^="shape-"], [data-is-element-button="true"], [data-type="button"], g[id^="button-"], [data-type="audio-frame"], [data-type="qrcode"], [data-type="map"], [data-type="embed-frame"], [data-type="slideshow"], [data-type="table-frame"], [data-type="table"], g[id^="table-"]'
       );
       if (compoundParent) {
-        if (compoundParent.id) {
+        const isTable = compoundParent.getAttribute('data-type') === 'table-frame' || compoundParent.id?.startsWith('table-');
+        const isCellClick = isTable && Boolean(effectiveTarget?.closest?.('td, th'));
+        if (compoundParent.id && (!isCellClick || selectedLayerIdRef.current !== compoundParent.id)) {
           setSingleSelection(compoundParent.id);
         }
         const hasMask = Boolean(

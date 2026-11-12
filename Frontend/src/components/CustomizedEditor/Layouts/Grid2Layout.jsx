@@ -4,52 +4,7 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 
 
 import TableOfContentsPopup from '../popups/TableOfContentsPopup';
-
-const PageThumbnail = React.memo(({ html, index, scale = 0.15, baseWidth = 400, baseHeight = 566 }) => {
-    const cleanHtml = (html || '')
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/<video\b[^<]*(?:(?!<\/video>)<[^<]*)*<\/video>/gi, '<div style="width:100%;height:100%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:20px;color:#9ca3af">Video</div>')
-        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '<div style="width:100%;height:100%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:20px;color:#9ca3af">Frame</div>')
-        .replace(/<img\b([^>]*src=['"]https:\/\/codia-f2c\.s3\.us-west-1\.amazonaws\.com\/[^'"]*['"])([^>]*)>/gi, '<img $1 crossOrigin="anonymous" $2>');
-
-    const srcDoc = `
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    body { margin: 0; padding: 0; overflow: hidden; background: white; width: ${baseWidth}px; height: ${baseHeight}px; position: relative; }
-                    * { box-sizing: border-box; }
-                    ::-webkit-scrollbar { width: 0px; background: transparent; }
-                    img { max-width: 100%; height: auto; display: block; }
-                </style>
-            </head>
-            <body>
-                 <div style="width: ${baseWidth}px; height: ${baseHeight}px; overflow: hidden; position: relative; background: white;">
-                    ${cleanHtml}
-                </div>
-            </body>
-        </html>
-    `;
-
-    return (
-        <div className="w-full h-full relative overflow-hidden bg-white flex items-center justify-center">
-            <iframe
-                className="border-none pointer-events-none"
-                srcDoc={srcDoc}
-                title={`Thumb ${index}`}
-                loading="lazy"
-                style={{
-                    width: `${baseWidth}px`,
-                    height: `${baseHeight}px`,
-                    transform: `scale(${scale})`,
-                    transformOrigin: 'center center',
-                    backgroundColor: 'white'
-                }}
-            />
-        </div>
-    );
-});
+import PageThumbnail from '../common/PageThumbnail';
 
 const getLayoutColor = (id, defaultColor) => `var(--${id}, ${defaultColor})`;
 const getLayoutColorRgba = (id, defaultRgb, defaultOpacity) => {

@@ -104,7 +104,7 @@ export async function extractPresentationToPdf(fileInput, fileName = 'presentati
     // Render slide to pure vector SVG
     const svgString = renderSlideToSvg(pres, slide, { textLayout: 'svg' });
     const canvas = await svgToCanvas(svgString, widthPx, heightPx, 1.25);
-    const jpegBytes = await canvasToJpegBytes(canvas, 0.88);
+    const jpegBytes = await canvasToJpegBytes(canvas, 0.82);
 
     pdfPages.push({
       widthPx,

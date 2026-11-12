@@ -843,16 +843,23 @@ export const updateShapeMaskOpacity = ({
   if (!patternMatch || !patternMatch[1]) return;
   const patternId = patternMatch[1];
 
-  const pattern = (svgRoot || selectedElement.closest?.('svg') || doc).querySelector?.(`pattern[id="${patternId}"]`) ||
-    doc.getElementById(patternId) ||
-    document.getElementById(patternId);
-  if (!pattern) return;
-
-  const imgNode = ensurePatternImageNode(pattern, selectedElement, doc);
-  if (!imgNode) return;
+  const allPatterns = new Set();
+  const searchRoot = svgRoot || selectedElement.closest?.('svg') || doc;
+  searchRoot.querySelectorAll?.(`pattern[id="${patternId}"]`).forEach(p => allPatterns.add(p));
+  selectedElement.querySelectorAll?.(`pattern[id="${patternId}"]`).forEach(p => allPatterns.add(p));
+  const docP = doc.getElementById?.(patternId) || document.getElementById?.(patternId);
+  if (docP && docP.tagName?.toLowerCase() === 'pattern') allPatterns.add(docP);
+  if (allPatterns.size === 0) return;
 
   const dec = Math.max(0, Math.min(1, opacity / 100)).toString();
-  imgNode.setAttribute('opacity', dec);
+  allPatterns.forEach(pattern => {
+    const curImg = ensurePatternImageNode(pattern, selectedElement, doc);
+    if (curImg) {
+      curImg.setAttribute('opacity', dec);
+    }
+    pattern.setAttribute('data-ts', String(Date.now()));
+  });
+
   target.setAttribute('data-slot-opacity', opacity.toString());
   if (selectedElement !== target) {
     selectedElement.setAttribute('data-slot-opacity', opacity.toString());
@@ -887,13 +894,17 @@ export const updateShapeMaskTransform = ({
   if (!patternMatch || !patternMatch[1]) return;
   const patternId = patternMatch[1];
 
-  const pattern = (svgRoot || selectedElement.closest?.('svg') || doc).querySelector?.(`pattern[id="${patternId}"]`) ||
-    doc.getElementById(patternId) ||
-    document.getElementById(patternId);
-  if (!pattern) return;
+  const allPatterns = new Set();
+  const searchRoot = svgRoot || selectedElement.closest?.('svg') || doc;
+  searchRoot.querySelectorAll?.(`pattern[id="${patternId}"]`).forEach(p => allPatterns.add(p));
+  selectedElement.querySelectorAll?.(`pattern[id="${patternId}"]`).forEach(p => allPatterns.add(p));
+  const docP = doc.getElementById?.(patternId) || document.getElementById?.(patternId);
+  if (docP && docP.tagName?.toLowerCase() === 'pattern') allPatterns.add(docP);
+  if (allPatterns.size === 0) return;
 
-  const imgNode = ensurePatternImageNode(pattern, selectedElement, doc);
-  if (!imgNode) return;
+  const firstPattern = Array.from(allPatterns)[0];
+  const primaryImgNode = ensurePatternImageNode(firstPattern, selectedElement, doc);
+  if (!primaryImgNode) return;
 
   const currentPanX = panX !== undefined ? panX : parseFloat(target.getAttribute('data-slot-pan-x') || '0');
   const currentPanY = panY !== undefined ? panY : parseFloat(target.getAttribute('data-slot-pan-y') || '0');
@@ -901,7 +912,7 @@ export const updateShapeMaskTransform = ({
 
   let currentAngle = angle;
   if (currentAngle === null || currentAngle === undefined) {
-    const tf = imgNode.getAttribute('transform') || '';
+    const tf = primaryImgNode.getAttribute('transform') || '';
     const rMatch = tf.match(/rotate\(([-0-9.]+)/);
     if (rMatch) {
       currentAngle = parseFloat(rMatch[1]) || 0;
@@ -949,46 +960,10 @@ export const updateShapeMaskTransform = ({
   const padX = Math.max(baseW * 2, 200);
   const padY = Math.max(baseH * 2, 200);
 
-  pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-  pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
-  pattern.setAttribute('x', String(bbox.x - padX));
-  pattern.setAttribute('y', String(bbox.y - padY));
-  pattern.setAttribute('width', String(baseW + padX * 2));
-  pattern.setAttribute('height', String(baseH + padY * 2));
-  pattern.removeAttribute('patternTransform');
-  pattern.removeAttribute('viewBox');
-
-  // Background rect in pattern covering the entire user space tile
-  let bgRect = pattern.querySelector('rect.mask-bg-fill');
-  if (!bgRect) {
-    bgRect = (doc || document).createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bgRect.setAttribute('class', 'mask-bg-fill');
-    pattern.insertBefore(bgRect, pattern.firstChild);
-  }
-  bgRect.setAttribute('x', String(padX));
-  bgRect.setAttribute('y', String(padY));
-  bgRect.setAttribute('width', String(baseW));
-  bgRect.setAttribute('height', String(baseH));
-
-  const origFill = target.getAttribute('data-original-fill') || selectedElement.getAttribute('data-original-fill');
-  const origFillOp = target.getAttribute('data-original-fill-opacity') || selectedElement.getAttribute('data-original-fill-opacity') || '1';
-  if (origFill && origFill !== 'none') {
-    applySvgGradientOrSolid({
-      targetEl: bgRect,
-      fillVal: origFill,
-      fillOp: origFillOp,
-      idPrefix: `grad-${patternId}-bg`,
-      doc,
-      svgRoot
-    });
-  } else if (origFill === 'none') {
-    bgRect.setAttribute('fill', 'none');
-  }
-
   const meta = target.getAttribute('data-slot-image-meta') || selectedElement.getAttribute('data-slot-image-meta') || '';
   const m = meta.match(/(\d+)\s*[xX]\s*(\d+)/);
-  let naturalW = m ? parseFloat(m[1]) : (imgNode.naturalWidth || (imgNode.width?.baseVal?.value > 1 ? imgNode.width.baseVal.value : 1254));
-  let naturalH = m ? parseFloat(m[2]) : (imgNode.naturalHeight || (imgNode.height?.baseVal?.value > 1 ? imgNode.height.baseVal.value : 1254));
+  let naturalW = m ? parseFloat(m[1]) : (primaryImgNode.naturalWidth || (primaryImgNode.width?.baseVal?.value > 1 ? primaryImgNode.width.baseVal.value : 1254));
+  let naturalH = m ? parseFloat(m[2]) : (primaryImgNode.naturalHeight || (primaryImgNode.height?.baseVal?.value > 1 ? primaryImgNode.height.baseVal.value : 1254));
   if (!naturalW || naturalW <= 1) naturalW = 1254;
   if (!naturalH || naturalH <= 1) naturalH = 1254;
 
@@ -1005,25 +980,68 @@ export const updateShapeMaskTransform = ({
   const imgX = tileCenterX + dx - imgW / 2;
   const imgY = tileCenterY + dy - imgH / 2;
 
-  imgNode.setAttribute('x', String(imgX));
-  imgNode.setAttribute('y', String(imgY));
-  imgNode.setAttribute('width', String(imgW));
-  imgNode.setAttribute('height', String(imgH));
-  imgNode.setAttribute('preserveAspectRatio', 'none');
+  const origFill = target.getAttribute('data-original-fill') || selectedElement.getAttribute('data-original-fill');
+  const origFillOp = target.getAttribute('data-original-fill-opacity') || selectedElement.getAttribute('data-original-fill-opacity') || '1';
 
-  if (currentAngle !== 0) {
-    imgNode.setAttribute('transform', `rotate(${currentAngle}, ${tileCenterX + dx}, ${tileCenterY + dy})`);
-  } else {
-    imgNode.removeAttribute('transform');
-  }
+  allPatterns.forEach(pattern => {
+    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+    pattern.setAttribute('patternContentUnits', 'userSpaceOnUse');
+    pattern.setAttribute('x', String(bbox.x - padX));
+    pattern.setAttribute('y', String(bbox.y - padY));
+    pattern.setAttribute('width', String(baseW + padX * 2));
+    pattern.setAttribute('height', String(baseH + padY * 2));
+    pattern.removeAttribute('patternTransform');
+    pattern.removeAttribute('viewBox');
+
+    // Background rect in pattern covering the entire user space tile
+    let bgRect = pattern.querySelector('rect.mask-bg-fill');
+    if (!bgRect) {
+      bgRect = (doc || document).createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bgRect.setAttribute('class', 'mask-bg-fill');
+      pattern.insertBefore(bgRect, pattern.firstChild);
+    }
+    bgRect.setAttribute('x', String(padX));
+    bgRect.setAttribute('y', String(padY));
+    bgRect.setAttribute('width', String(baseW));
+    bgRect.setAttribute('height', String(baseH));
+
+    if (origFill && origFill !== 'none') {
+      applySvgGradientOrSolid({
+        targetEl: bgRect,
+        fillVal: origFill,
+        fillOp: origFillOp,
+        idPrefix: `grad-${patternId}-bg`,
+        doc,
+        svgRoot
+      });
+    } else if (origFill === 'none') {
+      bgRect.setAttribute('fill', 'none');
+    }
+
+    const curImg = ensurePatternImageNode(pattern, selectedElement, doc);
+    if (curImg) {
+      curImg.setAttribute('x', String(imgX));
+      curImg.setAttribute('y', String(imgY));
+      curImg.setAttribute('width', String(imgW));
+      curImg.setAttribute('height', String(imgH));
+      curImg.setAttribute('preserveAspectRatio', 'none');
+
+      if (currentAngle !== 0) {
+        curImg.setAttribute('transform', `rotate(${currentAngle}, ${tileCenterX + dx}, ${tileCenterY + dy})`);
+      } else {
+        curImg.removeAttribute('transform');
+      }
+    }
+
+    // Force pattern cache invalidation in browser
+    pattern.setAttribute('data-ts', String(Date.now()));
+  });
 
   target.setAttribute('data-slot-rotation', String(currentAngle));
   if (selectedElement !== target) {
     selectedElement.setAttribute('data-slot-rotation', String(currentAngle));
   }
 
-  // Force pattern cache invalidation in browser
-  pattern.setAttribute('data-ts', String(Date.now()));
   const fill = target.getAttribute('fill') || fillAttr;
   if (fill) {
     target.setAttribute('fill', fill);

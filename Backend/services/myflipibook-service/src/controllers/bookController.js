@@ -203,6 +203,7 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
       ? String(doc.folder_id)
       : (doc.folder_id || 'default');
   }
+  folderVId = String(folderVId).replace(/^fol_/, '');
 
   const primaryFolder = folderVId;
   const mtime = doc.lastUpdated || doc.updatedAt || doc.createdAt;
@@ -2748,12 +2749,32 @@ exports.getBook = async (req, res) => {
       }
     }
 
-    const populatedPages = (book.pages || []).map((p) => {
+    // 1. Detect which candidate directory actually contains the pages folder first to avoid scanning 12+ dirs for every page
+    let primaryBookDir = null;
+    for (const candDir of candidateDirs) {
+      const pDir = path.join(candDir, "pages");
+      try {
+        if (fs.existsSync(pDir)) {
+          primaryBookDir = candDir;
+          break;
+        }
+      } catch (_) {}
+    }
+
+    const dirsToSearch = primaryBookDir 
+      ? [primaryBookDir, ...candidateDirs.filter(d => d !== primaryBookDir)]
+      : candidateDirs;
+
+    // 2. Load page data asynchronously in non-blocking parallel to prevent event-loop freezes on 100-page books
+    const sortedRawPages = (book.pages || []).slice().sort(
+      (a, b) => (Number(a.pageNumber) || 0) - (Number(b.pageNumber) || 0)
+    );
+    const populatedPages = await Promise.all(sortedRawPages.map(async (p) => {
       const pageObj = p.toObject ? p.toObject() : { ...p };
       let pageContent = "";
 
-      // 1. MUST load page data directly from local storage file on disk first
-      for (const candDir of candidateDirs) {
+      // MUST load page data directly from local storage file on disk first
+      for (const candDir of dirsToSearch) {
         const candidateFiles = [
           pageObj.fileName
             ? path.join(candDir, "pages", pageObj.fileName)
@@ -2767,20 +2788,18 @@ exports.getBook = async (req, res) => {
         ].filter(Boolean);
 
         for (const fPath of candidateFiles) {
-          if (fs.existsSync(fPath)) {
-            try {
-              const str = fs.readFileSync(fPath, "utf8");
-              if (str && str.trim()) {
-                pageContent = str;
-                break;
-              }
-            } catch (e) {}
-          }
+          try {
+            const str = await fs.promises.readFile(fPath, "utf8");
+            if (str && str.trim()) {
+              pageContent = str;
+              break;
+            }
+          } catch (_) {}
         }
         if (pageContent) break;
       }
 
-      // 2. Fallback to MongoDB only if local storage file does not exist
+      // Fallback to MongoDB only if local storage file does not exist
       if (!pageContent) {
         pageContent = pageObj.content || pageObj.html || "";
       }
@@ -2802,7 +2821,7 @@ exports.getBook = async (req, res) => {
         content: pageContent,
         html: pageContent,
       };
-    });
+    }));
 
     let customizedDoc = null;
     try {
@@ -3263,7 +3282,7 @@ exports.previewBook = async (req, res) => {
     res.status(200).json({
       success: true,
       book: formatBook(book, null, null, folderMap, reverseFolderMap),
-      pages: book.pages || [],
+      pages: (book.pages || []).slice().sort((a, b) => (Number(a.pageNumber) || 0) - (Number(b.pageNumber) || 0)),
       html: firstPageHtml,
     });
   } catch (err) {

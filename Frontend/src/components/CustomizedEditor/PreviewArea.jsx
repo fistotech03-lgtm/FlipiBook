@@ -73,6 +73,14 @@ const PreviewArea = React.memo(({
     const watermarkSettings = watermarkSettingsProp || customizerRedux.watermarkSettings;
 
     const [processedLogoSrc, setProcessedLogoSrc] = useState(incomingLogoSettings?.src || '');
+    const [isInitialPreparing, setIsInitialPreparing] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsInitialPreparing(false);
+        }, 1800);
+        return () => clearTimeout(timer);
+    }, []);
 
     useEffect(() => {
         if (!incomingLogoSettings?.src) {
@@ -151,7 +159,10 @@ const PreviewArea = React.memo(({
     }, [incomingOtherSetupSettings, incomingSettings, currentBook]);
 
     const leadFormSettings = React.useMemo(() => {
-        return incomingLeadFormSettings || incomingSettings?.leadForm || incomingSettings?.leadform || incomingSettings?.Customized_Settings?.leadForm || currentBook?.Customized_Settings?.leadForm || null;
+        const candidate = incomingLeadFormSettings || incomingSettings?.leadForm || incomingSettings?.leadform || incomingSettings?.Customized_Settings?.leadForm || currentBook?.Customized_Settings?.leadForm || null;
+        if (candidate && candidate.enabled !== undefined) return candidate;
+        const fallback = incomingSettings?.leadForm || incomingSettings?.leadform || incomingSettings?.Customized_Settings?.leadForm || currentBook?.Customized_Settings?.leadForm || null;
+        return fallback || candidate;
     }, [incomingLeadFormSettings, incomingSettings, currentBook]);
 
     const resolvedVId = React.useMemo(() => {
@@ -463,58 +474,64 @@ const PreviewArea = React.memo(({
 
 
 
+    const prevBaseDimRef = useRef({ width: 210, height: 297 });
     const baseDimensions = useMemo(() => {
+        let dim = null;
         if (pages && pages.length > 0) {
             for (const p of pages) {
                 const htmlStr = p.html || p.content || '';
                 if (htmlStr) {
                     const match = htmlStr.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*["']/i);
                     if (match && parseFloat(match[3]) > 0 && parseFloat(match[4]) > 0) {
-                        return { width: parseFloat(match[3]), height: parseFloat(match[4]) };
+                        dim = { width: parseFloat(match[3]), height: parseFloat(match[4]) };
+                        break;
                     }
                     const wMatch = htmlStr.match(/<svg[^>]*\bwidth=["']([0-9.]+)(?:px|mm)?["']/i);
                     const hMatch = htmlStr.match(/<svg[^>]*\bheight=["']([0-9.]+)(?:px|mm)?["']/i);
                     if (wMatch && hMatch && parseFloat(wMatch[1]) > 0 && parseFloat(hMatch[1]) > 0) {
-                        return { width: parseFloat(wMatch[1]), height: parseFloat(hMatch[1]) };
+                        dim = { width: parseFloat(wMatch[1]), height: parseFloat(hMatch[1]) };
+                        break;
                     }
                 }
             }
         }
 
-        // Fallback: check currentBook, settings, or location state for explicit width / height or templateId + orientation
-        const state = (typeof window !== 'undefined' && window.history?.state?.usr) || {};
-        const w = currentBook?.width || settings?.width || state?.width;
-        const h = currentBook?.height || settings?.height || state?.height;
-        if (w && h) {
-            return { width: parseFloat(w), height: parseFloat(h) };
-        }
+        if (!dim) {
+            // Fallback: check currentBook, settings, or location state for explicit width / height or templateId + orientation
+            const state = (typeof window !== 'undefined' && window.history?.state?.usr) || {};
+            const w = currentBook?.width || settings?.width || state?.width;
+            const h = currentBook?.height || settings?.height || state?.height;
+            if (w && h) {
+                dim = { width: parseFloat(w), height: parseFloat(h) };
+            } else {
+                const templateId = (currentBook?.templateId || settings?.templateId || settings?.format || state?.templateId || '').toLowerCase();
+                const orientation = (currentBook?.orientation || settings?.orientation || state?.orientation || '').toLowerCase();
+                if (templateId) {
+                    let baseW = 210, baseH = 297;
+                    if (templateId === 'corporate' || templateId === 'a4') { baseW = 210; baseH = 297; }
+                    else if (templateId === 'large_catalogue' || templateId === 'a3') { baseW = 297; baseH = 420; }
+                    else if (templateId === 'mini' || templateId === 'a5') { baseW = 148; baseH = 210; }
+                    else if (templateId === 'letter') { baseW = 216; baseH = 279; }
+                    else if (templateId === 'legal') { baseW = 216; baseH = 356; }
+                    else if (templateId === 'dl') { baseW = 99; baseH = 210; }
+                    else if (templateId === 'square') { baseW = 210; baseH = 210; }
 
-        const templateId = (currentBook?.templateId || settings?.templateId || settings?.format || state?.templateId || '').toLowerCase();
-        const orientation = (currentBook?.orientation || settings?.orientation || state?.orientation || '').toLowerCase();
-        if (templateId) {
-            let baseW = 210, baseH = 297;
-            if (templateId === 'corporate' || templateId === 'a4') { baseW = 210; baseH = 297; }
-            else if (templateId === 'large_catalogue' || templateId === 'a3') { baseW = 297; baseH = 420; }
-            else if (templateId === 'mini' || templateId === 'a5') { baseW = 148; baseH = 210; }
-            else if (templateId === 'letter') { baseW = 216; baseH = 279; }
-            else if (templateId === 'legal') { baseW = 216; baseH = 356; }
-            else if (templateId === 'dl') { baseW = 99; baseH = 210; }
-            else if (templateId === 'square') { baseW = 210; baseH = 210; }
-
-            if (templateId !== 'square' && orientation === 'landscape') {
-                return { width: baseH, height: baseW };
+                    dim = (templateId !== 'square' && orientation === 'landscape') ? { width: baseH, height: baseW } : { width: baseW, height: baseH };
+                } else if (orientation === 'square') {
+                    dim = { width: 210, height: 210 };
+                } else if (orientation === 'landscape') {
+                    dim = { width: 297, height: 210 };
+                } else {
+                    dim = { width: 210, height: 297 };
+                }
             }
-            return { width: baseW, height: baseH };
         }
 
-        if (orientation === 'square') {
-            return { width: 210, height: 210 };
+        if (prevBaseDimRef.current && prevBaseDimRef.current.width === dim.width && prevBaseDimRef.current.height === dim.height) {
+            return prevBaseDimRef.current;
         }
-        if (orientation === 'landscape') {
-            return { width: 297, height: 210 };
-        }
-
-        return { width: 210, height: 297 }; // Fallback A4
+        prevBaseDimRef.current = dim;
+        return dim;
     }, [pages, currentBook, settings]);
 
     const isTurnJs = !bookAppearanceSettings?.hardCover;
@@ -720,6 +737,11 @@ const PreviewArea = React.memo(({
     const [countdown, setCountdown] = useState(null);
 
     const [currentPage, setCurrentPage] = useState(targetPage);
+    // Guard to prevent circular flip: when we programmatically jump via targetPage,
+    // onFlip would echo back to setTargetPage → targetPage → flip again.
+    const isExternalJumpRef = useRef(false);
+    const prevTargetPageRef = useRef(targetPage);
+    const externalJumpTimerRef = useRef(null);
     const [offset, setOffset] = useState(() => {
         // Compute the correct initial offset so first page is centered from the very first render
         if (targetPage === 0) return -(400 / 2); // WIDTH = 400, half-page shift left for cover
@@ -867,23 +889,27 @@ const PreviewArea = React.memo(({
         }
     }, [otherSetupSettings?.gallery?.previewOpen, isPublishedPreview, disableAutoGallery]);
 
-    // Sync current page with targetPage prop (from PageEditor's activePageIndex)
+    // Sync current page with targetPage prop (from PageEditor's activePageIndex or direct URL)
     useEffect(() => {
+        if (prevTargetPageRef.current === targetPage) return;
+        prevTargetPageRef.current = targetPage;
+
         if (targetPage !== undefined && targetPage !== currentPage) {
+            isExternalJumpRef.current = true;
             setCurrentPage(targetPage);
-            // Ensure the flipbook engine also jumps to the new page
+            if (externalJumpTimerRef.current) clearTimeout(externalJumpTimerRef.current);
+
             if (bookRef.current) {
-                // Determine if we need to call turnToPage or similar
                 const flip = bookRef.current?.pageFlip();
                 if (flip) {
-                    // Use a small delay to ensure the turn engine is fully initialized
-                    setTimeout(() => {
-                        try { flip.turnToPage(targetPage); } catch (e) { console.warn('Flip failed', e); }
-                    }, 50);
+                    try { flip.turnToPage(targetPage); } catch (e) { console.warn('Flip failed', e); }
                 }
             }
+            externalJumpTimerRef.current = setTimeout(() => {
+                isExternalJumpRef.current = false;
+            }, 120);
         }
-    }, [targetPage]);
+    }, [targetPage, currentPage]);
 
     const handleToggleAudio = useCallback(() => {
         setIsMuted(prev => !prev);
@@ -1066,7 +1092,6 @@ const PreviewArea = React.memo(({
     }, [otherSetupSettings?.toolbar?.autoFlipEnabled]);
 
     const setShowTOCMemo = useCallback((val) => {
-        console.log('🔄 PreviewArea: setShowTOCMemo triggered with value:', val);
         if (val) {
             setShowThumbnailBar(false);
             setShowAddBookmarkPopup(false);
@@ -1535,7 +1560,11 @@ const PreviewArea = React.memo(({
     const customHardPages = useMemo(() => rawCustomHardPages || [], [rawCustomHardPages]);
 
     const onFlip = useCallback((e) => {
+        // Skip echoing back to setTargetPage while we are in a programmatic external jump
+        // — prevents the circular: targetPage → flip → onFlip → setTargetPage → targetPage loop
+        if (isExternalJumpRef.current) return;
         const logicalIndex = e.data;
+        prevTargetPageRef.current = logicalIndex;
         setCurrentPage(logicalIndex);
 
         if (externalOnFlip) {
@@ -1570,26 +1599,17 @@ const PreviewArea = React.memo(({
 
     const onTurning = useCallback((e) => {
         const logicalIndex = e.data;
-        if (logicalIndex !== currentPage) {
-            setCurrentPage(logicalIndex);
-
-            if (externalOnFlip) {
-                externalOnFlip(logicalIndex);
-            }
-
-            // Signal a flip to the Sound component when turning starts
-            if (lastSoundLogicalRef.current !== logicalIndex) {
-                lastSoundLogicalRef.current = logicalIndex;
-                setFlipTrigger(prev => prev + 1);
-                setMobileFlipTrigger(prev => prev + 1);
-            }
+        // Signal flip sound directly via zero-render custom event
+        if (lastSoundLogicalRef.current !== logicalIndex) {
+            lastSoundLogicalRef.current = logicalIndex;
+            window.dispatchEvent(new CustomEvent('flipbook:play-flip-sound'));
         }
 
         // Fix for iframe cursor issue: Blur parent buttons so iframe can capture focus
         if (document.activeElement && typeof document.activeElement.blur === 'function' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
             document.activeElement.blur();
         }
-    }, [currentPage, externalOnFlip])
+    }, []);
 
 
     useEffect(() => {
@@ -1694,8 +1714,27 @@ const PreviewArea = React.memo(({
         return getIframeContent(html, pageNum, watermarkSettingsRef.current, pages.length, isSinglePage, baseUrl);
     }, [watermarkSrc, pages.length, isSinglePage, baseUrl]);
 
-    const bookRendererProps = {
+    const interactionZoomStyle = useMemo(() => {
+        if (!interactionZoom) return { transition: 'transform 0.5s ease', transform: 'scale(1)', transformOrigin: 'center center' };
+        const { scale, rect, pageNumber } = interactionZoom;
+        const originX = ((rect.left + rect.width / 2) / rect.windowWidth) * 100;
+        const originY = ((rect.top + rect.height / 2) / rect.windowHeight) * 100;
+        let finalOriginX = originX;
+        if (activeDevice !== 'Mobile') {
+            const isRightPage = pageNumber % 2 !== 0;
+            finalOriginX = isRightPage ? 50 + (originX / 2) : originX / 2;
+        }
+        return {
+            transform: `scale(${scale})`,
+            transformOrigin: `${finalOriginX}% ${originY}%`,
+            transition: 'transform 0.5s ease',
+            zIndex: 50
+        };
+    }, [interactionZoom, activeDevice]);
+
+    const bookRendererProps = useMemo(() => ({
         augmentedPages,
+        v_id: incomingVId || incomingVIdProp || currentBook?.v_id || null,
         WIDTH,
         HEIGHT,
         baseDimensions,
@@ -1728,24 +1767,17 @@ const PreviewArea = React.memo(({
         isTurnJs,
         physicalZoom: actualPhysicalZoom,
         watermarkSettings,
-        style: (() => {
-            if (!interactionZoom) return { transition: 'transform 0.5s ease', transform: 'scale(1)', transformOrigin: 'center center' };
-            const { scale, rect, pageNumber } = interactionZoom;
-            const originX = ((rect.left + rect.width / 2) / rect.windowWidth) * 100;
-            const originY = ((rect.top + rect.height / 2) / rect.windowHeight) * 100;
-            let finalOriginX = originX;
-            if (activeDevice !== 'Mobile') {
-                const isRightPage = pageNumber % 2 !== 0;
-                finalOriginX = isRightPage ? 50 + (originX / 2) : originX / 2;
-            }
-            return {
-                transform: `scale(${scale})`,
-                transformOrigin: `${finalOriginX}% ${originY}%`,
-                transition: 'transform 0.5s ease',
-                zIndex: 50
-            };
-        })()
-    };
+        style: interactionZoomStyle
+    }), [
+        augmentedPages, incomingVId, incomingVIdProp, currentBook?.v_id,
+        WIDTH, HEIGHT, baseDimensions, flipTime, flipStyle, useHardCover,
+        makeFirstLastPageHard, selectCustomHardPages, customHardPages,
+        targetPage, bookRef, onFlip, onTurning, cornerRadius, pageOpacity,
+        textureStyle, shadowActive, shadowStyle, shadowFilter, currentPage,
+        isSinglePage, pages.length, onPageClick, settings, setShowViewBookmarkPopup,
+        memoizedBuildPageDoc, activeLayout, interactionZoom, activeTooltip,
+        isTurnJs, actualPhysicalZoom, watermarkSettings, interactionZoomStyle
+    ]);
 
 
     const prevSubViewRef = useRef(activeSubView);
@@ -1779,7 +1811,7 @@ const PreviewArea = React.memo(({
         }
 
         const isLeadFormTabActive = (activeSubView || '').toLowerCase() === 'leadform';
-        if (isLeadFormTabActive) {
+        if (isLeadFormTabActive && !leadFormSubmitted) {
             setShowLeadForm(true);
             return;
         }
@@ -2263,13 +2295,15 @@ const PreviewArea = React.memo(({
 
         const totalPages = augmentedPages.length || pages.length;
         // Soft cover (turn.js): Shift left to center the front cover, shift right to center the back cover
+        let targetOffset = 0;
         if (currentPage === 0) {
-            setOffset(-(WIDTH / 2));
+            targetOffset = -(WIDTH / 2);
         } else if (currentPage >= totalPages - 2) {
-            setOffset((currentPage % 2 === 0) ? -(WIDTH / 2) : (WIDTH / 2));
+            targetOffset = (currentPage % 2 === 0) ? -(WIDTH / 2) : (WIDTH / 2);
         } else {
-            setOffset(0);
+            targetOffset = 0;
         }
+        setOffset(prev => prev === targetOffset ? prev : targetOffset);
     }, [currentPage, pages.length, augmentedPages.length, WIDTH, useHardCover]);
 
     const layoutBackgroundSettings = React.useMemo(() => ({
@@ -2357,6 +2391,8 @@ const PreviewArea = React.memo(({
             bookmarks={bookmarks}
             notes={notes}
             isMobileLandscape={isMobileLandscape}
+            leadFormSettings={leadFormSettings}
+            onOpenLeadForm={() => setShowLeadForm(true)}
         />
     );
 
@@ -2499,6 +2535,13 @@ const PreviewArea = React.memo(({
 
             {(!['Tablet', 'Mobile'].includes(activeDevice) || (activeDevice === 'Tablet' && isPhysicalTablet) || (activeDevice === 'Mobile' && isPhysicalMobile)) && backgroundLayers}
 
+            {isInitialPreparing && (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 99999, backgroundColor: '#1E1F24', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', transition: 'opacity 0.4s ease' }}>
+                    <div className="w-9 h-9 border-2 border-white/20 border-t-[#ea543a] rounded-full animate-spin" />
+                    <span style={{ color: '#fff', fontSize: '13px', fontWeight: 500, letterSpacing: '0.03em' }}>Preparing Flipbook…</span>
+                </div>
+            )}
+
             <DeviceLayoutRenderer
                 activeDevice={activeDevice}
                 isPublishedPreview={isPublishedPreview}
@@ -2584,15 +2627,7 @@ const PreviewArea = React.memo(({
                 />
             )}
 
-            {/* Centered Screen Lead Form Modal Overlay */}
-            {showLeadForm && (
-                <LeadFormPopup
-                    leadFormSettings={leadFormSettings}
-                    isTablet={isTablet}
-                    isMobile={activeDevice === 'Mobile'}
-                    onClose={() => setLeadFormSubmitted(true)}
-                />
-            )}
+
         </div>
     );
 });

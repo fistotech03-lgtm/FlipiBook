@@ -1,33 +1,20 @@
 // Frontend/src/pages/Forum/ForumSidebar.jsx
 import React from 'react';
 import { 
-  BookOpen, 
-  FileText, 
-  Settings, 
-  Box, 
-  Repeat, 
-  User, 
   PanelLeftClose, 
-  PanelLeftOpen,
-  Folder
+  PanelLeftOpen 
 } from 'lucide-react';
+import { Icon } from '@iconify/react';
 import { FORUM_MODULES } from './data/forumData';
-
-const iconMap = {
-  BookOpen,
-  FileText,
-  Settings,
-  Box,
-  Repeat,
-  User
-};
 
 export default function ForumSidebar({ 
   selectedModuleId, 
   onSelectModule, 
   isCollapsed, 
   onToggleCollapse, 
-  moduleCounts = {} 
+  moduleCounts = {},
+  activeArea = 'modules',
+  onSelectArea
 }) {
   return (
     <aside 
@@ -37,11 +24,11 @@ export default function ForumSidebar({
           : 'w-full sm:w-[18vw] p-[1.2vw]'
       }`}
     >
-      {/* Top Header Row (Exact MyFlipbooks Section Header Style) */}
+      {/* Top Header Row */}
       {!isCollapsed ? (
         <div className="flex items-center justify-between mb-[0.75vw] flex-none px-[0.2vw]">
-          <span className="text-[0.95vw] font-bold text-white tracking-tight">
-            Modules
+          <span className="text-[0.85vw] font-semibold text-gray-400 uppercase tracking-wider">
+            Categories
           </span>
           <button
             onClick={onToggleCollapse}
@@ -63,12 +50,44 @@ export default function ForumSidebar({
         </div>
       )}
 
-      {/* Module Navigation List (Exact MyFlipbooks item text-[0.875vw], gap-[0.75vw], px-[0.85vw] py-[0.55vw]) */}
-      <nav className="flex-1 overflow-y-auto space-y-[0.25vw] pr-[0.1vw] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      {/* Categories Navigation */}
+      <nav className="flex-1 overflow-y-auto space-y-[0.35vw] pr-[0.1vw] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {/* All Items Option (iconamoon:profile) */}
+        {isCollapsed ? (
+          <div
+            onClick={() => onSelectArea && onSelectArea('all')}
+            className={`relative group w-[clamp(36px,2.4vw,44px)] h-[clamp(36px,2.4vw,44px)] mx-auto rounded-[0.5vw] flex items-center justify-center transition-all duration-150 cursor-pointer select-none ${
+              activeArea === 'all'
+                ? 'bg-[#ec5137]/20 text-[#ec5137] border border-[#ec5137]/30'
+                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white'
+            }`}
+          >
+            <Icon icon="iconamoon:profile" className="w-[1.25vw] h-[1.25vw] shrink-0" />
+            <div className="absolute left-full ml-[0.6vw] px-[0.7vw] py-[0.35vw] bg-[#1e2738] text-white border border-[#243042] text-[0.75vw] rounded-[0.4vw] whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-xl">
+              <div className="font-medium text-white">All</div>
+            </div>
+          </div>
+        ) : (
+          <div
+            onClick={() => onSelectArea && onSelectArea('all')}
+            className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+              activeArea === 'all'
+                ? 'bg-[#ec5137]/15 text-[#ec5137] font-semibold border-l-2 border-[#ec5137]'
+                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+            }`}
+          >
+            <div className="flex items-center gap-[0.75vw] min-w-0">
+              <Icon icon="iconamoon:profile" className="w-[1.25vw] h-[1.25vw] shrink-0" />
+              <span className="truncate">All</span>
+            </div>
+          </div>
+        )}
+
+        {/* Modules List */}
         {FORUM_MODULES.map((module) => {
-          const isSelected = module.id === selectedModuleId;
-          const IconComponent = iconMap[module.icon] || Folder;
+          const isSelected = activeArea === 'modules' && module.id === selectedModuleId;
           const count = moduleCounts[module.id] || 0;
+          const iconName = module.iconify || 'lucide:folder';
 
           if (isCollapsed) {
             return (
@@ -77,12 +96,12 @@ export default function ForumSidebar({
                 onClick={() => onSelectModule(module.id)}
                 className={`relative group w-[clamp(36px,2.4vw,44px)] h-[clamp(36px,2.4vw,44px)] mx-auto rounded-[0.5vw] flex items-center justify-center transition-all duration-150 cursor-pointer select-none ${
                   isSelected 
-                    ? 'bg-[#2c3749] text-white shadow-xs' 
+                    ? 'bg-[#ec5137]/20 text-[#ec5137] border border-[#ec5137]/30 shadow-xs' 
                     : 'text-gray-300 hover:bg-[#1e2738] hover:text-white'
                 }`}
               >
-                <IconComponent className={`w-[1.15vw] h-[1.15vw] shrink-0 ${
-                  isSelected ? 'text-white' : 'text-gray-300'
+                <Icon icon={iconName} className={`w-[1.25vw] h-[1.25vw] shrink-0 ${
+                  isSelected ? 'text-[#ec5137]' : 'text-gray-300'
                 }`} />
 
                 {/* Floating tooltip on hover */}
@@ -94,32 +113,108 @@ export default function ForumSidebar({
             );
           }
 
-          // Expanded layout (matches MyFlipbooks item classes 1:1)
           return (
             <div
               key={module.id}
               onClick={() => onSelectModule(module.id)}
               className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
                 isSelected 
-                  ? 'bg-[#2c3749] text-white font-medium shadow-xs' 
+                  ? 'bg-[#ec5137]/15 text-[#ec5137] font-semibold border-l-2 border-[#ec5137]' 
                   : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
               }`}
             >
               <div className="flex items-center gap-[0.75vw] min-w-0">
-                <IconComponent className={`w-[1.15vw] h-[1.15vw] shrink-0 ${
-                  isSelected ? 'text-white' : 'text-gray-300'
+                <Icon icon={iconName} className={`w-[1.25vw] h-[1.25vw] shrink-0 ${
+                  isSelected ? 'text-[#ec5137]' : 'text-gray-300'
                 }`} />
                 <span className="truncate">{module.name}</span>
               </div>
 
-              <span className={`text-[0.8vw] flex-shrink-0 ${
-                isSelected ? 'text-white font-medium' : 'text-gray-400'
-              }`}>
-                {count}
-              </span>
+              {count > 0 && (
+                <span className={`text-[0.75vw] flex-shrink-0 ${
+                  isSelected ? 'text-[#ec5137] font-medium' : 'text-gray-400'
+                }`}>
+                  {count}
+                </span>
+              )}
             </div>
           );
         })}
+
+        {/* Separator & Your Activity Section */}
+        <div className="pt-4 pb-2">
+          {!isCollapsed ? (
+            <div className="border-t border-[#1f293d] pt-3 pb-1 px-[0.2vw]">
+              <span className="text-[0.85vw] font-semibold text-gray-400 uppercase tracking-wider">
+                Your Activity
+              </span>
+            </div>
+          ) : (
+            <div className="border-t border-[#1f293d] my-2" />
+          )}
+        </div>
+
+        {/* Favourites (lucide:bookmark outline) */}
+        {isCollapsed ? (
+          <div
+            onClick={() => onSelectArea && onSelectArea('favourites')}
+            className={`relative group w-[clamp(36px,2.4vw,44px)] h-[clamp(36px,2.4vw,44px)] mx-auto rounded-[0.5vw] flex items-center justify-center transition-all duration-150 cursor-pointer select-none ${
+              activeArea === 'favourites'
+                ? 'bg-[#ec5137]/20 text-[#ec5137]'
+                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white'
+            }`}
+          >
+            <Icon icon="lucide:bookmark" className="w-[1.2vw] h-[1.2vw] shrink-0" />
+            <div className="absolute left-full ml-[0.6vw] px-[0.7vw] py-[0.35vw] bg-[#1e2738] text-white border border-[#243042] text-[0.75vw] rounded-[0.4vw] whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-xl">
+              <div className="font-medium text-white">Favourites</div>
+            </div>
+          </div>
+        ) : (
+          <div
+            onClick={() => onSelectArea && onSelectArea('favourites')}
+            className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+              activeArea === 'favourites'
+                ? 'bg-[#ec5137]/15 text-[#ec5137] font-semibold border-l-2 border-[#ec5137]'
+                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+            }`}
+          >
+            <div className="flex items-center gap-[0.75vw] min-w-0">
+              <Icon icon="lucide:bookmark" className="w-[1.2vw] h-[1.2vw] shrink-0" />
+              <span className="truncate">Favourites</span>
+            </div>
+          </div>
+        )}
+
+        {/* My Posts (ant-design:history-outlined) */}
+        {isCollapsed ? (
+          <div
+            onClick={() => onSelectArea && onSelectArea('my_posts')}
+            className={`relative group w-[clamp(36px,2.4vw,44px)] h-[clamp(36px,2.4vw,44px)] mx-auto rounded-[0.5vw] flex items-center justify-center transition-all duration-150 cursor-pointer select-none ${
+              activeArea === 'my_posts'
+                ? 'bg-[#ec5137]/20 text-[#ec5137]'
+                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white'
+            }`}
+          >
+            <Icon icon="ant-design:history-outlined" className="w-[1.2vw] h-[1.2vw] shrink-0" />
+            <div className="absolute left-full ml-[0.6vw] px-[0.7vw] py-[0.35vw] bg-[#1e2738] text-white border border-[#243042] text-[0.75vw] rounded-[0.4vw] whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-xl">
+              <div className="font-medium text-white">My Posts</div>
+            </div>
+          </div>
+        ) : (
+          <div
+            onClick={() => onSelectArea && onSelectArea('my_posts')}
+            className={`w-full flex items-center justify-between px-[0.85vw] py-[0.55vw] rounded-[0.5vw] transition-all text-[0.875vw] cursor-pointer select-none ${
+              activeArea === 'my_posts'
+                ? 'bg-[#ec5137]/15 text-[#ec5137] font-semibold border-l-2 border-[#ec5137]'
+                : 'text-gray-300 hover:bg-[#1e2738] hover:text-white font-normal'
+            }`}
+          >
+            <div className="flex items-center gap-[0.75vw] min-w-0">
+              <Icon icon="ant-design:history-outlined" className="w-[1.2vw] h-[1.2vw] shrink-0" />
+              <span className="truncate">My Posts</span>
+            </div>
+          </div>
+        )}
       </nav>
     </aside>
   );

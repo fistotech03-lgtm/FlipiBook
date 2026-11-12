@@ -252,6 +252,24 @@ const syncProfile = (profileDoc) => {
 };
 
 /**
+ * Synchronize shelf customizations into backup DB
+ */
+const syncShelfCustomizations = (shelfDoc) => {
+  safeAsync(async () => {
+    const raw = toPlainObject(shelfDoc);
+    if (!raw) return;
+
+    const conn = await getBackupConnection();
+    if (!conn) return;
+
+    const col = conn.collection('ShelfCustomizations');
+    const query = raw._id ? { _id: raw._id } : { emailId: raw.emailId };
+
+    await col.updateOne(query, { $set: { ...raw, isDeleted: false } }, { upsert: true });
+  });
+};
+
+/**
  * Append or sync a login audit log into backup DB
  */
 const syncLoginLog = (logDoc) => {
@@ -579,6 +597,7 @@ module.exports = {
   syncPageEditorSettings,
   syncUser,
   syncProfile,
+  syncShelfCustomizations,
   syncLoginLog,
   syncUserGallery,
   syncLead,

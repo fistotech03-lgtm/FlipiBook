@@ -9,6 +9,99 @@ import ColorPicker from '../../../properties/ColorPicker';
 import Effect from '../../../properties/Effect';
 import { ElementToggle, ElementDropdown } from './ElementUIControls';
 import { getEmbedOverlayHtml } from '../utils/embedElementUtils';
+import { handleScrubHelper } from '../../../properties/propertiesShared';
+
+const SectionHeader = ({ title, rightElement }) => (
+  <div className="flex items-center gap-[0.8vw]">
+    <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+    {rightElement}
+    <div className="flex-1 h-[1px] bg-gray-200" />
+  </div>
+);
+
+// Exact ColorBox matching user screenshot and Color.jsx
+const ColorBoxRow = ({
+  title,
+  color,
+  opacity = 100,
+  onOpenPicker,
+  onChange,
+  onOpacityChange,
+  isActive = false,
+  titleRight,
+}) => {
+  const isTransparent = !color || color === 'none' || color === 'transparent';
+  const displayColor = (() => {
+    if (isTransparent) return '#';
+    if (typeof color === 'string' && color.includes('gradient')) return 'Gradient';
+    return typeof color === 'string' ? (color.startsWith('#') ? color.toUpperCase() : '#' + color.toUpperCase()) : '#000000';
+  })();
+
+  return (
+    <div className="flex flex-col gap-[0.5vw]">
+      {title && (
+        <div className="flex items-center gap-[0.8vw] mb-[0.1vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+          {titleRight}
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+      )}
+      <div className="flex items-center gap-[0.6vw]">
+        {/* Swatch (3.6vw x 2.1vw rounded rectangle matching user screenshot) */}
+        <div
+          onClick={onOpenPicker}
+          className={`w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105 ${
+            isActive ? 'border-indigo-500 ring-2 ring-indigo-500/20' : ''
+          }`}
+          title={`Change ${title || 'color'}`}
+        >
+          <div
+            className="w-full h-full"
+            style={{ background: isTransparent ? '#ffffff' : color }}
+          />
+          {isTransparent && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45 pointer-events-none" />
+          )}
+        </div>
+
+        {/* Input box */}
+        <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 focus-within:border-indigo-400 transition-colors shadow-2xs">
+          <input
+            type="text"
+            value={displayColor}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || val === '#') {
+                onChange('none');
+              } else {
+                const finalVal = val.startsWith('#') ? val : '#' + val;
+                onChange(finalVal);
+              }
+            }}
+            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            maxLength={9}
+          />
+          <div
+            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+            onPointerDown={(e) => {
+              const currentPct = Math.round(parseFloat(opacity !== undefined ? opacity : 100));
+              handleScrubHelper(e, currentPct, (val) => {
+                const num = parseInt(val);
+                const clamped = Math.min(Math.max(num, 0), 100);
+                onOpacityChange(clamped);
+              });
+            }}
+            title="Drag horizontally to adjust opacity"
+          >
+            <span className="text-[0.8vw] font-medium text-gray-700">
+              {Math.round(parseFloat(opacity !== undefined ? opacity : 100))}%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Section header matching editor design standards
 // Helper to sync live SVG filters on the DOM element for Drop Shadow
@@ -133,78 +226,7 @@ const syncLiveFilters = (el) => {
   el.setAttribute('filter', `url(#${filterId})`);
 };
 
-const SectionHeader = ({ title }) => (
-  <div className="flex items-center gap-[0.4vw] mt-[0.3vw] mb-[0.5vw]">
-    <span className="text-[0.9vw] font-semibold text-black whitespace-nowrap">{title}</span>
-    <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
-  </div>
-);
-
-// PropertyRow matching editor alignment
-const PropertyRow = ({ label, children, className = '' }) => (
-  <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.8vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-800 font-semibold">
-      <span className={`${label.length > 12 ? 'text-[0.8vw]' : 'text-[0.8vw]'}`}>
-        {label}
-      </span>
-      <span className="text-gray-900 font-semibold text-[0.8vw]">:</span>
-    </div>
-    <div className="flex-1 min-w-0">
-      {children}
-    </div>
-  </div>
-);
-
-// Custom Dropdown matching exact reference design
 const CustomSelect = ElementDropdown;
-
-// Color Swatch + Hex Input Box
-const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => {
-  const displayColor = color && color.startsWith('#') ? color.toUpperCase() : color || '#000000';
-
-  return (
-    <div className="flex items-center gap-[0.4vw] w-full">
-      <div
-        onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2.2vw] h-[2.2vw] rounded-[0.45vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
-          }`}
-        style={{ backgroundColor: color === 'none' || color === 'transparent' ? '#ffffff' : color }}
-        title="Click to open color palette"
-      >
-        {(color === 'none' || color === 'transparent') && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
-        )}
-      </div>
-      <div className="flex-1 h-[2.4vw] min-h-[32px] flex items-center justify-between border border-gray-200 rounded-[0.45vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-        <input
-          type="text"
-          value={color && color.includes('gradient') ? 'GRADIENT' : displayColor}
-          onChange={(e) => {
-            let val = e.target.value;
-            if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
-            onChange(val);
-          }}
-          className="w-[6.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
-          maxLength={color && color.includes('gradient') ? 10 : 9}
-        />
-        <span className="text-gray-500 text-[0.75vw] font-semibold">{opacity}%</span>
-      </div>
-    </div>
-  );
-};
-
-// RadioButton component with signature accent
-const RadioButton = ({ label, checked, onChange }) => (
-  <label onClick={onChange} className="flex items-center gap-[0.4vw] cursor-pointer select-none">
-    <div
-      className={`w-[1.05vw] h-[1.05vw] rounded-full border-2 flex items-center justify-center transition-all ${checked ? 'border-[#E05638]' : 'border-gray-400 hover:border-gray-600'
-        }`}
-    >
-      {checked && <div className="w-[0.5vw] h-[0.5vw] rounded-full bg-[#E05638]" />}
-    </div>
-    <span className="text-[0.78vw] text-gray-700 font-semibold">{label}</span>
-  </label>
-);
 
 const escapeHtml = (unsafe) => {
   return (unsafe || '')
@@ -250,7 +272,7 @@ const formatEmbedUrl = (rawUrl, allowFs = true) => {
 
 const getEmbedIframeContent = ({ via, targetUrl, code, allowFs }) => {
   const defaultPlaceholderHtml = `
-    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#64748b; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border-radius:0px; border:2px dashed #cbd5e1;">
+    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#64748b; font-family:system-ui, -apple-system, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border-radius:0px; border:2px dashed #cbd5e1;">
       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px;">
         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
@@ -262,7 +284,7 @@ const getEmbedIframeContent = ({ via, targetUrl, code, allowFs }) => {
 
   const placeholderDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;}</style></head><body>${defaultPlaceholderHtml}</body></html>`;
 
-  const fsAttrs = allowFs ? 'allowfullscreen' : '';
+  const fsAttrs = allowFs ? 'allowfullscreen="true"' : '';
   const allowPolicy = `accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture${allowFs ? '; fullscreen' : ''}`;
 
   if (via === 'URL') {
@@ -295,7 +317,7 @@ const getEmbedIframeContent = ({ via, targetUrl, code, allowFs }) => {
 
     // Only allow HTML embed code (tags like <iframe>, <div>, <script>, etc.) - do not parse plain URLs as embeds
     if (!trimmedCode.startsWith('<')) {
-      const invalidEmbedDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;}</style></head><body><div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#ef4444; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border:2px dashed #fca5a5;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg><div style="font-size:16px; font-weight:600; color:#b91c1c; margin-bottom:4px;">Invalid Embed Code</div><div style="font-size:12px; color:#64748b;">Please enter valid HTML embed code (e.g. &lt;iframe...&gt;), or switch to URL mode.</div></div></body></html>`;
+      const invalidEmbedDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;}</style></head><body><div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; background:#f8fafc; color:#ef4444; font-family:system-ui, -apple-system, sans-serif; text-align:center; box-sizing:border-box; padding:20px; border:2px dashed #fca5a5;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg><div style="font-size:16px; font-weight:600; color:#b91c1c; margin-bottom:4px;">Invalid Embed Code</div><div style="font-size:12px; color:#64748b;">Please enter valid HTML embed code (e.g. &lt;iframe...&gt;), or switch to URL mode.</div></div></body></html>`;
       return {
         type: 'placeholder',
         src: '',
@@ -308,7 +330,7 @@ const getEmbedIframeContent = ({ via, targetUrl, code, allowFs }) => {
     if (!allowFs) {
       processedContent = processedContent.replace(/\sallowfullscreen(="[^"]*")?/gi, '');
     } else if (!processedContent.includes('allowfullscreen')) {
-      processedContent = processedContent.replace(/<iframe/i, '<iframe allowfullscreen');
+      processedContent = processedContent.replace(/<iframe/i, '<iframe allowfullscreen="true"');
     }
 
     const rawHtmlDocument = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;border-radius:0px;} video::-webkit-media-controls { zoom: 1.5; } video, iframe, img { width: 100%; height: 100%; border: none; display: block; border-radius:0px; }</style></head><body>${processedContent}</body></html>`;
@@ -1190,140 +1212,269 @@ const ElementEmbedProperties = ({
   };
 
   return (
-    <div className="w-full flex flex-col gap-[0.6vw] font-sans text-gray-800 pt-[0.2vw] pr-[0.2vw] select-none">
+    <div className="relative flex flex-col gap-[1.7vw] w-full max-w-[25vw] pb-[2vw] font-sans select-none">
+      {/* ===================== HEADER ===================== */}
+      <div className="flex items-center gap-[0.8vw]">
+        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">Embed Properties</span>
+        <div className="flex-1 h-[1px] bg-gray-200" />
+      </div>
 
-      {/* ─── 1. 3RD PARTY EMBED PROPERTY ─── */}
-      <SectionHeader title="3rd Party Embed Property" />
+      {/* ===================== 1. 3RD PARTY EMBED ===================== */}
+      <div className="flex flex-col gap-[0.6vw]">
+        <SectionHeader title="3rd Party Embed" />
 
-      {/* Embed Via row */}
-      <PropertyRow label="Embed Via">
-        <div className="flex items-center gap-[1.2vw]">
-          <RadioButton
-            label="Embed Link"
-            checked={embedVia === 'URL'}
-            onChange={() => handleEmbedViaChange('URL')}
-          />
-          <RadioButton
-            label="Embed Code"
-            checked={embedVia === 'Embed Code'}
-            onChange={() => handleEmbedViaChange('Embed Code')}
+        {/* Embed Via Switcher */}
+        <div className="grid grid-cols-2 gap-[0.4vw] p-[0.2vw] bg-gray-100 rounded-[0.45vw]">
+          <button
+            type="button"
+            onClick={() => handleEmbedViaChange('URL')}
+            className={`h-[1.9vw] rounded-[0.35vw] text-[0.8vw] font-medium transition-all ${
+              embedVia === 'URL' ? 'bg-white text-gray-900 shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Embed Link
+          </button>
+          <button
+            type="button"
+            onClick={() => handleEmbedViaChange('Embed Code')}
+            className={`h-[1.9vw] rounded-[0.35vw] text-[0.8vw] font-medium transition-all ${
+              embedVia === 'Embed Code' ? 'bg-white text-gray-900 shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Embed Code
+          </button>
+        </div>
+
+        {/* Input / Code Area */}
+        <div className="flex flex-col gap-[0.3vw] mt-[0.1vw]">
+          <span className="text-[0.72vw] text-gray-500 font-medium">
+            {embedVia === 'Embed Code' ? 'HTML Embed Code' : 'Source URL'}
+          </span>
+
+          {embedVia === 'Embed Code' ? (
+            <div className="relative w-full">
+              <textarea
+                placeholder="Paste HTML code here (e.g. <iframe ...>)"
+                value={customCode}
+                onChange={(e) => handleCustomCodeChange(e.target.value)}
+                rows={3}
+                className="w-full border border-gray-300 rounded-[0.45vw] p-[0.6vw] pr-[2.2vw] text-[0.8vw] font-mono text-gray-800 placeholder-gray-400 outline-none focus:border-indigo-400 bg-white h-[5.5vw] resize-none shadow-2xs transition-colors"
+              />
+              {isLoading && (
+                <div className="absolute top-[0.6vw] right-[0.6vw] flex items-center justify-center pointer-events-none z-10">
+                  <Loader2 className="w-[0.9vw] h-[0.9vw] animate-spin text-indigo-600" />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex h-[2.1vw] border border-gray-300 rounded-[0.45vw] overflow-hidden focus-within:border-indigo-400 transition-colors bg-white shadow-2xs">
+              <input
+                type="text"
+                placeholder="e.g. https://..."
+                value={url}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                className="flex-1 px-[0.75vw] text-[0.8vw] font-medium outline-none text-gray-800 placeholder-gray-400 bg-transparent"
+              />
+              {isLoading && (
+                <div className="flex items-center px-[0.4vw]">
+                  <Loader2 className="w-[0.85vw] h-[0.85vw] animate-spin text-indigo-600" />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (url) {
+                    navigator.clipboard.writeText(url.startsWith('http') ? url : 'https://' + url);
+                    setCopiedUrl(true);
+                    setTimeout(() => setCopiedUrl(false), 1500);
+                  }
+                }}
+                className="px-[0.6vw] flex items-center justify-center text-gray-500 hover:text-indigo-600 transition-colors bg-gray-50 border-l border-gray-200 cursor-pointer"
+                title={copiedUrl ? 'Copied!' : 'Copy Link'}
+              >
+                {copiedUrl ? (
+                  <Check className="w-[0.85vw] h-[0.85vw] text-green-600" />
+                ) : (
+                  <Copy className="w-[0.85vw] h-[0.85vw]" />
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ===================== 2. EMBED CONTROLS ===================== */}
+      <div className="flex flex-col gap-[0.6vw]">
+        <SectionHeader title="Embed Controls" />
+
+        {/* Open website button */}
+        <div className="flex items-center justify-between h-[2.1vw]">
+          <span className="text-[0.82vw] font-medium text-gray-800 whitespace-nowrap">Open website button</span>
+          <ToggleSwitch
+            checked={openWebsiteBtn}
+            onChange={handleOpenWebsiteBtnChange}
           />
         </div>
-      </PropertyRow>
 
-      <div className="flex flex-col gap-[0.25vw] pl-[0.5vw] pr-[0.2vw]">
-        <span className="text-[0.7vw] text-gray-500 font-semibold">
-          {embedVia === 'Embed Code' ? 'Code' : 'Source URL'}
-        </span>
-
-        {embedVia === 'Embed Code' ? (
-          <div className="relative w-full">
-            <textarea
-              placeholder="Paste HTML code here"
-              value={customCode}
-              onChange={(e) => handleCustomCodeChange(e.target.value)}
-              rows={3}
-              className="w-full border border-gray-200 rounded-[0.5vw] p-[0.6vw] pr-[2.2vw] text-[0.78vw] font-semibold text-gray-800 placeholder-gray-400 outline-none focus:border-[#E05638] focus:ring-1 focus:ring-[#E05638] bg-white h-[5.5vw] resize-none shadow-2xs font-mono"
-            />
-            {isLoading && (
-              <div className="absolute top-[0.6vw] right-[0.6vw] flex items-center justify-center pointer-events-none z-10">
-                <Loader2 className="w-[0.9vw] h-[0.9vw] animate-spin text-[#E05638]" />
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex border border-gray-200 rounded-[0.5vw] overflow-hidden focus-within:border-[#E05638] focus-within:ring-1 focus-within:ring-[#E05638] transition-all bg-white shadow-2xs">
-            <input
-              type="text"
-              placeholder="e.g. https://..."
-              value={url}
-              onChange={(e) => handleUrlChange(e.target.value)}
-              className="flex-1 px-[0.6vw] py-[0.5vw] text-[0.78vw] font-semibold outline-none text-gray-800 placeholder-gray-400 bg-transparent"
-            />
-            {isLoading && (
-              <div className="flex items-center px-[0.4vw]">
-                <Loader2 className="w-[0.85vw] h-[0.85vw] animate-spin text-[#E05638]" />
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                if (url) {
-                  navigator.clipboard.writeText(url.startsWith('http') ? url : 'https://' + url);
-                  setCopiedUrl(true);
-                  setTimeout(() => setCopiedUrl(false), 1500);
-                }
-              }}
-              className="px-[0.6vw] flex items-center justify-center text-gray-500 hover:text-[#E05638] transition-colors bg-gray-50 border-l border-gray-200 cursor-pointer"
-              title={copiedUrl ? 'Copied!' : 'Copy Link'}
-            >
-              {copiedUrl ? (
-                <Check className="w-[0.85vw] h-[0.85vw] text-green-600" />
-              ) : (
-                <Copy className="w-[0.85vw] h-[0.85vw]" />
-              )}
-            </button>
+        {/* Behavior (only visible when Open website button is enabled) */}
+        {openWebsiteBtn && (
+          <div className="flex items-center justify-between gap-[0.8vw]">
+            <span className="text-[0.82vw] font-medium text-gray-800">Behavior</span>
+            <div className="relative flex-1">
+              <CustomSelect
+                value={behavior}
+                onChange={handleBehaviorChange}
+                options={BEHAVIOR_OPTIONS}
+              />
+            </div>
           </div>
         )}
-      </div>
 
-      {/* ─── 2. EMBED CONTROLS ─── */}
-      <SectionHeader title="Embed Controls" />
-
-      {/* Open website button */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <span className="text-[0.78vw] text-gray-700 font-semibold whitespace-nowrap">Open website button</span>
-        <ToggleSwitch
-          checked={openWebsiteBtn}
-          onChange={handleOpenWebsiteBtnChange}
-        />
-      </div>
-
-      {/* Behavior (only visible when Open website button is enabled) */}
-      {openWebsiteBtn && (
-        <PropertyRow label="Behavior">
-          <CustomSelect
-            value={behavior}
-            onChange={handleBehaviorChange}
-            options={BEHAVIOR_OPTIONS}
+        {/* Allow Fullscreen */}
+        <div className="flex items-center justify-between h-[2.1vw]">
+          <span className="text-[0.82vw] font-medium text-gray-800">Allow Fullscreen</span>
+          <ToggleSwitch
+            checked={allowFullscreen}
+            onChange={handleAllowFullscreenChange}
           />
-        </PropertyRow>
-      )}
-      
-      {/* Allow Fullscreen */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.2vw] h-[2.2vw]">
-        <div className="flex items-center gap-[0.25vw]">
-          <span className="text-[0.78vw] text-gray-700 font-semibold">Allow Fullscreen</span>
         </div>
-        <ToggleSwitch
-          checked={allowFullscreen}
-          onChange={handleAllowFullscreenChange}
-        />
       </div>
 
-      {/* ─── 3. EFFECTS ─── */}
-      <SectionHeader title="Effects" />
-
-      <div>
-        <Effect
-          isShape={false}
-          openSubSection={openSection}
-          setOpenSubSection={setOpenSection}
-          activeEffects={activeEffects}
-          setActiveEffects={handleSetActiveEffects}
-          effectSettings={effectSettings}
-          setEffectSettings={handleSetEffectSettings}
-          activeColorPicker={activeColorPicker}
-          setActiveColorPicker={setActiveColorPicker}
-          showDetailedPicker={showDetailedPicker}
-          setShowDetailedPicker={setShowDetailedPicker}
-          hideBlur={true}
-          hideInnerShadow={true}
-          hideHeader={true}
+      {/* ===================== 3. STROKE COLOR & WIDTH ===================== */}
+      <div className="flex flex-col gap-[1.1vw]">
+        <ColorBoxRow
+          title="Stoke Color"
+          color={strokeColor}
+          opacity={strokeOpacity}
+          onOpenPicker={() => setActiveColorPicker(activeColorPicker === 'strokeColor' ? null : 'strokeColor')}
+          onChange={handleStrokeColorChange}
+          onOpacityChange={handleStrokeOpacityChange}
+          isActive={activeColorPicker === 'strokeColor'}
         />
+
+        {/* Stroke Width & Line Corner */}
+        {(() => {
+          const isStrokeDisabled = !strokeColor || strokeColor === 'none' || strokeColor === 'transparent';
+          return (
+            <div className={`flex items-center gap-[1vw] mt-[0.2vw] transition-opacity duration-200 ${isStrokeDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
+              {/* Stroke Width */}
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Stroke width</span>
+                <div className="flex items-center gap-[0.3vw] h-[2.1vw]">
+                  <button
+                    type="button"
+                    disabled={isStrokeDisabled}
+                    onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
+                    className="w-[2.1vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <span className="text-[1vw] leading-none mb-[0.1vw]">-</span>
+                  </button>
+                  <div
+                    className="flex-grow h-full bg-white border border-gray-300 rounded-[0.45vw] flex items-center cursor-ew-resize shadow-2xs hover:border-gray-400 transition-colors"
+                    onPointerDown={(e) => {
+                      if (isStrokeDisabled) return;
+                      handleScrubHelper(e, strokeWidth, (v) => handleStrokeWidthChange(Math.max(0, parseInt(v) || 0)));
+                    }}
+                  >
+                    <input
+                      type="number"
+                      disabled={isStrokeDisabled}
+                      value={strokeWidth}
+                      onChange={(e) => handleStrokeWidthChange(Math.max(0, parseInt(e.target.value || 0)))}
+                      className="w-full text-center text-[0.8vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isStrokeDisabled}
+                    onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
+                    className="w-[2.1vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <span className="text-[0.9vw] leading-none mb-[0.1vw]">+</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Line Corner */}
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Line Corner</span>
+                <div className="relative">
+                  <CustomSelect
+                    value={lineCorner}
+                    onChange={handleLineCornerChange}
+                    options={LINE_CORNER_OPTIONS}
+                    disabled={isStrokeDisabled}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
-      {/* ─── PORTALS ─── */}
+      {/* ===================== 4. EFFECTS ===================== */}
+      <Effect
+        isShape={false}
+        openSubSection={openSection}
+        setOpenSubSection={setOpenSection}
+        activeEffects={activeEffects}
+        setActiveEffects={handleSetActiveEffects}
+        effectSettings={effectSettings}
+        setEffectSettings={handleSetEffectSettings}
+        activeColorPicker={activeColorPicker}
+        setActiveColorPicker={setActiveColorPicker}
+        showDetailedPicker={showDetailedPicker}
+        setShowDetailedPicker={setShowDetailedPicker}
+        hideBlur={true}
+        hideInnerShadow={true}
+        noAccordion={true}
+      />
+
+      {/* ===================== COLOR PICKER PORTAL ===================== */}
+      {activeColorPicker && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed z-[5000]"
+          style={{ top: '50%', right: '19.5vw', transform: 'translateY(-50%)' }}
+        >
+          <ColorPicker
+            color={strokeColor}
+            opacity={strokeOpacity}
+            onOpacityChange={handleStrokeOpacityChange}
+            onChange={handleStrokeColorChange}
+            onClose={() => setActiveColorPicker(null)}
+            disableGradient={false}
+          />
+        </div>,
+        document.body
+      )}
+
+      {/* CUSTOM CSS matching ShapeProperties */}
+      <style>{`
+        .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        body.is-scrubbing, body.is-scrubbing * {
+          cursor: none !important;
+          user-select: none !important;
+        }
+        .hide-cursor, .hide-cursor * {
+          cursor: none !important;
+        }
+        .virtual-scrub-cursor {
+          position: fixed;
+          pointer-events: none;
+          z-index: 100000;
+          width: 2vw;
+          height: 2vw;
+          margin-left: -1vw;
+          margin-top: -1vw;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          filter: drop-shadow(0 0.1vw 0.2vw rgba(0,0,0,0.3));
+        }
+      `}</style>
     </div>
   );
 };

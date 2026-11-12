@@ -1537,6 +1537,10 @@ const TextProperties = ({
       // Replace any variation of <br> (with or without attributes/slashes) and any closing </br> with a clean <br/>
       // and replace invalid XML entity &nbsp; with &#160;
       let cleanHtml = page.html
+        .replace(/<col\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*col\s*>|>)/gi, '<col$1 />')
+        .replace(/<img\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*img\s*>|>)/gi, '<img$1 />')
+        .replace(/<hr\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*hr\s*>|>)/gi, '<hr$1 />')
+        .replace(/<input\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*input\s*>|>)/gi, '<input$1 />')
         .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
         .replace(/<\/\s*br\s*>/gi, '')
         .replace(/&nbsp;/gi, '&#160;');
@@ -1565,12 +1569,15 @@ const TextProperties = ({
       cleanHtml = cleanHtml.replace(/\s+[a-zA-Z0-9_\-\:]*;=""/gi, '');
       cleanHtml = cleanHtml.replace(/\s+(?:playfair|roboto|poppins|inter|bangers|oswald|sans-serif)=""/gi, '');
 
-      let doc = parser.parseFromString(cleanHtml, 'image/svg+xml');
+      // Auto-heal unquoted HTML attributes or broken font-family quotes before parsing
+      cleanHtml = cleanHtml
+        .replace(/\b(allowfullscreen|webkitallowfullscreen|mozallowfullscreen)\b(?!\s*=)/gi, '$1="true"')
+        .replace(/"Segoe UI"/gi, "'Segoe UI'")
+        .replace(/&quot;Segoe UI&quot;/gi, "'Segoe UI'")
+        .replace(/\s+ui(?=[\s>"]|$)/gi, '')
+        .replace(/\s+segoe(?=[\s>"]|$)/gi, '');
 
-      if (!doc.querySelector('parsererror')) {
-        const lingering = document.getElementById('xml-debug-error');
-        if (lingering) lingering.remove();
-      }
+      let doc = parser.parseFromString(cleanHtml, 'image/svg+xml');
 
       // Auto-recover if the React state was permanently corrupted by a previous crash
       // (meaning the cleanHtml string literally contains the error document itself)
@@ -1580,6 +1587,30 @@ const TextProperties = ({
           // Extract the valid SVG portion and re-parse it to cure the state
           doc = parser.parseFromString(svgEl.outerHTML, 'image/svg+xml');
         }
+      }
+
+      // Fallback: if image/svg+xml still fails (e.g. unquoted HTML attributes inside foreignObject),
+      // parse with browser HTML parser which is lenient, and re-serialize to clean XML
+      if (doc.querySelector('parsererror')) {
+        try {
+          const htmlDoc = parser.parseFromString(cleanHtml, 'text/html');
+          const svgEl = htmlDoc.querySelector('svg');
+          if (svgEl) {
+            const serializer = new XMLSerializer();
+            const repairedXml = serializer.serializeToString(svgEl);
+            const repairedDoc = parser.parseFromString(repairedXml, 'image/svg+xml');
+            if (!repairedDoc.querySelector('parsererror')) {
+              doc = repairedDoc;
+            }
+          }
+        } catch (e) {
+          // fallback failed, continue to parsererror check below
+        }
+      }
+
+      if (!doc.querySelector('parsererror')) {
+        const lingering = document.getElementById('xml-debug-error');
+        if (lingering) lingering.remove();
       }
 
       if (doc.querySelector('parsererror')) {
@@ -2304,10 +2335,27 @@ const TextProperties = ({
                 if (!page.html) return prev;
                 const parser = new DOMParser();
                 const cleanHtml = page.html
+                  .replace(/<col\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*col\s*>|>)/gi, '<col$1 />')
+                  .replace(/<img\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*img\s*>|>)/gi, '<img$1 />')
+                  .replace(/<hr\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*hr\s*>|>)/gi, '<hr$1 />')
+                  .replace(/<input\b([^>]*?)(?:\s*\/\s*>|>\s*<\/\s*input\s*>|>)/gi, '<input$1 />')
                   .replace(/<\s*br[^>]*>(?:<\/\s*br\s*>)?/gi, '<br/>')
                   .replace(/<\/\s*br\s*>/gi, '')
                   .replace(/&nbsp;/gi, '&#160;');
-                const doc = parser.parseFromString(cleanHtml, 'image/svg+xml');
+                let doc = parser.parseFromString(cleanHtml, 'image/svg+xml');
+
+                if (doc.querySelector('parsererror')) {
+                  try {
+                    const htmlDoc = parser.parseFromString(cleanHtml, 'text/html');
+                    const svgEl = htmlDoc.querySelector('svg');
+                    if (svgEl) {
+                      const serializer = new XMLSerializer();
+                      doc = parser.parseFromString(serializer.serializeToString(svgEl), 'image/svg+xml');
+                    }
+                  } catch (e) {
+                    // fallback failed
+                  }
+                }
 
                 if (doc.querySelector('parsererror')) {
                   console.error('XML parsing failed in line height update, aborting.');

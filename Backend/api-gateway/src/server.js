@@ -381,6 +381,44 @@ app.use((req, res, next) => {
   next();
 });
 
+// Proxy /api/analytics requests to MyFlipibook Service
+app.use(
+  '/api/analytics',
+  createProxyMiddleware({
+    target: `${MYFLIPIBOOK_SERVICE_URL}/api/analytics`,
+    changeOrigin: true,
+    xfwd: true,
+    timeout: 300000,
+    proxyTimeout: 300000,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/',
+    on: {
+      proxyReq: (proxyReq, req) => {
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          req.ip;
+
+        if (clientIp) {
+          proxyReq.setHeader('x-client-ip', clientIp);
+          proxyReq.setHeader('x-real-ip', clientIp);
+        }
+      },
+      error: (err, req, res) => {
+        console.error('[API Gateway] Proxy error to myflipibook-service for analytics:', err.message);
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: 'Analytics Service unavailable.'
+          });
+        }
+      }
+    }
+  })
+);
+
 // Proxy /api/flipbook requests to MyFlipibook Service
 app.use(
   '/api/flipbook',
@@ -532,7 +570,7 @@ app.use(
 );
 
 // Proxy Bookshelf endpoints to MyFlipibook Service
-['/my-shelf-books', '/add-to-shelf', '/remove-from-shelf'].forEach((shelfEndpoint) => {
+['/my-shelf-books', '/add-to-shelf', '/remove-from-shelf', '/update-shelf-order', '/update-shelf-design'].forEach((shelfEndpoint) => {
   app.use(
     `/api/profile${shelfEndpoint}`,
     createProxyMiddleware({
@@ -570,6 +608,20 @@ app.use(
     })
   );
 });
+
+// Also proxy dedicated /api/shelf route to MyFlipibook Service
+app.use(
+  '/api/shelf',
+  createProxyMiddleware({
+    target: `${MYFLIPIBOOK_SERVICE_URL}/api/shelf`,
+    changeOrigin: true,
+    xfwd: true,
+    timeout: 300000,
+    proxyTimeout: 300000,
+    cookieDomainRewrite: '',
+    cookiePathRewrite: '/'
+  })
+);
 
 // Proxy /api/profile requests to User Service
 app.use(

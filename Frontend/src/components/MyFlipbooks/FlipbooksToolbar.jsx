@@ -83,7 +83,7 @@ export default function FlipbooksToolbar({
                     {/* All Status Dropdown */}
                     <div className="relative" ref={statusDropdownRef}>
                         <button
-                            onClick={() => { setIsStatusDropdownOpen(!isStatusDropdownOpen); setIsSortDropdownOpen(false); setIsFolderDropdownOpen(false); }}
+                            onClick={() => { setIsStatusDropdownOpen(!isStatusDropdownOpen); setIsCategoryDropdownOpen(false); setIsSortDropdownOpen(false); }}
                             className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer"
                         >
                             <Icon icon="lucide:disc" className="w-[0.9vw] h-[0.9vw] text-[#ec5137]" />
@@ -112,7 +112,7 @@ export default function FlipbooksToolbar({
                     {/* Sort by Dropdown */}
                     <div className="relative" ref={sortDropdownRef}>
                         <button
-                            onClick={() => { setIsSortDropdownOpen(!isSortDropdownOpen); setIsStatusDropdownOpen(false); setIsFolderDropdownOpen(false); }}
+                            onClick={() => { setIsSortDropdownOpen(!isSortDropdownOpen); setIsCategoryDropdownOpen(false); setIsStatusDropdownOpen(false); }}
                             className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer"
                         >
                             <ArrowDownUp size="0.9vw" className="text-[#ec5137]" />

@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Pencil,
-  ArrowLeftRight
+  ArrowLeftRight,
+  ChevronDown,
+  Minus,
+  Plus
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import ColorPicker, { parseGradient, generateGradientString } from '../../../../ColorPicker';
@@ -14,91 +17,94 @@ import { handleScrubHelper } from '../../../properties/propertiesShared';
 import { BUTTON_TEMPLATES } from '../utils/buttonElementUtils';
 
 const SectionHeader = ({ title }) => (
-  <div className="flex items-center gap-[0.4vw] mb-[0.1vw]">
-    <span className="text-[0.9vw] font-semibold text-black whitespace-nowrap">{title}</span>
-    <div className="h-[0.06vw] bg-gray-200 flex-1 ml-[0.3vw]" />
+  <div className="flex items-center gap-[0.8vw]">
+    <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+    <div className="flex-1 h-[1px] bg-gray-200" />
   </div>
 );
 
-// Helper row with fixed-width label ensuring all colons align vertically
-const PropertyRow = ({ label, children, className = '' }) => (
-  <div className={`flex items-center gap-[0.5vw] ${className}`}>
-    <div className="w-[5.8vw] shrink-0 flex items-center pl-[0.5vw] justify-between text-gray-800 font-semibold">
-      <span className={`${label.length > 12 ? 'text-[0.8vw]' : 'text-[0.8vw]'}`}>
-        {label}
-      </span>
-      <span className="text-gray-900 font-semibold text-[0.8vw]">:</span>
-    </div>
-    <div className="flex-1 min-w-0">
-      {children}
-    </div>
-  </div>
-);
-
-// Color swatch + hex & opacity box with ColorPicker connectivity
-const ColorInput = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => {
-  const displayColor = (color && color.startsWith('#')) ? color.toUpperCase() : (color || '#000000');
+// Exact ColorBox matching user screenshot and Color.jsx
+const ColorBoxRow = ({
+  title,
+  color,
+  opacity = 100,
+  onOpenPicker,
+  onChange,
+  onOpacityChange,
+  isActive = false,
+  titleRight,
+}) => {
+  const isTransparent = !color || color === 'none' || color === 'transparent';
+  const displayColor = (() => {
+    if (isTransparent) return '#';
+    if (typeof color === 'string' && color.includes('gradient')) return 'Gradient';
+    return typeof color === 'string' ? (color.startsWith('#') ? color.toUpperCase() : '#' + color.toUpperCase()) : '#000000';
+  })();
 
   return (
-    <div className="flex items-center gap-[0.4vw] w-full">
-      <div
-        onClick={onOpenPicker}
-        className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
+    <div className="flex flex-col gap-[0.5vw]">
+      {title && (
+        <div className="flex items-center gap-[0.8vw] mb-[0.1vw]">
+          <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">{title}</span>
+          {titleRight}
+          <div className="flex-1 h-[1px] bg-gray-200" />
+        </div>
+      )}
+      <div className="flex items-center gap-[0.6vw]">
+        {/* Swatch (3.6vw x 2.1vw rounded rectangle matching user screenshot) */}
+        <div
+          onClick={onOpenPicker}
+          className={`w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border border-gray-300 shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105 ${
+            isActive ? 'border-indigo-500 ring-2 ring-indigo-500/20' : ''
           }`}
-        style={{ background: (color === 'none' || color === 'transparent') ? '#ffffff' : (color || '#000000') }}
-        title="Click to open color palette"
-      >
-        {(color === 'none' || color === 'transparent') && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
-        )}
-      </div>
-      <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-        <input
-          type="text"
-          value={color && color.includes('gradient') ? 'GRADIENT' : displayColor}
-          onChange={(e) => {
-            let val = e.target.value;
-            if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
-            onChange(val);
-          }}
-          className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
-          maxLength={color && color.includes('gradient') ? 10 : 7}
-        />
-        <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
+          title={`Change ${title || 'color'}`}
+        >
+          <div
+            className="w-full h-full"
+            style={{ background: isTransparent ? '#ffffff' : color }}
+          />
+          {isTransparent && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45 pointer-events-none" />
+          )}
+        </div>
+
+        {/* Input box */}
+        <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 focus-within:border-indigo-400 transition-colors shadow-2xs">
+          <input
+            type="text"
+            value={displayColor}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || val === '#') {
+                onChange('none');
+              } else {
+                const finalVal = val.startsWith('#') ? val : '#' + val;
+                onChange(finalVal);
+              }
+            }}
+            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            maxLength={9}
+          />
+          <div
+            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
+            onPointerDown={(e) => {
+              handleScrubHelper(e, opacity, (val) => {
+                const num = parseInt(val, 10);
+                const clamped = Math.min(Math.max(isNaN(num) ? 0 : num, 0), 100);
+                onOpacityChange(clamped);
+              });
+            }}
+            title="Drag horizontally to adjust opacity"
+          >
+            <span className="text-[0.8vw] font-medium text-gray-700">
+              {opacity}%
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
-
-const ColorInputWithFormat = ({ color, onChange, opacity = 100, onOpenPicker, isActive = false }) => (
-  <div className="flex items-center gap-[0.4vw] w-full">
-    <div
-      onClick={onOpenPicker}
-      className={`color-box color-box-trigger w-[2vw] h-[2vw] rounded-[0.5vw] border flex-shrink-0 relative overflow-hidden flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 transition-all ${isActive ? 'border-[#E05638] ring-2 ring-[#E05638]/40 scale-105 shadow-xs' : 'border-gray-200 hover:border-gray-300'
-        }`}
-      style={{ background: (color === 'none' || color === 'transparent') ? '#ffffff' : (color || '#000000') }}
-      title="Click to open color palette"
-    >
-      {(color === 'none' || color === 'transparent') && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[1.5px] bg-red-500 rotate-45" />
-      )}
-    </div>
-    <div className="flex-1 h-[2.5vw] flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white px-[0.6vw] text-[0.8vw] text-gray-800 focus-within:border-[#E05638] shadow-2xs">
-      <input
-        type="text"
-        value={color && color.includes('gradient') ? 'GRADIENT' : (color?.toUpperCase() || '#000000')}
-        onChange={(e) => {
-          let val = e.target.value;
-          if (!val.startsWith('#') && val.length > 0 && !val.includes('gradient')) val = '#' + val;
-          onChange(val);
-        }}
-        className="w-[5.2vw] font-mono text-[0.8vw] text-gray-500 bg-transparent focus:outline-none uppercase font-normal"
-        maxLength={color && color.includes('gradient') ? 10 : 7}
-      />
-      <span className="text-gray-400 text-[0.75vw] font-semibold">{opacity}%</span>
-    </div>
-  </div>
-);
 
 const fontFamilies = [
   'Poppins', 'Arial', 'Bangers', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
@@ -413,6 +419,11 @@ export const ButtonEditor = ({
 
   const [openSection, setOpenSection] = useState(null);
   const [activeColorPicker, setActiveColorPicker] = useState(null);
+  const [showFontDropdown, setShowFontDropdown] = useState(false);
+  const [showFontSizeDropdown, setShowFontSizeDropdown] = useState(false);
+  const [showWeightDropdown, setShowWeightDropdown] = useState(false);
+  const [showPlacementDropdown, setShowPlacementDropdown] = useState(false);
+  const [showLineCornerDropdown, setShowLineCornerDropdown] = useState(false);
 
   const lastElementIdRef = useRef(null);
 
@@ -2026,47 +2037,16 @@ export const ButtonEditor = ({
   };
 
   return (
-    <div className="w-full flex flex-col gap-[0.6vw] font-sans text-gray-800 pt-[0.2vw] pr-[0.2vw] select-none pb-[2vw]">
-      {/* Scoped CSS for Coral Orange Range Slider */}
-      <style>{`
-        .button-icon-gap-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 0.9vw;
-          height: 0.9vw;
-          border-radius: 50%;
-          background: #ffffff;
-          border: 0.15vw solid #E05638;
-          cursor: pointer;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.15);
-        }
-        .button-icon-gap-slider::-moz-range-thumb {
-          width: 0.9vw;
-          height: 0.9vw;
-          border-radius: 50%;
-          background: #ffffff;
-          border: 0.15vw solid #E05638;
-          cursor: pointer;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.15);
-        }
-        .virtual-scrub-cursor {
-          position: fixed;
-          pointer-events: none;
-          z-index: 999999;
-          transform: translate(-50%, -50%);
-          filter: drop-shadow(0 0.2vw 0.4vw rgba(0,0,0,0.4));
-        }
-        body.is-scrubbing * {
-          cursor: ew-resize !important;
-          user-select: none !important;
-        }
-      `}</style>
+    <div className="relative flex flex-col gap-[1.7vw] w-full max-w-[25vw] pb-[2vw] font-sans select-none">
+      {/* ===================== HEADER ===================== */}
+      <div className="flex items-center gap-[0.8vw]">
+        <span className="text-[0.9vw] font-semibold text-gray-900 whitespace-nowrap tracking-wider">Button Properties</span>
+        <div className="flex-1 h-[1px] bg-gray-200" />
+      </div>
 
-      {/* ─── 1. BUTTON CONTENT SECTION ──────────────────────────── */}
-      <SectionHeader title="Button Properties" />
-
-      {/* Row 1: Button Text */}
-      <PropertyRow label="Button Text">
+      {/* ===================== BUTTON TEXT ===================== */}
+      <div className="flex flex-col gap-[0.6vw]">
+        <SectionHeader title="Button Text" />
         <div className="relative w-full">
           <input
             type="text"
@@ -2074,273 +2054,413 @@ export const ButtonEditor = ({
             value={buttonText}
             onChange={(e) => handleTextChange(e.target.value)}
             placeholder="Button"
-            className="w-full h-[2.5vw] bg-white border border-gray-200 rounded-[0.5vw] px-[0.6vw] pr-[1.8vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#E05638] shadow-2xs font-semibold"
+            className="w-full h-[2.1vw] px-[0.75vw] pr-[2.2vw] text-[0.8vw] font-medium text-gray-800 bg-white border border-gray-300 rounded-[0.45vw] shadow-2xs placeholder-gray-400 focus:outline-none focus:border-indigo-400 hover:border-gray-400 transition-colors"
           />
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.6vw] text-gray-400">
-            <Pencil className="w-[0.85vw] h-[0.85vw]" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.75vw] text-gray-400">
+            <Pencil size="0.85vw" />
           </div>
         </div>
-      </PropertyRow>
-
-      {/* Row 2: Font Family & Font Size */}
-      <div className="flex items-center gap-[0.5vw]">
-        <div className="w-[5.6vw] shrink-0" />
-        <div className="flex-1 min-w-0 grid grid-cols-2 gap-[0.4vw]">
-          {/* Font Family Dropdown */}
-          <ElementDropdown
-            value={fontFamily}
-            onChange={handleFontFamilyChange}
-            options={fontFamilies}
-            isFont={true}
-          />
-
-          {/* Font Size Dropdown */}
-          <ElementDropdown
-            value={fontSize}
-            onChange={(val) => handleFontSizeChange(parseInt(val))}
-            options={fontSizes}
-          />
-        </div>
       </div>
 
-      {/* Row 3: Font Weight Dropdown */}
-      <div className="flex items-center gap-[0.5vw]">
-        <div className="w-[5.6vw] shrink-0" />
-        <div className="flex-1 min-w-0">
-          <ElementDropdown
-            value={fontWeight}
-            onChange={handleFontWeightChange}
-            options={fontWeights.map(w => ({ label: w.name, value: w.value }))}
-          />
-        </div>
-      </div>
+      {/* ===================== TYPOGRAPHY ===================== */}
+      <div className="flex flex-col gap-[0.6vw]">
+        <SectionHeader title="Typography" />
 
-      {/* Row 4: Text Color */}
-      <PropertyRow label="Text Color">
-        <ColorInput
+        {/* Row 1: Font Family & Font Size */}
+        <div className="flex items-center gap-[0.6vw]">
+          {/* Font Family */}
+          <div className="relative flex-[1.6]">
+            <button
+              type="button"
+              onClick={() => setShowFontDropdown(!showFontDropdown)}
+              className="w-full h-[2.1vw] px-[0.7vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 shadow-2xs transition-colors cursor-pointer"
+            >
+              <span className="text-[0.8vw] font-medium text-gray-800 truncate" style={{ fontFamily: `'${fontFamily}', sans-serif` }}>
+                {fontFamily === 'Designer_Signature' ? 'Designer Signature' : (fontFamily || 'Poppins')}
+              </span>
+              <ChevronDown size="0.75vw" className={`text-gray-400 transition-transform ${showFontDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showFontDropdown && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setShowFontDropdown(false)} />
+                <div className="absolute left-0 top-full mt-[0.3vw] w-full bg-white border border-gray-200 rounded-[0.45vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-40 [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                  {fontFamilies.map(font => {
+                    const isSelected = font.toLowerCase() === (fontFamily || '').toLowerCase();
+                    return (
+                      <div
+                        key={font}
+                        onClick={() => {
+                          handleFontFamilyChange(font);
+                          setShowFontDropdown(false);
+                        }}
+                        className={`px-[0.75vw] py-[0.38vw] cursor-pointer text-[0.8vw] flex items-center justify-between transition-colors ${
+                          isSelected ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
+                        style={{ fontFamily: `'${font}', sans-serif` }}
+                      >
+                        <span className="truncate">{font === 'Designer_Signature' ? 'Designer Signature' : font}</span>
+                        {isSelected && (
+                          <span className="text-indigo-600 font-bold ml-1 text-[0.8vw]">✓</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Font Size */}
+          <div className="relative flex-1">
+            <div className="w-full h-[2.1vw] px-[0.6vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 focus-within:border-indigo-400 shadow-2xs transition-colors">
+              <div className="flex items-center flex-1 min-w-0 mr-[0.2vw]">
+                <input
+                  type="text"
+                  value={fontSize}
+                  onChange={(e) => setFontSize(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val)) {
+                        handleFontSizeChange(val);
+                        setShowFontSizeDropdown(false);
+                      }
+                      e.target.blur();
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) handleFontSizeChange(val);
+                  }}
+                  onFocus={() => setShowFontSizeDropdown(true)}
+                  className="w-full bg-transparent outline-none text-[0.8vw] text-gray-800 font-medium"
+                  placeholder="14"
+                />
+                <span className="text-[0.7vw] font-medium text-gray-400 select-none uppercase tracking-wider mr-[0.1vw]">pt</span>
+              </div>
+              <ChevronDown
+                size="0.75vw"
+                className={`text-gray-400 cursor-pointer flex-shrink-0 transition-transform ${showFontSizeDropdown ? 'rotate-180' : ''}`}
+                onClick={() => setShowFontSizeDropdown(!showFontSizeDropdown)}
+              />
+            </div>
+            {showFontSizeDropdown && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setShowFontSizeDropdown(false)} />
+                <div className="absolute right-0 top-full mt-[0.3vw] w-full bg-white border border-gray-200 rounded-[0.45vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-40 [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                  {fontSizes.map(size => (
+                    <div
+                      key={size}
+                      onClick={() => {
+                        handleFontSizeChange(size);
+                        setShowFontSizeDropdown(false);
+                      }}
+                      className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] flex items-center justify-between transition-colors ${Number(fontSize) === size ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+                    >
+                      <span>{size}</span>
+                      <span className="text-[0.68vw] text-gray-400 font-normal">pt</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: Font Weight (Full Width) */}
+        <div className="relative w-full">
+          <button
+            type="button"
+            onClick={() => setShowWeightDropdown(!showWeightDropdown)}
+            className="w-full h-[2.1vw] px-[0.7vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 shadow-2xs transition-colors cursor-pointer"
+          >
+            <span className="text-[0.8vw] truncate text-gray-800 font-medium">
+              {fontWeights.find(w => w.value === fontWeight)?.name || 'Regular'}
+            </span>
+            <ChevronDown size="0.75vw" className={`text-gray-400 transition-transform ${showWeightDropdown ? 'rotate-180' : ''}`} />
+          </button>
+          {showWeightDropdown && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setShowWeightDropdown(false)} />
+              <div className="absolute left-0 top-full mt-[0.3vw] w-full bg-white border border-gray-200 rounded-[0.45vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-40 [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                {fontWeights.map(w => (
+                  <div
+                    key={w.value}
+                    onClick={() => {
+                      handleFontWeightChange(w.value);
+                      setShowWeightDropdown(false);
+                    }}
+                    className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] transition-colors ${fontWeight === w.value ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+                  >
+                    {w.name}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Row 3: Text Color (Inside Typography, full width, without separate heading) */}
+        <ColorBoxRow
           color={textFillColor}
-          onChange={handleTextFillColorChange}
           opacity={textOpacity}
           onOpenPicker={() => setActiveColorPicker('textColor')}
+          onChange={handleTextFillColorChange}
+          onOpacityChange={handleTextOpacityChange}
           isActive={activeColorPicker === 'textColor'}
-        />
-      </PropertyRow>
-
-      {/* Row 5: Add Icon Toggle */}
-      <div className="flex items-center justify-between pl-[0.5vw] pr-[0.1vw] py-[0.2vw]">
-        <span className="text-[0.8vw] font-semibold text-gray-900">Add Icon to the button</span>
-        <ElementToggle
-          checked={hasIcon}
-          onChange={handleToggleIcon}
         />
       </div>
 
-      {/* Rows when Icon is enabled */}
-      {hasIcon && (
-        <>
-          {/* Icon Card */}
-          <PropertyRow label="Icon">
+      {/* ===================== BUTTON ICON ===================== */}
+      <div className="flex flex-col gap-[0.6vw]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-[0.8vw] flex-1 mr-[0.8vw]">
+            <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Button Icon</span>
+            <div className="flex-1 h-[1px] bg-gray-200" />
+          </div>
+          <ElementToggle
+            checked={hasIcon}
+            onChange={handleToggleIcon}
+          />
+        </div>
+
+        {hasIcon && (
+          <div className="flex flex-col gap-[0.8vw] animate-in fade-in duration-150">
+            {/* Icon Preview Card */}
             <div
               onClick={() => setIsIconGalleryOpen(true)}
-              className="w-full h-[5vw] border border-gray-200 hover:border-gray-300 rounded-[0.5vw] bg-[#f8fafc] p-[0.4vw] relative flex items-center justify-center cursor-pointer group transition-all shadow-2xs hover:shadow-sm"
+              className="w-full h-[4.5vw] border border-gray-300 hover:border-gray-400 rounded-[0.45vw] bg-gray-50/70 p-[0.4vw] relative flex items-center justify-center cursor-pointer group transition-all shadow-2xs hover:shadow-sm"
               title="Click to change icon"
             >
-              {/* Swap Icon button in top-right */}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsIconGalleryOpen(true);
                 }}
-                className="absolute top-[0.35vw] right-[0.35vw] text-gray-400 group-hover:text-gray-700 transition-colors p-[0.2vw] rounded-[0.2vw] hover:bg-gray-50 cursor-pointer"
+                className="absolute top-[0.35vw] right-[0.35vw] text-gray-400 group-hover:text-gray-700 transition-colors p-[0.25vw] rounded-[0.3vw] bg-white border border-gray-200 hover:bg-gray-50 cursor-pointer shadow-2xs"
                 title="Change icon"
               >
-                <ArrowLeftRight className="w-[0.9vw] h-[0.9vw]" />
+                <ArrowLeftRight size="0.8vw" />
               </button>
-
-              {/* Centered preview of icon */}
-              <div className="w-[4.5vw] h-[4.5vw] flex items-center justify-center group-hover:scale-105 transition-transform">
+              <div className="w-[3.6vw] h-[3.6vw] flex items-center justify-center group-hover:scale-105 transition-transform">
                 {renderIconPreview()}
               </div>
             </div>
-          </PropertyRow>
 
-          {/* Placement Dropdown */}
-          <PropertyRow label="Placement">
-            <ElementDropdown
-              value={iconPlacement}
-              onChange={handleIconPlacementChange}
-              options={['Left', 'Right']}
-            />
-          </PropertyRow>
+            {/* Placement */}
+            <div className="flex items-center justify-between gap-[0.8vw]">
+              <span className="text-[0.82vw] font-medium text-gray-800">Placement</span>
+              <div className="relative w-[10vw]">
+                <button
+                  type="button"
+                  onClick={() => setShowPlacementDropdown(!showPlacementDropdown)}
+                  className="w-full h-[2.1vw] px-[0.7vw] flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white hover:border-gray-400 shadow-2xs transition-colors cursor-pointer"
+                >
+                  <span className="text-[0.8vw] text-gray-800 font-medium">{iconPlacement}</span>
+                  <ChevronDown size="0.75vw" className={`text-gray-400 transition-transform ${showPlacementDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                {showPlacementDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setShowPlacementDropdown(false)} />
+                    <div className="absolute left-0 top-full mt-[0.3vw] w-full bg-white border border-gray-200 rounded-[0.45vw] shadow-xl py-[0.25vw] z-40 animate-in fade-in zoom-in-95 duration-150">
+                      {['Left', 'Right'].map(opt => (
+                        <div
+                          key={opt}
+                          onClick={() => {
+                            handleIconPlacementChange(opt);
+                            setShowPlacementDropdown(false);
+                          }}
+                          className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] transition-colors ${iconPlacement === opt ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          {opt}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
 
-          {/* Icon Color */}
-          <PropertyRow label="Icon Color">
-            <ColorInput
-              color={iconColor}
-              onChange={handleIconColorChange}
-              opacity={iconOpacity}
-              onOpenPicker={() => setActiveColorPicker('iconColor')}
-              isActive={activeColorPicker === 'iconColor'}
-            />
-          </PropertyRow>
+            {/* Icon Colors */}
+            <div className="flex flex-col gap-[0.9vw]">
+              <ColorBoxRow
+                title="Icon Color"
+                color={iconColor}
+                opacity={iconOpacity}
+                onOpenPicker={() => setActiveColorPicker('iconColor')}
+                onChange={handleIconColorChange}
+                onOpacityChange={handleIconOpacityChange}
+                isActive={activeColorPicker === 'iconColor'}
+              />
+              <ColorBoxRow
+                title="Icon Background"
+                color={iconBgColor}
+                opacity={iconBgOpacity}
+                onOpenPicker={() => setActiveColorPicker('iconBgColor')}
+                onChange={handleIconBgColorChange}
+                onOpacityChange={handleIconBgOpacityChange}
+                isActive={activeColorPicker === 'iconBgColor'}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
-          {/* Icon BG Color */}
-          <PropertyRow label="Icon BG Color">
-            <ColorInput
-              color={iconBgColor}
-              onChange={handleIconBgColorChange}
-              opacity={iconBgOpacity}
-              onOpenPicker={() => setActiveColorPicker('iconBgColor')}
-              isActive={activeColorPicker === 'iconBgColor'}
-            />
-          </PropertyRow>
-        </>
-      )}
-
-      {/* ─── 3. BUTTON COLOR SECTION ────────────────────────────── */}
-      <SectionHeader title="Button Color" />
-
-      <div className="pl-[0.5vw]">
-        <ColorInputWithFormat
+      {/* ===================== APPEARANCE: COLOR ===================== */}
+      <div className="flex flex-col gap-[1.1vw]">
+        {/* Fill Color */}
+        <ColorBoxRow
+          title="Fill Color"
           color={shapeFillColor}
-          onChange={handleShapeFillColorChange}
           opacity={shapeOpacity}
           onOpenPicker={() => setActiveColorPicker('buttonColor')}
+          onChange={handleShapeFillColorChange}
+          onOpacityChange={handleShapeOpacityChange}
           isActive={activeColorPicker === 'buttonColor'}
         />
-      </div>
 
-      {/* ─── 4. STROKE COLOR SECTION ─────────────────────────────── */}
-      <SectionHeader title="Stroke Color" />
-
-      {/* Row 1: Swatch, Hex, Format */}
-      <div className="pl-[0.5vw]">
-        <ColorInputWithFormat
+        {/* Stoke Color */}
+        <ColorBoxRow
+          title="Stoke Color"
           color={strokeColor}
-          onChange={handleStrokeColorChange}
           opacity={strokeOpacity}
           onOpenPicker={() => setActiveColorPicker('strokeColor')}
+          onChange={handleStrokeColorChange}
+          onOpacityChange={handleStrokeOpacityChange}
           isActive={activeColorPicker === 'strokeColor'}
         />
-      </div>
 
-      {/* Stroke Settings Grid */}
-      {(() => {
-        const isStrokeDisabled = !strokeColor || strokeColor === 'none' || strokeColor === 'transparent';
-        const el = resolveTargetElement();
-        const btnTemplate = el?.getAttribute('data-button-template') || '';
-        const isChevronOrRibbon = el?.querySelector('polygon.btn-main-poly') || el?.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
+        {/* Stroke Width & Line Corner */}
+        {(() => {
+          const isStrokeDisabled = !strokeColor || strokeColor === 'none' || strokeColor === 'transparent';
+          const el = resolveTargetElement();
+          const btnTemplate = el?.getAttribute('data-button-template') || '';
+          const isChevronOrRibbon = el?.querySelector('polygon.btn-main-poly') || el?.querySelector('.btn-ribbon-poly') || btnTemplate === 'like-chevron';
 
-        const maxCurrentRadius = isChevronOrRibbon ? 0 : Math.max(radius?.tl || 0, radius?.tr || 0, radius?.bl || 0, radius?.br || 0);
-        const hasCornerRadius = maxCurrentRadius > 0;
-        const isLineCornerDisabled = isStrokeDisabled || hasCornerRadius;
-        const effectiveLineCorner = hasCornerRadius ? 'Rounded' : lineCorner;
+          const maxCurrentRadius = isChevronOrRibbon ? 0 : Math.max(radius?.tl || 0, radius?.tr || 0, radius?.bl || 0, radius?.br || 0);
+          const hasCornerRadius = maxCurrentRadius > 0;
+          const isLineCornerDisabled = isStrokeDisabled || hasCornerRadius;
+          const effectiveLineCorner = hasCornerRadius ? 'Rounded' : lineCorner;
 
-        return (
-          <div className={`flex flex-col gap-[0.75vw] pl-[0.5vw] mt-[0.25vw] transition-opacity duration-200 ${isStrokeDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
-            {/* Stroke Width & Line Corner */}
-            <div className="grid grid-cols-2 gap-[0.6vw]">
+          return (
+            <div className={`flex items-center gap-[1vw] mt-[0.2vw] transition-opacity duration-200 ${isStrokeDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
               {/* Stroke Width */}
-              <div className="flex flex-col gap-[0.25vw]">
-                <span className="text-[0.76vw] text-[#546274] font-semibold">Stroke Width</span>
-                <div className="flex items-center gap-[0.3vw] h-[1.8vw] min-h-[28px]">
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Stroke width</span>
+                <div className="flex items-center gap-[0.3vw] h-[2.1vw]">
                   <button
                     type="button"
                     disabled={isStrokeDisabled}
                     onClick={() => handleStrokeWidthChange(Math.max(0, strokeWidth - 1))}
-                    className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
+                    className="w-[2.1vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer disabled:cursor-not-allowed"
                   >
-                    −
+                    <span className="text-[1vw] leading-none mb-[0.1vw]">-</span>
                   </button>
-                  <div className="flex-1 h-full bg-white border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center shadow-2xs">
+                  <div
+                    className="flex-grow h-full bg-white border border-gray-300 rounded-[0.45vw] flex items-center cursor-ew-resize shadow-2xs hover:border-gray-400 transition-colors"
+                    onPointerDown={(e) => {
+                      if (isStrokeDisabled) return;
+                      handleScrubHelper(e, strokeWidth, (v) => handleStrokeWidthChange(Math.max(0, parseInt(v) || 0)));
+                    }}
+                  >
                     <input
                       type="number"
                       disabled={isStrokeDisabled}
                       value={strokeWidth}
-                      onChange={(e) => handleStrokeWidthChange(Math.max(0, parseFloat(e.target.value) || 0))}
-                      className="w-full text-center text-[0.8vw] font-semibold text-slate-800 outline-none bg-transparent no-spin disabled:cursor-not-allowed"
+                      onChange={(e) => handleStrokeWidthChange(Math.max(0, parseInt(e.target.value || 0)))}
+                      className="w-full text-center text-[0.8vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text disabled:cursor-not-allowed"
                     />
                   </div>
                   <button
                     type="button"
                     disabled={isStrokeDisabled}
                     onClick={() => handleStrokeWidthChange(strokeWidth + 1)}
-                    className="w-[1.8vw] min-w-[28px] h-full bg-[#f4f6f8] hover:bg-slate-200 active:scale-95 border border-[#e2e8f0] rounded-[0.45vw] flex items-center justify-center text-slate-800 font-semibold text-[1.15vw] leading-none transition-all cursor-pointer shadow-2xs select-none disabled:cursor-not-allowed"
+                    className="w-[2.1vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.4vw] text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer disabled:cursor-not-allowed"
                   >
-                    +
+                    <span className="text-[0.9vw] leading-none mb-[0.1vw]">+</span>
                   </button>
                 </div>
               </div>
 
               {/* Line Corner */}
-              <div className="flex flex-col gap-[0.25vw] relative">
-                <span className="text-[0.76vw] text-[#546274] font-semibold">Line Corner</span>
-                <ElementDropdown
-                  disabled={isLineCornerDisabled}
-                  value={effectiveLineCorner}
-                  onChange={handleLineCornerChange}
-                  options={['Square', 'Rounded']}
-                  buttonClassName="!h-[1.8vw] !min-h-[28px] !text-[0.78vw]"
-                />
+              <div className="flex-1 flex flex-col gap-[0.35vw]">
+                <span className="text-[0.82vw] font-medium text-gray-800">Line Corner</span>
+                <div className="relative">
+                  <button
+                    type="button"
+                    disabled={isLineCornerDisabled}
+                    onClick={() => setShowLineCornerDropdown(!showLineCornerDropdown)}
+                    className="w-full h-[2.1vw] px-[0.7vw] border border-gray-300 rounded-[0.45vw] flex items-center justify-between bg-white text-[0.8vw] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-2xs cursor-pointer transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span>{effectiveLineCorner}</span>
+                    <ChevronDown size="0.75vw" className="text-gray-400" />
+                  </button>
+                  {showLineCornerDropdown && !isLineCornerDisabled && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setShowLineCornerDropdown(false)} />
+                      <div className="absolute top-[110%] left-0 right-0 bg-white border border-gray-200 rounded-[0.4vw] shadow-xl z-40 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                        {['Square', 'Rounded'].map((corner) => (
+                          <div
+                            key={corner}
+                            onClick={() => {
+                              handleLineCornerChange(corner);
+                              setShowLineCornerDropdown(false);
+                            }}
+                            className={`px-[0.75vw] py-[0.35vw] text-[0.8vw] cursor-pointer transition-colors ${effectiveLineCorner === corner ? 'bg-indigo-50 font-semibold text-indigo-600' : 'text-gray-700 hover:bg-gray-50'}`}
+                          >
+                            {corner}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
+      </div>
 
-      {/* ─── 5. CORNER RADIUS SECTION ───────────────────────────── */}
+      {/* ===================== APPEARANCE: CORNER RADIUS ===================== */}
       {(() => {
         const el = resolveTargetElement();
         const btnTemplate = el?.getAttribute('data-button-template') || '';
         const isChevronOrRibbon = el?.querySelector('polygon.btn-main-poly') || el?.querySelector('.btn-ribbon-poly');
-        // Chevron polygon cannot have SVG corner radius. Other button styles (pills, badges, cards) can customize Corner Radius.
-        const isFixedShape =
-          isChevronOrRibbon ||
-          btnTemplate === 'like-chevron';
+        const isFixedShape = isChevronOrRibbon || btnTemplate === 'like-chevron';
 
         if (isFixedShape) return null;
 
         return (
-          <div className="flex flex-col">
-            <CornerRadius
-              radius={radius}
-              onCornerChange={handleCornerChange}
-              isRadiusLinked={isRadiusLinked}
-              onToggleLinked={handleToggleRadiusLink}
-              openSubSection={openSection === 'cornerRadius' ? 'cornerRadius' : null}
-              setOpenSubSection={(s) => setOpenSection(s === 'cornerRadius' ? 'cornerRadius' : null)}
-              className="pl-[0.5vw]"
-            />
-          </div>
+          <CornerRadius
+            radius={radius}
+            onCornerChange={handleCornerChange}
+            isRadiusLinked={isRadiusLinked}
+            onToggleLinked={handleToggleRadiusLink}
+            noAccordion={true}
+          />
         );
       })()}
 
-      {/* ─── 6. EFFECTS SECTION ─────────────────────────────────── */}
-      <SectionHeader title="Effects" />
+      {/* ===================== APPEARANCE: EFFECTS ===================== */}
+      <Effect
+        isShape={true}
+        hideBlur={true}
+        hideInnerShadow={true}
+        openSubSection={openSection === 'effect' ? 'effect' : null}
+        setOpenSubSection={(s) => setOpenSection(s === 'effect' ? 'effect' : null)}
+        activeEffects={activeEffects}
+        setActiveEffects={handleSetActiveEffects}
+        effectSettings={effectSettings}
+        setEffectSettings={handleSetEffectSettings}
+        activeColorPicker={activeColorPicker}
+        setActiveColorPicker={setActiveColorPicker}
+        showDetailedPicker={false}
+        setShowDetailedPicker={() => { }}
+        noAccordion={true}
+      />
 
-      <div className="pl-[0.5vw]">
-        <Effect
-          isShape={true}
-          hideBlur={true}
-          hideInnerShadow={true}
-          hideHeader={true}
-          openSubSection={openSection === 'effect' ? 'effect' : null}
-          setOpenSubSection={(s) => setOpenSection(s === 'effect' ? 'effect' : null)}
-          activeEffects={activeEffects}
-          setActiveEffects={handleSetActiveEffects}
-          effectSettings={effectSettings}
-          setEffectSettings={handleSetEffectSettings}
-          activeColorPicker={activeColorPicker}
-          setActiveColorPicker={setActiveColorPicker}
-          showDetailedPicker={false}
-          setShowDetailedPicker={() => { }}
-        />
-      </div>
-
-      {/* ─── PORTALS ────────────────────────────────────────────── */}
-
-      {/* Color Picker Portal */}
+      {/* ===================== COLOR PICKER PORTAL ===================== */}
       {activeColorPicker && createPortal(
         <div
           className="fixed z-[5000]"
@@ -2382,7 +2502,7 @@ export const ButtonEditor = ({
         document.body
       )}
 
-      {/* Icon Gallery Portal */}
+      {/* ===================== ICON GALLERY PORTAL ===================== */}
       {isIconGalleryOpen && createPortal(
         <IconsModal
           isOpen={isIconGalleryOpen}
@@ -2406,6 +2526,34 @@ export const ButtonEditor = ({
         />,
         document.body
       )}
+
+      {/* CUSTOM CSS matching ShapeProperties */}
+      <style>{`
+        .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        body.is-scrubbing, body.is-scrubbing * {
+          cursor: none !important;
+          user-select: none !important;
+        }
+        .hide-cursor, .hide-cursor * {
+          cursor: none !important;
+        }
+        .virtual-scrub-cursor {
+          position: fixed;
+          pointer-events: none;
+          z-index: 100000;
+          width: 2vw;
+          height: 2vw;
+          margin-left: -1vw;
+          margin-top: -1vw;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          filter: drop-shadow(0 0.1vw 0.2vw rgba(0,0,0,0.3));
+        }
+      `}</style>
     </div>
   );
 };

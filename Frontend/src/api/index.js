@@ -1,4 +1,5 @@
 export { flipbookApi, default as flipbookApiDefault } from './flipbookApi';
+export { analyticsApi, default as analyticsApiDefault } from './analyticsApi';
 export { pageEditorApi, default as pageEditorApiDefault } from './pageEditorApi';
 export { customizedEditorApi, default as customizedEditorApiDefault } from './customizedEditorApi';
 export { ticketApi, default as ticketApiDefault, fetchTickets, fetchTicketById, createTicketApi, updateTicketStatusApi, addTicketMessageApi, cancelTicketApi } from './ticketApi';

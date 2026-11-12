@@ -3,9 +3,21 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { X, Search } from 'lucide-react';
-import { ELEMENT_CATEGORIES, searchElementCatalog } from './elementCatalog';
+import { ELEMENT_CATEGORIES, searchElementCatalog, getElementItemById } from './elementCatalog';
 import { useRulerState, useElementInsertion, useCanvasDropListener } from './hooks';
 import { CategorySidebarList, ElementGridCard } from './components';
+
+const RECENT_ELEMENTS_STORAGE_KEY = 'flipibook_recent_elements';
+const MAX_RECENT_ELEMENTS = 24;
+
+const getStoredRecentElementIds = () => {
+  try {
+    const raw = localStorage.getItem(RECENT_ELEMENTS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
 
 export const AddElementsModal = ({
   isOpen = false,
@@ -135,8 +147,62 @@ export const AddElementsModal = ({
     };
   }, [isOpen, modalPos, updateDragConstraints]);
 
+  const [recentElementIds, setRecentElementIds] = useState(getStoredRecentElementIds);
+  const [isDraggingElement, setIsDraggingElement] = useState(false);
+
+  // Sync recent elements whenever the modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setRecentElementIds(getStoredRecentElementIds());
+    }
+  }, [isOpen]);
+
+  // Listen for element drag start & end to hide modal while dragging onto canvas
+  useEffect(() => {
+    const handleDragStartEvt = () => setIsDraggingElement(true);
+    const handleDragEndEvt = () => setIsDraggingElement(false);
+
+    window.addEventListener('element-drag-start', handleDragStartEvt);
+    window.addEventListener('element-drag-end', handleDragEndEvt);
+    window.addEventListener('dragend', handleDragEndEvt);
+    window.addEventListener('drop', handleDragEndEvt);
+    window.addEventListener('add-element-to-editor', handleDragEndEvt);
+    window.addEventListener('mouseup', handleDragEndEvt);
+
+    return () => {
+      window.removeEventListener('element-drag-start', handleDragStartEvt);
+      window.removeEventListener('element-drag-end', handleDragEndEvt);
+      window.removeEventListener('dragend', handleDragEndEvt);
+      window.removeEventListener('drop', handleDragEndEvt);
+      window.removeEventListener('add-element-to-editor', handleDragEndEvt);
+      window.removeEventListener('mouseup', handleDragEndEvt);
+    };
+  }, []);
+
+  const recordRecentElement = useCallback((item) => {
+    if (!item || !item.id) return;
+    try {
+      const existing = getStoredRecentElementIds();
+      const updated = [item.id, ...existing.filter((id) => id !== item.id)].slice(0, MAX_RECENT_ELEMENTS);
+      localStorage.setItem(RECENT_ELEMENTS_STORAGE_KEY, JSON.stringify(updated));
+      setRecentElementIds(updated);
+    } catch (e) {
+      console.warn('[AddElementsModal] Failed to record recent element:', e);
+    }
+  }, []);
+
+  const handleClearRecent = useCallback((e) => {
+    e?.stopPropagation();
+    try {
+      localStorage.removeItem(RECENT_ELEMENTS_STORAGE_KEY);
+      setRecentElementIds([]);
+    } catch (e) {
+      console.warn('[AddElementsModal] Failed to clear recent elements:', e);
+    }
+  }, []);
+
   // Element insertion workflow custom hook
-  const { handleInsert } = useElementInsertion({
+  const { handleInsert: baseHandleInsert } = useElementInsertion({
     activePageIndex,
     baseWidth,
     baseHeight,
@@ -151,14 +217,34 @@ export const AddElementsModal = ({
     setActiveMainTool,
   });
 
+  const handleInsert = useCallback((item, customX, customY, targetPageIndex) => {
+    recordRecentElement(item);
+    baseHandleInsert(item, customX, customY, targetPageIndex);
+  }, [baseHandleInsert, recordRecentElement]);
+
   // Canvas drop event listener custom hook
   useCanvasDropListener(handleInsert);
 
   // High-performance search via Inverted Index + Memoization Cache
   const filteredElements = useMemo(() => {
     if (!isOpen) return [];
+    if (selectedCategory === 'recent') {
+      const items = recentElementIds
+        .map((id) => getElementItemById(id))
+        .filter(Boolean);
+      if (!searchQuery.trim()) return items;
+      const q = searchQuery.toLowerCase().trim();
+      return items.filter((el) => {
+        return (
+          el.name?.toLowerCase().includes(q) ||
+          el.category?.toLowerCase().includes(q) ||
+          el.subtopic?.toLowerCase().includes(q) ||
+          el.type?.toLowerCase().includes(q)
+        );
+      });
+    }
     return searchElementCatalog(searchQuery, selectedCategory);
-  }, [isOpen, searchQuery, selectedCategory]);
+  }, [isOpen, searchQuery, selectedCategory, recentElementIds]);
 
   const [selectedSubtopic, setSelectedSubtopic] = useState('all');
 
@@ -173,12 +259,12 @@ export const AddElementsModal = ({
       id: name,
       name,
       count: filteredElements.filter((el) => el.subtopic === name).length
-    }));
+    })).filter((item) => item.count > 0);
   }, [filteredElements]);
 
   // Extract distinct subtopics from elements in the selected category
   const availableSubtopics = useMemo(() => {
-    if (!isOpen) return [];
+    if (!isOpen || selectedCategory === 'recent') return [];
     const subs = new Set();
     filteredElements.forEach((el) => {
       if (el.subtopic) subs.add(el.subtopic);
@@ -242,17 +328,24 @@ export const AddElementsModal = ({
           dragElastic={0}
           dragConstraints={dragConstraints}
           initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
+          animate={{
+            opacity: isDraggingElement ? 0 : 1,
+            scale: isDraggingElement ? 0.96 : 1,
+          }}
           exit={{ opacity: 0, scale: 0.96 }}
-          transition={{ duration: 0.18, ease: 'easeOut' }}
+          transition={{
+            duration: isDraggingElement ? 0.28 : 0.24,
+            ease: [0.16, 1, 0.3, 1],
+          }}
           className="fixed z-[9999] bg-white rounded-[0.75vw] border border-gray-300 shadow-[0_12px_45px_rgba(0,0,0,0.18)] flex flex-col overflow-hidden select-none"
           style={{
-            width: '26.5vw',
-            minWidth: '380px',
-            height: '74vh',
+            width: '28.5vw',
+            minWidth: '420px',
+            height: '75vh',
             maxHeight: 'calc(100vh - 40px)',
             left: modalPos.x,
             top: modalPos.y,
+            pointerEvents: isDraggingElement ? 'none' : 'auto',
           }}
           onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
@@ -312,18 +405,15 @@ export const AddElementsModal = ({
 
           {/* Body: 2 Columns */}
           <div className="flex-1 min-h-0 flex border-t border-gray-100 mt-[0.2vh] overflow-hidden">
-            {/* Left Categories Sidebar Component with Subtopics Tree */}
+            {/* Left Categories Sidebar Component */}
             <CategorySidebarList
               categories={ELEMENT_CATEGORIES}
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
-              subtopics={maskingSubtopics}
-              selectedSubtopic={selectedSubtopic}
-              onSelectSubtopic={setSelectedSubtopic}
             />
 
             {/* Right Elements Grid */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-[0.6vw] flex flex-col">
+            <div className="flex-1 overflow-y-auto p-[0.6vw] flex flex-col [scrollbar-width:none] [&::-webkit-scrollbar]:hidden hover:[scrollbar-width:thin] hover:[&::-webkit-scrollbar]:block custom-scrollbar transition-all duration-200">
               {groupedBySubtopic ? (
                 <div className="flex flex-col gap-[2vh]">
                   {groupedBySubtopic.map(({ title, items }) => (
@@ -336,7 +426,7 @@ export const AddElementsModal = ({
                           {items.length}
                         </span>
                       </div>
-                      <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[0.4vw] gap-y-[1.2vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[0.8vh]'}`}>
+                      <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-2 gap-x-[0.6vw] gap-y-[1.2vh] p-[0.2vw]' : 'grid-cols-4 gap-x-[0.45vw] gap-y-[0.8vh]'}`}>
                         {items.map((item) => (
                           <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
                         ))}
@@ -350,18 +440,41 @@ export const AddElementsModal = ({
                     <span className="text-[0.74vw] font-bold text-gray-800 tracking-tight">
                       {selectedCategory === 'masking' && selectedSubtopic !== 'all' ? selectedSubtopic : activeCategoryObj.name}
                     </span>
-                    <span className="text-[0.58vw] text-gray-400 font-semibold bg-gray-100 px-[0.35vw] py-[0.1vh] rounded-[0.25vw]">
-                      {displayedElements.length}
-                    </span>
+                    <div className="flex items-center gap-[0.4vw]">
+                      {selectedCategory === 'recent' && displayedElements.length > 0 && (
+                        <button
+                          onClick={handleClearRecent}
+                          className="text-[0.62vw] text-gray-400 hover:text-red-500 font-medium transition-colors cursor-pointer mr-[0.2vw]"
+                          title="Clear recent elements"
+                        >
+                          Clear
+                        </button>
+                      )}
+                      <span className="text-[0.58vw] text-gray-400 font-semibold bg-gray-100 px-[0.35vw] py-[0.1vh] rounded-[0.25vw]">
+                        {displayedElements.length}
+                      </span>
+                    </div>
                   </div>
-                  <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-1 p-[0.4vw] gap-y-[1.2vh]' : 'grid-cols-3 gap-x-[0.5vw] gap-y-[0.8vh]'}`}>
+                  <div className={`grid ${selectedCategory === 'google-maps' ? 'grid-cols-2 gap-x-[0.6vw] gap-y-[1.2vh] p-[0.2vw]' : 'grid-cols-4 gap-x-[0.45vw] gap-y-[0.8vh]'}`}>
                     {displayedElements.map((item) => (
                       <ElementGridCard key={item.id} item={item} onInsert={handleInsert} />
                     ))}
 
                     {displayedElements.length === 0 && (
-                      <div className="col-span-full py-[4vh] text-center text-gray-400 text-[0.75vw]">
-                        No elements found in {selectedSubtopic !== 'all' ? selectedSubtopic : activeCategoryObj.name}
+                      <div className="col-span-full py-[4vh] flex flex-col items-center justify-center text-center text-gray-400">
+                        {selectedCategory === 'recent' ? (
+                          <>
+                            <Icon icon="lucide:clock" className="w-[1.8vw] h-[1.8vw] text-gray-300 mb-[0.8vh]" />
+                            <p className="text-[0.78vw] font-medium text-gray-500 mb-[0.3vh]">No recent elements yet</p>
+                            <p className="text-[0.68vw] text-gray-400 max-w-[17vw] leading-relaxed">
+                              Elements you click or drag onto your page will appear here for fast access.
+                            </p>
+                          </>
+                        ) : (
+                          <span className="text-[0.75vw]">
+                            No elements found in {selectedSubtopic !== 'all' ? selectedSubtopic : activeCategoryObj.name}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>

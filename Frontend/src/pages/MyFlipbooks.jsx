@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Folder, Plus, ArrowLeft, Search, MoreVertical, Trash2, Edit2, Copy, Eye, Wrench, PenTool, BarChart2, Share2, Download, FolderInput, SlidersHorizontal, CheckSquare, Check, X, Home, Library, ArrowRight, UploadCloud, Upload, ChevronLeft, ChevronRight, ChevronDown, ArrowDownUp, Globe, Lock, Settings, CloudUpload, GripVertical, RotateCcw, Heart } from 'lucide-react';
+import { BookOpen, Folder, Plus, ArrowLeft, Search, MoreVertical, Trash2, Edit2, Copy, Eye, Wrench, PenTool, BarChart2, Share2, Download, FolderInput, SlidersHorizontal, CheckSquare, Check, X, Home, Library, ArrowRight, UploadCloud, Upload, ChevronLeft, ChevronRight, ChevronDown, ArrowDownUp, Globe, Lock, Settings, CloudUpload, GripVertical, RotateCcw, Heart, Monitor, Laptop } from 'lucide-react';
 import { Icon } from '@iconify/react';
 
 import AlertModal from '../components/AlertModal';
@@ -13,6 +13,7 @@ import StorageLimitModal from '../components/StorageLimitModal';
 import LegacyFormatModal from '../components/LegacyFormatModal';
 import { validateStorageBeforeUpload } from '../utils/storageValidation';
 import { saveCustomizedEditorState, savePageEditorState, deleteBookEditorState } from '../utils/dbUtils';
+import { saveAllPagesToIDB } from '../utils/pageWindowStore';
 import { backgroundSyncManager } from '../utils/backgroundSyncManager';
 import { backgroundExtractionManager } from '../utils/backgroundExtractionManager';
 import { preloadEditorComponents } from '../utils/preloadUtils';
@@ -81,6 +82,39 @@ const templates = [
 
 export default function MyFlipbooks() {
     const navigate = useNavigate();
+
+    // Block Mobile and Tablet Devices from Application
+    const isMobileOrTablet = typeof window !== 'undefined' && (
+      window.innerWidth < 1024 ||
+      (typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+    );
+
+    if (isMobileOrTablet) {
+      return (
+        <div className="w-full h-full min-h-[85vh] flex flex-col items-center justify-center p-6 text-center bg-white font-sans select-none">
+          <div className="w-16 h-16 rounded-2xl bg-orange-50 border border-orange-200/80 flex items-center justify-center text-[#ec5137] mb-4 shadow-xs">
+            <Monitor className="w-8 h-8" />
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 text-[#ec5137] border border-orange-200 text-xs font-semibold mb-3">
+            <Laptop className="w-3.5 h-3.5" />
+            <span>Desktop Only Application</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 max-w-md leading-snug">
+            Try Application on Your Desktop for Best Experience
+          </h1>
+          <p className="text-gray-500 text-xs sm:text-sm mt-2 mb-6 max-w-sm leading-relaxed">
+            FlipiBook Application (Studio, 3D Canvas, and Page Editors) is designed exclusively for desktop and laptop computers. Mobile and tablet devices are not supported for editing and managing flipbooks.
+          </p>
+          <button
+            onClick={() => navigate('/home')}
+            className="px-6 py-2.5 rounded-xl bg-[#ec5137] hover:bg-[#d5452e] text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+          >
+            <Home className="w-4 h-4" />
+            <span>Back to Home</span>
+          </button>
+        </div>
+      );
+    }
 
     // User Data from Redux Auth
     const { user } = useAuth();
@@ -153,14 +187,14 @@ export default function MyFlipbooks() {
             try {
                 const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books`, {
                     withCredentials: true,
-                    params: { t: Date.now() }
+                    params: { t: Date.now(), emailId }
                 });
-                const actualMyShelf = res.data?.myShelf;
+                const actualMyShelf = res.data?.shelfCustomizations || res.data?.myShelf;
                 if (actualMyShelf && actualMyShelf.folders && actualMyShelf.folders.length > 0) {
                     const previewFolders = actualMyShelf.folders.map(f => ({
                         name: f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : (f.folderName || 'My Flipbooks'),
                         books: f.books || [],
-                        shelf_design: f.shelf_design || 4
+                        shelf_design: f.shelf_design || 'customize4'
                     }));
                     setShelfFolders(prev => prev.length === 0 ? previewFolders : prev);
                 }
@@ -531,7 +565,8 @@ export default function MyFlipbooks() {
 
             const targetFolder = (!activeFolder || activeFolder === 'All Flipbook' || activeFolder === 'All Flipbooks' || activeFolder === 'Recent Book' || activeFolder === 'Recent' || activeFolder === 'Trash' || activeFolder === 'Favorites') ? 'My Flipbooks' : activeFolder;
             const matchedFolder = folders.find(f => (f.name || '').trim().toLowerCase() === targetFolder.trim().toLowerCase() || (targetFolder === 'My Flipbooks' && f.isDefault));
-            const targetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'default';
+            const rawTargetFolderVId = matchedFolder?.fol_v_id || matchedFolder?.id || 'default';
+            const targetFolderVId = String(rawTargetFolderVId).replace(/^fol_/, '');
 
             const now = new Date();
             const timeString = now.toISOString().replace(/[-:T.]/g, '').slice(0, 14);
@@ -693,6 +728,7 @@ export default function MyFlipbooks() {
             });
             const v_id = createRes.data?.v_id || cryptoVId;
             createdFlipbookVIdRef.current = v_id;
+            saveAllPagesToIDB(v_id, allPages).catch(e => console.warn('[MyFlipbooks] saveAllPagesToIDB error:', e));
 
             if (isUploadCancelledRef.current) {
                 flipbookApi.deleteBook(v_id).catch(() => {});
@@ -775,12 +811,14 @@ export default function MyFlipbooks() {
             // Smooth transition: brief delay to let spring physics smoothly glide to 100%
             await new Promise(res => setTimeout(res, 220));
 
-            // Navigate to the customized editor IMMEDIATELY with all in-memory pages
+            // Navigate to the customized editor IMMEDIATELY (pass initial pages to stay within history quota)
+            const safeStatePages = allPages.length > 20 ? allPages.slice(0, 10) : allPages;
+
             navigate(`/editor/customized_editor/${encodeURIComponent(targetFolderVId)}/${v_id}`, {
                 state: { 
                     flipbookName: uniqueName, 
                     pageCount: allPages.length,
-                    pages: allPages,
+                    pages: safeStatePages,
                     width: maxWidth,
                     height: maxHeight,
                     orientation,

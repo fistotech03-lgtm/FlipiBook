@@ -1,12 +1,26 @@
 import React from 'react';
-import { ArrowRight, MoreVertical, Eye, Plus } from 'lucide-react';
+import { ArrowRight, MoreVertical, Heart, Info, Edit2, Trash2 } from 'lucide-react';
+import { Icon } from '@iconify/react';
 import { RECENT_3D_PRESETS } from './recent3dPresets';
 
 export default function ThreeDRecentPresets({
+  models = [],
+  favorites = new Set(),
+  toggleFavorite,
   onViewPreset,
   onAddToFlipbook,
-  onViewAll
+  onLaunchEditor,
+  onRename,
+  onDelete,
+  onViewAll,
+  formatModelSize,
+  ModelCardPreview
 }) {
+  // Use models from backend if present; otherwise fallback to the default sample presets
+  const displayModels = (models && models.length > 0)
+    ? models.slice(0, 5)
+    : RECENT_3D_PRESETS;
+
   return (
     <div className="w-full bg-white rounded-[1vw] p-[1.1vw] shadow-[0_2px_12px_rgba(15,23,42,0.04)] border border-slate-100 flex-shrink-0 select-none">
       {/* Header Row */}
@@ -23,72 +37,108 @@ export default function ThreeDRecentPresets({
         </button>
       </div>
 
-      {/* Cards Grid: Exactly 5 items side by side */}
+      {/* Cards Grid: Matching the exact old card style from screenshot */}
       <div className="grid grid-cols-5 gap-[0.85vw]">
-        {RECENT_3D_PRESETS.map((preset) => (
-          <div
-            key={preset.id}
-            className="group bg-white rounded-[0.9vw] p-[0.7vw] border border-slate-200/90 hover:border-slate-300 shadow-[0_2px_8px_rgba(15,23,42,0.03)] hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)] hover:-translate-y-[2px] transition-all duration-200 flex flex-col justify-between"
-          >
-            {/* Image Box */}
-            <div className="w-full h-[6.8vw] min-h-[90px] rounded-[0.6vw] bg-[#f8f9fc] flex items-center justify-center relative overflow-hidden">
-              <img
-                src={preset.image}
-                alt={preset.name}
-                className="w-full h-full object-contain p-[0.4vw] group-hover:scale-105 transition-transform duration-300"
-              />
-              <button
-                type="button"
-                className="absolute top-[0.4vw] right-[0.4vw] w-[1.5vw] h-[1.5vw] rounded-full bg-white/90 hover:bg-white text-slate-400 hover:text-slate-700 flex items-center justify-center shadow-2xs transition-colors cursor-pointer"
-              >
-                <MoreVertical size="0.85vw" />
-              </button>
-            </div>
+        {displayModels.map((model) => {
+          const id = model.modelId || model.id;
+          const title = model.displayName || model.name || 'Untitled 3D Model';
+          const fileType = (model.type || model.name?.split('.').pop() || 'glb').toUpperCase();
+          const sizeMB = formatModelSize ? formatModelSize(model.size) : model.size;
+          const createdDate = model.uploadedAt
+            ? new Date(model.uploadedAt).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+              })
+            : '12 Nov 2026';
+          const isFav = favorites?.has ? favorites.has(id) : false;
 
-            {/* Meta */}
-            <div className="mt-[0.6vw] flex flex-col space-y-[0.3vw]">
-              <h3 className="text-[0.84vw] font-bold text-slate-900 truncate" title={preset.name}>
-                {preset.name}
-              </h3>
+          return (
+            <div
+              key={id || title}
+              className="group bg-white rounded-[0.9vw] border border-gray-200/80 hover:border-gray-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+            >
+              {/* Top Thumbnail Container */}
+              <div className="w-full h-[9.5vw] min-h-[140px] rounded-t-[0.9vw] bg-slate-50 border-b border-gray-100 relative flex items-center justify-center overflow-hidden">
+                {ModelCardPreview && model.url ? (
+                  <ModelCardPreview model={model} />
+                ) : model.image ? (
+                  <img
+                    src={model.image}
+                    alt={title}
+                    className="w-full h-full object-contain p-[0.6vw] transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-gray-400">
+                    <Icon icon="ph:cube-duotone" className="w-[2.4vw] h-[2.4vw] text-slate-300 group-hover:text-[#ea543a] transition-colors" />
+                  </div>
+                )}
 
-              <div className="flex items-center text-[0.68vw] text-slate-400 font-medium">
-                <span>{preset.format}</span>
-                <span className="mx-[0.3vw]">•</span>
-                <span>{preset.size}</span>
-              </div>
-
-              {/* Tag / Category Badge */}
-              <div className="pt-[0.1vw]">
-                <span className={`inline-block px-[0.55vw] py-[0.12vw] rounded-[0.3vw] text-[0.62vw] font-semibold border ${preset.categoryColor}`}>
-                  {preset.category}
+                {/* Format Badge Top Left (e.g. GLB) */}
+                <span className="absolute top-[0.45vw] left-[0.45vw] bg-black/65 backdrop-blur-xs text-white text-[0.58vw] font-bold px-[0.38vw] py-[0.12vw] rounded-[0.25vw] pointer-events-none z-10 uppercase">
+                  {fileType}
                 </span>
+
+                {/* Favorite Heart Top Right */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite && toggleFavorite(id);
+                  }}
+                  className="absolute top-[0.45vw] right-[0.45vw] w-[1.6vw] h-[1.6vw] rounded-full bg-white/80 backdrop-blur-xs hover:bg-white text-gray-400 hover:text-rose-500 flex items-center justify-center transition-all cursor-pointer shadow-xs z-10"
+                  title="Favorite"
+                >
+                  <Heart className={`w-[0.85vw] h-[0.85vw] ${isFav ? 'text-rose-500 fill-rose-500' : ''}`} />
+                </button>
               </div>
 
-              {/* Action Buttons: View & Add to Flipbook */}
-              <div className="grid grid-cols-[auto_1fr] gap-[0.4vw] pt-[0.4vw]">
-                <button
-                  type="button"
-                  onClick={() => onViewPreset && onViewPreset(preset)}
-                  className="flex items-center justify-center gap-[0.25vw] px-[0.65vw] py-[0.42vw] rounded-[0.45vw] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[0.72vw] font-semibold cursor-pointer shadow-2xs transition-colors"
-                >
-                  <Eye size="0.75vw" className="text-slate-500" />
-                  <span>View</span>
-                </button>
+              {/* Card Main Body */}
+              <div className="p-[0.75vw] flex flex-col justify-between flex-1 space-y-[0.55vw]">
+                <div>
+                  <div className="flex items-start justify-between gap-[0.4vw]">
+                    <h3
+                      className="text-[0.82vw] font-bold text-gray-800 line-clamp-1 hover:text-[#ea543a] cursor-pointer transition-colors"
+                      onClick={() => onLaunchEditor && onLaunchEditor(id)}
+                      title={title}
+                    >
+                      {title}
+                    </h3>
 
+                    {/* Three Dots More Menu */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewPreset && onViewPreset(model);
+                      }}
+                      className="p-[0.2vw] text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer transition-colors shrink-0"
+                      title="File info"
+                    >
+                      <MoreVertical className="w-[0.85vw] h-[0.85vw]" />
+                    </button>
+                  </div>
+
+                  {/* Metadata (e.g., 2.44 MB • 12 Nov 2026) */}
+                  <p className="text-[0.68vw] text-gray-400 font-medium mt-[0.15vw]">
+                    {[sizeMB, createdDate].filter(Boolean).join(' • ') || 'WebGL Model'}
+                  </p>
+                </div>
+
+                {/* Bottom Action Button: Open 3D Editor */}
                 <button
                   type="button"
-                  onClick={() => onAddToFlipbook && onAddToFlipbook(preset)}
-                  className="flex items-center justify-center gap-[0.25vw] px-[0.65vw] py-[0.42vw] rounded-[0.45vw] bg-[#ec5137] hover:bg-[#d4432c] text-white text-[0.72vw] font-semibold cursor-pointer shadow-2xs transition-colors truncate"
+                  onClick={() => onLaunchEditor && onLaunchEditor(id)}
+                  className="w-full py-[0.38vw] bg-[#fff5f3] hover:bg-[#ea543a] text-[#ea543a] hover:text-white rounded-[0.45vw] text-[0.74vw] font-semibold transition-all flex items-center justify-center gap-[0.3vw] cursor-pointer"
                 >
-                  <Plus size="0.75vw" strokeWidth={2.5} />
-                  <span className="truncate">Add to Flipbook</span>
+                  <Icon icon="ph:cube-bold" className="w-[0.8vw] h-[0.8vw]" />
+                  <span>Open 3D Editor</span>
                 </button>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
-

@@ -713,6 +713,29 @@ export default function MaterialList({
         return (
             <div className="w-full h-full flex flex-col select-none font-sans bg-transparent overflow-hidden">
                 <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+                        {/* Search Bar */}
+                        <div className="px-[0.75vw] pt-[0.6vw] pb-[0.35vw] w-full shrink-0">
+                            <div className="relative group w-full flex items-center bg-gray-50/90 border border-gray-200/80 rounded-[0.5vw] px-[0.6vw] py-[0.35vw] focus-within:bg-white focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100/70 transition-all shadow-2xs">
+                                <Icon icon="heroicons:magnifying-glass-20-solid" width="0.8vw" height="0.8vw" className="text-gray-400 group-focus-within:text-[#5d5efc] transition-colors shrink-0 mr-[0.4vw]" />
+                                <input
+                                    type="text"
+                                    placeholder="Search objects or meshes..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full text-[0.72vw] font-medium text-gray-800 placeholder:text-gray-400 outline-none bg-transparent"
+                                />
+                                {searchTerm && (
+                                    <button
+                                        onClick={() => setSearchTerm("")}
+                                        className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer shrink-0 ml-[0.3vw]"
+                                        title="Clear search"
+                                    >
+                                        <Icon icon="heroicons:x-mark-20-solid" width="0.8vw" height="0.8vw" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Scrollable Tree */}
                         <div className="flex-1 overflow-y-auto overflow-x-hidden px-[0.6vw] pb-[0.6vw] mt-[0.2vw] w-full [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
                             <div className="space-y-[0.05vw] w-full min-w-0">

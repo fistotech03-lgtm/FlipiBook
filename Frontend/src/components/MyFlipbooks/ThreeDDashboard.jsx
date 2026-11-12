@@ -763,429 +763,28 @@ export default function ThreeDDashboard({
         }}
       />
 
-      {/* RECENT 3D MODELS PRESETS ROW (Matching Screenshot 1) */}
-      <div className="w-full mb-[0.9vw] flex-shrink-0">
+      {/* RECENT 3D MODELS ROW (Fetched from backend with fallback) */}
+      <div className="w-full flex-1 min-h-0 flex flex-col">
         <ThreeDRecentPresets
-          onViewPreset={(preset) => {
-            setPreviewModel({
-              name: preset.name,
-              displayName: preset.title,
-              size: preset.size,
-              type: preset.format.toLowerCase(),
-              url: preset.modelUrl,
-              thumbnailUrl: preset.image,
-              uploadedAt: new Date().toISOString()
-            });
+          models={models}
+          favorites={favorites}
+          toggleFavorite={toggleFavorite}
+          formatModelSize={formatModelSize}
+          ModelCardPreview={ModelCardPreview}
+          onViewPreset={(m) => {
+            setPreviewModel(m);
           }}
-          onAddToFlipbook={(preset) => {
-            setAddToFlipbookModel(preset);
+          onAddToFlipbook={(m) => {
+            setAddToFlipbookModel(m);
+          }}
+          onLaunchEditor={(modelId) => {
+            handleLaunchEditor(modelId);
           }}
           onViewAll={() => {
             setIsViewAllOpen(true);
           }}
         />
       </div>
-
-      {/* CONTROLS & FILTER HEADER BAR (Exact FlipbooksToolbar styling & size) */}
-      <div className="w-full mb-[0.8vw] relative z-20 flex-shrink-0">
-        <h2 className="text-[1.15vw] font-bold text-[#1f2937] mb-[0.6vw]">
-          {activeFolder === 'Recent' || activeTab === 'recent'
-            ? 'Recent'
-            : activeTab === 'favorites'
-            ? 'Favorites'
-            : activeTab === 'trash'
-            ? 'Trash'
-            : 'All Models'}
-        </h2>
-
-        <div className="flex items-center justify-between w-full" ref={menuRef}>
-          {/* Left: Search & Filter Dropdowns */}
-          <div className="flex items-center gap-[0.75vw]">
-            {/* Search Input */}
-            <div className="relative w-[15vw]">
-              <Search className="absolute left-[0.9vw] top-1/2 -translate-y-1/2 text-[#ec5137]" size="0.95vw" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-[2.4vw] pr-[1vw] py-[0.5vw] rounded-[0.6vw] border border-gray-200 text-[0.84vw] focus:outline-none focus:border-[#ec5137] focus:ring-1 focus:ring-[#ec5137] bg-white text-gray-700 placeholder-gray-400 shadow-sm transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-[0.6vw] top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-                >
-                  <X size="0.85vw" />
-                </button>
-              )}
-            </div>
-
-            {/* All 3D Formats Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setIsTypeFilterOpen(!isTypeFilterOpen);
-                  setIsStatusFilterOpen(false);
-                  setIsSortOpen(false);
-                }}
-                className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer"
-              >
-                <Box size="0.9vw" className="text-[#ec5137]" />
-                <span>{typeFilter === 'all' ? 'All 3D Formats' : typeFilter.toUpperCase()}</span>
-                <ChevronDown size="0.85vw" className="text-gray-400 ml-[0.3vw]" />
-              </button>
-              {isTypeFilterOpen && (
-                <div className="absolute top-full left-0 mt-[0.25vw] min-w-[10vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-xl z-50 overflow-hidden">
-                  {['all', 'glb', 'obj', 'fbx'].map((tf) => (
-                    <button
-                      key={tf}
-                      onClick={() => {
-                        setTypeFilter(tf);
-                        setIsTypeFilterOpen(false);
-                      }}
-                      className={`w-full text-left px-[1vw] py-[0.48vw] text-[0.8vw] transition-colors cursor-pointer first:rounded-t-[0.55vw] last:rounded-b-[0.55vw] ${
-                        typeFilter === tf
-                          ? 'bg-[#fff5f3] text-[#ec5137] font-semibold'
-                          : 'text-gray-700 hover:bg-[#fff5f3] hover:text-[#ec5137]'
-                      }`}
-                    >
-                      {tf === 'all' ? 'All 3D Formats' : tf.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* All Status Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setIsStatusFilterOpen(!isStatusFilterOpen);
-                  setIsTypeFilterOpen(false);
-                  setIsSortOpen(false);
-                }}
-                className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer"
-              >
-                <Icon icon="lucide:disc" className="w-[0.9vw] h-[0.9vw] text-[#ec5137]" />
-                <span>{statusFilter === 'all' ? 'All Status' : (statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1))}</span>
-                <ChevronDown size="0.85vw" className="text-gray-400 ml-[0.3vw]" />
-              </button>
-              {isStatusFilterOpen && (
-                <div className="absolute top-full left-0 mt-[0.25vw] min-w-[9vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-xl z-50 overflow-hidden">
-                  {['all', 'public', 'private'].map((st) => (
-                    <button
-                      key={st}
-                      onClick={() => {
-                        setStatusFilter(st);
-                        setIsStatusFilterOpen(false);
-                      }}
-                      className={`w-full text-left px-[1vw] py-[0.48vw] text-[0.8vw] transition-colors cursor-pointer first:rounded-t-[0.55vw] last:rounded-b-[0.55vw] ${
-                        statusFilter === st
-                          ? 'bg-[#fff5f3] text-[#ec5137] font-semibold'
-                          : 'text-gray-700 hover:bg-[#fff5f3] hover:text-[#ec5137]'
-                      }`}
-                    >
-                      {st === 'all' ? 'All Status' : (st.charAt(0).toUpperCase() + st.slice(1))}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Sort by Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setIsSortOpen(!isSortOpen);
-                  setIsTypeFilterOpen(false);
-                  setIsStatusFilterOpen(false);
-                }}
-                className="flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] bg-white border border-gray-200 rounded-[0.6vw] text-[0.84vw] text-gray-700 hover:bg-gray-50 shadow-sm font-medium cursor-pointer"
-              >
-                <Icon icon="lucide:arrow-down-up" className="w-[0.9vw] h-[0.9vw] text-[#ec5137]" />
-                <span>Sort by - <span className="text-gray-500 font-normal">
-                  {sortBy === 'recent' ? 'Recently Created' : sortBy === 'oldest' ? 'Oldest First' : sortBy === 'name' ? 'Name (A → Z)' : 'File Size'}
-                </span></span>
-                <ChevronDown size="0.85vw" className="text-gray-400 ml-[0.3vw]" />
-              </button>
-              {isSortOpen && (
-                <div className="absolute top-full left-0 mt-[0.25vw] min-w-[12vw] bg-white border border-gray-200 rounded-[0.6vw] shadow-xl z-50 overflow-hidden">
-                  {[
-                    { id: 'recent', label: 'Recently Created' },
-                    { id: 'oldest', label: 'Oldest First' },
-                    { id: 'name', label: 'Name (A → Z)' },
-                    { id: 'size', label: 'File Size' }
-                  ].map((opt) => (
-                    <button
-                      key={opt.id}
-                      onClick={() => {
-                        setSortBy(opt.id);
-                        setIsSortOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between text-left px-[1vw] py-[0.48vw] text-[0.8vw] transition-colors cursor-pointer first:rounded-t-[0.55vw] last:rounded-b-[0.55vw] ${
-                        sortBy === opt.id
-                          ? 'bg-[#fff5f3] text-[#ec5137] font-semibold'
-                          : 'text-gray-700 hover:bg-[#fff5f3] hover:text-[#ec5137]'
-                      }`}
-                    >
-                      <span>{opt.label}</span>
-                      {sortBy === opt.id && <Check size="0.75vw" className="text-[#ec5137]" strokeWidth={2.5} />}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Selected Actions & Multiple Selection Checkbox */}
-          <div className="flex items-center gap-[1vw]">
-            {selectedModelIds.length > 0 && (
-              <button
-                onClick={handleBulkDelete}
-                className="flex items-center gap-[0.5vw] px-[0.75vw] py-[0.4vw] bg-white text-red-500 border border-red-200 rounded-[0.5vw] hover:bg-red-50 transition-colors shadow-sm text-[0.75vw] font-semibold cursor-pointer"
-              >
-                <Trash2 size="0.9vw" /> Delete ({selectedModelIds.length})
-              </button>
-            )}
-
-            <label
-              className="flex items-center gap-[0.5vw] cursor-pointer select-none"
-              onClick={(e) => {
-                e.preventDefault();
-                if (!isMultipleSelection) {
-                  setIsMultipleSelection(true);
-                  setSelectedModelIds(filteredModels.map((m) => m.modelId));
-                } else {
-                  if (selectedModelIds.length === filteredModels.length && filteredModels.length > 0) {
-                    setSelectedModelIds([]);
-                    setIsMultipleSelection(false);
-                  } else {
-                    setSelectedModelIds(filteredModels.map((m) => m.modelId));
-                  }
-                }
-              }}
-            >
-              <div
-                className={`w-[1.1vw] h-[1.1vw] rounded-[0.2vw] border flex items-center justify-center transition-all ${
-                  isMultipleSelection && selectedModelIds.length === filteredModels.length && filteredModels.length > 0
-                    ? 'bg-gray-700 border-gray-700'
-                    : 'border-gray-400 bg-white'
-                }`}
-              >
-                {isMultipleSelection && selectedModelIds.length === filteredModels.length && filteredModels.length > 0 && (
-                  <Check size="0.75vw" className="text-white" strokeWidth={3} />
-                )}
-              </div>
-              <span className="text-[0.85vw] font-medium text-gray-600">Select All</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      {/* 3D MODELS SCROLLABLE AREA (Models scrollable while banner & toolbar remain fixed) */}
-      <CustomScrollbar
-        color="#d1d5db"
-        hoverColor="#9ca3af"
-        width="0.35vw"
-        className="flex-1 pr-[0.3vw] pb-[2vw] z-10 min-h-0"
-        onScroll={() => setActiveMenuId(null)}
-      >
-        {/* 3D MODELS LIST / EMPTY STATE */}
-        {loading ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(14vw,16.5vw))] gap-[1.2vw]">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="w-full h-[15vw] min-h-[220px] bg-white rounded-[0.9vw] border border-gray-200 animate-pulse p-[0.9vw]" />
-            ))}
-          </div>
-        ) : filteredModels.length === 0 ? (
-          /* EMPTY STATE (Matching screenshot & 100% 3D buttons) */
-          <div className="w-full bg-white rounded-[1.1vw] border border-gray-200/80 p-[2.5vw] text-center shadow-[0_0.15vw_1vw_rgba(0,0,0,0.02)]">
-            <div className="w-[3.8vw] h-[3.8vw] rounded-[0.9vw] bg-[#fff5f3] text-[#ea543a] flex items-center justify-center mx-auto mb-[0.9vw]">
-              <Icon icon="ph:cube-bold" className="w-[2vw] h-[2vw]" />
-            </div>
-            <h3 className="text-[1.1vw] font-bold text-gray-900">No 3D Models Found</h3>
-            <p className="text-[0.82vw] text-gray-500 mt-[0.25vw] mb-[1.2vw]">
-              {searchQuery
-                ? `No 3D models matching "${searchQuery}".`
-                : 'Import your first 3D model file (.glb, .gltf, .obj, .fbx, .stl) or launch the 3D Studio Editor.'}
-            </p>
-            <div className="flex items-center justify-center gap-[0.8vw]">
-              <button
-                onClick={() => setIsUploadModalOpen(true)}
-                className="px-[1.2vw] py-[0.55vw] bg-[#ea543a] hover:bg-[#d4432c] text-white rounded-[0.55vw] text-[0.82vw] font-semibold transition-all inline-flex items-center gap-[0.45vw] cursor-pointer shadow-sm"
-              >
-                <Plus className="w-[0.95vw] h-[0.95vw]" />
-                <span>Import 3D Model</span>
-              </button>
-              <button
-                onClick={() => handleLaunchEditor()}
-                className="px-[1.2vw] py-[0.55vw] bg-slate-900 hover:bg-black text-white rounded-[0.55vw] text-[0.82vw] font-semibold transition-all inline-flex items-center gap-[0.45vw] cursor-pointer shadow-sm"
-              >
-                <Icon icon="ph:cube-bold" className="w-[0.95vw] h-[0.95vw]" />
-                <span>Launch 3D Editor</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* CARD GRID (Reduced Width, Real-time 3D Model Preview, Minimalist Layout) */
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(14vw,16.5vw))] gap-[1.2vw]">
-            {filteredModels.map((model) => {
-              const title = model.displayName || model.name || 'Untitled 3D Model';
-              const isFav = favorites.has(model.modelId);
-              const isSelected = selectedModelIds.includes(model.modelId);
-              const fileType = (model.type || model.name.split('.').pop() || 'glb').toUpperCase();
-              const sizeMB = formatModelSize(model.size);
-              const createdDate = model.uploadedAt
-                ? new Date(model.uploadedAt).toLocaleDateString('en-GB', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                  })
-                : '';
-
-              return (
-                <div
-                  key={model.modelId}
-                  className={`group bg-white rounded-[0.9vw] border transition-all duration-200 flex flex-col relative ${
-                    activeMenuId === model.modelId ? 'z-30 ring-1 ring-gray-300' : 'z-10'
-                  } ${
-                    isSelected ? 'border-[#ea543a] ring-2 ring-[#ea543a]/20 shadow-md' : 'border-gray-200/80 hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  {/* Top Thumbnail / 3D Canvas Preview Container */}
-                  <div className="w-full h-[9.5vw] min-h-[140px] rounded-t-[0.9vw] bg-slate-50 border-b border-gray-100 relative flex items-center justify-center overflow-hidden">
-                    <ModelCardPreview model={model} />
-
-                    {/* Format Badge Top Left */}
-                    <span className="absolute top-[0.45vw] left-[0.45vw] bg-black/65 backdrop-blur-xs text-white text-[0.58vw] font-bold px-[0.38vw] py-[0.12vw] rounded-[0.25vw] pointer-events-none z-10">
-                      {fileType}
-                    </span>
-
-                    {/* Checkbox (if multiple selection enabled) or Favorite Top Right */}
-                    <div className="absolute top-[0.45vw] right-[0.45vw] flex items-center gap-[0.3vw] z-10">
-                      {isMultipleSelection ? (
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => {
-                            setSelectedModelIds((prev) =>
-                              prev.includes(model.modelId)
-                                ? prev.filter((id) => id !== model.modelId)
-                                : [...prev, model.modelId]
-                            );
-                          }}
-                          className="w-[0.9vw] h-[0.9vw] rounded text-[#ea543a] focus:ring-[#ea543a] cursor-pointer"
-                        />
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(model.modelId);
-                          }}
-                          className="w-[1.6vw] h-[1.6vw] rounded-full bg-white/80 backdrop-blur-xs hover:bg-white text-gray-400 hover:text-rose-500 flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                          title="Favorite"
-                        >
-                          <Heart
-                            className={`w-[0.85vw] h-[0.85vw] ${isFav ? 'text-rose-500 fill-rose-500' : ''}`}
-                          />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Card Main Body */}
-                  <div className="p-[0.75vw] flex flex-col justify-between flex-1 space-y-[0.55vw]">
-                    <div>
-                      <div className="flex items-start justify-between gap-[0.4vw]">
-                        <h3
-                          className="text-[0.82vw] font-bold text-gray-800 line-clamp-1 hover:text-[#ea543a] cursor-pointer transition-colors"
-                          onClick={() => handleLaunchEditor(model.modelId)}
-                          title={title}
-                        >
-                          {title}
-                        </h3>
-
-                        {/* Three Dots More Menu Dropdown */}
-                        <div className="relative card-more-menu shrink-0">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenuId(activeMenuId === model.modelId ? null : model.modelId);
-                            }}
-                            className="p-[0.2vw] text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer transition-colors"
-                            title="More options"
-                          >
-                            <MoreVertical className="w-[0.85vw] h-[0.85vw]" />
-                          </button>
-
-                          {activeMenuId === model.modelId && (
-                            <div className="absolute right-0 top-full mt-[0.25vw] w-[8.8vw] min-w-[120px] bg-white border border-gray-200/90 rounded-[0.55vw] shadow-xl py-[0.25vw] z-50">
-                              {/* 1. File info */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPreviewModel(model);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full text-left px-[0.7vw] py-[0.38vw] text-[0.74vw] font-medium text-gray-700 hover:bg-[#fff5f3] hover:text-[#ea543a] flex items-center gap-[0.4vw] cursor-pointer transition-colors"
-                              >
-                                <Info className="w-[0.8vw] h-[0.8vw]" />
-                                <span>File info</span>
-                              </button>
-
-                              {/* 2. Rename */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setRenamingModel(model);
-                                  setNewNameInput(model.displayName || model.name);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full text-left px-[0.7vw] py-[0.38vw] text-[0.74vw] font-medium text-gray-700 hover:bg-[#fff5f3] hover:text-[#ea543a] flex items-center gap-[0.4vw] cursor-pointer transition-colors"
-                              >
-                                <Edit2 className="w-[0.8vw] h-[0.8vw]" />
-                                <span>Rename</span>
-                              </button>
-
-                              {/* 3. Delete */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeletingModel(model);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full text-left px-[0.7vw] py-[0.38vw] text-[0.74vw] font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-[0.4vw] cursor-pointer transition-colors border-t border-gray-100"
-                              >
-                                <Trash2 className="w-[0.8vw] h-[0.8vw]" />
-                                <span>Delete</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* File Metadata (Simplified) */}
-                      <p className="text-[0.68vw] text-gray-400 font-medium mt-[0.15vw]">
-                        {[sizeMB, createdDate].filter(Boolean).join(' • ') || 'WebGL Model'}
-                      </p>
-                    </div>
-
-                    {/* Bottom Action Button */}
-                    <button
-                      onClick={() => handleLaunchEditor(model.modelId)}
-                      className="w-full py-[0.38vw] bg-[#fff5f3] hover:bg-[#ea543a] text-[#ea543a] hover:text-white rounded-[0.45vw] text-[0.74vw] font-semibold transition-all flex items-center justify-center gap-[0.3vw] cursor-pointer"
-                    >
-                      <Icon icon="ph:cube-bold" className="w-[0.8vw] h-[0.8vw]" />
-                      <span>Open 3D Editor</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CustomScrollbar>
 
       {/* UPLOAD 3D MODEL MODAL (100% vw styling) */}
       {isUploadModalOpen && (
@@ -1382,7 +981,7 @@ export default function ThreeDDashboard({
                       <directionalLight position={[-5, 8, 5]} intensity={1.2} />
 
                       <Center>
-                        <group scale={0.7}>
+                        <AutoFitModel targetSize={2.0}>
                           <ThumbnailErrorBoundary>
                             <RenderModel
                               type={previewModel.type}
@@ -1391,7 +990,7 @@ export default function ThreeDDashboard({
                               shouldClone={true}
                             />
                           </ThumbnailErrorBoundary>
-                        </group>
+                        </AutoFitModel>
                       </Center>
 
                       <Environment preset="city" />
@@ -1527,6 +1126,7 @@ export default function ThreeDDashboard({
           isOpen={isViewAllOpen}
           onClose={() => setIsViewAllOpen(false)}
           uploadedModels={models}
+          ModelCardPreview={ModelCardPreview}
           onOpenInEditor={(modelId) => {
             setIsViewAllOpen(false);
             handleLaunchEditor(modelId);
@@ -1536,6 +1136,17 @@ export default function ThreeDDashboard({
             setAddToFlipbookModel(item);
           }}
           onViewPreset={(item) => {
+            setPreviewModel({
+              name: item.name,
+              displayName: item.title,
+              size: item.size,
+              type: (item.format || 'glb').toLowerCase(),
+              url: item.modelUrl,
+              thumbnailUrl: item.image,
+              uploadedAt: item.uploadedAt || new Date().toISOString()
+            });
+          }}
+          onViewInfo={(item) => {
             setPreviewModel({
               name: item.name,
               displayName: item.title,

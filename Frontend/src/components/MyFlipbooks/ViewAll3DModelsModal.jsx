@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, Html } from "@react-three/drei";
 import axios from "axios";
-import { X, Search, Plus, Eye, Check } from "lucide-react";
+import { X, Search, Plus, Eye, Check, MoreVertical } from "lucide-react";
 import RenderModel from "../ThreedEditor/Components/ModelLoaders";
 import { resolveUploadsPath } from "../../utils/assetUtils";
 import { useAuth } from "../../context/AuthContext";
@@ -92,9 +92,11 @@ export default function ViewAll3DModelsModal({
   isOpen,
   onClose,
   uploadedModels = [],
+  ModelCardPreview,
   onOpenInEditor,
   onAddToFlipbook,
-  onViewPreset
+  onViewPreset,
+  onViewInfo
 }) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'presets' | 'uploaded'
@@ -121,26 +123,20 @@ export default function ViewAll3DModelsModal({
     }
   };
 
-  // Combine standard 5 presets + any backend default models
+  // Fetch only real presets from backend defaultmodels collection
   const allPresets = useMemo(() => {
-    const list = [...RECENT_3D_PRESETS];
-    (dbPresets || []).forEach((dbm) => {
-      if (!list.some((p) => p.name.toLowerCase() === dbm.name.toLowerCase())) {
-        list.push({
-          id: dbm.id || dbm.modelId,
-          name: dbm.name,
-          title: dbm.name,
-          format: (dbm.type || 'GLB').toUpperCase(),
-          size: dbm.size || '10 MB',
-          category: dbm.category || 'Preset',
-          categoryColor: 'bg-orange-50 text-orange-600 border-orange-200',
-          image: dbm.thumbnailUrl || null,
-          modelUrl: dbm.url || '/chair.glb',
-          isDb: true
-        });
-      }
-    });
-    return list;
+    return (dbPresets || []).map((dbm) => ({
+      id: dbm.id || dbm.modelId,
+      name: dbm.name,
+      title: dbm.name,
+      format: (dbm.type || 'GLB').toUpperCase(),
+      size: dbm.size || 'N/A',
+      category: dbm.category || 'Preset',
+      categoryColor: 'bg-orange-50 text-orange-600 border-orange-200',
+      image: dbm.thumbnailUrl || null,
+      modelUrl: dbm.url || null,
+      isDb: true
+    }));
   }, [dbPresets]);
 
   // Unified items
@@ -267,7 +263,9 @@ export default function ViewAll3DModelsModal({
                 >
                   {/* Thumbnail */}
                   <div className="w-full h-[8.5vw] min-h-[110px] rounded-[0.55vw] bg-slate-50 flex items-center justify-center relative overflow-hidden border border-slate-100">
-                    {item.image ? (
+                    {ModelCardPreview && item.url ? (
+                      <ModelCardPreview model={item} />
+                    ) : item.image ? (
                       <img src={item.image} alt={item.name} className="w-full h-full object-contain p-[0.4vw] group-hover:scale-105 transition-transform duration-300" />
                     ) : (
                       <div className="flex flex-col items-center justify-center text-slate-400">
@@ -287,9 +285,24 @@ export default function ViewAll3DModelsModal({
 
                   {/* Meta */}
                   <div className="mt-[0.6vw] flex flex-col space-y-[0.3vw]">
-                    <h3 className="text-[0.82vw] font-bold text-slate-900 truncate" title={item.name}>
-                      {item.name}
-                    </h3>
+                    <div className="flex items-start justify-between gap-[0.4vw]">
+                      <h3 className="text-[0.82vw] font-bold text-slate-900 truncate" title={item.name}>
+                        {item.name}
+                      </h3>
+                      {/* Three-dots menu to view file info */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewInfo && onViewInfo(item);
+                        }}
+                        className="p-[0.2vw] text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 cursor-pointer transition-colors shrink-0"
+                        title="File info"
+                      >
+                        <MoreVertical className="w-[0.85vw] h-[0.85vw]" />
+                      </button>
+                    </div>
+
                     <div className="flex items-center text-[0.68vw] text-slate-400 font-medium">
                       <span>{item.format}</span>
                       <span className="mx-[0.3vw]">•</span>
@@ -302,30 +315,17 @@ export default function ViewAll3DModelsModal({
                       </span>
                     </div>
 
-                    {/* Actions */}
-                    <div className="grid grid-cols-[auto_1fr] gap-[0.4vw] pt-[0.4vw]">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onViewPreset && onViewPreset(item);
-                        }}
-                        className="flex items-center justify-center gap-[0.25vw] px-[0.65vw] py-[0.4vw] rounded-[0.4vw] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[0.72vw] font-semibold cursor-pointer shadow-2xs transition-colors"
-                      >
-                        <Eye size="0.75vw" className="text-slate-500" />
-                        <span>View</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onAddToFlipbook && onAddToFlipbook(item);
-                        }}
-                        className="flex items-center justify-center gap-[0.25vw] px-[0.65vw] py-[0.4vw] rounded-[0.4vw] bg-[#ec5137] hover:bg-[#d4432c] text-white text-[0.72vw] font-semibold cursor-pointer shadow-2xs transition-colors truncate"
-                      >
-                        <Plus size="0.75vw" strokeWidth={2.5} />
-                        <span className="truncate">Add to Flipbook</span>
-                      </button>
-                    </div>
+                    {/* Bottom Action Button: Open 3D Editor */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenInEditor && onOpenInEditor(item.id || item.modelId || null);
+                      }}
+                      className="w-full mt-[0.4vw] py-[0.38vw] bg-[#fff5f3] hover:bg-[#ea543a] text-[#ea543a] hover:text-white rounded-[0.45vw] text-[0.74vw] font-semibold transition-all flex items-center justify-center gap-[0.3vw] cursor-pointer"
+                    >
+                      <Icon icon="ph:cube-bold" className="w-[0.8vw] h-[0.8vw]" />
+                      <span>Open 3D Editor</span>
+                    </button>
                   </div>
                 </div>
               ))}

@@ -463,16 +463,16 @@ export default function MyFlipbooks() {
 
         // INSTANT LOADER APPEARANCE (0ms latency - immediately on button click!)
         setProcessingProgress({
-            current: 1,
+            current: 0,
             total: initialPageCount,
             fileIndex: 0,
             totalFiles: files.length,
             pageCount: initialPageCount,
             message: files.length > 1
-                ? `Converting queued ${initialDocLabel} 1 of ${files.length} (${firstFile.name})...`
-                : `Converting ${initialDocLabel}: ${firstFile.name}...`,
+                ? `Uploading queued ${initialDocLabel} 1 of ${files.length} (${firstFile.name})...`
+                : `Uploading ${initialDocLabel}: ${firstFile.name}...`,
             fileName: firstFile.name,
-            stage: 'converting'
+            stage: 'uploading'
         });
 
         try {
@@ -488,20 +488,22 @@ export default function MyFlipbooks() {
                 const detectedCount = file._pageCount || 1;
 
                 setProcessingProgress({
-                    current: 1,
+                    current: 0,
                     total: detectedCount,
                     fileIndex,
                     totalFiles: files.length,
                     pageCount: detectedCount,
                     message: files.length > 1
-                        ? `Converting queued ${docLabel} ${fileIndex + 1} of ${files.length} (${file.name})...`
-                        : `Converting ${docLabel}: ${file.name}...`,
+                        ? `Uploading queued ${docLabel} ${fileIndex + 1} of ${files.length} (${file.name})...`
+                        : `Uploading ${docLabel}: ${file.name}...`,
                     fileName: file.name,
-                    stage: 'converting'
+                    stage: 'uploading'
                 });
-                // 50% Fast-Launch: For large documents (>6 pages), extract first 50% for instant editor launch,
+                // 50% Fast-Launch: For large PDF documents (>6 pages), extract first 50% for instant editor launch,
                 // and stream remaining balance pages in background Web Workers with zero UI latency.
-                const isSingleLargeDoc = files.length === 1 && detectedCount > 6;
+                // Modern Office documents (.docx, .pptx) are converted client-side in one pass and should not be partitioned.
+                const isOffice = docType === 'word' || docType === 'powerpoint';
+                const isSingleLargeDoc = !isOffice && files.length === 1 && detectedCount > 6;
                 const earlyExtractLimit = isSingleLargeDoc ? Math.max(4, Math.ceil(detectedCount * 0.5)) : Infinity;
 
                 const images = await convertPdfWithInkscape(file, earlyExtractLimit, backendUrl, (currOrObj, total, pct, stage, msg) => {

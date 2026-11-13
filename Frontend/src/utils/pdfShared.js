@@ -260,8 +260,8 @@ export const generateSkeletonPageSvg = (pageNum, baseWidth = 210, baseHeight = 2
       <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.20}" width="${baseWidth * 0.76}" height="${baseHeight * 0.015}" rx="2" fill="#f1f5f9" />
       <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.23}" width="${baseWidth * 0.80}" height="${baseHeight * 0.015}" rx="2" fill="#f1f5f9" />
       <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.29}" width="${baseWidth * 0.84}" height="${baseHeight * 0.48}" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.2" />
-      <text x="${baseWidth * 0.5}" y="${baseHeight * 0.52}" font-family="system-ui, -apple-system, sans-serif" font-size="${titleFontSize}" fill="#6366f1" text-anchor="middle" font-weight="600">Extracting Page ${pageNum}...</text>
-      <text x="${baseWidth * 0.5}" y="${baseHeight * 0.57}" font-family="system-ui, -apple-system, sans-serif" font-size="${subFontSize}" fill="#94a3b8" text-anchor="middle">Loading high-fidelity vector graphics</text>
+      <circle cx="${baseWidth * 0.5}" cy="${baseHeight * 0.52}" r="14" fill="none" stroke="#ea7233" stroke-width="2" stroke-dasharray="20 10" />
+      <rect x="${baseWidth * 0.35}" y="${baseHeight * 0.60}" width="${baseWidth * 0.30}" height="${baseHeight * 0.015}" rx="2" fill="#e2e8f0" />
       <text x="${baseWidth * 0.5}" y="${baseHeight * 0.94}" font-family="system-ui, -apple-system, sans-serif" font-size="${numFontSize}" fill="#cbd5e1" text-anchor="middle" font-weight="500">${pageNum}</text>
     </g>
     <rect id="${shieldId}" data-name="Document Shield" data-type="shield" x="0" y="0" width="${baseWidth}" height="${baseHeight}" fill="none" opacity="0" pointer-events="all" style="pointer-events: all;" />

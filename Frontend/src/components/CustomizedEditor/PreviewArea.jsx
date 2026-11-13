@@ -611,43 +611,7 @@ const PreviewArea = React.memo(({
         };
     }, []);
 
-    useEffect(() => {
-        // ── Scroll wheel: navigation (if enabled) ──────────
-        const handleWheel = (e) => {
-            if (!settings?.navigation?.mouseWheel) return;
-
-            const target = e.target;
-            const isInsideFlipbook = target.closest?.('.turn-book, #turn-book, [data-turn-book], .flipbook-magazine-wrapper, .fbe-book, .fbe-wrapper, [data-fbe]');
-            if (!isInsideFlipbook) return;
-
-            // Only flip on significant scroll to avoid accidental flips
-            if (Math.abs(e.deltaY) < 10) return;
-
-            if (isFlippingRef.current) {
-                e.preventDefault();
-                return;
-            }
-
-            e.preventDefault();
-
-            if (e.deltaY > 0) {
-                bookRef.current?.pageFlip()?.flipNext();
-            } else if (e.deltaY < 0) {
-                bookRef.current?.pageFlip()?.flipPrev();
-            }
-
-            isFlippingRef.current = true;
-            setTimeout(() => {
-                isFlippingRef.current = false;
-            }, 300);
-        };
-
-        window.addEventListener('wheel', handleWheel, { passive: false });
-
-        return () => {
-            window.removeEventListener('wheel', handleWheel);
-        };
-    }, [settings?.navigation?.mouseWheel]);
+    // Note: Scroll wheel navigation is handled by DeviceLayoutRenderer layouts with proper debouncing and animation locks
 
     useEffect(() => {
         if (!screenRef.current) {
@@ -1559,6 +1523,23 @@ const PreviewArea = React.memo(({
 
     const customHardPages = useMemo(() => rawCustomHardPages || [], [rawCustomHardPages]);
 
+    const updateCenteringOffset = useCallback((logicalIndex) => {
+        if (isSinglePage) {
+            setOffset(0);
+            return;
+        }
+        let newOffset = 0;
+        const totalPages = augmentedPages.length || pages.length;
+        if (logicalIndex <= 0) {
+            newOffset = -(WIDTH / 2);
+        } else if (logicalIndex >= totalPages - 1 && totalPages % 2 === 0) {
+            newOffset = (WIDTH / 2);
+        } else {
+            newOffset = 0;
+        }
+        setOffset(newOffset);
+    }, [isSinglePage, augmentedPages.length, pages.length, WIDTH]);
+
     const onFlip = useCallback((e) => {
         // Skip echoing back to setTargetPage while we are in a programmatic external jump
         // — prevents the circular: targetPage → flip → onFlip → setTargetPage → targetPage loop
@@ -1572,17 +1553,7 @@ const PreviewArea = React.memo(({
         }
 
         // Compute offset for UI centering
-        let newOffset = 0;
-        const totalPages = augmentedPages.length || pages.length;
-        if (logicalIndex === 0) {
-            newOffset = -(WIDTH / 2);
-        } else if (logicalIndex === totalPages - 1) {
-            // For the back cover, shift to center the single page
-            newOffset = (logicalIndex % 2 === 0) ? -(WIDTH / 2) : (WIDTH / 2);
-        } else {
-            newOffset = 0;
-        }
-        setOffset(newOffset);
+        updateCenteringOffset(logicalIndex);
 
         // Signal a flip to the Sound component
         if (lastSoundLogicalRef.current !== logicalIndex) {
@@ -1595,10 +1566,13 @@ const PreviewArea = React.memo(({
         if (document.activeElement && typeof document.activeElement.blur === 'function' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
             document.activeElement.blur();
         }
-    }, [pages.length, WIDTH, useHardCover, externalOnFlip]);
+    }, [updateCenteringOffset, externalOnFlip]);
 
     const onTurning = useCallback((e) => {
         const logicalIndex = e.data;
+        // Instantly initiate smooth centering glide in lockstep with the 3D page flip animation!
+        updateCenteringOffset(logicalIndex);
+
         // Signal flip sound directly via zero-render custom event
         if (lastSoundLogicalRef.current !== logicalIndex) {
             lastSoundLogicalRef.current = logicalIndex;
@@ -1609,7 +1583,7 @@ const PreviewArea = React.memo(({
         if (document.activeElement && typeof document.activeElement.blur === 'function' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
             document.activeElement.blur();
         }
-    }, []);
+    }, [updateCenteringOffset]);
 
 
     useEffect(() => {

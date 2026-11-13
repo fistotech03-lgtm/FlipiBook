@@ -802,6 +802,7 @@ const CustomizedEditor = () => {
             bookName={bookName}
             pages={visiblePages}
             targetPage={targetPage}
+            onFlip={setTargetPage}
             logoSettings={logoSettings}
             watermarkSettings={watermarkSettings}
             backgroundSettings={backgroundSettings}

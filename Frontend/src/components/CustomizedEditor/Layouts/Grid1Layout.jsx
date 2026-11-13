@@ -268,6 +268,7 @@ const Grid1Layout = React.memo((props) => {
     const [dimWidth, setDimWidth] = useState(isMobileLandscape ? initialWidth * 0.95 : initialWidth);
     const [dimHeight, setDimHeight] = useState(isMobileLandscape ? initialHeight * 0.9 : initialHeight);
     const aspectRatio = initialHeight / initialWidth;
+    const isPortraitLayout = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
 
     // Reset dimensions to default when tablet mode changes or initial props change
     React.useEffect(() => {
@@ -349,15 +350,19 @@ const Grid1Layout = React.memo((props) => {
     };
 
     const localOffset = React.useMemo(() => {
-        if (offset === 0) return 0; // Use offset prop to respect single page mode
-        // Shift left to center the front cover, shift right to center the back cover
+        if (isPortraitLayout || (pages?.length ?? 0) <= 1) return 0;
+        // Prioritize reactive offset passed directly from PreviewArea (which triggers on frame 0 of onTurning!)
+        if (typeof offset === 'number') {
+            if (offset === 0) return 0;
+            return offset < 0 ? -(dimWidth / 2) : (dimWidth / 2);
+        }
         if (currentPage === 0) {
             return -(dimWidth / 2);
-        } else if (currentPage >= pages.length - 1) {
-            return (currentPage % 2 === 0) ? -(dimWidth / 2) : (dimWidth / 2);
+        } else if (currentPage >= pages.length - 1 && pages.length % 2 === 0) {
+            return (dimWidth / 2);
         }
         return 0;
-    }, [currentPage, pages.length, dimWidth, offset]);
+    }, [currentPage, pages.length, dimWidth, offset, isPortraitLayout]);
 
     const originalBuildPageDoc = children && children.props && children.props.buildPageDoc;
     const localBuildPageDoc = React.useCallback((html, pageNum) => {
@@ -381,16 +386,24 @@ const Grid1Layout = React.memo((props) => {
 
     // Keyboard and Mouse Wheel Actions
     React.useEffect(() => {
+        let lastKeyTime = 0;
         const handleKeyDown = (e) => {
             // Prevent interference with search input or other text fields
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
+            const now = Date.now();
+            if (bookRef.current?.pageFlip()?.isAnimating?.()) return;
+
             switch (e.key) {
                 case 'ArrowRight':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     closeAllPopups();
                     bookRef.current?.pageFlip()?.flipNext();
                     break;
                 case 'ArrowLeft':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     closeAllPopups();
                     bookRef.current?.pageFlip()?.flipPrev();
                     break;
@@ -423,14 +436,13 @@ const Grid1Layout = React.memo((props) => {
                 }
                 
                 const now = Date.now();
-                if (now - lastWheelTime < 600) return; // Debounce to prevent rapid flipping
+                if (now - lastWheelTime < 400 || bookRef.current?.pageFlip()?.isAnimating?.()) return;
+                lastWheelTime = now;
                 
                 if (e.deltaY > 0) {
                     bookRef.current?.pageFlip()?.flipNext();
-                    lastWheelTime = now;
                 } else if (e.deltaY < 0) {
                     bookRef.current?.pageFlip()?.flipPrev();
-                    lastWheelTime = now;
                 }
             }
         };
@@ -637,7 +649,6 @@ const Grid1Layout = React.memo((props) => {
     }, [currentPage, showThumbnailBar, checkScroll]);
 
     const isPdfProject = pages?.some(p => p.html && p.html.includes('data-name="PDF Background"'));
-    const isPortraitLayout = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
 
     return (
         <div className="flex-1 flex flex-col h-full w-full min-h-0 overflow-hidden relative" style={{ backgroundColor: backgroundSettings?.color || 'transparent' }}>
@@ -852,52 +863,64 @@ const Grid1Layout = React.memo((props) => {
             >
                 {/* Vertical Centered Navigation Arrows */}
                 {(() => {
-                    const isCover = currentPage === 0;
-                    const isBackCover = currentPage === pages.length - 1 && pages.length % 2 === 0;
-
-                    const leftDistance = isPortraitLayout
-                        ? (dimWidth * responsiveScale) / 2
-                        : (isCover ? 0 : dimWidth * responsiveScale);
-
-                    const rightDistance = isPortraitLayout
-                        ? (dimWidth * responsiveScale) / 2
-                        : (isBackCover ? 0 : dimWidth * responsiveScale);
-
+                    const isCover = typeof offset === 'number' ? offset < 0 : currentPage === 0;
+                    const isBackCover = typeof offset === 'number' ? offset > 0 : (currentPage >= pages.length - 1 && pages.length % 2 === 0);
                     const isSinglePage = isPortraitLayout || isCover || isBackCover;
-                    const gap = (isTablet ? 4 : 5) + (isSinglePage ? 2 : 0); // 2vw extra gap for single pages
 
-                    const leftPos = `calc(50% - ${leftDistance}px - ${gap}vw + ${localOffset}px)`;
-                    const rightPos = `calc(50% - ${rightDistance}px - ${gap}vw - ${localOffset}px)`;
+                    const hasPrev = currentPage > 0;
+                    const hasNext = currentPage < pages.length - 1;
+
+                    const bookHalfWidth = isSinglePage
+                        ? (dimWidth * responsiveScale) / 2
+                        : (dimWidth * responsiveScale);
+
+                    const gap = (isTablet ? 3.5 : 4.5);
+                    const leftPos = `calc(50% - ${bookHalfWidth}px - ${gap}vw)`;
+                    const rightPos = `calc(50% - ${bookHalfWidth}px - ${gap}vw)`;
 
                     return (
                         <>
                             {(settings?.navigation?.nextPrevButtons ?? true) && (
                                 <button
-                                    className={`absolute top-1/2 -translate-y-1/2 ${isTablet ? 'w-[1.7vw] h-[1.7vw]' : 'w-[2.2vw] h-[2.2vw]'} backdrop-blur-md rounded-[0.25vw] flex items-center justify-center transition-all shadow-lg group z-[200] ${currentPage === 0 ? 'opacity-40 cursor-default pointer-events-none' : 'hover:brightness-110 cursor-pointer'}`}
-                                    style={{ left: leftPos, backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', '0.8'), color: getLayoutColor('toolbar-text-main', '#FFFFFF'), opacity: currentPage === 0 ? 0.4 : 'var(--toolbar-text-main-opacity, 1)' }}
+                                    className={`absolute top-1/2 -translate-y-1/2 ${isTablet ? 'w-[1.7vw] h-[1.7vw]' : 'w-[2.2vw] h-[2.2vw]'} backdrop-blur-md rounded-[0.25vw] flex items-center justify-center shadow-lg group z-[200] ${!hasPrev ? 'pointer-events-none' : 'hover:brightness-110 cursor-pointer'}`}
+                                    style={{
+                                        left: leftPos,
+                                        backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', '0.8'),
+                                        color: getLayoutColor('toolbar-text-main', '#FFFFFF'),
+                                        opacity: hasPrev ? 1 : 0,
+                                        pointerEvents: hasPrev ? 'auto' : 'none',
+                                        transition: 'left 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease, transform 0.2s ease'
+                                    }}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        if (currentPage === 0) return;
+                                        if (!hasPrev) return;
                                         closeAllPopups();
                                         bookRef.current?.pageFlip()?.flipPrev();
                                     }}
                                 >
-                                    <Icon icon="fluent:chevron-left-24-filled" className={`${isTablet ? 'w-[1vw] h-[1vw]' : 'w-[1.1vw] h-[1.1vw]'} ${currentPage === 0 ? '' : 'group-active:scale-90'} transition-transform`} />
+                                    <Icon icon="fluent:chevron-left-24-filled" className={`${isTablet ? 'w-[1vw] h-[1vw]' : 'w-[1.1vw] h-[1.1vw]'} ${!hasPrev ? '' : 'group-active:scale-90'} transition-transform`} />
                                 </button>
                             )}
 
                             {(settings?.navigation?.nextPrevButtons ?? true) && (
                                 <button
-                                    className={`absolute top-1/2 -translate-y-1/2 ${isTablet ? 'w-[1.7vw] h-[1.7vw]' : 'w-[2.2vw] h-[2.2vw]'} backdrop-blur-md rounded-[0.25vw] flex items-center justify-center transition-all shadow-lg group z-[200] ${currentPage >= pages.length - 1 ? 'opacity-40 cursor-default pointer-events-none' : 'hover:brightness-110 cursor-pointer'}`}
-                                    style={{ right: rightPos, backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', '0.8'), color: getLayoutColor('toolbar-text-main', '#FFFFFF'), opacity: currentPage >= pages.length - 1 ? 0.4 : 'var(--toolbar-text-main-opacity, 1)' }}
+                                    className={`absolute top-1/2 -translate-y-1/2 ${isTablet ? 'w-[1.7vw] h-[1.7vw]' : 'w-[2.2vw] h-[2.2vw]'} backdrop-blur-md rounded-[0.25vw] flex items-center justify-center shadow-lg group z-[200] ${!hasNext ? 'pointer-events-none' : 'hover:brightness-110 cursor-pointer'}`}
+                                    style={{
+                                        right: rightPos,
+                                        backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', '0.8'),
+                                        color: getLayoutColor('toolbar-text-main', '#FFFFFF'),
+                                        opacity: hasNext ? 1 : 0,
+                                        pointerEvents: hasNext ? 'auto' : 'none',
+                                        transition: 'right 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease, transform 0.2s ease'
+                                    }}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        if (currentPage >= pages.length - 1) return;
+                                        if (!hasNext) return;
                                         closeAllPopups();
                                         bookRef.current?.pageFlip()?.flipNext();
                                     }}
                                 >
-                                    <Icon icon="fluent:chevron-right-24-filled" className={`${isTablet ? 'w-[1vw] h-[1vw]' : 'w-[1.1vw] h-[1.1vw]'} ${currentPage >= pages.length - 1 ? '' : 'group-active:scale-90'} transition-transform`} />
+                                    <Icon icon="fluent:chevron-right-24-filled" className={`${isTablet ? 'w-[1vw] h-[1vw]' : 'w-[1.1vw] h-[1.1vw]'} ${!hasNext ? '' : 'group-active:scale-90'} transition-transform`} />
                                 </button>
                             )}
                         </>
@@ -982,7 +1005,7 @@ const Grid1Layout = React.memo((props) => {
                     style={{
                         transform: `translateX(${localOffset}px) scale(${responsiveScale})`,
                         transformOrigin: 'center center',
-                        transition: 'transform 0.7s ease-out',
+                        transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
                         width: isPortraitLayout ? dimWidth : dimWidth * 2,
                         height: dimHeight
                     }}

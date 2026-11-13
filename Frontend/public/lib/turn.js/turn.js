@@ -275,18 +275,24 @@ turnMethods = {
 
 		// Event listeners
 
-		$(this).bind(events.start, function(e) {
+		var that = this;
+		var eventId = Math.random().toString(36).substring(2, 9);
+		data.eventId = eventId;
+
+		$(this).bind(events.start + '.turn_' + eventId, function(e) {
 			for (var page in data.pages)
 				if (has(page, data.pages) && flipMethods._eventStart.call(data.pages[page], e)===false)
 					return false;
 		});
 			
-		$(document).bind(events.move, function(e) {
+		$(document).bind(events.move + '.turn_' + eventId, function(e) {
+			if (!that[0] || !document.body.contains(that[0]) || !that.data() || !that.data().pages) return;
 			for (var page in data.pages)
 				if (has(page, data.pages))
 					flipMethods._eventMove.call(data.pages[page], e);
 		}).
-		bind(events.end, function(e) {
+		bind(events.end + '.turn_' + eventId, function(e) {
+			if (!that[0] || !document.body.contains(that[0]) || !that.data() || !that.data().pages) return;
 			for (var page in data.pages)
 				if (has(page, data.pages))
 					flipMethods._eventEnd.call(data.pages[page], e);
@@ -806,11 +812,22 @@ turnMethods = {
 			delete data['tpage'];
 		}
 
+		// Stop and hide all active folds across all pages
+		for (var p in data.pages) {
+			if (has(p, data.pages)) {
+				var pData = data.pages[p].data() ? data.pages[p].data().f : null;
+				if (pData && (pData.point || pData.corner || (pData.fwrapper && pData.fwrapper.is(':visible')))) {
+					flipMethods._moveFoldingPage.call(data.pages[p], null);
+					data.pages[p].flip('hide');
+				}
+			}
+		}
+
 		for (i in pages) {
 			if (!has(i, pages)) continue;
 			opts = data.pages[pages[i]].data().f.opts;
 			flipMethods._moveFoldingPage.call(data.pages[pages[i]], null);
-			data.pages[pages[i]].flip('hideFoldedPage');
+			data.pages[pages[i]].flip('hide');
 			data.pagePlace[opts.next] = opts.next;
 			
 			if (opts.force) {
@@ -818,6 +835,38 @@ turnMethods = {
 				delete opts['force'];
 			}
 
+		}
+
+		// Ensure all pages are placed back in their own wrappers and have clean transforms
+		if (data.fparent) {
+			data.fparent.data().flips = 0;
+			data.fparent.hide();
+		}
+		for (var p in data.pageObjs) {
+			if (has(p, data.pageObjs) && data.pageObjs[p]) {
+				var pData = data.pages && data.pages[p] && data.pages[p].data() ? data.pages[p].data().f : null;
+				var targetParent = (pData && pData.wrapper) ? pData.wrapper : (data.pageWrap && data.pageWrap[p]);
+				if (targetParent && data.pageObjs[p].parent()[0] !== targetParent[0]) {
+					targetParent.prepend(data.pageObjs[p]);
+				}
+				data.pageObjs[p].transform('', '0% 0%');
+				data.pageObjs[p].css({
+					'transform': '',
+					'-webkit-transform': '',
+					'transform-origin': '',
+					'-webkit-transform-origin': '',
+					'left': 0, 'top': 0, 'right': 'auto', 'bottom': 'auto'
+				});
+				if (pData && pData.wrapper) {
+					pData.wrapper.transform('', '0% 0%');
+					pData.wrapper.css({
+						'transform': '',
+						'-webkit-transform': '',
+						'transform-origin': '',
+						'-webkit-transform-origin': ''
+					});
+				}
+			}
 		}
 
 		this.turn('update');
@@ -1175,15 +1224,33 @@ turnMethods = {
 			view = this.turn('view');
 
 		if (page==view[0] || page==view[1]) {
-			data.pageWrap[page].css({'z-index': data.totalPages, display: ''});
+			if (data.pageWrap && data.pageWrap[page]) data.pageWrap[page].css({'z-index': data.totalPages, display: ''});
 			return 1;
-		} else if ((data.display=='single' && page==view[0]+1) || (data.display=='double' && page==view[0]-2 || page==view[1]+2)) {
-			data.pageWrap[page].css({'z-index': data.totalPages-1, display: ''});
+		} else if ((data.display=='single' && page==view[0]+1) || (data.display=='double' && (page==view[0]-2 || page==view[1]+2))) {
+			if (data.pageWrap && data.pageWrap[page]) data.pageWrap[page].css({'z-index': data.totalPages-1, display: ''});
 			return 2;
 		} else {
-			data.pageWrap[page].css({'z-index': 0, display: 'none'});
+			if (data.pageWrap && data.pageWrap[page]) data.pageWrap[page].css({'z-index': 0, display: 'none'});
 			return 0;
 		}
+	},
+
+	destroy: function() {
+		var data = this.data();
+		if (data && data.eventId) {
+			$(document).unbind('.' + 'turn_' + data.eventId);
+			$(this).unbind('.' + 'turn_' + data.eventId);
+		}
+		if (data && data.pages) {
+			for (var page in data.pages) {
+				if (has(page, data.pages)) {
+					try {
+						data.pages[page].flip('hide');
+					} catch (_) {}
+				}
+			}
+		}
+		return this;
 	}
 },
 
@@ -1231,16 +1298,20 @@ flipMethods = {
 
 	z: function(z) {
 
-		var data = this.data().f;
+		var data = this.data() ? this.data().f : null;
+		if (!data || !data.opts) return this;
 		data.opts['z-index'] = z;
-		data.fwrapper.css({'z-index': z || parseInt(data.parent.css('z-index'), 10) || 0});
+		if (data.fwrapper)
+			data.fwrapper.css({'z-index': z || parseInt(data.parent ? data.parent.css('z-index') : 0, 10) || 0});
 
 		return this;
 	},
 
 	_cAllowed: function() {
 
-		return corners[this.data().f.opts.corners] || this.data().f.opts.corners;
+		var data = this.data() ? this.data().f : null;
+		if (!data || !data.opts) return [];
+		return corners[data.opts.corners] || data.opts.corners || [];
 
 	},
 
@@ -1251,26 +1322,37 @@ flipMethods = {
 
 		e = (isTouch) ? e.originalEvent.touches : [e];
 
-		var data = this.data().f,
-			pos = data.parent.offset(),
+		var data = this.data() ? this.data().f : null;
+		if (!data || !data.parent) return false;
+
+		var parentDom = data.parent[0],
 			width = this.width(),
-			height = this.height(),
-			c = {x: Math.max(0, e[0].pageX-pos.left), y: Math.max(0, e[0].pageY-pos.top)},
-			csz = data.opts.cornerSize,
+			height = this.height();
+
+		if (!parentDom) return false;
+
+		var rect = parentDom.getBoundingClientRect(),
+			scaleX = rect.width > 0 ? (parentDom.offsetWidth / rect.width) : 1,
+			scaleY = rect.height > 0 ? (parentDom.offsetHeight / rect.height) : 1,
+			clientX = e[0].clientX !== undefined ? e[0].clientX : (e[0].pageX - (window.pageXOffset || window.scrollX || 0)),
+			clientY = e[0].clientY !== undefined ? e[0].clientY : (e[0].pageY - (window.pageYOffset || window.scrollY || 0)),
+			c = {
+				x: Math.round((clientX - rect.left) * scaleX),
+				y: Math.round((clientY - rect.top) * scaleY)
+			},
+			csz = data.opts.cornerSize || 80,
 			allowedCorners = flipMethods._cAllowed.call(this);
 
-			if (c.x<=0 || c.y<=0 || c.x>=width || c.y>=height) return false;
+		if (c.x<=0 || c.y<=0 || c.x>=width || c.y>=height) return false;
 
-			if (c.y<csz) c.corner = 't';
-			else if (c.y>=height-csz) c.corner = 'b';
-			else c.corner = '';
-			
-			if (c.x<=csz) c.corner+= 'l';
-			else if (c.x>=width-csz) c.corner+= 'r';
-			else return false;
-
-            if (c.corner === 'r') c.corner = 'tr';
-            if (c.corner === 'l') c.corner = 'tl';
+		// Only activate corner peel when hovering within the corner targets
+		if (c.y < csz) c.corner = 't';
+		else if (c.y >= height - csz) c.corner = 'b';
+		else return false;
+		
+		if (c.x <= csz) c.corner += 'l';
+		else if (c.x >= width - csz) c.corner += 'r';
+		else return false;
 
 		return ($.inArray(c.corner, allowedCorners)==-1) ? false : c;
 
@@ -1352,11 +1434,15 @@ flipMethods = {
 		}
 
 		if (data.parent.is(':visible')) {
-			data.fwrapper.css({top: data.parent.offset().top,
-				left: data.parent.offset().left});
-
-			if (data.opts.turn)
-				data.fparent.css({top: -data.opts.turn.offset().top, left: -data.opts.turn.offset().left});
+			if (data.opts.turn) {
+				var isDouble = (data.opts.turn.data().display === 'double');
+				var isRight = isDouble && (data.opts.page % 2 === 1);
+				var pLeft = isRight ? width : 0;
+				data.fwrapper.css({top: 0, left: pLeft});
+				data.fparent.css({top: 0, left: 0});
+			} else {
+				data.fwrapper.css({top: data.parent.offset().top, left: data.parent.offset().left});
+			}
 		}
 
 		this.flip('z', data.opts['z-index']);
@@ -1387,7 +1473,7 @@ flipMethods = {
 					fparent.data().flips = 0;
 
 				if (data.opts.turn) {
-					fparent.css(divAtt(-data.opts.turn.offset().top, -data.opts.turn.offset().left, 'auto', 'visible').css).
+					fparent.css({position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 'z-index': 10000, overflow: 'visible', 'pointer-events': 'none'}).
 							appendTo(data.opts.turn);
 					
 					data.opts.turn.data().fparent = fparent;
@@ -1406,7 +1492,11 @@ flipMethods = {
 								appendTo(parent).
 									prepend(this);
 
-			data.fwrapper = $('<div/>', divAtt(parent.offset().top, parent.offset().left)).
+			var isDouble = (data.opts.turn && data.opts.turn.data().display === 'double');
+			var isRight = isDouble && (data.opts.page % 2 === 1);
+			var pInitLeft = (data.opts.turn) ? (isRight ? width : 0) : parent.offset().left;
+			var pInitTop = (data.opts.turn) ? 0 : parent.offset().top;
+			data.fwrapper = $('<div/>', divAtt(pInitTop, pInitLeft)).
 								hide().
 									appendTo(data.fparent);
 
@@ -1616,9 +1706,16 @@ flipMethods = {
 					data.fpage.prepend(folding);
 				}
 			} else {
-				if (data.backParent)
+				if (data.backParent) {
 					data.backParent.prepend(folding);
-
+				}
+				folding.transform('', '0% 0%');
+				folding.css({
+					'transform': '',
+					'-webkit-transform': '',
+					'transform-origin': '',
+					'-webkit-transform-origin': ''
+				});
 			}
 		}
 
@@ -1681,19 +1778,29 @@ flipMethods = {
 		var data = this.data().f,
 			folding = flipMethods._foldingPage.call(this);
 
-		if ((--data.fparent.data().flips)===0)
+		if ((--data.fparent.data().flips)<=0) {
+			data.fparent.data().flips = 0;
 			data.fparent.hide();
+		}
 
 		this.css({left: 0, top: 0, right: 'auto', bottom: 'auto'}).transform('', '0% 100%');
+		this.css({'transform': '', '-webkit-transform': ''});
 
 		data.wrapper.transform('', '0% 100%');
+		data.wrapper.css({'transform': '', '-webkit-transform': ''});
 
 		data.fwrapper.hide();
 
 		if (data.bshadow)
 			data.bshadow.hide();
 
-		folding.transform('', '0% 0%');
+		if (folding) {
+			folding.transform('', '0% 0%');
+			folding.css({'transform': '', '-webkit-transform': '', 'transform-origin': '', '-webkit-transform-origin': ''});
+			if (data.backParent) {
+				data.backParent.prepend(folding);
+			}
+		}
 
 		return this;
 	},
@@ -1746,7 +1853,8 @@ flipMethods = {
 
 		corner = {corner: (data.corner) ? data.corner.corner : corner || flipMethods._cAllowed.call(this)[0]};
 
-		var p1 = data.point || flipMethods._c.call(this, corner.corner, (data.opts.turn) ? data.opts.turn.data().opts.elevation : 0),
+		var elevation = (data.opts.turn && data.opts.turn.data().opts.elevation) ? data.opts.turn.data().opts.elevation : 8;
+		var p1 = data.point || flipMethods._c.call(this, corner.corner, elevation),
 			p4 = flipMethods._c2.call(this, corner.corner);
 
 			this.trigger('flip').
@@ -1784,9 +1892,17 @@ flipMethods = {
 
 	_eventStart: function(e) {
 
-		var data = this.data().f;
+		if (!this[0] || !document.body.contains(this[0])) return;
+		var data = this.data() ? this.data().f : null;
+		if (!data || !data.opts) return;
 
-		if (!data.disabled && !this.flip('isTurning')) {
+		if (!data.disabled && !this.flip('isTurning') && this.is(':visible') && this.parent().is(':visible')) {
+			if (data.opts.turn) {
+				var view = data.opts.turn.turn('view');
+				if ($.inArray(data.opts.page, view) == -1) {
+					return;
+				}
+			}
 			data.corner = flipMethods._cornerActivated.call(this, e);
 			if (data.corner && flipMethods._foldingPage.call(this, data.corner)) {
 				flipMethods._moveFoldingPage.call(this, true);
@@ -1800,44 +1916,49 @@ flipMethods = {
 
 	_eventMove: function(e) {
 
-		var data = this.data().f;
+		if (!this[0] || !document.body.contains(this[0])) return;
+		var data = this.data() ? this.data().f : null;
+		if (!data || !data.opts || !data.parent) return;
 
 		if (!data.disabled) {
 			e = (isTouch) ? e.originalEvent.touches : [e];
 		
 			if (data.corner) {
 
-				var pos = data.parent.offset();
+				var parentDom = data.parent[0];
+				if (!parentDom) return;
 
-				data.corner.x = e[0].pageX-pos.left;
-				data.corner.y = e[0].pageY-pos.top;
+				var rect = parentDom.getBoundingClientRect(),
+					scaleX = rect.width > 0 ? (parentDom.offsetWidth / rect.width) : 1,
+					scaleY = rect.height > 0 ? (parentDom.offsetHeight / rect.height) : 1,
+					clientX = e[0].clientX !== undefined ? e[0].clientX : (e[0].pageX - (window.pageXOffset || window.scrollX || 0)),
+					clientY = e[0].clientY !== undefined ? e[0].clientY : (e[0].pageY - (window.pageYOffset || window.scrollY || 0));
+
+				data.corner.x = Math.round((clientX - rect.left) * scaleX);
+				data.corner.y = Math.round((clientY - rect.top) * scaleY);
 
 				flipMethods._showFoldedPage.call(this, data.corner);
 			
-			} else if (!this.data().effect && this.is(':visible')) { // roll over
-				
-				var corner = flipMethods._cornerActivated.call(this, e[0]);
-				if (corner) {
-					var origin = flipMethods._c.call(this, corner.corner, data.opts.cornerSize/2);
-					corner.x = origin.x;
-					corner.y = origin.y;
-					flipMethods._showFoldedPage.call(this, corner, true);
-				} else
-					flipMethods.hideFoldedPage.call(this, true);
-
 			}
 		}
 	},
 
 	_eventEnd: function() {
 
-		var data = this.data().f;
+		if (!this[0] || !document.body.contains(this[0])) return;
+		var data = this.data() ? this.data().f : null;
+		if (!data || !data.opts) return;
 
-		if (!data.disabled && data.point) {
-			var event = $.Event('released');
-			this.trigger(event, [data.point]);
-			if (!event.isDefaultPrevented())
-				flipMethods.hideFoldedPage.call(this, true);
+		if (!data.disabled) {
+			if (data.point) {
+				var event = $.Event('released');
+				this.trigger(event, [data.point]);
+				if (!event.isDefaultPrevented())
+					flipMethods.hideFoldedPage.call(this, true);
+			} else if (data.corner) {
+				// Mouse down / hover without drag: restore folded page immediately
+				flipMethods.hide.call(this);
+			}
 		}
 
 		data.corner = null;
@@ -1876,10 +1997,13 @@ $.extend($.fn, {
 
 		var properties = {};
 		
-		if (origin)
+		if (origin) {
 			properties[vendor+'transform-origin'] = origin;
+			properties['transform-origin'] = origin;
+		}
 		
 		properties[vendor+'transform'] = transform;
+		properties['transform'] = transform;
 	
 		return this.css(properties);
 

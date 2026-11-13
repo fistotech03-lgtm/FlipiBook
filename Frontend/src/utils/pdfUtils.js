@@ -701,7 +701,7 @@ export const convertOfficeDocumentToPdf = async (file, backendUrl = null, onProg
 export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl = null, onProgress = null) => {
   const resolvedBackendUrl = backendUrl || import.meta.env.VITE_BACKEND_URL || '';
 
-  // 1. If Office Document (.doc, .docx, .ppt, .pptx), convert to PDF client-side
+  // 1. If Office Document (.doc, .docx, .ppt, .pptx), convert to standard PDF File
   let targetFile = file;
   if (isOfficeDocument(file.name)) {
     try {
@@ -710,37 +710,9 @@ export const convertDocumentPages = async (file, maxPages = Infinity, backendUrl
       console.error('[Document] Client office-to-pdf conversion failed:', convErr);
       throw convErr;
     }
-
-    // FAST-TRACK: officeExtractor already rendered high-fidelity pages directly into targetFile.pagesData!
-    // Using pagesData directly avoids running MuPDF on an already-rendered document (2x-3x speedup).
-    if (targetFile && targetFile.pagesData && Array.isArray(targetFile.pagesData) && targetFile.pagesData.length > 0) {
-      const slicedPages = targetFile.pagesData.slice(0, maxPages);
-      if (typeof onProgress === 'function') {
-        try {
-          onProgress(slicedPages.length, slicedPages.length, 100, 'converting', 'All pages extracted!');
-        } catch (e) {}
-      }
-      return slicedPages.map((p, idx) => {
-        const width = p.width || 210;
-        const height = p.height || 297;
-        const pageDataUrl = p.dataUrl || (p.canvas ? p.canvas.toDataURL('image/jpeg', 0.82) : null);
-        const pageContent = p.content || p.svgString || (pageDataUrl ? generatePdfPageSvg(pageDataUrl, `Page ${idx + 1}`, width, height, true) : '');
-        return {
-          pageNumber: idx + 1,
-          pageName: `Page ${idx + 1}`,
-          content: pageContent,
-          svgString: p.svgString || pageContent,
-          dataUrl: pageDataUrl,
-          blob: p.blob || null,
-          width,
-          height,
-          isVector: !!p.isVector
-        };
-      });
-    }
   }
 
-  // 2. High-Performance Customized Editor Extraction Engine
+  // 2. High-Performance Customized Editor Extraction Engine (Standard PDF Architecture)
   try {
     const images = await convertPdfToImages(targetFile, 2.5, maxPages, onProgress, resolvedBackendUrl);
     const mapped = images.map((img, idx) => ({

@@ -87,13 +87,21 @@ const Grid6Layout = ({
 
     // Keyboard and Mouse Wheel Actions
     React.useEffect(() => {
+        let lastKeyTime = 0;
         const handleKeyDown = (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+            const now = Date.now();
+            if (bookRef.current?.pageFlip()?.isAnimating?.()) return;
+
             switch (e.key) {
                 case 'ArrowRight':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     bookRef.current?.pageFlip()?.flipNext();
                     break;
                 case 'ArrowLeft':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     bookRef.current?.pageFlip()?.flipPrev();
                     break;
                 case 'ArrowUp':
@@ -121,7 +129,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                     return;
                 }
                 const now = Date.now();
-                if (now - lastWheelTime < 600) return;
+                if (now - lastWheelTime < 400 || bookRef.current?.pageFlip()?.isAnimating?.()) return;
                 
                 if (e.deltaY > 0) {
                     bookRef.current?.pageFlip()?.flipNext();
@@ -934,11 +942,16 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                     // We'll calculate relative to the visual center of the book viewer container
                     return (
                         <div className="absolute inset-0 pointer-events-none z-30" style={{ right: isFullscreen ? '0vw' : '3vw' }}>
-                            {/* Left Navigation Arrow â€” hugs left edge of book */}
+                            {/* Left Navigation Arrow — hugs left edge of book */}
                             {(settings?.navigation?.nextPrevButtons ?? true) && (
                                 <div
                                     className="absolute top-1/2 -translate-y-1/2 -translate-x-full flex items-center transition-all duration-500 ease-out pointer-events-auto"
-                                    style={{ left: `calc(50% + ${leftBound}px - ${isTablet ? '2.5vw' : '3.5vw'})` }}
+                                    style={{
+                                        left: `calc(50% + ${leftBound}px - ${isTablet ? '2.5vw' : '3.5vw'})`,
+                                        opacity: currentPage > 0 ? 1 : 0,
+                                        pointerEvents: currentPage > 0 ? 'auto' : 'none',
+                                        transition: 'left 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease'
+                                    }}
                                 >
                                     <button
                                         className="flex items-center justify-center transition-all hover:scale-110 p-[0.5vw]"
@@ -946,18 +959,26 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                                             color: getLayoutColor('toolbar-bg', '#555555'),
                                             opacity: getLayoutOpacity('toolbar-bg', 1) * 0.5
                                         }}
-                                        onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
+                                        onClick={() => {
+                                            if (currentPage <= 0) return;
+                                            bookRef.current?.pageFlip()?.flipPrev();
+                                        }}
                                     >
                                         <Icon icon="ph:caret-left" className={`${isTablet ? 'w-[2vw] h-[2vw]' : 'w-[2.5vw] h-[2.5vw]'}`} />
                                     </button>
                                 </div>
                             )}
 
-                            {/* Right Navigation Arrow â€” hugs right edge of book */}
+                            {/* Right Navigation Arrow — hugs right edge of book */}
                             {(settings?.navigation?.nextPrevButtons ?? true) && (
                                 <div
                                     className="absolute top-1/2 -translate-y-1/2 flex items-center transition-all duration-500 ease-out pointer-events-auto"
-                                    style={{ left: `calc(50% + ${rightBound}px + ${isTablet ? '1vw' : '1.5vw'})` }}
+                                    style={{
+                                        left: `calc(50% + ${rightBound}px + ${isTablet ? '1vw' : '1.5vw'})`,
+                                        opacity: currentPage < (pages?.length || pagesCount || 0) - 1 ? 1 : 0,
+                                        pointerEvents: currentPage < (pages?.length || pagesCount || 0) - 1 ? 'auto' : 'none',
+                                        transition: 'left 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease'
+                                    }}
                                 >
                                     <button
                                         className="flex items-center justify-center transition-all hover:scale-110 p-[0.5vw]"
@@ -965,7 +986,10 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                                             color: getLayoutColor('toolbar-bg', '#555555'),
                                             opacity: getLayoutOpacity('toolbar-bg', 1) * 0.5
                                         }}
-                                        onClick={() => bookRef.current?.pageFlip()?.flipNext()}
+                                        onClick={() => {
+                                            if (currentPage >= (pages?.length || pagesCount || 0) - 1) return;
+                                            bookRef.current?.pageFlip()?.flipNext();
+                                        }}
                                     >
                                         <Icon icon="ph:caret-right" className={`${isTablet ? 'w-[2vw] h-[2vw]' : 'w-[2.5vw] h-[2.5vw]'}`} />
                                     </button>

@@ -88,16 +88,16 @@ export default function Home() {
     const initialPageCount = firstFile._pageCount || 1;
 
     setProcessingProgress({
-      current: 1,
+      current: 0,
       total: initialPageCount,
       fileIndex: 0,
       totalFiles: files.length,
       pageCount: initialPageCount,
       message: files.length > 1
-        ? `Converting queued ${initialDocLabel} 1 of ${files.length} (${firstFile.name})...`
-        : `Converting ${initialDocLabel}: ${firstFile.name}...`,
+        ? `Uploading queued ${initialDocLabel} 1 of ${files.length} (${firstFile.name})...`
+        : `Uploading ${initialDocLabel}: ${firstFile.name}...`,
       fileName: firstFile.name,
-      stage: 'converting'
+      stage: 'uploading'
     });
 
     try {
@@ -119,16 +119,16 @@ export default function Home() {
         const detectedCount = file._pageCount || 1;
 
         setProcessingProgress({
-          current: 1,
+          current: 0,
           total: detectedCount,
           fileIndex,
           totalFiles: files.length,
           pageCount: detectedCount,
           message: files.length > 1
-            ? `Converting queued ${docLabel} ${fileIndex + 1} of ${files.length} (${file.name})...`
-            : `Converting ${docLabel}: ${file.name}...`,
+            ? `Uploading queued ${docLabel} ${fileIndex + 1} of ${files.length} (${file.name})...`
+            : `Uploading ${docLabel}: ${file.name}...`,
           fileName: file.name,
-          stage: 'converting'
+          stage: 'uploading'
         });
         const images = await convertPdfWithInkscape(file, remainingPages, backendUrl, (currOrObj, total, pct, stage, msg) => {
           let current, pageCount, percent, message, currentStage;

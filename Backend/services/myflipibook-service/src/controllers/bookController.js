@@ -2832,8 +2832,8 @@ exports.getBook = async (req, res) => {
           hide: 0
         };
       });
-      // Update MongoDB asynchronously with complete page count
-      Flipbook.updateOne({ _id: book._id }, { $set: { pagesCount: sortedRawPages.length } }).catch(() => {});
+      // Update MongoDB asynchronously with complete pages array and count
+      Flipbook.updateOne({ _id: book._id }, { $set: { pages: sortedRawPages, pagesCount: sortedRawPages.length } }).catch(() => {});
     }
     const populatedPages = await Promise.all(sortedRawPages.map(async (p) => {
       const pageObj = p.toObject ? p.toObject() : { ...p };

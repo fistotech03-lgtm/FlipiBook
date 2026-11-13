@@ -140,13 +140,21 @@ const Grid8Layout = ({
 
     // Keyboard and Mouse Wheel Actions
     React.useEffect(() => {
+        let lastKeyTime = 0;
         const handleKeyDown = (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+            const now = Date.now();
+            if (bookRef.current?.pageFlip()?.isAnimating?.()) return;
+
             switch (e.key) {
                 case 'ArrowRight':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     bookRef.current?.pageFlip()?.flipNext();
                     break;
                 case 'ArrowLeft':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     bookRef.current?.pageFlip()?.flipPrev();
                     break;
                 case 'ArrowUp':
@@ -174,7 +182,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                     return;
                 }
                 const now = Date.now();
-                if (now - lastWheelTime < 600) return;
+                if (now - lastWheelTime < 400 || bookRef.current?.pageFlip()?.isAnimating?.()) return;
                 
                 if (e.deltaY > 0) {
                     bookRef.current?.pageFlip()?.flipNext();
@@ -1065,8 +1073,12 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                     {(settings?.navigation?.nextPrevButtons ?? true) && (
                         <div className="group relative">
                             <button
-                                onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
-                                className={`${isSidebarOpen ? (isTablet ? 'w-[1.7vw] h-[1.7vw]' : 'w-[1.85vw] h-[1.85vw]') : 'w-[2.6vw] h-[2.6vw]'} rounded-full flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105 transition-all`}
+                                disabled={currentPage <= 0}
+                                onClick={() => {
+                                    if (currentPage <= 0) return;
+                                    bookRef.current?.pageFlip()?.flipPrev();
+                                }}
+                                className={`${isSidebarOpen ? (isTablet ? 'w-[1.7vw] h-[1.7vw]' : 'w-[1.85vw] h-[1.85vw]') : 'w-[2.6vw] h-[2.6vw]'} rounded-full flex items-center justify-center shadow-md ${currentPage <= 0 ? 'opacity-35 cursor-not-allowed' : 'hover:shadow-lg hover:scale-105 cursor-pointer'} transition-all`}
                                 style={{ backgroundColor: getLayoutColor('toolbar-bg', primaryColor) }}
                             >
                                 <Icon icon="lucide:chevron-left" style={{ width: isSidebarOpen ? (isTablet ? '0.9vw' : '0.95vw') : '1.2vw', height: isSidebarOpen ? (isTablet ? '0.9vw' : '0.95vw') : '1.2vw' }} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
@@ -1160,8 +1172,12 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                     {(settings?.navigation?.nextPrevButtons ?? true) && (
                         <div className="group relative">
                             <button
-                                onClick={() => bookRef.current?.pageFlip()?.flipNext()}
-                                className={`${isSidebarOpen ? (isTablet ? 'w-[1.7vw] h-[1.7vw]' : 'w-[1.85vw] h-[1.85vw]') : 'w-[2.6vw] h-[2.6vw]'} rounded-full flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105 transition-all`}
+                                disabled={currentPage >= pages.length - 1}
+                                onClick={() => {
+                                    if (currentPage >= pages.length - 1) return;
+                                    bookRef.current?.pageFlip()?.flipNext();
+                                }}
+                                className={`${isSidebarOpen ? (isTablet ? 'w-[1.7vw] h-[1.7vw]' : 'w-[1.85vw] h-[1.85vw]') : 'w-[2.6vw] h-[2.6vw]'} rounded-full flex items-center justify-center shadow-md ${currentPage >= pages.length - 1 ? 'opacity-35 cursor-not-allowed' : 'hover:shadow-lg hover:scale-105 cursor-pointer'} transition-all`}
                                 style={{ backgroundColor: getLayoutColor('toolbar-bg', primaryColor) }}
                             >
                                 <Icon icon="lucide:chevron-right" style={{ width: isSidebarOpen ? (isTablet ? '0.9vw' : '0.95vw') : '1.2vw', height: isSidebarOpen ? (isTablet ? '0.9vw' : '0.95vw') : '1.2vw' }} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />

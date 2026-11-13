@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import Footer from '../Footer';
-import heroBg from '../../assets/Features/Converter/Feature.webp';
+import heroBg from '../../assets/Features/Explore/Explore.webp';
 import Explore1Img from '../../assets/Features/Explore/Explore1.webp';
 import Explore2Img from '../../assets/Features/Explore/Explore2.webp';
 
@@ -82,13 +82,18 @@ export default function ExploreFeatures() {
         {/* =========================================
             SECTION 2: CENTER HEADING (EXPLORE MADE SIMPLE)
         ========================================= */}
-        <section className="relative w-full pt-6 pb-4 sm:pt-10 sm:pb-8 text-center bg-white">
-          <div className="max-w-[750px] mx-auto px-4 flex items-center justify-center gap-3 sm:gap-6">
-            <span className="w-8 sm:w-24 h-[1.5px] bg-[#E2E8F0]"></span>
-            <h2 className="text-xl sm:text-[36px] md:text-[40px] font-semibold text-[#111827] tracking-tight leading-tight">
-              Explore Made Simple
-            </h2>
-            <span className="w-8 sm:w-24 h-[1.5px] bg-[#E2E8F0]"></span>
+        <section className="relative w-full pt-10 sm:pt-14 md:pt-16 pb-8 sm:pb-12 md:pb-14 text-center bg-white">
+          <div className="max-w-[960px] mx-auto px-4">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
+              <h2 className="text-xl sm:text-2xl md:text-[28px] font-bold text-[#111827] tracking-tight">
+                Explore Made Simple
+              </h2>
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
+            </div>
+            <p className="text-xs sm:text-sm md:text-[14px] text-[#64748B] mt-2 max-w-xl mx-auto leading-relaxed">
+              Discover, organize, and read interactive digital flipbooks effortlessly across all devices and formats.
+            </p>
           </div>
         </section>
 
@@ -186,126 +191,130 @@ export default function ExploreFeatures() {
         ========================================= */}
         <section className="relative w-full pb-16 bg-white">
           <div className="max-w-[92vw] mx-auto px-4 md:px-[2vw]">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
-              
-              {/* LEFT COLUMN: EXPLORE BOOKS (4.5 Cols on LG) */}
-              <div className="lg:col-span-4 flex flex-col items-start pr-0 lg:pr-2">
-                <div className="flex items-center gap-3.5 mb-3">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#2563EB] flex items-center justify-center text-white shrink-0 shadow-sm">
-                    <Icon icon="ph:book-open" className="w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="w-full bg-white rounded-3xl border border-[#E2E8F0] shadow-sm p-6 sm:p-8 md:p-10 lg:p-12">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
+                
+                {/* LEFT COLUMN: EXPLORE BOOKS (4 Cols on LG) */}
+                <div className="lg:col-span-4 flex flex-col items-start">
+                  <div className="flex items-center gap-3.5 mb-3">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#2F5EA8] flex items-center justify-center text-white shrink-0 shadow-sm">
+                      <Icon icon="ph:book-open" className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </div>
+                    <h3 className="text-xl sm:text-[26px] md:text-[28px] font-bold text-[#111827] tracking-tight">
+                      Explore Books
+                    </h3>
                   </div>
-                  <h3 className="text-xl sm:text-[30px] font-semibold text-[#111827] tracking-tight">
-                    Explore Books
-                  </h3>
+
+                  <p className="text-xs sm:text-[14px] font-semibold text-[#1E293B] mb-5 sm:mb-6 leading-snug">
+                    Explore digital publications from different categories and industries.
+                  </p>
+
+                  <ul className="space-y-3 sm:space-y-3.5">
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
+                      <span className="text-xs sm:text-[13.5px] text-[#475569] leading-snug">
+                        Search books by title or keyword.
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
+                      <span className="text-xs sm:text-[13.5px] text-[#475569] leading-snug">
+                        Filter by category
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
+                      <span className="text-xs sm:text-[13.5px] text-[#475569] leading-snug">
+                        Choose flipbook type (Landscape, Portrait, Square, 3D).
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
+                      <span className="text-xs sm:text-[13.5px] text-[#475569] leading-snug">
+                        View book details – pages, views and ratings.
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
+                      <span className="text-xs sm:text-[13.5px] text-[#475569] leading-snug">
+                        Add your favourite books to Favourites.
+                      </span>
+                    </li>
+                  </ul>
                 </div>
 
-                <p className="text-xs sm:text-[15px] font-semibold text-[#1E293B] mb-4 sm:mb-6 leading-snug">
-                  Explore digital publications from different categories and industries.
-                </p>
-
-                <ul className="space-y-3 sm:space-y-3.5">
-                  <li className="flex items-start gap-2.5 sm:gap-3">
-                    <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
-                    <span className="text-xs sm:text-[14px] text-[#475569] leading-snug">
-                      Search books by title or keyword.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2.5 sm:gap-3">
-                    <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
-                    <span className="text-xs sm:text-[14px] text-[#475569] leading-snug">
-                      Filter by category
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2.5 sm:gap-3">
-                    <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
-                    <span className="text-xs sm:text-[14px] text-[#475569] leading-snug">
-                      Choose flipbook type (Landscape, Portrait, Square, 3D).
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2.5 sm:gap-3">
-                    <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
-                    <span className="text-xs sm:text-[14px] text-[#475569] leading-snug">
-                      View book details – pages, views and ratings.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2.5 sm:gap-3">
-                    <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
-                    <span className="text-xs sm:text-[14px] text-[#475569] leading-snug">
-                      Add your favourite books to Favourites.
-                    </span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* CENTER COLUMN: PREVIEW SCREENSHOTS (4 Cols on LG) */}
-              <div className="lg:col-span-4 flex justify-center items-center my-4 lg:my-0">
-                <div className="w-full max-w-[340px] sm:max-w-[370px] bg-white rounded-2xl border border-[#FDBA74]/50 p-2 sm:p-2.5 shadow-md flex flex-col gap-2">
-                  <div className="rounded-xl overflow-hidden border border-[#F1F5F9] bg-[#FAFAFA]">
-                    <img
-                      src={Explore1Img}
-                      alt="Explore Books UI Preview"
-                      className="w-full h-auto object-cover block"
-                    />
-                  </div>
-                  <div className="rounded-xl overflow-hidden border border-[#F1F5F9] bg-[#FAFAFA]">
-                    <img
-                      src={Explore2Img}
-                      alt="Explore Creators UI Preview"
-                      className="w-full h-auto object-cover block"
-                    />
+                {/* CENTER COLUMN: PREVIEW SCREENSHOTS (4 Cols on LG - STACKED OVERLAPPING) */}
+                <div className="lg:col-span-4 flex justify-center items-center py-4 lg:py-0">
+                  <div className="relative w-full max-w-[340px] sm:max-w-[380px] h-[240px] sm:h-[280px] flex items-center justify-center">
+                    {/* Top card (Explore1Img) */}
+                    <div className="absolute top-0 left-2 sm:left-4 w-[85%] rounded-xl overflow-hidden shadow-lg border border-[#E2E8F0] bg-white z-10 transition-transform hover:scale-[1.02]">
+                      <img
+                        src={Explore1Img}
+                        alt="Explore Books UI Preview"
+                        className="w-full h-auto object-cover block"
+                      />
+                    </div>
+                    {/* Bottom overlapping card (Explore2Img) */}
+                    <div className="absolute bottom-0 right-2 sm:right-4 w-[85%] rounded-xl overflow-hidden shadow-xl border border-[#E2E8F0] bg-white z-20 transition-transform hover:scale-[1.02]">
+                      <img
+                        src={Explore2Img}
+                        alt="Explore Creators UI Preview"
+                        className="w-full h-auto object-cover block"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* RIGHT COLUMN: EXPLORE CREATORS (4 Cols on LG) */}
-              <div className="lg:col-span-4 flex flex-col items-start pl-0 lg:pl-4">
-                <div className="flex items-center gap-3.5 mb-3">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#06B6D4] flex items-center justify-center text-white shrink-0 shadow-sm">
-                    <Icon icon="ph:users" className="w-5 h-5 sm:w-6 sm:h-6" />
+                {/* RIGHT COLUMN: EXPLORE CREATORS (4 Cols on LG) */}
+                <div className="lg:col-span-4 flex flex-col items-start">
+                  <div className="flex items-center gap-3.5 mb-3">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#14B8A6] flex items-center justify-center text-white shrink-0 shadow-sm">
+                      <Icon icon="ph:users" className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </div>
+                    <h3 className="text-xl sm:text-[26px] md:text-[28px] font-bold text-[#111827] tracking-tight">
+                      Explore Creators
+                    </h3>
                   </div>
-                  <h3 className="text-xl sm:text-[30px] font-semibold text-[#111827] tracking-tight">
-                    Explore Creators
-                  </h3>
+
+                  <p className="text-xs sm:text-[14px] font-semibold text-[#1E293B] mb-5 sm:mb-6 leading-snug">
+                    Explore creator profiles and discover the digital publications they share.
+                  </p>
+
+                  <ul className="space-y-3 sm:space-y-3.5">
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
+                      <span className="text-xs sm:text-[13.5px] text-[#475569] leading-snug">
+                        Search creators .
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
+                      <span className="text-xs sm:text-[13.5px] text-[#475569] leading-snug">
+                        Filter by industry, location and creator type.
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
+                      <span className="text-xs sm:text-[13.5px] text-[#475569] leading-snug">
+                        View creator profiles and details.
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
+                      <span className="text-xs sm:text-[13.5px] text-[#475569] leading-snug">
+                        Explore published flipbooks from each creator.
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
+                      <span className="text-xs sm:text-[13.5px] text-[#475569] leading-snug">
+                        Follow creators to stay connected with their work.
+                      </span>
+                    </li>
+                  </ul>
                 </div>
 
-                <p className="text-xs sm:text-[15px] text-[#475569] mb-4 sm:mb-6 leading-snug">
-                  Explore creator profiles and discover the digital publications they share.
-                </p>
-
-                <ul className="space-y-3 sm:space-y-3.5">
-                  <li className="flex items-start gap-2.5 sm:gap-3">
-                    <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
-                    <span className="text-xs sm:text-[14px] text-[#475569] leading-snug">
-                      Search creators .
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2.5 sm:gap-3">
-                    <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
-                    <span className="text-xs sm:text-[14px] text-[#475569] leading-snug">
-                      Filter by industry, location and creator type.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2.5 sm:gap-3">
-                    <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
-                    <span className="text-xs sm:text-[14px] text-[#475569] leading-snug">
-                      View creator profiles and details.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2.5 sm:gap-3">
-                    <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
-                    <span className="text-xs sm:text-[14px] text-[#475569] leading-snug">
-                      Explore published flipbooks from each creator.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2.5 sm:gap-3">
-                    <Icon icon="ph:check" className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5 stroke-[2.5]" />
-                    <span className="text-xs sm:text-[14px] text-[#475569] leading-snug">
-                      Follow creators to stay connected with their work.
-                    </span>
-                  </li>
-                </ul>
               </div>
-
             </div>
           </div>
         </section>

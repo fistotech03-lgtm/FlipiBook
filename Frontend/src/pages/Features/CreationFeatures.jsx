@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import Footer from '../Footer';
-import heroBg from '../../assets/Features/Converter/Feature.webp';
+import heroBg from '../../assets/Features/Creation/creation.webp';
 import Creation1Img from '../../assets/Features/Creation/Creation1.webp';
 import Creation2Img from '../../assets/Features/Creation/Creation2.webp';
 import Creation3Img from '../../assets/Features/Creation/Creation3.webp';
@@ -59,7 +59,7 @@ export default function CreationFeatures() {
 
                 {/* Subtitle */}
                 <p className="mt-2 md:mt-[0.9vw] text-xs sm:text-sm md:text-[0.86vw] text-[#64748B] leading-relaxed max-w-full md:max-w-[34vw]">
-                  Start your project exactly how you want. Our dashboard offers complete design freedom and fluid layout controls.
+                  Start your project exactly how you want. Our dashboard offers
                 </p>
 
                 {/* Pill Feature Badges */}
@@ -83,32 +83,46 @@ export default function CreationFeatures() {
         </section>
 
         {/* =========================================
-            SECTION 2: 2-COLUMN CREATION CARDS GRID
+            SECTION 2: HEADING & 2-COLUMN CREATION CARDS GRID
         ========================================= */}
-        <section className="relative w-full pt-4 pb-12 sm:pt-6 sm:pb-16 bg-white">
-          <div className="max-w-[92vw] mx-auto px-4 md:px-[2vw]">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 items-stretch">
+        <section className="relative w-full pt-10 sm:pt-14 md:pt-16 pb-8 sm:pb-12 md:pb-14 text-center bg-white">
+          <div className="max-w-[960px] mx-auto px-4">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
+              <h2 className="text-xl sm:text-2xl md:text-[28px] font-bold text-[#111827] tracking-tight">
+                Create Interactive Digital Catalogues
+              </h2>
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
+            </div>
+            <p className="text-xs sm:text-sm md:text-[14px] text-[#64748B] mt-2 max-w-xl mx-auto leading-relaxed">
+              Transform PDFs and product lists into engaging digital catalogues that attract customers and generate inquiries.
+            </p>
+          </div>
+        </section>
+
+          <div className="max-w-[92vw] mx-auto px-4 md:px-[2vw] flex flex-col gap-6">
+            {/* Top 2-Column Section: 1 & 2 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               
               {/* =========================================
-                  GROUP 1: Upload and Transform (Left on Desktop, 1st on Mobile)
+                  LEFT COLUMN:
+                  1. Image 1 Card (Upload and Transform in Seconds)
+                  2. Mini Cards 1 (Effortless File Import & Interactive Design Studio)
               ========================================= */}
-              <div className="flex flex-col gap-5 sm:gap-6 order-1">
+              <div className="flex flex-col gap-6">
                 {/* 1. UPLOAD AND TRANSFORM (IMAGE CARD) */}
                 <div className="relative w-full rounded-2xl overflow-hidden shadow-sm group">
                   <img
                     src={Creation1Img}
                     alt="Upload and Transform in Seconds"
-                    className="w-full h-[220px] sm:h-[340px] md:h-[370px] object-cover block"
+                    className="w-full h-[240px] sm:h-[350px] md:h-[400px] object-cover block"
                   />
                   {/* Overlay Title */}
-                  <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10">
-                    <h3 className="text-white text-[16px] sm:text-[21px] md:text-[22px] font-semibold leading-snug drop-shadow-md flex items-start gap-1.5">
-                      <span className="shrink-0">1.</span>
-                      <span>
-                        Upload and Transform
-                        <br />
-                        in Seconds
-                      </span>
+                  <div className="absolute top-5 left-5 sm:top-7 sm:left-7 z-10">
+                    <h3 className="text-white text-[17px] sm:text-[21px] md:text-[22px] font-semibold leading-snug drop-shadow-md">
+                      1. Upload and Transform
+                      <br />
+                      &nbsp;&nbsp;&nbsp;&nbsp;in Seconds
                     </h3>
                   </div>
                 </div>
@@ -116,10 +130,10 @@ export default function CreationFeatures() {
                 {/* PAIR 1: TWO MINI CARDS (CARD 1 DETAILS) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Effortless File Import (White Card) */}
-                  <div className="relative bg-white border border-[#D5D9E0] rounded-2xl p-4 sm:p-6 flex flex-col justify-between min-h-[160px] sm:min-h-[175px] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+                  <div className="relative bg-white border border-[#D5D9E0] rounded-2xl p-5 sm:p-6 flex flex-col justify-between min-h-[190px] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <Icon icon="ph:file-text" className="w-6 h-6 text-[#EA580C]" />
+                      <div className="flex items-center justify-between mb-3">
+                        <Icon icon="ph:file-text" className="w-7 h-7 text-[#EA580C]" />
                         <span 
                           className="text-4xl sm:text-5xl font-extrabold text-transparent select-none leading-none"
                           style={{
@@ -130,7 +144,7 @@ export default function CreationFeatures() {
                           1
                         </span>
                       </div>
-                      <h4 className="text-[14px] sm:text-[15px] font-semibold text-[#111827] mb-2 leading-snug">
+                      <h4 className="text-[14px] sm:text-[15px] font-bold text-[#111827] mb-2 leading-snug">
                         Effortless File Import:
                       </h4>
                       <p className="text-[12px] sm:text-[12.5px] text-[#64748B] leading-relaxed">
@@ -140,12 +154,12 @@ export default function CreationFeatures() {
                   </div>
 
                   {/* Interactive Design Studio (Grey Card) */}
-                  <div className="bg-[#D3D8DF] rounded-2xl p-4 sm:p-6 flex flex-col justify-between min-h-[160px] sm:min-h-[175px]">
+                  <div className="bg-[#D3D8DF] rounded-2xl p-5 sm:p-6 flex flex-col justify-between min-h-[190px]">
                     <div>
-                      <div className="flex items-center justify-between mb-3.5">
-                        <Icon icon="ph:sparkle-fill" className="w-6 h-6 text-[#111827]" />
+                      <div className="flex items-center justify-between mb-3">
+                        <Icon icon="ph:sparkle" className="w-7 h-7 text-[#111827]" />
                       </div>
-                      <h4 className="text-[14px] sm:text-[15px] font-semibold text-[#111827] mb-2 leading-snug">
+                      <h4 className="text-[14px] sm:text-[15px] font-bold text-[#111827] mb-2 leading-snug">
                         Interactive Design Studio:
                       </h4>
                       <p className="text-[12px] sm:text-[12.5px] text-[#475569] leading-relaxed">
@@ -157,36 +171,18 @@ export default function CreationFeatures() {
               </div>
 
               {/* =========================================
-                  GROUP 2: Build Your Publication (Right on Desktop, 2nd on Mobile)
+                  RIGHT COLUMN:
+                  1. Mini Cards 2 (Custom Dimensions & Interactive Design Studio)
+                  2. Image 2 Card (Build Your Publication Design From Zero)
               ========================================= */}
-              <div className="flex flex-col gap-5 sm:gap-6 order-2">
-                {/* 2. BUILD YOUR PUBLICATION DESIGN FROM ZERO (IMAGE CARD) */}
-                <div className="relative w-full rounded-2xl overflow-hidden shadow-sm group">
-                  <img
-                    src={Creation2Img}
-                    alt="Build Your Publication Design From Zero"
-                    className="w-full h-[220px] sm:h-[340px] md:h-[370px] object-cover block"
-                  />
-                  {/* Overlay Title */}
-                  <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10">
-                    <h3 className="text-white text-[16px] sm:text-[21px] md:text-[22px] font-semibold leading-snug drop-shadow-md flex items-start gap-1.5">
-                      <span className="shrink-0">2.</span>
-                      <span>
-                        Build Your Publication
-                        <br />
-                        Design From Zero
-                      </span>
-                    </h3>
-                  </div>
-                </div>
-
+              <div className="flex flex-col gap-6">
                 {/* PAIR 2: TWO MINI CARDS (CARD 2 DETAILS) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Custom Dimensions (White Card) */}
-                  <div className="relative bg-white border border-[#D5D9E0] rounded-2xl p-4 sm:p-6 flex flex-col justify-between min-h-[160px] sm:min-h-[175px] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+                  <div className="relative bg-white border border-[#D5D9E0] rounded-2xl p-5 sm:p-6 flex flex-col justify-between min-h-[190px] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <Icon icon="ph:crop" className="w-6 h-6 text-[#EA580C]" />
+                      <div className="flex items-center justify-between mb-3">
+                        <Icon icon="ph:crop" className="w-7 h-7 text-[#EA580C]" />
                         <span 
                           className="text-4xl sm:text-5xl font-extrabold text-transparent select-none leading-none"
                           style={{
@@ -197,7 +193,7 @@ export default function CreationFeatures() {
                           2
                         </span>
                       </div>
-                      <h4 className="text-[14px] sm:text-[15px] font-semibold text-[#111827] mb-2 leading-snug">
+                      <h4 className="text-[14px] sm:text-[15px] font-bold text-[#111827] mb-2 leading-snug">
                         Custom Dimensions
                       </h4>
                       <p className="text-[12px] sm:text-[12.5px] text-[#64748B] leading-relaxed">
@@ -207,12 +203,12 @@ export default function CreationFeatures() {
                   </div>
 
                   {/* Interactive Design Studio (Dark Card) */}
-                  <div className="bg-[#353535] rounded-2xl p-4 sm:p-6 flex flex-col justify-between min-h-[160px] sm:min-h-[175px]">
+                  <div className="bg-[#353535] rounded-2xl p-5 sm:p-6 flex flex-col justify-between min-h-[190px]">
                     <div>
-                      <div className="flex items-center justify-between mb-3.5">
-                        <Icon icon="ph:pen-nib" className="w-6 h-6 text-white" />
+                      <div className="flex items-center justify-between mb-3">
+                        <Icon icon="ph:pen-nib" className="w-7 h-7 text-white" />
                       </div>
-                      <h4 className="text-[14px] sm:text-[15px] font-semibold text-white mb-2 leading-snug">
+                      <h4 className="text-[14px] sm:text-[15px] font-bold text-white mb-2 leading-snug">
                         Interactive Design Studio:
                       </h4>
                       <p className="text-[12px] sm:text-[12.5px] text-[#CBD5E1] leading-relaxed">
@@ -221,83 +217,94 @@ export default function CreationFeatures() {
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* =========================================
-                  GROUP 3: Design Faster With Ready-Made Layouts (3rd on Mobile & Desktop)
-              ========================================= */}
-              <div className="flex flex-col gap-5 sm:gap-6 order-3">
-                {/* 3. DESIGN FASTER WITH READY-MADE LAYOUTS (IMAGE CARD) */}
+                {/* 2. BUILD YOUR PUBLICATION DESIGN FROM ZERO (IMAGE CARD) */}
                 <div className="relative w-full rounded-2xl overflow-hidden shadow-sm group">
                   <img
-                    src={Creation3Img}
-                    alt="Design Faster With Ready-Made Layouts"
-                    className="w-full h-[160px] sm:h-[200px] md:h-[220px] lg:h-[370px] object-cover block"
+                    src={Creation2Img}
+                    alt="Build Your Publication Design From Zero"
+                    className="w-full h-[240px] sm:h-[350px] md:h-[400px] object-cover block"
                   />
                   {/* Overlay Title */}
-                  <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10">
-                    <h3 className="text-white text-[15px] sm:text-[19px] md:text-[20px] font-semibold leading-snug drop-shadow-md flex items-start gap-1.5">
-                      <span className="shrink-0">3.</span>
-                      <span>
-                        Design Faster With Ready-
-                        <br />
-                        Made Layouts
-                      </span>
+                  <div className="absolute top-5 left-5 sm:top-7 sm:left-7 z-10">
+                    <h3 className="text-white text-[17px] sm:text-[21px] md:text-[22px] font-semibold leading-snug drop-shadow-md">
+                      2. Build Your Publication
+                      <br />
+                      &nbsp;&nbsp;&nbsp;&nbsp;Design From Zero
                     </h3>
                   </div>
                 </div>
               </div>
 
-              {/* =========================================
-                  GROUP 3 DETAILS: Mini Cards (4th on Mobile, under Group 2 on Desktop / Right Col)
-              ========================================= */}
-              <div className="flex flex-col gap-5 sm:gap-6 order-4">
-                {/* PAIR 3: TWO MINI CARDS (CARD 3 DETAILS) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Industry-Ready Templates (White Card) */}
-                  <div className="relative bg-white border border-[#D5D9E0] rounded-2xl p-4 sm:p-6 flex flex-col justify-between min-h-[160px] sm:min-h-[175px] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <Icon icon="ph:layout" className="w-6 h-6 text-[#EA580C]" />
-                        <span 
-                          className="text-4xl sm:text-5xl font-extrabold text-transparent select-none leading-none"
-                          style={{
-                            WebkitTextStroke: '2.5px #EA580C',
-                            filter: 'drop-shadow(2.5px 2.5px 0px rgba(234, 88, 12, 0.35))',
-                          }}
-                        >
-                          3
-                        </span>
-                      </div>
-                      <h4 className="text-[14px] sm:text-[15px] font-semibold text-[#111827] mb-2 leading-snug">
-                        Industry-Ready Templates:
-                      </h4>
-                      <p className="text-[12px] sm:text-[12.5px] text-[#64748B] leading-relaxed">
-                        Jumpstart your project with ready-made layouts built specifically for catalogues, magazines, portfolios, and brochures.
-                      </p>
-                    </div>
-                  </div>
+            </div>
 
-                  {/* Fast & Flexible Customization (Dark Card) */}
-                  <div className="bg-[#353535] rounded-2xl p-4 sm:p-6 flex flex-col justify-between min-h-[160px] sm:min-h-[175px]">
-                    <div>
-                      <div className="flex items-center justify-between mb-3.5">
-                        <Icon icon="ph:sliders-horizontal" className="w-6 h-6 text-white" />
-                      </div>
-                      <h4 className="text-[14px] sm:text-[15px] font-semibold text-white mb-2 leading-snug">
-                        Fast &amp; Flexible Customization:
-                      </h4>
-                      <p className="text-[12px] sm:text-[12.5px] text-[#CBD5E1] leading-relaxed">
-                        Skip the blank page, drop in your content, and effortlessly adapt colors, fonts, and imagery to match your brand.
-                      </p>
-                    </div>
-                  </div>
+            {/* =========================================
+                BOTTOM ROW (ROW 3): SAME HEIGHT ROW
+                Image 3 (Left half, 50%) + Mini Cards 3 (Right half, 50% divided into 2 cards)
+            ========================================= */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+              {/* 3. DESIGN FASTER WITH READY-MADE LAYOUTS (IMAGE CARD) */}
+              <div className="relative w-full h-full min-h-[220px] rounded-2xl overflow-hidden shadow-sm group">
+                <img
+                  src={Creation3Img}
+                  alt="Design Faster With Ready-Made Layouts"
+                  className="w-full h-full object-cover block"
+                />
+                {/* Overlay Title */}
+                <div className="absolute top-5 left-5 sm:top-6 sm:left-6 z-10">
+                  <h3 className="text-white text-[16px] sm:text-[20px] md:text-[21px] font-semibold leading-snug drop-shadow-md">
+                    3. Design Faster With Ready-
+                    <br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;Made Layouts
+                  </h3>
                 </div>
               </div>
 
+              {/* PAIR 3: TWO MINI CARDS (CARD 3 DETAILS) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
+                {/* Industry-Ready Templates (White Card) */}
+                <div className="relative bg-white border border-[#D5D9E0] rounded-2xl p-5 sm:p-6 flex flex-col justify-between h-full shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <Icon icon="ph:layout" className="w-7 h-7 text-[#EA580C]" />
+                      <span 
+                        className="text-4xl sm:text-5xl font-extrabold text-transparent select-none leading-none"
+                        style={{
+                          WebkitTextStroke: '2.5px #EA580C',
+                          filter: 'drop-shadow(2.5px 2.5px 0px rgba(234, 88, 12, 0.35))',
+                        }}
+                      >
+                        3
+                      </span>
+                    </div>
+                    <h4 className="text-[14px] sm:text-[15px] font-bold text-[#111827] mb-2 leading-snug">
+                      Industry-Ready Templates:
+                    </h4>
+                    <p className="text-[12px] sm:text-[12.5px] text-[#64748B] leading-relaxed">
+                      Jumpstart your project with ready-made layouts built specifically for catalogues, magazines, portfolios, and brochures.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Fast & Flexible Customization (Dark Card) */}
+                <div className="bg-[#353535] rounded-2xl p-5 sm:p-6 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <Icon icon="ph:sliders-horizontal" className="w-7 h-7 text-white" />
+                    </div>
+                    <h4 className="text-[14px] sm:text-[15px] font-bold text-white mb-2 leading-snug">
+                      Fast &amp; Flexible Customization:
+                    </h4>
+                    <p className="text-[12px] sm:text-[12.5px] text-[#CBD5E1] leading-relaxed">
+                      Skip the blank page, drop in your content, and effortlessly adapt colors, fonts, and imagery to match your brand.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
+
           </div>
-        </section>
+       
       </main>
       <Footer />
     </div>

@@ -183,7 +183,7 @@ export default function Features() {
               >
                 {/* Image Container with subtle hover zoom */}
                 <div
-                  className={`w-full ${card.aspect} rounded-xl md:rounded-[0.9vw] bg-[#F8FAFC] border border-[#E2E8F0]/60 flex items-center justify-center relative overflow-hidden`}
+                  className="w-full h-[180px] sm:h-[220px] md:h-[240px] lg:h-[260px] rounded-xl md:rounded-[0.9vw] bg-[#F8FAFC] border border-[#E2E8F0]/60 flex items-center justify-center relative overflow-hidden"
                 >
                   <img
                     src={card.image}

@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import Footer from '../Footer';
-import heroBg from '../../assets/Features/Converter/Feature.webp';
+import heroBg from '../../assets/Features/Shelf/Shelf.webp';
 import Shelf1Img from '../../assets/Features/Shelf/Shelf1.webp';
 import Shelf2Img from '../../assets/Features/Shelf/Shelf2.webp';
 
@@ -82,12 +82,16 @@ export default function MyShelfFeatures() {
         {/* =========================================
             SECTION 2: CENTER HEADING & SUBTITLE
         ========================================= */}
-        <section className="relative w-full pt-6 pb-4 sm:pt-8 sm:pb-6 text-center bg-[#F6F6F6]">
-          <div className="max-w-[900px] mx-auto px-4">
-            <h2 className="text-xl sm:text-[34px] md:text-[38px] font-semibold text-[#111827] tracking-tight leading-tight mb-2">
-              Showcase &amp; Organize Your Published Work
-            </h2>
-            <p className="text-xs sm:text-[15px] text-[#64748B] max-w-[700px] mx-auto leading-relaxed">
+        <section className="relative w-full pt-10 sm:pt-14 md:pt-16 pb-8 sm:pb-12 md:pb-14 text-center bg-[#F6F6F6]">
+          <div className="max-w-[960px] mx-auto px-4">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
+              <h2 className="text-xl sm:text-2xl md:text-[28px] font-bold text-[#111827] tracking-tight">
+                Showcase &amp; Organize Your Published Work
+              </h2>
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
+            </div>
+            <p className="text-xs sm:text-sm md:text-[14px] text-[#64748B] mt-2 max-w-xl mx-auto leading-relaxed">
               A centralized library to store, sort, and manage all your interactive publications and 3D models in one place.
             </p>
           </div>
@@ -122,7 +126,7 @@ export default function MyShelfFeatures() {
               </div>
 
               {/* DESKTOP VIEW: Right column cards */}
-              <div className="hidden lg:flex w-full lg:w-[42%] flex-col gap-6 lg:gap-10 py-2">
+              <div className="hidden lg:flex w-full lg:w-[42%] flex-col gap-6 lg:gap-30 py-2">
                 {/* CARD 1: Customized Branded Book Shelf */}
                 <div className="w-full lg:w-[88%] lg:ml-[12%] bg-white rounded-2xl p-6 lg:p-8 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.06)] border border-[#EDEDED] flex items-center gap-4 transition-transform duration-200 hover:-translate-y-0.5">
                   <div className="w-12 h-12 rounded-xl bg-[#EAB308] text-white flex items-center justify-center shrink-0 shadow-sm">

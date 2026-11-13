@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react';
 import Footer from '../Footer';
 
 // Analytics Assets
-import heroBg from '../../assets/Features/Converter/Feature.webp';
+import heroBg from '../../assets/Features/Analytics/Analytics.webp';
 import analytics1Woman from '../../assets/Features/Analytics/Analytics1.webp';
 import analytics2Laptop from '../../assets/Features/Analytics/Analytics2.webp';
 import analytics3Touch from '../../assets/Features/Analytics/Analytics3.webp';
@@ -86,16 +86,16 @@ export default function AnalyticsFeatures() {
         {/* =========================================
             SECTION 2: HEADER BANNER
         ========================================= */}
-        <section className="relative w-full pt-6 pb-4 md:pt-8 md:pb-14 bg-white text-center">
-          <div className="max-w-[1000px] mx-auto px-4">
-            <div className="flex items-center justify-center gap-2.5 sm:gap-4 mb-2.5 sm:mb-3">
-              <span className="w-8 sm:w-14 h-[2.5px] bg-[#C86D58] rounded-full"></span>
-              <h2 className="text-xl sm:text-[30px] md:text-[36px] font-semibold text-[#111827] tracking-tight leading-tight">
+        <section className="relative w-full pt-10 sm:pt-14 md:pt-16 pb-8 sm:pb-12 md:pb-14 text-center bg-white">
+          <div className="max-w-[960px] mx-auto px-4">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
+              <h2 className="text-xl sm:text-2xl md:text-[28px] font-bold text-[#111827] tracking-tight">
                 Make Every Page Interactive &amp; Trackable
               </h2>
-              <span className="w-8 sm:w-14 h-[2.5px] bg-[#D48B6A] rounded-full"></span>
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
             </div>
-            <p className="text-xs sm:text-[14.5px] text-[#4B5563] max-w-[650px] mx-auto leading-relaxed font-normal">
+            <p className="text-xs sm:text-sm md:text-[14px] text-[#64748B] mt-2 max-w-xl mx-auto leading-relaxed">
               Interactive digital catalogues capture 3x more reader attention than static PDFs and turn passive browsing into direct inquiries.
             </p>
           </div>
@@ -112,7 +112,7 @@ export default function AnalyticsFeatures() {
               {/* COLUMN 1: Content + Image */}
               <div className="flex flex-col border-b md:border-b-0 md:border-r border-[#BED2CF]">
                 {/* Content */}
-                <div className="bg-[#F5F5F5] p-5 lg:p-6 flex flex-col items-center justify-center text-center py-6 md:py-8 border-b border-[#BED2CF]">
+                <div className="bg-[#F5F5F5] p-5 lg:p-6 flex flex-col items-center justify-center text-center py-6 md:py-8 border-b border-[#BED2CF] min-h-[170px] sm:min-h-[185px]">
                   <div className="w-[42px] h-[42px] rounded-full bg-[#2F87AD] text-white flex items-center justify-center mb-2 shadow-xs">
                     <Icon icon="lucide:eye" className="w-[20px] h-[20px] stroke-[1.8]" />
                   </div>
@@ -124,7 +124,7 @@ export default function AnalyticsFeatures() {
                   </p>
                 </div>
                 {/* Image */}
-                <div className="relative bg-white overflow-hidden min-h-[220px] md:min-h-[300px] h-56 sm:h-72 md:h-auto flex items-center justify-center">
+                <div className="relative bg-white overflow-hidden h-[240px] sm:h-[300px] md:h-[350px] flex items-center justify-center">
                   <img
                     src={analytics1Woman}
                     alt="Woman analyzing digital publication"
@@ -133,18 +133,18 @@ export default function AnalyticsFeatures() {
                 </div>
               </div>
 
-              {/* COLUMN 2: On mobile show Content then Image for consistent reading experience */}
+              {/* COLUMN 2: Laptop Top, Content Bottom */}
               <div className="flex flex-col border-b md:border-b-0 md:border-r border-[#BED2CF]">
-                {/* Image (Desktop top, mobile bottom) */}
-                <div className="relative bg-white overflow-hidden min-h-[220px] md:min-h-[260px] h-56 sm:h-72 md:h-auto border-b md:border-b border-[#BED2CF] order-2 md:order-1 flex items-center justify-center">
+                {/* Image */}
+                <div className="relative bg-white overflow-hidden h-[240px] sm:h-[300px] md:h-[350px] border-b border-[#BED2CF] flex items-center justify-center">
                   <img
                     src={analytics2Laptop}
                     alt="Analytics Dashboard on Laptop"
                     className="w-full h-full object-cover object-center select-none"
                   />
                 </div>
-                {/* Content (Desktop bottom, mobile top) */}
-                <div className="bg-[#F5F5F5] p-5 lg:p-6 flex flex-col items-center justify-center text-center py-6 md:py-8 order-1 md:order-2 border-b md:border-b-0 border-[#BED2CF]">
+                {/* Content */}
+                <div className="bg-[#F5F5F5] p-5 lg:p-6 flex flex-col items-center justify-center text-center py-6 md:py-8 min-h-[170px] sm:min-h-[185px]">
                   <div className="w-[42px] h-[42px] rounded-full bg-[#7FBCAC] text-white flex items-center justify-center mb-2 shadow-xs">
                     <Icon icon="lucide:pointer" className="w-[20px] h-[20px] stroke-[1.8]" />
                   </div>
@@ -160,7 +160,7 @@ export default function AnalyticsFeatures() {
               {/* COLUMN 3: Content + Image */}
               <div className="flex flex-col">
                 {/* Content */}
-                <div className="bg-[#F5F5F5] p-5 lg:p-6 flex flex-col items-center justify-center text-center py-6 md:py-8 border-b border-[#BED2CF]">
+                <div className="bg-[#F5F5F5] p-5 lg:p-6 flex flex-col items-center justify-center text-center py-6 md:py-8 border-b border-[#BED2CF] min-h-[170px] sm:min-h-[185px]">
                   <div className="w-[42px] h-[42px] rounded-full bg-[#A87ABB] text-white flex items-center justify-center mb-2 shadow-xs">
                     <Icon icon="lucide:arrow-down-to-line" className="w-[20px] h-[20px] stroke-[1.8]" />
                   </div>
@@ -172,7 +172,7 @@ export default function AnalyticsFeatures() {
                   </p>
                 </div>
                 {/* Image */}
-                <div className="relative bg-white overflow-hidden min-h-[220px] md:min-h-[260px] h-56 sm:h-72 md:h-auto flex items-center justify-center">
+                <div className="relative bg-white overflow-hidden h-[240px] sm:h-[300px] md:h-[350px] flex items-center justify-center">
                   <img
                     src={analytics3Touch}
                     alt="Interactive finger tap and analytics engagement"

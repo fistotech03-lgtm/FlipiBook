@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react';
 import Footer from '../Footer';
 
 // Asset imports
-import heroBg from '../../assets/Features/Converter/Feature.webp';
+import heroBg from '../../assets/Features/Converter/converter.webp';
 import imgMock from '../../assets/Features/Converter/img.webp';
 import imgBgLeaves from '../../assets/Features/Converter/imgbg.webp';
 import vdoMock from '../../assets/Features/Converter/vdo.webp';
@@ -87,6 +87,21 @@ export default function ConverterFeatures() {
             </div>
           </div>
 
+        </section>
+
+        <section className="relative w-full pt-10 sm:pt-14 md:pt-16 pb-8 sm:pb-12 md:pb-14 text-center bg-white">
+          <div className="max-w-[960px] mx-auto px-4">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
+              <h2 className="text-xl sm:text-2xl md:text-[28px] font-bold text-[#111827] tracking-tight">
+                 Turn Every Page into an Interactive Experience
+                 </h2>
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
+            </div>
+            <p className="text-xs sm:text-sm md:text-[14px] text-[#64748B] mt-2 max-w-2xl mx-auto leading-relaxed">
+               Create engaging digital catalogues that get 3x more attention than static PDFs and turn interest into real business inquiries.
+                </p>
+          </div>
         </section>
 
         {/* =========================================

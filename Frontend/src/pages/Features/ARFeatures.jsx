@@ -2,8 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import Footer from '../Footer';
-import heroBg from '../../assets/Features/Converter/Feature.webp';
 import ARImg from '../../assets/Features/AR/AR.webp';
+import AR1Img from '../../assets/Features/AR/AR1.webp';
 
 export default function ARFeatures() {
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ export default function ARFeatures() {
             {/* The laptop + rock 3D illustration background */}
             <div className="absolute inset-0 z-0 pointer-events-none select-none flex justify-end items-center opacity-25 md:opacity-100">
               <img
-                src={heroBg}
+                src={ARImg}
                 alt="FlipiBook Augmented Reality Preview"
                 className="w-full h-full object-contain object-right"
               />
@@ -83,12 +83,16 @@ export default function ARFeatures() {
         {/* =========================================
             SECTION 2: CENTER HEADING & SUBTITLE
         ========================================= */}
-        <section className="relative w-full pt-6 pb-4 sm:pt-8 sm:pb-6 text-center bg-white">
+        <section className="relative w-full pt-10 sm:pt-14 md:pt-16 pb-8 sm:pb-12 md:pb-14 text-center bg-white">
           <div className="max-w-[960px] mx-auto px-4">
-            <h2 className="text-xl sm:text-[34px] md:text-[38px] font-semibold text-[#111827] tracking-tight leading-tight mb-2">
-              <span className="text-[#EA580C]">AR</span> – Bring Your Catalogue Into Reality
-            </h2>
-            <p className="text-xs sm:text-[15px] text-[#4B5563] max-w-[760px] mx-auto leading-relaxed">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
+              <h2 className="text-xl sm:text-2xl md:text-[28px] font-bold text-[#111827] tracking-tight">
+                <span className="text-[#EA580C]">AR</span> – Bring Your Catalogue Into Reality
+              </h2>
+              <span className="w-8 sm:w-14 h-[2.5px] bg-[#EA580C] rounded-full inline-block shrink-0"></span>
+            </div>
+            <p className="text-xs sm:text-sm md:text-[14px] text-[#64748B] mt-2 max-w-xl mx-auto leading-relaxed">
               Transform flat product pages into interactive 3D experiences that users can place, scale, and explore right in their own environment.
             </p>
           </div>
@@ -97,15 +101,15 @@ export default function ARFeatures() {
         {/* =========================================
             SECTION 3: TABLET AR DEMO & 2x3 FEATURE CARDS
         ========================================= */}
-        <section className="relative w-full pb-12 bg-white">
+        <section className="relative w-full pb-10 bg-white">
           <div className="max-w-[92vw] mx-auto px-4 md:px-[2vw]">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
               
               {/* LEFT COLUMN: TABLET AR VISUAL (5 Cols on LG) */}
               <div className="lg:col-span-5 flex justify-center items-center">
-                <div className="relative w-full max-w-[340px] sm:max-w-[420px] lg:max-w-[460px] group transition-transform duration-300 hover:scale-[1.01]">
+                <div className="relative w-full mt-[1vw] max-w-[5800px] sm:max-w-[560px] lg:max-w-[580px] group transition-transform duration-300 hover:scale-[1.01]">
                   <img
-                    src={ARImg}
+                    src={AR1Img}
                     alt="AR Interactive Tablet View"
                     className="w-full h-auto object-contain block drop-shadow-xl"
                   />

@@ -159,12 +159,12 @@ export default function Features() {
         </motion.div>
 
         {/* Subheading: Feature */}
-        <section className="w-full max-w-[94vw] lg:max-w-[88vw] mx-auto pt-8 pb-4 px-4 sm:px-6">
+        <section className="w-full max-w-[94vw] lg:max-w-[88vw] mx-auto pt-9 pb-9 px-4 sm:px-6">
           <div>
-            <h2 className="text-[1.1vw] font-semibold text-[#111827] tracking-tight">
-              Feature
+            <h2 className="text-[1.5vw] font-semibold text-[#111827] tracking-tight">
+              Explore Our Features
             </h2>
-            <p className="text-xs md:text-[0.78vw] text-[#94A3B8] mt-0.5">
+            <p className="text-xs md:text-[0.9vw] text-[#94A3B8] mt-0.5">
               Share ideas, solve problems, and improve your workflow.
             </p>
           </div>

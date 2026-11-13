@@ -191,21 +191,18 @@ export function MaterialsPanel({
   })();
 
   const activeMaterialPreview = (() => {
+    const rawMap = materialSettings?.maps?.map || materialSettings?.maps?.base;
+    if (rawMap && rawMap !== "existing") {
+      return resolveUploadsPath(rawMap);
+    }
     if (materialSettings?.appliedTexture?.preview) {
       return resolveUploadsPath(materialSettings.appliedTexture.preview);
     }
     if (materialSettings?.appliedTexture?.thumb) {
       return resolveUploadsPath(materialSettings.appliedTexture.thumb);
     }
-    const texName = materialSettings?.materialName;
-    if (texName && textureData) {
-      const found = textureData.find(t => t.name?.toLowerCase() === texName.toLowerCase() || t.id?.toLowerCase() === texName.toLowerCase());
-      if (found?.preview) {
-        return resolveUploadsPath(found.preview);
-      }
-    }
-    if (selectedTextureId && textureData) {
-      const found = textureData.find(t => t.id === selectedTextureId);
+    if (materialSettings?.appliedTexture?.id && textureData) {
+      const found = textureData.find(t => t.id === materialSettings.appliedTexture.id || t.name?.toLowerCase() === materialSettings.appliedTexture.id?.toLowerCase());
       if (found?.preview) {
         return resolveUploadsPath(found.preview);
       }
@@ -377,9 +374,9 @@ export function MaterialsPanel({
         <button
           type="button"
           onClick={() => onOpenMaterialDrawer && onOpenMaterialDrawer()}
-          className="w-full h-[2.8vw] px-[0.6vw] bg-white rounded-[0.45vw] border border-gray-200 hover:border-gray-300 flex items-center justify-between transition-all cursor-pointer shadow-2xs group"
+          className="w-full min-h-[2.8vw] py-[0.4vw] px-[0.6vw] bg-white rounded-[0.45vw] border border-gray-200 hover:border-gray-300 flex items-center justify-between gap-[0.5vw] transition-all cursor-pointer shadow-2xs group"
         >
-          <div className="flex items-center gap-[0.6vw] min-w-0">
+          <div className="flex items-center gap-[0.6vw] min-w-0 flex-1">
             {/* Sphere Thumbnail */}
             <div className="w-[1.9vw] h-[1.9vw] rounded-full overflow-hidden border border-gray-200/90 shrink-0 bg-gray-100 shadow-2xs">
               {activeMaterialPreview ? (
@@ -400,9 +397,11 @@ export function MaterialsPanel({
             </div>
 
             {/* Material Name */}
-            <span className="text-[0.82vw] font-medium text-gray-800 truncate">
-              {materialSettings?.materialName || (selectedMaterial ? getItemDisplayName(selectedMaterial) : 'Solid Material')}
-            </span>
+            <div className="flex flex-col min-w-0 flex-1 text-left">
+              <span className="text-[0.78vw] font-normal text-gray-800 break-all leading-tight">
+                {materialSettings?.appliedTexture?.name || materialSettings?.materialName || (selectedMaterial ? (selectedMaterial.material || getItemDisplayName(selectedMaterial)) : 'Solid Material')}
+              </span>
+            </div>
           </div>
 
           {/* Clean Right Action: "Change" with chevron */}

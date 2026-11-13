@@ -7,8 +7,8 @@ export function SliderRow({ label, value = 50, onChange }) {
   return (
     <div className="flex items-center justify-between gap-[0.6vw]">
       <div className="flex items-center gap-[0.2vw] w-[5.5vw] shrink-0">
-        <span className="text-[0.75vw] font-semibold text-gray-700">{label}</span>
-        <Icon icon="heroicons:chevron-down-20-solid" className="w-[0.7vw] h-[0.7vw] text-gray-400" />
+        <span className="text-[0.75vw] font-normal text-gray-800">{label}</span>
+        
       </div>
 
       <div className="flex-1 relative flex items-center">
@@ -22,7 +22,7 @@ export function SliderRow({ label, value = 50, onChange }) {
         />
       </div>
 
-      <span className="text-[0.72vw] font-bold text-gray-700 w-[2vw] text-right shrink-0">
+      <span className="text-[0.72vw] font-normal text-gray-700 w-[2vw] text-right shrink-0">
         {numVal}%
       </span>
     </div>
@@ -164,7 +164,7 @@ export function DualAxisInput({
 }) {
   return (
     <div className="flex items-center justify-between gap-[0.4vw]">
-      <span className="text-[0.75vw] font-medium text-gray-800 w-[3.5vw] shrink-0">
+      <span className="text-[0.75vw] font-normal text-gray-800 w-[3.5vw] shrink-0">
         {label}
       </span>
       <div className="flex-1 flex items-center gap-[0.4vw]">

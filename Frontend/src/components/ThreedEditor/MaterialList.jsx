@@ -502,9 +502,9 @@ const TreeItem = ({
 
                         <div className="w-[1.2vw] h-[1.2vw] rounded-[0.28vw] flex items-center justify-center shrink-0">
                             <Icon
-                                icon={isOpen ? "solar:folder-open-bold-duotone" : "solar:folder-bold-duotone"}
-                                width="1vw"
-                                height="1vw"
+                                icon={isOpen ? "lucide:folder-open" : "lucide:folder"}
+                                width="0.9vw"
+                                height="0.9vw"
                                 className={`transition-colors ${
                                     isSelected
                                         ? "text-[#5d5efc]"
@@ -524,18 +524,18 @@ const TreeItem = ({
                                 onBlur={handleRenameSubmit}
                                 onKeyDown={handleKeyDown}
                                 onClick={(e) => e.stopPropagation()}
-                                className="bg-white border border-indigo-400 rounded px-[0.25vw] py-[0.04vw] text-[0.68vw] text-gray-900 font-semibold outline-none w-full shadow-xs"
+                                className="bg-white border border-indigo-400 rounded px-[0.25vw] py-[0.04vw] text-[0.68vw] text-gray-900 font-normal outline-none w-full shadow-xs"
                             />
                         ) : (
                             <span 
-                                className="truncate font-semibold text-[0.7vw] text-gray-800 tracking-tight flex-1 min-w-0 leading-tight"
+                                className="truncate font-normal text-[0.7vw] text-gray-800 tracking-tight flex-1 min-w-0 leading-tight"
                                 title={displayName}
                             >
                                 {visualTitle}
                             </span>
                         )}
 
-                        <span className="text-[0.52vw] font-medium px-[0.28vw] py-[0.04vw] rounded-[0.22vw] bg-gray-100 text-gray-400 shrink-0 ml-auto mr-[0.1vw]">
+                        <span className="text-[0.52vw] font-normal px-[0.28vw] py-[0.04vw] rounded-[0.22vw] bg-gray-100 text-gray-400 shrink-0 ml-auto mr-[0.1vw]">
                             {childMeshCount}
                         </span>
                     </div>
@@ -596,7 +596,7 @@ const TreeItem = ({
             title={displayName}
             className={`group relative flex items-center justify-between py-[0.32vw] px-[0.42vw] rounded-[0.42vw] text-[0.68vw] cursor-pointer transition-all duration-150 border select-none w-full min-w-0 my-[0.03vw] ${
                 isSelected
-                    ? "bg-indigo-50/90 border-indigo-200/90 text-indigo-950 font-semibold shadow-2xs"
+                    ? "bg-indigo-50/90 border-indigo-200/90 text-indigo-950 font-normal shadow-2xs"
                     : "border-transparent text-gray-700 hover:bg-gray-100/70"
             } ${!isVisible ? "opacity-40" : ""}`}
         >
@@ -614,7 +614,7 @@ const TreeItem = ({
                             : "bg-gray-100/90 text-gray-400 group-hover:text-[#5d5efc] group-hover:bg-indigo-50/80"
                     }`}
                 >
-                    <Icon icon="solar:box-minimalistic-bold-duotone" width="0.78vw" height="0.78vw" />
+                    <Icon icon="f7:cube" width="0.75vw" height="0.75vw" />
                 </div>
 
                 {isEditing ? (
@@ -626,11 +626,11 @@ const TreeItem = ({
                         onBlur={handleRenameSubmit}
                         onKeyDown={handleKeyDown}
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-white border border-indigo-400 rounded px-[0.25vw] py-[0.04vw] text-[0.68vw] text-gray-900 font-semibold outline-none w-full shadow-xs"
+                        className="bg-white border border-indigo-400 rounded px-[0.25vw] py-[0.04vw] text-[0.68vw] text-gray-900 font-normal outline-none w-full shadow-xs"
                     />
                 ) : (
                     <span 
-                        className="truncate font-medium text-[0.68vw] text-gray-700 group-hover:text-gray-900 tracking-tight flex-1 min-w-0 leading-tight"
+                        className="truncate font-normal text-[0.68vw] text-gray-700 group-hover:text-gray-900 tracking-tight flex-1 min-w-0 leading-tight"
                         title={displayName}
                     >
                         {visualTitle}
@@ -765,7 +765,7 @@ export default function MaterialList({
             >
                 <div className="flex items-center gap-[0.45vw] min-w-0">
                     <div className="w-[1.35vw] h-[1.35vw] rounded-[0.32vw] bg-indigo-50 text-[#5d5efc] flex items-center justify-center shrink-0 border border-indigo-100/80 shadow-2xs">
-                        <Icon icon="solar:box-bold-duotone" width="0.85vw" height="0.85vw" />
+                        <Icon icon="f7:cube" width="0.82vw" height="0.82vw" />
                     </div>
                     <span className="text-[0.78vw] font-semibold text-gray-800 tracking-tight whitespace-nowrap">
                         Meshes

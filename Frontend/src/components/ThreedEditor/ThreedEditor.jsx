@@ -2156,6 +2156,7 @@ export default function ThreedEditor() {
             } else {
               nextCustomMap[tKey] = {
                 ...prevEntry,
+                materialName: textureData?.name || prevEntry.materialName,
                 appliedTexture: newTexture,
                 maps: next.maps,
                 metallic: next.metallic,
@@ -2368,6 +2369,7 @@ export default function ThreedEditor() {
           }
           return {
             ...next,
+            materialName: customData.materialName || target.material || target.name || "Solid Material",
             color: customData.color || next.color,
             colorIntensity: customData.colorIntensity !== undefined ? customData.colorIntensity : next.colorIntensity,
             metallic: customData.metallic !== undefined ? customData.metallic : next.metallic,
@@ -2416,6 +2418,7 @@ export default function ThreedEditor() {
           }
           return {
             ...next,
+            materialName: defaultData.materialName || target.material || target.name || "Solid Material",
             color: defaultData.color || next.color,
             metallic: defaultData.metallic !== undefined ? defaultData.metallic : next.metallic,
             roughness: defaultData.roughness !== undefined ? defaultData.roughness : next.roughness,
@@ -2437,6 +2440,7 @@ export default function ThreedEditor() {
           if (Object.keys(freshClean).length > 0) {
             return {
               ...next,
+              materialName: target.material || target.name || "Solid Material",
               appliedTexture: null,
               maps: { ...freshClean, ...(preservedEnvMap ? { envMap: preservedEnvMap } : {}) },
               customEnvMap: preservedEnvMap,
@@ -2449,7 +2453,7 @@ export default function ThreedEditor() {
 
       return {
         ...next,
-        materialName: target.name || "Solid Material",
+        materialName: target.material || target.name || "Solid Material",
         appliedTexture: null
       };
     });

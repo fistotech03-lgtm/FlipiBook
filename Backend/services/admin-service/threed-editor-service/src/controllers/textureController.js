@@ -163,7 +163,10 @@ const getUserTextures = async (req, res) => {
       queryConditions.push({ userEmail: userID }, { emailId: userID }, { userID: userID });
     }
 
-    const textures = await Texture.find({ $or: queryConditions }).sort({ createdAt: -1 });
+    const textures = await Texture.find({ $or: queryConditions })
+      .populate('materialCategory')
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.status(200).json({ success: true, count: textures.length, textures });
   } catch (error) {

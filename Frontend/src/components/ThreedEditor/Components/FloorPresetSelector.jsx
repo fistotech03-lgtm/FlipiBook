@@ -48,10 +48,10 @@ export default function FloorPresetSelector({
   ].includes(currentFloorType);
 
   return (
-    <div className="flex flex-col gap-[0.55vw] pt-[0.2vw]">
+    <div className="flex flex-col gap-[0.55vw] pt-[0.5vw]">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-[0.78vw] font-bold text-gray-900">Floor Preset</span>
+        <span className="text-[0.85vw] font-semibold text-gray-900">Floor Preset</span>
       </div>
 
       {/* Top 5 Quick Presets */}
@@ -70,9 +70,9 @@ export default function FloorPresetSelector({
               title={preset.description}
             >
               <Icon icon={preset.icon} className="w-[1.1vw] h-[1.1vw]" />
-              <span className="text-[0.6vw] leading-none truncate max-w-full px-[0.1vw]">
+              {/* <span className="text-[0.6vw] leading-none truncate max-w-full px-[0.1vw]">
                 {preset.name.split(" ")[0]}
-              </span>
+              </span> */}
             </button>
           );
         })}
@@ -82,13 +82,11 @@ export default function FloorPresetSelector({
       <div className="flex items-center justify-between px-[0.6vw] py-[0.35vw] bg-gray-50 border border-gray-200/80 rounded-[0.45vw]">
         <div className="flex items-center gap-[0.4vw] min-w-0">
           <Icon icon={currentPreset.icon} className="w-[0.9vw] h-[0.9vw] text-[#ea543a] shrink-0" />
-          <span className="text-[0.72vw] font-medium text-gray-800 truncate">
+          <span className="text-[0.72vw] font-normal text-gray-800 truncate">
             {currentPreset.name}
           </span>
         </div>
-        <span className="text-[0.62vw] px-[0.35vw] py-[0.1vw] bg-white border border-gray-200 rounded text-gray-500 font-normal shrink-0">
-          {currentPreset.category}
-        </span>
+        
       </div>
 
       {/* Dynamic Sub-Controls for Fine Tuning */}

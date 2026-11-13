@@ -126,9 +126,14 @@ export default function ViewAll3DModelsModal({
   // Fetch only real presets from backend defaultmodels collection
   const allPresets = useMemo(() => {
     return (dbPresets || []).map((dbm) => ({
+      ...dbm,
       id: dbm.id || dbm.modelId,
       name: dbm.name,
       title: dbm.name,
+      displayName: dbm.displayName || dbm.name,
+      url: dbm.url || dbm.modelUrl || null,
+      thumbnailUrl: dbm.thumbnailUrl || null,
+      type: (dbm.type || 'glb').toLowerCase(),
       format: (dbm.type || 'GLB').toUpperCase(),
       size: dbm.size || 'N/A',
       category: dbm.category || 'Preset',
@@ -152,6 +157,7 @@ export default function ViewAll3DModelsModal({
       category: 'Uploaded',
       categoryColor: 'bg-emerald-50 text-emerald-600 border-emerald-200',
       isPreset: false,
+      url: m.url,
       modelUrl: m.url
     }));
 

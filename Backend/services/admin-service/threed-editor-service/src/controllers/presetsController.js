@@ -69,6 +69,31 @@ const getPresetModels = async (req, res) => {
 };
 
 /**
+ * GET /api/presets/models/:id
+ */
+const getPresetModelById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const query = id.match(/^[0-9a-fA-F]{24}$/) ? { $or: [{ id }, { _id: id }] } : { id };
+    const model = await DefaultModel.findOne(query).lean();
+    if (!model) {
+      return res.status(404).json({ success: false, message: 'Preset model not found' });
+    }
+    res.status(200).json({
+      success: true,
+      model: {
+        ...model,
+        url: resolveUrl(req, model.url),
+        thumbnailUrl: model.thumbnailUrl ? resolveUrl(req, model.thumbnailUrl) : null
+      }
+    });
+  } catch (error) {
+    console.error('[Presets] Error fetching default model by ID:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+/**
  * POST /api/presets/models
  */
 const addPresetModel = async (req, res) => {
@@ -168,6 +193,7 @@ module.exports = {
   getHdriPresets,
   getMaterialPresets,
   getPresetModels,
+  getPresetModelById,
   addPresetModel,
   updatePresetModel,
   deletePresetModel

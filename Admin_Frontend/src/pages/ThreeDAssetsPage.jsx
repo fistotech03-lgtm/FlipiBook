@@ -14,9 +14,11 @@ import {
   FileBox,
   Sparkles,
   UploadCloud,
-  X
+  X,
+  ChevronDown
 } from 'lucide-react';
 import CustomColorPicker from '../components/CustomColorPicker';
+import Model3DThumbnail from '../components/Model3DThumbnail';
 import {
   get3DModels,
   upload3DModel,
@@ -49,6 +51,8 @@ export default function ThreeDAssetsPage() {
   const [editingItem, setEditingItem] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const categoryWrapperRef = useRef(null);
 
   // Custom Delete Confirmation Modal state
   const [deleteConfirm, setDeleteConfirm] = useState({
@@ -84,6 +88,21 @@ export default function ThreeDAssetsPage() {
   const [removedFiles, setRemovedFiles] = useState([]);
   const [dragActiveField, setDragActiveField] = useState(null);
 
+  // Close category dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (categoryWrapperRef.current && !categoryWrapperRef.current.contains(e.target)) {
+        setShowCategoryDropdown(false);
+      }
+    };
+    if (showCategoryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCategoryDropdown]);
+
   const showStatus = (type, text) => {
     setStatusMsg({ type, text });
     setTimeout(() => setStatusMsg(null), 4000);
@@ -92,12 +111,24 @@ export default function ThreeDAssetsPage() {
   // Generate object URLs for image preview & clean up
   const handleAssignFile = (key, file) => {
     if (!file) return;
+
+    // Enforce GLB-only for 3D model uploads
+    if (key === 'modelFile') {
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (ext !== 'glb') {
+        showStatus('error', 'Only .glb files are accepted for 3D models');
+        return;
+      }
+    }
+
     setRemovedFiles((prev) => prev.filter((k) => k !== key));
     setSelectedFiles((prev) => ({ ...prev, [key]: file }));
-    if (file.type && file.type.startsWith('image/')) {
+
+    // Generate object URL for image or 3D GLB preview
+    if (file.type?.startsWith('image/') || key === 'modelFile') {
       const url = URL.createObjectURL(file);
       setPreviewUrls((prev) => {
-        if (prev[key]) URL.revokeObjectURL(prev[key]);
+        if (prev[key] && prev[key].startsWith('blob:')) URL.revokeObjectURL(prev[key]);
         return { ...prev, [key]: url };
       });
     }
@@ -220,8 +251,10 @@ export default function ThreeDAssetsPage() {
     const initialPreviews = {};
     if (activeTab === 'models') {
       if (item.thumbnailUrl) initialPreviews.thumbnail = item.thumbnailUrl;
+      if (item.url) initialPreviews.modelFile = item.url;
     } else if (activeTab === 'hdris') {
       if (item.preview) initialPreviews.preview = item.preview;
+      if (item.file) initialPreviews.hdriFile = item.file;
     } else if (activeTab === 'materials') {
       if (item.preview) initialPreviews.preview = item.preview;
       if (item.maps) {
@@ -523,6 +556,8 @@ export default function ThreeDAssetsPage() {
                 {activeTab === 'models' ? (
                   item.thumbnailUrl ? (
                     <img src={item.thumbnailUrl} alt={item.name} className="w-full h-full object-cover" />
+                  ) : item.url ? (
+                    <Model3DThumbnail url={item.url} />
                   ) : (
                     <Box className="w-[2.8vw] h-[2.8vw] text-gray-400 stroke-1" />
                   )
@@ -648,15 +683,79 @@ export default function ThreeDAssetsPage() {
               </div>
 
               {/* Category */}
-              <div className="flex flex-col gap-[0.25vw]">
+              <div className="flex flex-col gap-[0.25vw] relative" ref={categoryWrapperRef}>
                 <label className="text-[0.74vw] font-medium text-gray-700">Category</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Furniture, Studio, Metal, Glass..."
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="px-[0.7vw] py-[0.4vw] border border-gray-200 rounded-[0.45vw] text-[0.76vw] font-normal focus:outline-none focus:border-[#ea543a]"
-                />
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    placeholder="e.g. Furniture, Studio, Metal, Glass..."
+                    value={formData.category}
+                    onFocus={() => setShowCategoryDropdown(true)}
+                    onChange={(e) => {
+                      setFormData({ ...formData, category: e.target.value });
+                      setShowCategoryDropdown(true);
+                    }}
+                    className="w-full px-[0.7vw] py-[0.4vw] pr-[2vw] border border-gray-200 rounded-[0.45vw] text-[0.76vw] font-normal focus:outline-none focus:border-[#ea543a] focus:ring-1 focus:ring-[#ea543a]/20 transition-all bg-white"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowCategoryDropdown((prev) => !prev)}
+                    className="absolute right-[0.4vw] text-gray-400 hover:text-gray-600 p-[0.2vw] transition-colors cursor-pointer"
+                  >
+                    <ChevronDown
+                      size="0.9vw"
+                      className={`transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                </div>
+
+                {/* Custom Styled Autosuggestion Dropdown */}
+                {showCategoryDropdown && (
+                  <div className="absolute left-0 right-0 top-full mt-[0.25vw] bg-white border border-gray-200/90 shadow-xl rounded-[0.55vw] z-50 max-h-[10vw] overflow-y-auto py-[0.25vw] animate-in fade-in slide-in-from-top-1 duration-150">
+                    {categories
+                      .filter(
+                        (c) =>
+                          c &&
+                          c !== 'All' &&
+                          (!formData.category ||
+                            c.toLowerCase().includes(formData.category.trim().toLowerCase()))
+                      )
+                      .map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, category: cat });
+                            setShowCategoryDropdown(false);
+                          }}
+                          className={`w-full px-[0.75vw] py-[0.35vw] text-left text-[0.74vw] flex items-center justify-between transition-colors cursor-pointer ${
+                            formData.category.trim().toLowerCase() === cat.toLowerCase()
+                              ? 'bg-orange-50/70 text-[#ea543a] font-medium'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span>{cat}</span>
+                          {formData.category.trim().toLowerCase() === cat.toLowerCase() && (
+                            <span className="w-[0.4vw] h-[0.4vw] rounded-full bg-[#ea543a]" />
+                          )}
+                        </button>
+                      ))}
+
+                    {/* Fallback if no matching existing category */}
+                    {categories.filter(
+                      (c) =>
+                        c &&
+                        c !== 'All' &&
+                        (!formData.category ||
+                          c.toLowerCase().includes(formData.category.trim().toLowerCase()))
+                    ).length === 0 && (
+                      <div className="px-[0.75vw] py-[0.4vw] text-[0.7vw] text-gray-400 italic">
+                        Press Enter or tab away to use new category "{formData.category}"
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* ── 3D MODELS TAB FIELDS ── */}
@@ -664,33 +763,50 @@ export default function ThreeDAssetsPage() {
                 <>
                   <div className="flex flex-col gap-[0.25vw]">
                     <label className="text-[0.72vw] font-medium text-gray-700">
-                      3D Model File (.glb, .gltf, .obj) <span className="text-red-500">*</span>
+                      3D Model File (.glb) <span className="text-red-500">*</span>
                     </label>
                     <div
                       onDragOver={(e) => handleDragOver('modelFile', e)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDropFile('modelFile', e)}
                       onClick={() => fileInputRef.current?.click()}
-                      className={`border-2 border-dashed rounded-[0.55vw] p-[0.9vw] text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-[0.2vw] ${
+                      className={`border-2 border-dashed rounded-[0.55vw] p-[0.75vw] text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-[0.3vw] ${
                         dragActiveField === 'modelFile'
                           ? 'border-[#ea543a] bg-orange-50/50'
-                          : selectedFiles.modelFile
-                          ? 'border-emerald-300 bg-emerald-50/30'
+                          : selectedFiles.modelFile || previewUrls.modelFile
+                          ? 'border-emerald-300 bg-emerald-50/20'
                           : 'border-gray-200 hover:border-gray-300 bg-gray-50/60'
                       }`}
                     >
                       <input
                         type="file"
-                        accept=".glb,.gltf,.obj"
+                        accept=".glb"
                         ref={fileInputRef}
                         onChange={(e) => handleFileChange('modelFile', e)}
                         className="hidden"
                       />
-                      <Box className={`w-[1.4vw] h-[1.4vw] ${selectedFiles.modelFile ? 'text-emerald-600' : 'text-gray-400'}`} />
-                      <span className="text-[0.72vw] font-medium text-gray-800">
-                        {selectedFiles.modelFile ? selectedFiles.modelFile.name : 'Drag & drop 3D model or click to browse'}
-                      </span>
-                      <span className="text-[0.62vw] text-gray-400 font-normal">Supported: GLB, GLTF, OBJ (up to 300MB)</span>
+
+                      {previewUrls.modelFile ? (
+                        <div className="flex flex-col items-center w-full gap-[0.4vw]">
+                          <div className="w-[14vw] h-[8vw] rounded-[0.45vw] overflow-hidden bg-gray-100 border border-gray-200 shadow-2xs pointer-events-none">
+                            <Model3DThumbnail url={previewUrls.modelFile} />
+                          </div>
+                          <div className="flex items-center gap-[0.4vw] text-[0.66vw] text-gray-600">
+                            <span className="font-semibold text-emerald-600">
+                              {selectedFiles.modelFile ? selectedFiles.modelFile.name : 'Current 3D Model'}
+                            </span>
+                            <span className="text-gray-400">• Click or drop new GLB to replace</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <Box className="w-[1.5vw] h-[1.5vw] text-gray-400" />
+                          <span className="text-[0.72vw] font-medium text-gray-800">
+                            Drag & drop .glb model or click to browse
+                          </span>
+                          <span className="text-[0.62vw] text-gray-400 font-normal">Format: GLB (Binary glTF, up to 300MB)</span>
+                        </>
+                      )}
                     </div>
                   </div>
 

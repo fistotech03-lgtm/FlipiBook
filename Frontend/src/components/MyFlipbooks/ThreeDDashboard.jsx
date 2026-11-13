@@ -158,7 +158,7 @@ const AutoFitModel = ({ children, targetSize = 1.9 }) => {
 // 3D Model Card Preview with auto-fit centering and static 3/4 perspective
 const ModelCardPreview = ({ model }) => {
   const containerRef = useRef(null);
-  const [isInView, setIsInView] = useState(false);
+  const [isInView, setIsInView] = useState(true);
   const fullThumbnailUrl = buildVersionedUrl(model.thumbnailUrl, model.updatedAt, model.uploadedAt);
   const fullUrl = buildVersionedUrl(model.url, model.updatedAt, model.uploadedAt);
 

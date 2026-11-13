@@ -627,9 +627,7 @@ const GenericModel = React.memo(React.forwardRef(({
                 if (foundMat.emissiveMap) nativeMaps.emissiveMap = getTexUrl(foundMat.emissiveMap);
 
                 const hasAny = Object.keys(nativeMaps).some(k => k !== 'envMap' && nativeMaps[k]);
-                if (hasAny) {
-                    onUpdateMaterialSettingRef.current?.('maps', nativeMaps, true);
-                }
+                onUpdateMaterialSettingRef.current?.('maps', hasAny ? nativeMaps : {}, true);
             }
         } else {
             onUpdateMaterialSettingRef.current?.('maps', {}, true);
@@ -727,6 +725,14 @@ const GenericModel = React.memo(React.forwardRef(({
 
             if (m.userData.appliedTexture) {
                 batch.appliedTexture = m.userData.appliedTexture;
+            } else {
+                batch.appliedTexture = null;
+            }
+
+            // Sync the true material name for the selected mesh/part
+            const trueMatName = foundMat.name || foundMat.userData?.baseMaterialName || selMat?.material || selMat?.name;
+            if (trueMatName) {
+                batch.materialName = trueMatName;
             }
 
             // If customizedMaterials has an entry for this selection, ensure batch matches customized state
@@ -760,6 +766,7 @@ const GenericModel = React.memo(React.forwardRef(({
                     if (customEntry.rotation !== undefined) batch.rotation = customEntry.rotation;
                     if (customEntry.offset !== undefined) batch.offset = customEntry.offset;
                     if (customEntry.appliedTexture) batch.appliedTexture = customEntry.appliedTexture;
+                    if (customEntry.materialName) batch.materialName = customEntry.materialName;
                 }
             }
 

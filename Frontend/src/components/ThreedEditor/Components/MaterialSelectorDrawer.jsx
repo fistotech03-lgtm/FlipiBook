@@ -42,11 +42,22 @@ export default function MaterialSelectorDrawer({
   const startPosRef = useRef({ x: 0, y: 0 });
   const rAFRef = useRef(null);
 
-  // Predefined categories from the reference UI
-  const predefinedCategoryList = useMemo(() => [
-    "All", "Metal", "Rock", "Floor", "Wall", "Glass", "Plastic", 
-    "Wood", "Cloth", "Rubber", "Paper", "Fiber", "Skin", "X-Ray"
-  ], []);
+  // Dynamic Categories from Backend Preset Materials
+  const predefinedCategoryList = useMemo(() => {
+    const catsSet = new Set();
+    presetMaterialsList.forEach((m) => {
+      if (m && m.category && m.category !== "All" && m.id !== "none") {
+        // Clean and format category title
+        const trimmed = String(m.category).trim();
+        if (trimmed) {
+          catsSet.add(trimmed);
+        }
+      }
+    });
+
+    const dynamicCats = Array.from(catsSet).sort((a, b) => a.localeCompare(b));
+    return ["All", ...dynamicCats, "X-Ray"];
+  }, [presetMaterialsList]);
 
   useEffect(() => {
     fetchMaterials().then((loaded) => {
@@ -146,10 +157,18 @@ export default function MaterialSelectorDrawer({
         const mapped = response.data.textures.map(t => {
           const firstAvailableMap = t.maps ? Object.values(t.maps).find(url => Boolean(url)) : null;
           const previewUrl = t.maps?.preview || t.maps?.base || firstAvailableMap;
+          const catName = typeof t.materialCategory === 'object' && t.materialCategory?.name 
+            ? t.materialCategory.name 
+            : (t.materialCategory || "General");
+          const catId = typeof t.materialCategory === 'object' && t.materialCategory?._id
+            ? String(t.materialCategory._id)
+            : (typeof t.materialCategory === 'string' ? t.materialCategory : null);
+
           return {
             id: t._id,
             name: t.materialName,
-            category: typeof t.materialCategory === 'object' ? t.materialCategory?.name : (t.materialCategory || "Texture 1"),
+            category: catName,
+            categoryId: catId,
             thumb: previewUrl,
             preview: previewUrl,
             maps: t.maps || {},
@@ -335,35 +354,28 @@ export default function MaterialSelectorDrawer({
         if (t.id === "none") return false;
         const itemCat = (t.category || "").toLowerCase();
         const itemName = (t.name || "").toLowerCase();
-        return matchingAliases.some(alias => itemCat.includes(alias) || itemName.includes(alias));
+        return itemCat === lowerCat || matchingAliases.some(alias => itemCat.includes(alias) || itemName.includes(alias));
       });
 
-      if (found.length < 8) {
-        const standardNames = ["Sliver", "Iron", "Copper", "Bronze", "Steel", "Chrome", "Titanium", "Gold", "Brass", "Nickel", "Cobalt", "Platinum"];
-        const placeholderCards = standardNames.slice(0, 12).map((matName, idx) => ({
-          id: `pred_${lowerCat}_${idx}`,
-          name: matName,
-          category: selectedCategory,
-          preview: null,
-          isPredefinedPreset: true,
-          presetType: matName.toLowerCase(),
-          maps: {}
-        }));
-        
-        if (found.length > 0) {
-          return found;
-        }
-        return placeholderCards;
-      }
       return found;
     } else {
+      const selectedCatObj = fetchedCategories.find(c => (c.name || "").toLowerCase() === selectedCategory.toLowerCase());
+      const selectedCatId = selectedCatObj ? String(selectedCatObj._id) : null;
+
       const userList = uploadedTextures.filter(t => {
         const tCat = (t.category || "").toLowerCase();
-        return tCat === selectedCategory.toLowerCase();
+        const matchesName = tCat === selectedCategory.toLowerCase();
+        const matchesId = selectedCatId && (t.categoryId === selectedCatId || t.category === selectedCatId);
+        // Also check if t.category matches any category ID in fetchedCategories whose name is selectedCategory
+        const matchedByNameFromId = fetchedCategories.some(c => 
+          (c.name || "").toLowerCase() === selectedCategory.toLowerCase() && 
+          (String(c._id) === String(t.category) || String(c._id) === String(t.categoryId))
+        );
+        return matchesName || matchesId || matchedByNameFromId;
       });
       return userList;
     }
-  }, [activeTab, selectedCategory, uploadedTextures, categoryAliasMap, xrayMaterialPreset, presetMaterialsList]);
+  }, [activeTab, selectedCategory, uploadedTextures, categoryAliasMap, xrayMaterialPreset, presetMaterialsList, fetchedCategories]);
 
   // Filtered by Search Query
   const displayedMaterials = useMemo(() => {

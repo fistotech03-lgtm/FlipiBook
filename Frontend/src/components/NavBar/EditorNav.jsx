@@ -101,6 +101,7 @@ const EditorNavbar = ({
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState(false);
   const [isPublishMenuOpen, setIsPublishMenuOpen] = useState(false);
+  const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
   const deviceMenuRef = useRef(null);
 
   useEffect(() => {
@@ -399,48 +400,129 @@ const EditorNavbar = ({
           {/* Save & Sync Status Area: Hidden when AutoSave is enabled per user request */}
           {!isAutoSaveEnabled && (
             /* When AutoSave is DISABLED: Show the manual Save button */
-            <div className="relative group/tooltip flex items-center ml-[0.2vw]">
-              <button
-                onClick={() => onSave && onSave(true)}
-                disabled={isSaving || !hasUnsavedChanges}
-                className={`transition-all relative flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] rounded-[2vw] flex-shrink-0 ${
-                  isSaving
-                    ? "bg-gray-100 border border-gray-200 text-gray-500 cursor-not-allowed"
-                    : hasUnsavedChanges
-                    ? "bg-[#EC5137] hover:bg-[#d9482f] border border-[#EC5137] text-white shadow-sm cursor-pointer active:scale-[0.98]"
-                    : "bg-white border border-[#D9D9D9] text-gray-600 cursor-default"
-                }`}
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin text-[#EC5137]" />
-                    <span className="font-medium text-[0.85vw]">Saving...</span>
-                  </>
-                ) : hasUnsavedChanges ? (
-                  <>
-                    <Save className="w-[1.1vw] h-[1.1vw] text-white" />
-                    <span className="font-medium text-[0.85vw]">Save</span>
-                  </>
-                ) : (
-                  <>
-                    <Icon
-                      icon="reicon:tick-circle-filled"
-                      className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
-                    />
-                    <span className="font-medium text-[0.85vw] text-gray-600">Saved</span>
-                  </>
-                )}
-              </button>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-[0.4vw] hidden group-hover/tooltip:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap">
-                <div className="w-0 h-0 border-x-[0.3vw] border-x-transparent border-b-[0.3vw] border-b-gray-900/90" />
-                <div className="bg-gray-900/90 text-white text-[0.65vw] font-medium px-[0.5vw] py-[0.25vw] rounded-[0.3vw] shadow-md backdrop-blur-xs">
-                  {hasUnsavedChanges
-                    ? "You have unsaved changes - Click to Save"
-                    : isSaving
-                    ? "Saving changes..."
-                    : "All changes saved"}
+            <div className="relative flex items-center ml-[0.2vw]">
+              {isThreedEditor ? (
+                /* 3D Editor Save Split Dropdown Button */
+                <div className="relative flex items-center">
+                  <div className="flex items-center rounded-[2vw] overflow-hidden shadow-xs border border-[#EC5137] bg-[#EC5137]">
+                    <button
+                      onClick={() => onSave && onSave(true)}
+                      disabled={isSaving}
+                      className="flex items-center gap-[0.4vw] pl-[0.9vw] pr-[0.5vw] py-[0.5vw] text-white hover:bg-[#d9482f] transition-all cursor-pointer disabled:cursor-not-allowed active:scale-[0.98]"
+                      title="Save"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin text-white" />
+                          <span className="font-medium text-[0.85vw]">Saving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-[1.1vw] h-[1.1vw] text-white" />
+                          <span className="font-medium text-[0.85vw]">Save</span>
+                        </>
+                      )}
+                    </button>
+                    <div className="w-[1px] h-[1.2vw] bg-white/30" />
+                    <button
+                      onClick={() => setIsSaveMenuOpen(!isSaveMenuOpen)}
+                      className="px-[0.4vw] py-[0.5vw] text-white hover:bg-[#d9482f] transition-all cursor-pointer flex items-center justify-center"
+                      title="More save options"
+                    >
+                      <ChevronDown
+                        size="1.1vw"
+                        className={`transition-transform duration-200 ${isSaveMenuOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                  </div>
+
+                  {isSaveMenuOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsSaveMenuOpen(false)}
+                      />
+                      <div className="absolute left-0 top-full mt-[0.5vw] bg-white border border-gray-200 shadow-xl rounded-[0.8vw] w-[9vw] min-w-[8.5vw] z-50 overflow-hidden py-[0.3vw] animate-in fade-in slide-in-from-top-2 duration-150">
+                        <button
+                          onClick={() => {
+                            setIsSaveMenuOpen(false);
+                            if (onSave) onSave(true);
+                          }}
+                          className="w-full px-[0.8vw] py-[0.5vw] flex items-center gap-[0.5vw] text-gray-700 hover:bg-gray-50 hover:text-[#EC5137] transition-colors font-normal text-[0.82vw] cursor-pointer text-left"
+                        >
+                          <Save size="1vw" className="text-gray-500" />
+                          <span>Save</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsSaveMenuOpen(false);
+                            window.dispatchEvent(new CustomEvent('editor-save-as'));
+                          }}
+                          className="w-full px-[0.8vw] py-[0.5vw] flex items-center gap-[0.5vw] text-gray-700 hover:bg-gray-50 hover:text-[#EC5137] transition-colors font-normal text-[0.82vw] cursor-pointer text-left"
+                        >
+                          <Icon icon="material-symbols:save-as-outline" className="w-[1.05vw] h-[1.05vw] text-gray-500" />
+                          <span>Save as</span>
+                        </button>
+                        <div className="h-[1px] bg-gray-100 my-[0.2vw]" />
+                        <button
+                          onClick={() => {
+                            setIsSaveMenuOpen(false);
+                            window.dispatchEvent(new CustomEvent('editor-export-3d'));
+                          }}
+                          className="w-full px-[0.8vw] py-[0.5vw] flex items-center gap-[0.5vw] text-gray-700 hover:bg-gray-50 hover:text-[#EC5137] transition-colors font-normal text-[0.82vw] cursor-pointer text-left"
+                        >
+                          <Download size="1vw" className="text-gray-500" />
+                          <span>Export</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
-              </div>
+              ) : (
+                <div className="relative group/tooltip flex items-center">
+                  <button
+                    onClick={() => onSave && onSave(true)}
+                    disabled={isSaving || !hasUnsavedChanges}
+                    className={`transition-all relative flex items-center gap-[0.4vw] px-[1vw] py-[0.5vw] rounded-[2vw] flex-shrink-0 ${
+                      isSaving
+                        ? "bg-gray-100 border border-gray-200 text-gray-500 cursor-not-allowed"
+                        : hasUnsavedChanges
+                        ? "bg-[#EC5137] hover:bg-[#d9482f] border border-[#EC5137] text-white shadow-sm cursor-pointer active:scale-[0.98]"
+                        : "bg-white border border-[#D9D9D9] text-gray-600 cursor-default"
+                    }`}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-[1.1vw] h-[1.1vw] animate-spin text-[#EC5137]" />
+                        <span className="font-medium text-[0.85vw]">Saving...</span>
+                      </>
+                    ) : hasUnsavedChanges ? (
+                      <>
+                        <Save className="w-[1.1vw] h-[1.1vw] text-white" />
+                        <span className="font-medium text-[0.85vw]">Save</span>
+                      </>
+                    ) : (
+                      <>
+                        <Icon
+                          icon="reicon:tick-circle-filled"
+                          className="w-[1.1vw] h-[1.1vw] text-[#22c55e]"
+                        />
+                        <span className="font-medium text-[0.85vw] text-gray-600">Saved</span>
+                      </>
+                    )}
+                  </button>
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-[0.4vw] hidden group-hover/tooltip:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap">
+                    <div className="w-0 h-0 border-x-[0.3vw] border-x-transparent border-b-[0.3vw] border-b-gray-900/90" />
+                    <div className="bg-gray-900/90 text-white text-[0.65vw] font-medium px-[0.5vw] py-[0.25vw] rounded-[0.3vw] shadow-md backdrop-blur-xs">
+                      {hasUnsavedChanges
+                        ? "You have unsaved changes - Click to Save"
+                        : isSaving
+                        ? "Saving changes..."
+                        : "All changes saved"}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

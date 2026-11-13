@@ -535,14 +535,18 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
         socials: sanitizedSocials
       };
 
-      const email = updatedEditedUser.email || updatedEditedUser.emailId;
+      const email = updatedEditedUser.email || updatedEditedUser.emailId || user?.email || user?.emailId;
       let savedProfile = null;
 
       try {
-        const res = await axios.post(`${backendUrl}/api/profile/save`, {
-          emailId: email,
-          ...updatedEditedUser
-        });
+        const res = await axios.post(
+          `${backendUrl}/api/profile/save`,
+          {
+            emailId: email,
+            ...updatedEditedUser
+          },
+          { withCredentials: true }
+        );
         if (res.data?.success && res.data?.profile) {
           savedProfile = res.data.profile;
         }
@@ -959,7 +963,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                   </label>
                   <input
                     type="text"
-                    placeholder="Luffy"
+                    placeholder="e.g. UI/UX Designer, Software Engineer"
                     value={editedUser?.professionalTitle || editedUser?.title || ''}
                     onChange={(e) => updateEditedUser({ professionalTitle: e.target.value, title: e.target.value })}
                     className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
@@ -1335,23 +1339,7 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
                   </div>
                 </div>
               </>
-            ) : (
-              /* For Individual or other: Professional Title */
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-[1.5vw]">
-                <div>
-                  <label className="block text-[0.74vw] font-medium text-gray-700 mb-[0.3vw]">
-                    Professional Title
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. UI/UX Designer, Software Engineer"
-                    value={editedUser?.professionalTitle || editedUser?.title || ''}
-                    onChange={(e) => updateEditedUser({ professionalTitle: e.target.value, title: e.target.value })}
-                    className="w-full h-[2.15vw] border border-gray-200 rounded-[0.55vw] px-[0.85vw] text-[0.78vw] focus:outline-none focus:border-[#EC5137] text-gray-800 bg-white placeholder:text-gray-400"
-                  />
-                </div>
-              </div>
-            )}
+            ) : null}
 
             {/* Skills / Expertise */}
             <div>

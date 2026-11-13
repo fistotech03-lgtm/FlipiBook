@@ -5,25 +5,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { Search, ChevronDown, ArrowDownUp } from 'lucide-react';
 import exploreHeroImg from '../assets/Explore/explore-hero-section.png';
-import cover1 from '../assets/Explore/c-bg1.png';
-import cover2 from '../assets/Explore/c-bg2.png';
-import cover3 from '../assets/Explore/c-bg3.png';
-import cover4 from '../assets/Explore/c-bg4.png';
-import cover5 from '../assets/Explore/c-bg5.png';
-import p1 from '../assets/Explore/p1.png';
-import p2 from '../assets/Explore/p2.png';
-import p3 from '../assets/Explore/p3.png';
-import p4 from '../assets/Explore/p4.png';
-import p5 from '../assets/Explore/p5.png';
 import Footer from './Footer';
 import ShareModal from '../components/ShareModal';
 import ExportModal from '../components/ExportModal';
 import CreatorProfileModal from './CreatorProfileModal';
 import { useToast } from '../components/CustomToast';
 import { useAuth } from '../context/AuthContext';
+import { LazyPreview } from '../components/MyFlipbooks/LazyPreview';
+import { resolveUploadsPath } from '../utils/assetUtils';
 
-const covers = [cover1, cover2, cover3, cover4, cover5];
-const profiles = [p1, p2, p3, p4, p5];
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
 
 const defaultColors = [
     '#4c5add', '#2563eb', '#059669', '#d97706', '#dc2626',
@@ -96,8 +87,9 @@ const CustomDropdown = ({ options, value, onChange, className, buttonClassName, 
     );
 };
 
-const FlipbookCard = ({ v_id, shareId, access, rawBook, coverImg, profileImg, authorPicture, authorBgColor, bookName, authorName, location, pages, views, rating, description, onShare, onDownload, onProfileClick, onAddToShelf, isAddedToShelf, onToggleFavorite, isFavorited, isOwner }) => {
+const FlipbookCard = ({ v_id, shareId, access, rawBook, authorPicture, authorBgColor, bookName, authorName, location, pages, views, rating, description, onShare, onDownload, onProfileClick, onToggleFavorite, isFavorited, isOwner }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [avatarError, setAvatarError] = useState(false);
     const menuRef = useRef(null);
 
     const handleOpenBook = () => {
@@ -114,11 +106,16 @@ const FlipbookCard = ({ v_id, shareId, access, rawBook, coverImg, profileImg, au
                 setIsMenuOpen(false);
             }
         };
-        document.addEventListener('mousedown', handleClickOutside);
+        if (isMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [isMenuOpen]);
 
-    const displayAvatar = (authorPicture && authorPicture !== 'color_only') ? authorPicture : null;
+    const displayAvatar = (authorPicture && authorPicture !== 'color_only' && authorPicture !== 'null') ? authorPicture : null;
+    const resolvedAvatar = displayAvatar
+        ? (displayAvatar.startsWith('blob:') || displayAvatar.startsWith('data:') ? displayAvatar : resolveUploadsPath(displayAvatar))
+        : null;
     const avatarColor = getAvatarColor(authorName || rawBook?.userEmail, authorBgColor);
 
     const isShareEnabled = (book) => {
@@ -149,73 +146,96 @@ const FlipbookCard = ({ v_id, shareId, access, rawBook, coverImg, profileImg, au
     const canDownload = isDownloadEnabled(rawBook);
 
     const menuItems = [
-        { name: 'View Book', icon: <svg className="w-[1vw] h-[1vw]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> },
-        { name: 'Creator Profile', icon: <Icon icon="solar:user-bold" className="w-[1vw] h-[1vw]" /> },
-        { name: isAddedToShelf ? 'Book Added' : 'Add to Shelf', icon: isAddedToShelf ? <Icon icon="lucide:check" className="w-[1vw] h-[1vw] text-green-500" /> : <Icon icon="ri:book-shelf-line" className="w-[1vw] h-[1vw]" /> },
-        ...(!isOwner ? [{ name: isFavorited ? 'Favorited' : 'Add to Favorites', icon: <Icon icon="lucide:heart" className={`w-[1vw] h-[1vw] ${isFavorited ? 'text-red-500 fill-red-500' : ''}`} /> }] : []),
-        ...(canShare ? [{ name: 'Share', icon: <svg className="w-[1vw] h-[1vw]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg> }] : []),
-        ...(canDownload ? [{ name: 'Download', icon: <svg className="w-[1vw] h-[1vw]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> }] : []),
-        { name: 'Report', icon: <svg className="w-[1vw] h-[1vw]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> }
+        {
+            name: 'View Book',
+            icon: <Icon icon="solar:eye-linear" className="w-[1.1vw] h-[1.1vw] min-w-[16px] min-h-[16px]" />,
+            action: handleOpenBook
+        },
+        {
+            name: 'Creator Profile',
+            icon: <Icon icon="solar:user-bold" className="w-[1.1vw] h-[1.1vw] min-w-[16px] min-h-[16px]" />,
+            action: () => onProfileClick && onProfileClick({ name: authorName, profileImg: resolvedAvatar, picture: resolvedAvatar, role: 'Creator', email: rawBook?.userEmail, emailId: rawBook?.userEmail, avatarBgColor: authorBgColor, location, v_id, shareId })
+        },
+        ...(canShare ? [{
+            name: 'Share',
+            icon: <Icon icon="solar:share-linear" className="w-[1.1vw] h-[1.1vw] min-w-[16px] min-h-[16px]" />,
+            action: () => onShare && onShare(rawBook)
+        }] : []),
+        ...(canDownload ? [{
+            name: 'Download',
+            icon: <Icon icon="solar:download-linear" className="w-[1.1vw] h-[1.1vw] min-w-[16px] min-h-[16px]" />,
+            action: () => onDownload && onDownload(rawBook)
+        }] : []),
+        {
+            name: 'Report',
+            icon: <Icon icon="solar:danger-circle-linear" className="w-[1.1vw] h-[1.1vw] min-w-[16px] min-h-[16px]" />,
+            action: () => alert("Flipbook reported successfully. Our team will review it.")
+        }
     ];
 
     return (
-        <div className="bg-white border border-gray-100 rounded-[0.8vw] overflow-hidden flex flex-col hover:shadow-md transition-shadow duration-300 shadow-[0_2px_10px_rgba(0,0,0,0.06)] relative group">
-            {/* Thumbnail Container */}
-            <div className="relative w-full aspect-[4/4] flex items-center justify-center">
-                <img src={coverImg} alt="Flipbook Cover" className="w-full h-full object-cover" />
+        <div
+            onClick={handleOpenBook}
+            className="bg-white rounded-xl flex flex-col shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-shadow border border-gray-100/80 relative group cursor-pointer"
+        >
+            {/* Image Area Wrapper (1st page preview) */}
+            <div className="relative w-full aspect-[4/3] bg-white rounded-t-xl overflow-hidden flex items-center justify-center border-b border-gray-100">
+                <LazyPreview
+                    v_id={v_id}
+                    emailId={rawBook?.userEmail}
+                    backendUrl={BACKEND_URL}
+                    title={bookName || "Flipbook"}
+                    imageUrl={rawBook?.image || null}
+                />
+            </div>
 
-                {/* Favorite Heart Button for other creators' books */}
-                {!isOwner && (
-                    <div className={`absolute top-[0.8vw] left-[0.8vw] transition-opacity duration-200 z-10 ${isFavorited ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleFavorite?.(rawBook);
-                            }}
-                            className="bg-white/90 backdrop-blur-sm p-[0.35vw] rounded-full hover:bg-white text-gray-700 hover:text-red-500 focus:outline-none transition-all shadow-sm cursor-pointer"
-                            title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
-                        >
-                            <Icon icon="lucide:heart" className={`w-[1vw] h-[1vw] ${isFavorited ? 'text-red-500 fill-red-500' : 'text-gray-500 hover:text-red-500'}`} />
-                        </button>
-                    </div>
-                )}
+            {/* Top Right Floating Action Buttons (Heart + Three-Dots) - Visible on hover */}
+            <div
+                className={`absolute top-[0.6vw] right-[0.6vw] flex flex-col items-center gap-[0.35vw] z-30 transition-opacity duration-200 ${isMenuOpen || isFavorited ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Heart Button */}
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFavorite?.(rawBook);
+                    }}
+                    className="w-[2vw] h-[2vw] min-w-[30px] min-h-[30px] rounded-full bg-white/95 hover:bg-white shadow-md flex items-center justify-center text-gray-700 hover:text-red-500 hover:scale-105 transition-all cursor-pointer focus:outline-none"
+                    title={isFavorited ? "Favorited" : "Add to Favorites"}
+                >
+                    <Icon icon="lucide:heart" className={`w-[1vw] h-[1vw] min-w-[15px] min-h-[15px] transition-colors ${isFavorited ? 'text-red-500 fill-red-500' : 'text-gray-700'}`} />
+                </button>
 
-                {/* Menu Button */}
-                <div className={`absolute top-[0.8vw] right-[0.8vw] transition-opacity duration-200 ${isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} ref={menuRef}>
+                {/* Three-Dot Button & Dropdown */}
+                <div className="relative" ref={menuRef}>
                     <button
-                        onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        className="bg-white/80 backdrop-blur-sm p-[0.1vw] rounded-[0.3vw] hover:bg-white text-gray-800 focus:outline-none transition-colors shadow-sm cursor-pointer"
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMenuOpen(!isMenuOpen);
+                        }}
+                        className="w-[2vw] h-[2vw] min-w-[30px] min-h-[30px] rounded-full bg-white/95 hover:bg-white shadow-md flex items-center justify-center text-gray-700 hover:text-black hover:scale-105 transition-all cursor-pointer focus:outline-none"
+                        title="More Options"
                     >
-                        <svg className="w-[1.2vw] h-[1.2vw]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
+                        <Icon icon="mdi:dots-vertical" className="w-[1.05vw] h-[1.05vw] min-w-[16px] min-h-[16px]" />
                     </button>
 
                     {/* Dropdown Menu */}
                     {isMenuOpen && (
-                        <div className="absolute top-[110%] right-0 w-[9.5vw] min-w-[140px] bg-white rounded-[0.6vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-[1.2vh] z-20 border border-gray-100">
-                            {menuItems.map((menuItem, idx) => (
+                        <div className="absolute top-[110%] right-0 w-[9.5vw] min-w-[140px] bg-white rounded-[0.7vw] shadow-[0_10px_35px_rgba(0,0,0,0.15)] py-[0.6vh] z-50 border border-gray-100 flex flex-col">
+                            {menuItems.map((item, idx) => (
                                 <button
                                     key={idx}
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                        e.stopPropagation();
                                         setIsMenuOpen(false);
-                                        if (menuItem.name === 'View Book') {
-                                            handleOpenBook();
-                                        } else if (menuItem.name === 'Creator Profile') {
-                                            if (onProfileClick) onProfileClick({ name: authorName, profileImg: displayAvatar, picture: displayAvatar, role: 'Creator', email: rawBook?.userEmail, emailId: rawBook?.userEmail, avatarBgColor: authorBgColor, location });
-                                        } else if (menuItem.name === 'Share') {
-                                            if (onShare) onShare(rawBook);
-                                        } else if (menuItem.name === 'Download') {
-                                            if (onDownload) onDownload(rawBook);
-                                        } else if (menuItem.name === 'Add to Shelf' || menuItem.name === 'Book Added') {
-                                            if (onAddToShelf) onAddToShelf(rawBook);
-                                        } else if (menuItem.name === 'Add to Favorites' || menuItem.name === 'Favorited') {
-                                            if (onToggleFavorite) onToggleFavorite(rawBook);
-                                        }
+                                        item.action(e);
                                     }}
-                                    className="w-[8.8vw] min-w-[130px] flex items-center mx-[0.5vw] gap-[0.8vw] px-[0.8vw] py-[0.8vh] transition-colors text-left rounded-md text-gray-600 hover:text-black hover:bg-gray-50 cursor-pointer"
+                                    className="w-full flex items-center gap-[0.6vw] px-[0.8vw] py-[0.6vh] text-[0.78vw] font-medium text-gray-700 hover:text-black hover:bg-gray-50 transition-colors text-left cursor-pointer"
                                 >
-                                    <span className="transition-colors flex items-center justify-center">{menuItem.icon}</span>
-                                    <span className="text-[0.75vw] font-medium transition-colors">{menuItem.name}</span>
+                                    <span className="flex items-center justify-center text-gray-700">{item.icon}</span>
+                                    <span className="whitespace-nowrap">{item.name}</span>
                                 </button>
                             ))}
                         </div>
@@ -223,80 +243,76 @@ const FlipbookCard = ({ v_id, shareId, access, rawBook, coverImg, profileImg, au
                 </div>
             </div>
 
-            {/* Card Details */}
-            <div className="p-[1.2vw] flex flex-col flex-1 bg-white">
-                {/* Author Info */}
-                <div className="flex items-center gap-[0.6vw]">
-                    {displayAvatar ? (
-                        <img
-                            src={displayAvatar}
-                            alt={authorName}
-                            className="w-[2.5vw] h-[2.5vw] rounded-full border border-gray-200 object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0"
-                            onClick={() => onProfileClick && onProfileClick({ name: authorName, profileImg: displayAvatar, picture: displayAvatar, role: 'Creator', email: rawBook?.userEmail, emailId: rawBook?.userEmail, avatarBgColor: authorBgColor, location })}
-                        />
-                    ) : (
-                        <div
-                            className="w-[2.5vw] h-[2.5vw] rounded-full flex items-center justify-center text-white text-[1.1vw] font-bold shrink-0 cursor-pointer hover:opacity-80 transition-opacity shadow-inner"
-                            style={{ backgroundColor: avatarColor }}
-                            onClick={() => onProfileClick && onProfileClick({ name: authorName, profileImg: null, picture: null, role: 'Creator', email: rawBook?.userEmail, emailId: rawBook?.userEmail, avatarBgColor: authorBgColor, location })}
-                        >
-                            {authorName ? authorName.charAt(0).toUpperCase() : 'U'}
-                        </div>
-                    )}
-                    <div
-                        className="flex flex-col min-w-0 pr-[0.5vw] cursor-pointer"
-                        onClick={() => onProfileClick && onProfileClick({ name: authorName, profileImg: displayAvatar, picture: displayAvatar, role: 'Creator', email: rawBook?.userEmail, emailId: rawBook?.userEmail, avatarBgColor: authorBgColor, location })}
-                    >
-                        <span className="text-[0.85vw] font-semibold text-gray-900 leading-tight truncate hover:text-indigo-600 transition-colors">{authorName || 'Alex Johnson'}</span>
-                        <span className="flex items-center gap-[0.2vw] text-[0.7vw] text-gray-400 mt-[0.2vh] truncate">
-                            <Icon icon="lucide:map-pin" className="w-[0.75vw] h-[0.75vw] text-gray-400 shrink-0" />
-                            <span className="truncate">{location ? String(location).replace(/📍/g, '').trim() : 'Coimbatore'}</span>
-                        </span>
-                    </div>
-                </div>
-
-                {/* Stats */}
-                <div className="flex items-center gap-[0.3vw] justify-start text-[0.75vw] text-gray-700 font-medium mt-[1.5vh] whitespace-nowrap">
-                    <div className="flex items-center gap-[0.3vw]">
-                        <span className="text-black font-semibold">{pages || 12}</span>
+            {/* Card Details (Enhanced Size & Compact Spacing) */}
+            <div className="p-[1vw] flex flex-col flex-1 bg-white rounded-b-xl">
+                {/* Stats (Split evenly across width) */}
+                <div className="flex items-center justify-between w-full text-[0.76vw] text-gray-700 font-medium whitespace-nowrap">
+                    <div className="flex items-center gap-[0.25vw]">
+                        <span className="text-black font-semibold">{(Array.isArray(pages) ? pages.length : (typeof pages === 'number' ? pages : 12))}</span>
                         <span className="font-normal text-gray-500">Pages</span>
                     </div>
-                    <span className="text-gray-200">|</span>
-                    <span className="flex items-center gap-[0.3vw]">
-                        <svg className="w-[0.9vw] text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                        {views || '12.5k'}
-                    </span>
-                    <span className="text-gray-200">|</span>
-                    <span className="flex items-center gap-[0.3vw]">
-                        <svg className="w-[0.9vw] text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 1L12.7 6.5L19 7.4L14.5 11.8L15.6 18.1L10 15.2L4.4 18.1L5.5 11.8L1 7.4L7.3 6.5Z"></path></svg>
-                        {rating || 4.5}
-                    </span>
+                    <span className="text-gray-300">|</span>
+                    <div className="flex items-center gap-[0.25vw]">
+                        <Icon icon="lucide:eye" className="w-[0.85vw] h-[0.85vw] text-gray-400" />
+                        <span>{views || '12.5k'}</span>
+                    </div>
+                    <span className="text-gray-300">|</span>
+                    <div className="flex items-center gap-[0.25vw]">
+                        <Icon icon="material-symbols:star" className="w-[0.9vw] h-[0.9vw] text-yellow-400" />
+                        <span>{rating || 4.5}</span>
+                    </div>
                 </div>
 
-                {/* Title & Desc & Button */}
-                <div className="relative flex-1 mt-[1.2vh]">
-                    <div className="relative group/tt block max-w-full">
-                        <h4 className="text-[0.9vw] font-semibold text-black truncate tracking-tight pr-[2.2vw] cursor-default">
-                            {bookName || 'Name of the Flipbook'}
-                        </h4>
-                        {/* Hover Tooltip (TopToolbar style) */}
-                        <div className="absolute left-0 bottom-full mb-[0.35vw] hidden group-hover/tt:flex flex-col items-start pointer-events-none z-50 whitespace-nowrap max-w-[18vw]">
-                            <div className="bg-gray-900 text-white text-[0.65vw] font-medium px-[0.5vw] py-[0.25vw] rounded-[0.3vw] shadow-lg truncate max-w-full">
-                                {bookName || 'Name of the Flipbook'}
+                {/* Book Title */}
+                <h4 className="text-[0.98vw] font-semibold text-black truncate tracking-tight mt-[0.6vw]" title={bookName || 'Flipbook'}>
+                    {bookName || 'Flipbook'}
+                </h4>
+
+                {/* Author Info & Action Button */}
+                <div className="flex items-center justify-between mt-[0.6vw]">
+                    <div
+                        className="flex items-center gap-[0.55vw] min-w-0 pr-2 cursor-pointer"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onProfileClick && onProfileClick({ name: authorName, profileImg: resolvedAvatar, picture: resolvedAvatar, role: 'Creator', email: rawBook?.userEmail, emailId: rawBook?.userEmail, avatarBgColor: authorBgColor, location, v_id, shareId });
+                        }}
+                    >
+                        {resolvedAvatar && !avatarError ? (
+                            <img
+                                src={resolvedAvatar}
+                                alt={authorName || 'Creator'}
+                                className="w-[2.1vw] h-[2.1vw] min-w-[32px] min-h-[32px] rounded-full border border-gray-200 object-cover shrink-0 hover:opacity-85 transition-opacity"
+                                onError={() => setAvatarError(true)}
+                            />
+                        ) : (
+                            <div
+                                className="w-[2.1vw] h-[2.1vw] min-w-[32px] min-h-[32px] rounded-full flex items-center justify-center text-white text-[0.85vw] font-bold shrink-0 shadow-inner hover:opacity-85 transition-opacity"
+                                style={{ backgroundColor: avatarColor }}
+                            >
+                                {(authorName || 'U').charAt(0).toUpperCase()}
                             </div>
-                            <div className="w-0 h-0 ml-[0.8vw] -mt-[0.2px] border-x-[0.3vw] border-x-transparent border-t-[0.3vw] border-t-gray-900" />
+                        )}
+                        <div className="flex flex-col min-w-0 pr-1">
+                            <span className="text-[0.88vw] font-semibold text-gray-900 leading-tight truncate hover:text-[#ea543a] transition-colors">
+                                {authorName || 'Creator'}
+                            </span>
+                            <span className="flex items-center gap-[0.2vw] text-[0.68vw] text-gray-400 mt-0.5 truncate">
+                                <Icon icon="lucide:map-pin" className="w-[0.75vw] h-[0.75vw] min-w-[10px] min-h-[10px] text-gray-400 shrink-0" />
+                                <span className="truncate">{location ? String(location).replace(/📍/g, '').trim() : 'Coimbatore'}</span>
+                            </span>
                         </div>
                     </div>
-                    <p className="text-[0.7vw] text-gray-500 leading-relaxed mt-[0.5vh] pr-[2.2vw] line-clamp-2">
-                        {description || '“Bring your content to life with a real, interactive experience”'}
-                    </p>
 
                     {/* Action Button */}
                     <button
-                        onClick={handleOpenBook}
-                        className="absolute bottom-[0.5vw] right-[-0.5vw] bg-black text-white w-[2vw] h-[2vw] rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md cursor-pointer"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenBook();
+                        }}
+                        className="bg-[#ea543a] hover:bg-[#d9442a] text-white w-[2.1vw] h-[2.1vw] min-w-[32px] min-h-[32px] rounded-full flex items-center justify-center hover:scale-105 transition-all shadow-md cursor-pointer flex-shrink-0"
+                        title="View Book"
                     >
-                        <svg className="w-[1.5vw] h-[1.5vw]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 7l-10 10M17 7H8M17 7v9"></path></svg>
+                        <Icon icon="mdi:arrow-top-right" className="w-[1.1vw] h-[1.1vw] min-w-[16px] min-h-[16px]" />
                     </button>
                 </div>
             </div>
@@ -306,24 +322,24 @@ const FlipbookCard = ({ v_id, shareId, access, rawBook, coverImg, profileImg, au
 
 const FlipbookCardSkeleton = () => {
     return (
-        <div className="bg-white border border-gray-100 rounded-[0.8vw] overflow-hidden flex flex-col shadow-[0_2px_10px_rgba(0,0,0,0.06)] relative animate-pulse">
-            <div className="relative w-full bg-gray-200" style={{ aspectRatio: '4 / 3' }}></div>
-            <div className="p-[1.2vw] flex flex-col flex-1 bg-white">
-                <div className="flex items-center gap-[0.6vw]">
-                    <div className="w-[2.5vw] h-[2.5vw] rounded-full bg-gray-200 shrink-0"></div>
-                    <div className="flex flex-col gap-[0.3vh]">
-                        <div className="h-[0.85vw] bg-gray-200 rounded w-[6vw]"></div>
-                        <div className="h-[0.7vw] bg-gray-100 rounded w-[4vw]"></div>
+        <div className="bg-white border border-gray-100/80 rounded-xl overflow-hidden flex flex-col shadow-[0_4px_20px_rgba(0,0,0,0.05)] relative animate-pulse">
+            <div className="relative w-full aspect-[4/3] bg-gray-200 rounded-t-xl"></div>
+            <div className="p-[1vw] flex flex-col flex-1 bg-white rounded-b-xl">
+                <div className="flex items-center justify-between w-full">
+                    <div className="h-[0.76vw] bg-gray-200 rounded w-[4vw]"></div>
+                    <div className="h-[0.76vw] bg-gray-200 rounded w-[3.5vw]"></div>
+                    <div className="h-[0.76vw] bg-gray-200 rounded w-[3vw]"></div>
+                </div>
+                <div className="h-[0.98vw] bg-gray-200 rounded w-3/4 mt-[0.6vw]"></div>
+                <div className="flex items-center justify-between mt-[0.6vw]">
+                    <div className="flex items-center gap-[0.55vw]">
+                        <div className="w-[2.1vw] h-[2.1vw] min-w-[32px] min-h-[32px] rounded-full bg-gray-200 shrink-0"></div>
+                        <div className="flex flex-col gap-[0.2vw]">
+                            <div className="h-[0.88vw] bg-gray-200 rounded w-[5vw]"></div>
+                            <div className="h-[0.68vw] bg-gray-100 rounded w-[3.5vw]"></div>
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-center gap-[0.3vw] justify-start text-[0.75vw] mt-[1.5vh]">
-                    <div className="h-[0.75vw] bg-gray-200 rounded w-[3.5vw]"></div>
-                    <span className="text-gray-200">|</span>
-                    <div className="h-[0.75vw] bg-gray-200 rounded w-[3vw]"></div>
-                </div>
-                <div className="relative flex-1 mt-[1.2vh] space-y-[0.5vh]">
-                    <div className="h-[0.9vw] bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-[0.7vw] bg-gray-100 rounded w-full"></div>
+                    <div className="w-[2.1vw] h-[2.1vw] min-w-[32px] min-h-[32px] rounded-full bg-gray-200 shrink-0"></div>
                 </div>
             </div>
         </div>
@@ -339,7 +355,10 @@ const CreatorCard = ({ index, creator, onProfileClick, onToggleFollow, isFollowi
         backgroundSize: 'cover',
         backgroundPosition: 'center'
     };
-    const displayAvatar = (creator.picture && creator.picture !== 'color_only') ? creator.picture : null;
+    const rawCreatorPic = (creator.picture && creator.picture !== 'color_only' && creator.picture !== 'null') ? creator.picture : null;
+    const displayAvatar = rawCreatorPic
+        ? (rawCreatorPic.startsWith('blob:') || rawCreatorPic.startsWith('data:') ? rawCreatorPic : resolveUploadsPath(rawCreatorPic))
+        : null;
     const avatarColor = getAvatarColor(creator.name || creator.email, creator.avatarBgColor);
     const emailKey = (creator.emailId || creator.email || '').toLowerCase();
     const isSelf = emailKey && emailKey === currentUserEmail;
@@ -451,7 +470,6 @@ const Explore = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const toast = useToast();
-    const [shelfBookIds, setShelfBookIds] = useState([]);
     const [favoriteBookIds, setFavoriteBookIds] = useState([]);
 
     // Mobile/Tab Filter Drawer State
@@ -532,17 +550,6 @@ const Explore = () => {
 
     useEffect(() => {
         if (!currentUserEmail) return;
-        const fetchShelfBooks = async () => {
-            try {
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-                const res = await axios.get(`${backendUrl}/api/profile/my-shelf-books`, { withCredentials: true });
-                if (res.data && res.data.books) {
-                    setShelfBookIds(res.data.books.map(b => b.v_id));
-                }
-            } catch (err) {
-                console.error("Error fetching shelf books:", err);
-            }
-        };
 
         const fetchFavBooks = async () => {
             try {
@@ -557,7 +564,6 @@ const Explore = () => {
             }
         };
 
-        fetchShelfBooks();
         fetchFavBooks();
     }, [currentUserEmail]);
 
@@ -628,13 +634,8 @@ const Explore = () => {
     const [selectedCreator, setSelectedCreator] = useState(null);
 
     const handleProfileClick = (creator) => {
-        const creatorEmail = creator?.emailId || creator?.email || creator?.userEmail || '';
-        if (creatorEmail) {
-            navigate(`/profile/${encodeURIComponent(creatorEmail)}`);
-        } else {
-            setSelectedCreator(creator);
-            setIsProfileModalOpen(true);
-        }
+        setSelectedCreator(creator);
+        setIsProfileModalOpen(true);
     };
 
     const handleOpenShareModal = (rawBook) => {
@@ -647,84 +648,47 @@ const Explore = () => {
         setIsExportModalOpen(true);
     };
 
-    const handleAddToShelf = async (rawBook) => {
-        if (!currentUserEmail) {
-            toast.error("Please log in to add books to your shelf.");
-            return;
-        }
-        const isAdded = shelfBookIds.includes(rawBook.v_id);
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-
-        try {
-            if (isAdded) {
-                const res = await axios.post(`${backendUrl}/api/profile/remove-from-shelf`, {
-                    emailId: currentUserEmail,
-                    bookId: rawBook.v_id
-                });
-                if (res.data?.success) {
-                    toast.success("Book removed from your shelf.");
-                    setShelfBookIds(prev => prev.filter(id => id !== rawBook.v_id));
-                } else {
-                    toast.error(res.data?.message || "Failed to remove book from shelf");
-                }
-            } else {
-                const res = await axios.post(`${backendUrl}/api/profile/add-to-shelf`, {
-                    emailId: currentUserEmail,
-                    bookId: rawBook.v_id,
-                    folderName: 'My Flipbooks'
-                });
-                if (res.data?.success) {
-                    toast.success("Book successfully added to your shelf!");
-                    setShelfBookIds(prev => [...prev, rawBook.v_id]);
-                } else {
-                    toast.error(res.data?.message || "Failed to add book to shelf");
-                    if (res.data?.message === 'Book is already on your shelf') {
-                        setShelfBookIds(prev => [...prev, rawBook.v_id]);
-                    }
-                }
-            }
-        } catch (err) {
-            console.error("Error managing shelf:", err);
-            toast.error(err.response?.data?.message || "Error updating shelf");
-        }
-    };
-
     const handleToggleFavorite = async (rawBook) => {
         if (!currentUserEmail) {
             toast.error("Please log in to add books to your favorites.");
             return;
         }
+        const targetVId = rawBook?.v_id || rawBook?.book_v_id || rawBook?.vId;
+        if (!targetVId) {
+            toast.error("Flipbook identifier missing.");
+            return;
+        }
+        const authorEmail = (rawBook?.userEmail || rawBook?.emailId || '').trim().toLowerCase();
         const isOwner = Boolean(
-            (rawBook?.userEmail && rawBook.userEmail.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()) ||
-            (rawBook?.emailId && rawBook.emailId.trim().toLowerCase() === currentUserEmail.trim().toLowerCase())
+            authorEmail && currentUserEmail && authorEmail === currentUserEmail
         );
         if (isOwner) {
             toast.error("You cannot favorite your own book.");
             return;
         }
-        const isFav = favoriteBookIds.includes(rawBook.v_id);
+        const isFav = favoriteBookIds.includes(targetVId);
         const next = !isFav;
         const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
         try {
             if (next) {
-                setFavoriteBookIds(prev => [...prev, rawBook.v_id]);
+                setFavoriteBookIds(prev => [...prev, targetVId]);
             } else {
-                setFavoriteBookIds(prev => prev.filter(id => id !== rawBook.v_id));
+                setFavoriteBookIds(prev => prev.filter(id => id !== targetVId));
             }
             const res = await axios.post(`${backendUrl}/api/flipbook/favorite`, {
                 emailId: currentUserEmail,
-                v_id: rawBook.v_id,
+                v_id: targetVId,
                 isFavorite: next
             }, { withCredentials: true });
             if (res.data?.success) {
                 toast.success(next ? "Book added to your Favorites!" : "Book removed from your Favorites.");
             } else {
-                setFavoriteBookIds(prev => next ? prev.filter(id => id !== rawBook.v_id) : [...prev, rawBook.v_id]);
+                setFavoriteBookIds(prev => next ? prev.filter(id => id !== targetVId) : [...prev, targetVId]);
                 toast.error(res.data?.message || "Failed to update favorites");
             }
         } catch (err) {
-            setFavoriteBookIds(prev => next ? prev.filter(id => id !== rawBook.v_id) : [...prev, rawBook.v_id]);
+            setFavoriteBookIds(prev => next ? prev.filter(id => id !== targetVId) : [...prev, targetVId]);
             toast.error(err.response?.data?.message || "Error updating favorites");
         }
     };
@@ -739,21 +703,27 @@ const Explore = () => {
 
                 if (response.data && response.data.books) {
                     const formattedBooks = response.data.books.map(book => {
-                        let rawOrient = (book.Customized_Settings?.FlipbookInfo?.orientation || '').toLowerCase();
-                        if (!rawOrient) {
-                            const w = book.Customized_Settings?.FlipbookInfo?.width;
-                            const h = book.Customized_Settings?.FlipbookInfo?.height;
+                        let rawOrient = (book.orientation || book.Customized_Settings?.FlipbookInfo?.orientation || '').toLowerCase();
+                        if (rawOrient.includes('horizontal') || rawOrient.includes('landscape') || book.isLandscape) {
+                            rawOrient = 'landscape';
+                        } else if (rawOrient.includes('square')) {
+                            rawOrient = 'square';
+                        } else if (rawOrient.includes('vertical') || rawOrient.includes('portrait')) {
+                            rawOrient = 'portrait';
+                        } else {
+                            const w = book.Customized_Settings?.FlipbookInfo?.width || book.width || book.pageWidth;
+                            const h = book.Customized_Settings?.FlipbookInfo?.height || book.height || book.pageHeight;
                             if (w && h) {
-                                rawOrient = w > h ? 'landscape' : w < h ? 'portrait' : 'square';
+                                rawOrient = Number(w) > Number(h) ? 'landscape' : Number(w) < Number(h) ? 'portrait' : 'square';
                             } else {
                                 rawOrient = 'portrait';
                             }
                         }
 
                         let typeName = 'Portrait';
-                        if (rawOrient.includes('landscape')) typeName = 'Landscape';
-                        else if (rawOrient.includes('square')) typeName = 'Square';
-                        else if (rawOrient.includes('portrait')) typeName = 'Portrait';
+                        if (rawOrient === 'landscape') typeName = 'Landscape';
+                        else if (rawOrient === 'square') typeName = 'Square';
+                        else typeName = 'Portrait';
 
                         const has3D = Boolean(
                             book.has3D || 
@@ -2101,8 +2071,8 @@ const Explore = () => {
                             </div>
                         )
                     ) : isLoading ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-[1.5vw]">
-                            {[...Array(10)].map((_, idx) => (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-[1.5vw]">
+                            {[...Array(8)].map((_, idx) => (
                                 <FlipbookCardSkeleton key={idx} />
                             ))}
                         </div>
@@ -2112,7 +2082,7 @@ const Explore = () => {
                             <p className="font-semibold text-sm">{error}</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-[1.5vw]">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-[1.5vw]">
                             {sortedBooks.map((book, index) => (
                                 <FlipbookCard
                                     key={book.v_id || index}
@@ -2120,8 +2090,6 @@ const Explore = () => {
                                     shareId={book.shareId}
                                     access={book.access}
                                     rawBook={book.rawBook}
-                                    coverImg={covers[index % 5]}
-                                    profileImg={profiles[index % 5]}
                                     authorPicture={book.authorPicture}
                                     authorBgColor={book.authorBgColor}
                                     bookName={book.bookName}
@@ -2134,8 +2102,6 @@ const Explore = () => {
                                     onShare={handleOpenShareModal}
                                     onDownload={handleOpenExportModal}
                                     onProfileClick={handleProfileClick}
-                                    onAddToShelf={handleAddToShelf}
-                                    isAddedToShelf={shelfBookIds.includes(book.v_id)}
                                     onToggleFavorite={handleToggleFavorite}
                                     isFavorited={favoriteBookIds.includes(book.v_id)}
                                     isOwner={Boolean(
@@ -2182,6 +2148,8 @@ const Explore = () => {
                 isOpen={isProfileModalOpen}
                 onClose={() => setIsProfileModalOpen(false)}
                 creator={selectedCreator}
+                favoriteBookIds={favoriteBookIds}
+                onToggleFavorite={handleToggleFavorite}
             />
 
         </div>

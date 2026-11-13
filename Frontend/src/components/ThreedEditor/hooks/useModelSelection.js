@@ -27,12 +27,25 @@ export function useModelSelection({ scene, modelName, modelId, deletedMaterials,
         const selParent = selMat.parentGroup;
         const sceneModelId = scene?.userData?.modelId;
 
-        const isExplicitThisModel = Boolean(
-            (modelId && selModelId && (selModelId === modelId || selModelId === sceneModelId)) ||
-            (modelName && selParent && selParent === modelName)
+        // Check if multi-selection has items belonging to this model
+        const hasItemThisModel = Boolean(
+            (selMat.isMultiSelect || selMat.isGroup || Array.isArray(selMat.items)) &&
+            Array.isArray(selMat.items) &&
+            selMat.items.some(it => {
+                const itModelId = it.modelId || it.id;
+                const itParent = it.parentGroup;
+                return (modelId && itModelId && (itModelId === modelId || itModelId === sceneModelId)) ||
+                       (modelName && itParent && itParent === modelName);
+            })
         );
 
-        const isExplicitOtherModel = !selMat.isAll && selMat.name !== 'All Models' && selParent !== 'All Models' && Boolean(
+        const isExplicitThisModel = Boolean(
+            (modelId && selModelId && (selModelId === modelId || selModelId === sceneModelId)) ||
+            (modelName && selParent && selParent === modelName) ||
+            hasItemThisModel
+        );
+
+        const isExplicitOtherModel = !selMat.isAll && selMat.name !== 'All Models' && selParent !== 'All Models' && !hasItemThisModel && Boolean(
             (modelId && selModelId && selModelId !== modelId && selModelId !== sceneModelId) ||
             (modelName && selParent && selParent !== modelName && selParent !== 'Scene' && selParent !== 'All Meshes')
         );

@@ -1628,10 +1628,23 @@ const GenericModel = React.memo(React.forwardRef(({
         const isAll = typeof selectedMaterial === 'object' ? selectedMaterial.isAll : false;
         const isModel = typeof selectedMaterial === 'object' ? selectedMaterial.isModel : false;
 
+        // Check if multi-selection contains any items belonging to this model
+        const hasMultiItemThisModel = Boolean(
+            (selectedMaterial?.isMultiSelect || isGroup || Array.isArray(selectedMaterial?.items)) &&
+            Array.isArray(selectedMaterial?.items) &&
+            selectedMaterial.items.some(it => {
+                const itModelId = it.modelId || it.id;
+                const itParent = it.parentGroup;
+                return (modelId && itModelId && (itModelId === modelId || itModelId === scene?.userData?.modelId)) ||
+                       (modelName && itParent && itParent === modelName);
+            })
+        );
+
         // Check if the selection belongs to this specific model instance
         const isSelectedThisModel =
             isAll ||
             selectedMaterial.isAll ||
+            hasMultiItemThisModel ||
             parentGroup === 'All Models' ||
             targetName === 'All Models' ||
             (selectedId && (selectedId === modelId || selectedId === scene?.userData?.modelId)) ||
@@ -1645,8 +1658,9 @@ const GenericModel = React.memo(React.forwardRef(({
             return;
         }
 
-        // If selecting the entire model
-        const isModelLevel = isModel || isAll || !selectedMaterial.isMesh;
+        // If selecting the entire model (not a multi-mesh group or mesh-level selection)
+        const isMultiMesh = selectedMaterial.isMultiSelect || isGroup || Array.isArray(selectedMaterial.items) || Array.isArray(selectedMaterial.uuids);
+        const isModelLevel = (isModel || isAll || !selectedMaterial.isMesh) && !isMultiMesh;
 
         if (isModelLevel) {
             relatedMeshesRef.current = [];
@@ -1706,6 +1720,9 @@ const GenericModel = React.memo(React.forwardRef(({
                 return transformTarget === modelGroup || transformTarget === scene;
             }
             if (selectedMaterial.uuid && transformTarget.uuid === selectedMaterial.uuid) {
+                return true;
+            }
+            if ((selectedMaterial.isMultiSelect || selectedMaterial.isGroup) && (Array.isArray(selectedMaterial.uuids) || Array.isArray(selectedMaterial.items))) {
                 return true;
             }
             if (selectedMaterial.isGroup && Array.isArray(selectedMaterial.materials)) {

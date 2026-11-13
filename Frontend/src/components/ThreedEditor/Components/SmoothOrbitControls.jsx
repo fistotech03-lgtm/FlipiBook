@@ -21,6 +21,7 @@ const SmoothOrbitControls = React.forwardRef(({
   maxDistance = 25,
   sceneWrapperRef,
   navMode = "orbit",
+  isModelTab = false,
   onChange,
   onStart,
   onEnd,
@@ -69,8 +70,9 @@ const SmoothOrbitControls = React.forwardRef(({
       // If pan mode is active, do not track rotational momentum
       if (navMode === "pan") return;
 
-      // Only track left-click (rotate) or single touch
-      if (e.pointerType === "mouse" && e.button !== 0) return;
+      // In model tab, center click (button 1) rotates view. Otherwise, left-click (button 0) rotates view.
+      const rotateButton = isModelTab ? 1 : 0;
+      if (e.pointerType === "mouse" && e.button !== rotateButton) return;
 
       isInteractingRef.current = true;
       lastPointerRef.current = {
@@ -146,7 +148,7 @@ const SmoothOrbitControls = React.forwardRef(({
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerUp);
     };
-  }, [domElement, rotateSpeed, navMode]);
+  }, [domElement, rotateSpeed, navMode, isModelTab]);
 
   // Momentum Coasting & Custom Multi-Axis / Limited-Range AutoRotate in useFrame
   useFrame((state, delta) => {
@@ -264,8 +266,8 @@ const SmoothOrbitControls = React.forwardRef(({
       minDistance={minDistance}
       maxDistance={maxDistance}
       mouseButtons={{
-        LEFT: navMode === "pan" ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
-        MIDDLE: THREE.MOUSE.DOLLY,
+        LEFT: isModelTab ? null : (navMode === "pan" ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE),
+        MIDDLE: isModelTab ? THREE.MOUSE.ROTATE : THREE.MOUSE.DOLLY,
         RIGHT: navMode === "pan" ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN
       }}
       onChange={onChange}

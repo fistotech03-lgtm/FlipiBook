@@ -166,7 +166,7 @@ export default function LeftSidebar({
           className="w-9 h-9 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-[#ea543a] text-gray-600 hover:text-white transition-all cursor-pointer shadow-2xs mb-4"
           title="Expand sidebar"
         >
-          <Icon icon="heroicons:chevron-double-right-20-solid" className="w-4 h-4" />
+          <Icon icon="solar:double-alt-arrow-right-linear" className="w-5 h-5" />
         </button>
 
         {/* Minimized Quick Navigation Icons */}
@@ -229,13 +229,13 @@ export default function LeftSidebar({
       className="h-full bg-white flex flex-col p-[0.75vw] select-none shrink-0 border-r border-gray-200 relative group/sidebar transition-[width] duration-75"
     >
       {/* ── 1. TOP HEADER CARD (File Name + Size + Edit Pencil + Minimize Button) ── */}
-      <div className="bg-white border border-gray-200/80 rounded-[0.75vw] p-[0.7vw] shadow-2xs hover:shadow-xs transition-shadow mb-[0.8vw] relative flex items-center justify-between group shrink-0">
-        <div className="flex items-center gap-[0.6vw] min-w-0 flex-1 pr-[2.2vw]">
-          {/* Red/Orange File Icon */}
-          <div className="w-[2.2vw] h-[2.2vw] min-w-[28px] min-h-[28px] rounded-[0.45vw] flex items-center justify-center shrink-0">
+      <div className="bg-white border border-gray-200/80 rounded-[0.75vw] p-[0.7vw] shadow-2xs hover:shadow-xs transition-shadow mb-[0.8vw] relative flex items-center justify-between gap-[0.5vw] group shrink-0">
+        <div className="flex items-center gap-[0.6vw] min-w-0 flex-1">
+          {/* Red/Orange File Icon - Outlined & Larger */}
+          <div className="w-[2.5vw] h-[2.5vw] min-w-[34px] min-h-[34px] rounded-[0.55vw] bg-[#ea543a]/10 flex items-center justify-center shrink-0">
             <Icon
-              icon="solar:document-text-outline"
-              className="w-[1.8vw] h-[1.8vw] min-w-[22px] min-h-[22px] text-[#ea543a]"
+              icon="solar:document-text-linear"
+              className="w-[1.9vw] h-[1.9vw] min-w-[26px] min-h-[26px] text-[#ea543a]"
             />
           </div>
 
@@ -248,18 +248,18 @@ export default function LeftSidebar({
                 onChange={(e) => setTempName(e.target.value)}
                 onBlur={saveEdit}
                 onKeyDown={handleKeyDown}
-                className="w-full text-[0.82vw] font-bold text-gray-900 bg-gray-50 border border-[#ea543a] rounded px-[0.3vw] py-[0.1vw] outline-none"
+                className="w-full text-[0.82vw] font-medium text-gray-900 bg-gray-50 border border-[#ea543a] rounded px-[0.3vw] py-[0.1vw] outline-none"
               />
             ) : (
               <>
                 <h3
                   onClick={models && models.length > 0 ? startEdit : undefined}
                   title={models && models.length > 0 ? (modelName || "3D Model") : "No Model Loaded"}
-                  className={`text-[0.82vw] font-bold leading-tight truncate ${models && models.length > 0 ? "text-gray-900 cursor-pointer hover:text-[#ea543a]" : "text-gray-400"}`}
+                  className={`text-[0.82vw] font-medium leading-tight truncate ${models && models.length > 0 ? "text-gray-900 cursor-pointer hover:text-[#ea543a]" : "text-gray-400"}`}
                 >
                   {models && models.length > 0 ? (modelName || "3D Model") : "No Model Loaded"}
                 </h3>
-                <span className="text-[0.65vw] text-gray-400 font-medium leading-tight mt-[0.2vw] block">
+                <span className="text-[0.65vw] text-gray-400 font-medium leading-tight mt-[0.2vw] block truncate">
                   Total Size : {models && models.length > 0 ? (fileSize || "0 MB") : "0 MB"}
                 </span>
               </>
@@ -267,25 +267,25 @@ export default function LeftSidebar({
           </div>
         </div>
 
-        {/* Action Buttons: Rename + Minimize */}
-        <div className="absolute top-[0.45vw] right-[0.45vw] flex items-center gap-[0.2vw]">
+        {/* Action Buttons: Rename + Minimize - Outlined & Larger */}
+        <div className="flex items-center gap-[0.2vw] shrink-0">
           <button
             type="button"
             onClick={startEdit}
             disabled={disableRename || !models || models.length === 0}
-            className="text-gray-400 hover:text-[#ea543a] hover:scale-110 active:scale-95 transition-all cursor-pointer p-[0.2vw] rounded"
+            className="text-gray-400 hover:text-[#ea543a] hover:bg-orange-50 hover:scale-110 active:scale-95 transition-all cursor-pointer p-[0.3vw] rounded-[0.35vw]"
             title="Rename Model"
           >
-            <Icon icon="solar:pen-new-square-bold" className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px]" />
+            <Icon icon="solar:pen-new-square-linear" className="w-[1.15vw] h-[1.15vw] min-w-[18px] min-h-[18px]" />
           </button>
 
           <button
             type="button"
             onClick={() => setIsMinimized(true)}
-            className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 hover:scale-110 active:scale-95 transition-all cursor-pointer p-[0.2vw] rounded"
+            className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 hover:scale-110 active:scale-95 transition-all cursor-pointer p-[0.3vw] rounded-[0.35vw]"
             title="Minimize sidebar"
           >
-            <Icon icon="heroicons:chevron-double-left-20-solid" className="w-[0.95vw] h-[0.95vw] min-w-[15px] min-h-[15px]" />
+            <Icon icon="solar:double-alt-arrow-left-linear" className="w-[1.2vw] h-[1.2vw] min-w-[18px] min-h-[18px]" />
           </button>
         </div>
       </div>
@@ -300,8 +300,8 @@ export default function LeftSidebar({
           onClick={() => onSelectTab && onSelectTab("model")}
           className={`w-full flex items-center gap-[0.65vw] px-[0.85vw] py-[0.6vw] rounded-[0.55vw] text-left transition-all duration-200 cursor-pointer shrink-0 ${
             activeTab === "model"
-              ? "bg-[#ea543a] text-white font-bold shadow-xs"
-              : "text-gray-800 hover:bg-gray-100 font-semibold"
+              ? "bg-[#ea543a] text-white font-medium shadow-xs"
+              : "text-gray-800 hover:bg-gray-100 font-normal"
           }`}
         >
           <Icon icon="f7:cube" className="w-[1.15vw] h-[1.15vw] min-w-[16px] min-h-[16px] shrink-0" />
@@ -343,14 +343,14 @@ export default function LeftSidebar({
                   }}
                   className={`w-full group flex items-center justify-between px-[0.7vw] py-[0.48vw] rounded-[0.5vw] text-left transition-all duration-150 cursor-pointer ${
                     isModelActive
-                      ? "bg-[#fdeee9] text-[#ea543a] font-semibold border border-[#ea543a]/35 shadow-2xs"
-                      : "text-gray-700 hover:bg-gray-100/90 hover:text-gray-950 font-medium border border-gray-200/60 bg-white"
+                      ? "bg-[#fdeee9] text-[#ea543a] font-medium border border-[#ea543a]/35 shadow-2xs"
+                      : "text-gray-700 hover:bg-gray-100/90 hover:text-gray-950 font-normal border border-gray-200/60 bg-white"
                   }`}
                 >
                   <div className="flex items-center gap-[0.55vw] min-w-0 flex-1">
                     <Icon
                       icon="f7:cube"
-                      className={`w-[1vw] h-[1vw] min-w-[14px] min-h-[14px] shrink-0 ${
+                      className={`w-[1vw] h-[1vw] min-w-[14px] min-h-[1vw] shrink-0 ${
                         isModelActive ? "text-[#ea543a]" : "text-gray-500"
                       }`}
                     />
@@ -389,7 +389,7 @@ export default function LeftSidebar({
 
                 {/* Nested Layers (MaterialList) inside this Model */}
                 {isExpanded && (
-                  <div className="pl-[0.35vw] pr-[0.1vw] py-[0.2vw] border-l-2 border-[#ea543a]/30 ml-[0.55vw] my-[0.1vw] bg-gray-50/50 rounded-r-[0.4vw]">
+                  <div className="pl-[0.35vw] pr-[0.1vw] py-[0.1vw] border-l-2 border-[#ea543a]/30 ml-[0.55vw] my-[0.1vw] bg-gray-50/50 rounded-r-[0.4vw]">
                     <MaterialList
                       variant="panel"
                       materials={itemMaterials}
@@ -430,7 +430,7 @@ export default function LeftSidebar({
                 onAddModel();
               }
             }}
-            className="w-full flex items-center gap-[0.65vw] px-[0.85vw] py-[0.5vw] rounded-[0.55vw] text-left text-gray-700 hover:bg-gray-100 hover:text-gray-950 font-medium transition-colors cursor-pointer group mt-[0.35vw] shrink-0"
+            className="w-full flex items-center gap-[0.65vw] px-[0.85vw] py-[0.5vw] rounded-[0.55vw] text-left text-gray-700 hover:bg-gray-100 hover:text-gray-950 font-normal transition-colors cursor-pointer group mt-[0.35vw] shrink-0"
           >
             <Icon
               icon="solar:add-circle-linear"
@@ -458,8 +458,8 @@ export default function LeftSidebar({
           onClick={() => onSelectTab && onSelectTab("lighting")}
           className={`w-full flex items-center gap-[0.65vw] px-[0.85vw] py-[0.55vw] rounded-[0.55vw] text-left transition-all duration-200 cursor-pointer ${
             activeTab === "lighting"
-              ? "bg-[#ea543a] text-white font-bold shadow-xs"
-              : "text-gray-800 hover:bg-gray-100 font-medium"
+              ? "bg-[#ea543a] text-white font-semibold shadow-xs"
+              : "text-gray-800 hover:bg-gray-100 font-normal"
           }`}
         >
           <Icon
@@ -475,8 +475,8 @@ export default function LeftSidebar({
           onClick={() => onSelectTab && onSelectTab("camera")}
           className={`w-full flex items-center gap-[0.65vw] px-[0.85vw] py-[0.55vw] rounded-[0.55vw] text-left transition-all duration-200 cursor-pointer ${
             activeTab === "camera"
-              ? "bg-[#ea543a] text-white font-bold shadow-xs"
-              : "text-gray-800 hover:bg-gray-100 font-medium"
+              ? "bg-[#ea543a] text-white font-semibold shadow-xs"
+              : "text-gray-800 hover:bg-gray-100 font-normal"
           }`}
         >
           <Icon

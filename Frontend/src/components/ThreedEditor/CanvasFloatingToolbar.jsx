@@ -20,6 +20,7 @@ export default function CanvasFloatingToolbar({
   canRedo = false,
   onUndo,
   onRedo,
+  showTransformDock = true,
 }) {
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
   const viewMenuRef = useRef(null);
@@ -129,28 +130,30 @@ export default function CanvasFloatingToolbar({
       </div>
 
       {/* ─── RIGHT FLOATING TRANSFORM DOCK ─── */}
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 z-30 pointer-events-auto select-none">
-        <div className="bg-[#181b20]/90 backdrop-blur-md p-[0.35vw] rounded-[0.7vw] border border-white/10 shadow-2xl flex flex-col items-center gap-[0.35vw]">
-          {transformTools.map((tool) => {
-            const isActive = transformMode === tool.id;
-            const tooltip = tool.shortcut ? `${tool.label} (${tool.shortcut})` : tool.label;
-            return (
-              <button
-                key={tool.id}
-                onClick={() => onSelectTransformMode && onSelectTransformMode(tool.id)}
-                title={tooltip}
-                className={`w-[2.5vw] h-[2.5vw] rounded-[0.5vw] flex flex-col items-center justify-center transition-all cursor-pointer ${isActive
-                  ? "bg-[#ea543a] text-white shadow-md shadow-[#ea543a]/30"
-                  : "text-gray-300 hover:text-white hover:bg-white/10"
-                  }`}
-              >
-                <Icon icon={tool.icon} className="w-[1.05vw] h-[1.05vw]" />
-                <span className="text-[0.48vw] font-medium leading-none mt-[0.18vw]">{tool.label}</span>
-              </button>
-            );
-          })}
+      {showTransformDock && (
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-30 pointer-events-auto select-none">
+          <div className="bg-[#181b20]/90 backdrop-blur-md p-[0.35vw] rounded-[0.7vw] border border-white/10 shadow-2xl flex flex-col items-center gap-[0.35vw]">
+            {transformTools.map((tool) => {
+              const isActive = transformMode === tool.id;
+              const tooltip = tool.shortcut ? `${tool.label} (${tool.shortcut})` : tool.label;
+              return (
+                <button
+                  key={tool.id}
+                  onClick={() => onSelectTransformMode && onSelectTransformMode(tool.id)}
+                  title={tooltip}
+                  className={`w-[2.5vw] h-[2.5vw] rounded-[0.5vw] flex flex-col items-center justify-center transition-all cursor-pointer ${isActive
+                    ? "bg-[#ea543a] text-white shadow-md shadow-[#ea543a]/30"
+                    : "text-gray-300 hover:text-white hover:bg-white/10"
+                    }`}
+                >
+                  <Icon icon={tool.icon} className="w-[1.05vw] h-[1.05vw]" />
+                  <span className="text-[0.48vw] font-medium leading-none mt-[0.18vw]">{tool.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ─── BOTTOM FLOATING NAVIGATION BAR ─── */}
       <div className="absolute bottom-[1.2vw] left-1/2 -translate-x-1/2 z-30 pointer-events-auto select-none">

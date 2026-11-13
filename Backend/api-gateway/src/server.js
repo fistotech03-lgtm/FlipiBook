@@ -20,6 +20,7 @@ const THREED_EDITOR_SERVICE_URL = process.env.THREED_EDITOR_SERVICE_URL || 'http
 const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL || 'http://127.0.0.1:5007';
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://127.0.0.1:5008';
 const ADMIN_SERVICE_URL = process.env.ADMIN_SERVICE_URL || 'http://127.0.0.1:5009';
+const ADMIN_3D_SERVICE_URL = process.env.ADMIN_3D_SERVICE_URL || 'http://127.0.0.1:5011';
 
 // Global Middleware
 const allowedOrigins = [

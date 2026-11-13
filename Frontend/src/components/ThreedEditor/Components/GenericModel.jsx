@@ -72,6 +72,17 @@ const GenericModel = React.memo(React.forwardRef(({
     // Expose live Three.js scene and model group to parent ref for clean GLB exports and live sync
     React.useImperativeHandle(ref, () => scene || modelGroup, [scene, modelGroup]);
 
+    useEffect(() => {
+        if (scene) {
+            scene.userData.modelId = modelId;
+            scene.userData.modelName = modelName;
+        }
+        if (modelGroup) {
+            modelGroup.userData.modelId = modelId;
+            modelGroup.userData.modelName = modelName;
+        }
+    }, [scene, modelGroup, modelId, modelName]);
+
     const onUpdateMaterialSettingRef = React.useRef(onUpdateMaterialSetting);
     onUpdateMaterialSettingRef.current = onUpdateMaterialSetting;
 
@@ -187,6 +198,19 @@ const GenericModel = React.memo(React.forwardRef(({
                 cloned.userData.baseMaterialName = m.userData.baseMaterialName || m.name;
                 cloned.userData.initialName = m.userData.initialName || m.name;
                 cloned.userData.initialUuid = m.userData.initialUuid || m.uuid;
+
+                // Clone textures so this unique material instance has its own independent UV placement
+                const TEX_KEYS_TO_CLONE = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap', 'bumpMap', 'displacementMap'];
+                TEX_KEYS_TO_CLONE.forEach(k => {
+                    if (cloned[k] && cloned[k].isTexture) {
+                        const clonedTex = cloned[k].clone();
+                        clonedTex.needsUpdate = true;
+                        cloned[k] = clonedTex;
+                        if (cloned.userData && cloned.userData.appliedMap === m[k]) {
+                            cloned.userData.appliedMap = clonedTex;
+                        }
+                    }
+                });
 
                 const pristine = m.userData.__pristineBaseline ||
                     scene.userData?.__pristineMaterialRegistry?.get(m.uuid) ||
@@ -309,9 +333,10 @@ const GenericModel = React.memo(React.forwardRef(({
                     if (mat && typeof mat.onBeforeCompile !== 'function' && mat.onBeforeCompile !== undefined) {
                         delete mat.onBeforeCompile;
                     }
-                    if (!mat.userData.origTexturesSnap) {
+                    const hasValidTextureSnap = mat.userData.origTexturesSnap && Object.values(mat.userData.origTexturesSnap).some(v => v && v.isTexture);
+                    if (!hasValidTextureSnap) {
                         const snap = {};
-                        TEX_KEYS.forEach(k => { if (mat[k]) snap[k] = mat[k]; });
+                        TEX_KEYS.forEach(k => { if (mat[k] && mat[k].isTexture) snap[k] = mat[k]; });
                         mat.userData.origTexturesSnap = snap;
                         mat.userData.originalMap = mat.map;
                         mat.userData.originalNormalMap = mat.normalMap;
@@ -438,7 +463,11 @@ const GenericModel = React.memo(React.forwardRef(({
                     if (includeTextures === false) {
                         TEX_KEYS.forEach(k => { mat[k] = null; });
                     } else if (includeTextures === true && mat.userData.origTexturesSnap) {
-                        TEX_KEYS.forEach(k => { mat[k] = mat.userData.origTexturesSnap[k]; });
+                        TEX_KEYS.forEach(k => {
+                            if (mat.userData.origTexturesSnap[k]?.isTexture) {
+                                mat[k] = mat.userData.origTexturesSnap[k];
+                            }
+                        });
                     }
                     mat.needsUpdate = true;
                 });
@@ -598,9 +627,7 @@ const GenericModel = React.memo(React.forwardRef(({
                 if (foundMat.emissiveMap) nativeMaps.emissiveMap = getTexUrl(foundMat.emissiveMap);
 
                 const hasAny = Object.keys(nativeMaps).some(k => k !== 'envMap' && nativeMaps[k]);
-                if (hasAny) {
-                    onUpdateMaterialSettingRef.current?.('maps', nativeMaps, true);
-                }
+                onUpdateMaterialSettingRef.current?.('maps', hasAny ? nativeMaps : {}, true);
             }
         } else {
             onUpdateMaterialSettingRef.current?.('maps', {}, true);
@@ -680,6 +707,13 @@ const GenericModel = React.memo(React.forwardRef(({
                     } else if (tex.repeat && (tex.repeat.x !== 1 || tex.repeat.y !== 1)) {
                         batch.scale = Math.round(100 / (tex.repeat.x || 1));
                     }
+                    if (tex.repeat) {
+                        batch.tile = { x: Math.round(tex.repeat.x * 100), y: Math.round(tex.repeat.y * 100) };
+                        batch.textureScale = {
+                            x: Math.round(100 / (tex.repeat.x || 1)),
+                            y: Math.round(100 / (tex.repeat.y || 1))
+                        };
+                    }
                     if (tex.rotation !== undefined && tex.rotation !== 0) {
                         batch.rotation = Math.round(tex.rotation * (180 / Math.PI));
                     }
@@ -691,6 +725,14 @@ const GenericModel = React.memo(React.forwardRef(({
 
             if (m.userData.appliedTexture) {
                 batch.appliedTexture = m.userData.appliedTexture;
+            } else {
+                batch.appliedTexture = null;
+            }
+
+            // Sync the true material name for the selected mesh/part
+            const trueMatName = foundMat.name || foundMat.userData?.baseMaterialName || selMat?.material || selMat?.name;
+            if (trueMatName) {
+                batch.materialName = trueMatName;
             }
 
             // If customizedMaterials has an entry for this selection, ensure batch matches customized state
@@ -719,9 +761,12 @@ const GenericModel = React.memo(React.forwardRef(({
                     if (customEntry.normal !== undefined) batch.normal = customEntry.normal;
                     if (customEntry.bump !== undefined) batch.bump = customEntry.bump;
                     if (customEntry.scale !== undefined) batch.scale = customEntry.scale;
+                    if (customEntry.tile !== undefined) batch.tile = customEntry.tile;
+                    if (customEntry.textureScale !== undefined) batch.textureScale = customEntry.textureScale;
                     if (customEntry.rotation !== undefined) batch.rotation = customEntry.rotation;
                     if (customEntry.offset !== undefined) batch.offset = customEntry.offset;
                     if (customEntry.appliedTexture) batch.appliedTexture = customEntry.appliedTexture;
+                    if (customEntry.materialName) batch.materialName = customEntry.materialName;
                 }
             }
 
@@ -1583,10 +1628,23 @@ const GenericModel = React.memo(React.forwardRef(({
         const isAll = typeof selectedMaterial === 'object' ? selectedMaterial.isAll : false;
         const isModel = typeof selectedMaterial === 'object' ? selectedMaterial.isModel : false;
 
+        // Check if multi-selection contains any items belonging to this model
+        const hasMultiItemThisModel = Boolean(
+            (selectedMaterial?.isMultiSelect || isGroup || Array.isArray(selectedMaterial?.items)) &&
+            Array.isArray(selectedMaterial?.items) &&
+            selectedMaterial.items.some(it => {
+                const itModelId = it.modelId || it.id;
+                const itParent = it.parentGroup;
+                return (modelId && itModelId && (itModelId === modelId || itModelId === scene?.userData?.modelId)) ||
+                       (modelName && itParent && itParent === modelName);
+            })
+        );
+
         // Check if the selection belongs to this specific model instance
         const isSelectedThisModel =
             isAll ||
             selectedMaterial.isAll ||
+            hasMultiItemThisModel ||
             parentGroup === 'All Models' ||
             targetName === 'All Models' ||
             (selectedId && (selectedId === modelId || selectedId === scene?.userData?.modelId)) ||
@@ -1600,8 +1658,9 @@ const GenericModel = React.memo(React.forwardRef(({
             return;
         }
 
-        // If selecting the entire model
-        const isModelLevel = isModel || isAll || !selectedMaterial.isMesh;
+        // If selecting the entire model (not a multi-mesh group or mesh-level selection)
+        const isMultiMesh = selectedMaterial.isMultiSelect || isGroup || Array.isArray(selectedMaterial.items) || Array.isArray(selectedMaterial.uuids);
+        const isModelLevel = (isModel || isAll || !selectedMaterial.isMesh) && !isMultiMesh;
 
         if (isModelLevel) {
             relatedMeshesRef.current = [];
@@ -1663,6 +1722,9 @@ const GenericModel = React.memo(React.forwardRef(({
             if (selectedMaterial.uuid && transformTarget.uuid === selectedMaterial.uuid) {
                 return true;
             }
+            if ((selectedMaterial.isMultiSelect || selectedMaterial.isGroup) && (Array.isArray(selectedMaterial.uuids) || Array.isArray(selectedMaterial.items))) {
+                return true;
+            }
             if (selectedMaterial.isGroup && Array.isArray(selectedMaterial.materials)) {
                 const m = transformTarget.material;
                 const mats = Array.isArray(m) ? m : [m];
@@ -1695,12 +1757,13 @@ const GenericModel = React.memo(React.forwardRef(({
         if (sceneResetTrigger > 0 && scene) {
             if (scene.userData.normalization) {
                 const norm = scene.userData.normalization;
-                scene.position.set(0, 0, 0);
+                const [nx, ny, nz] = norm.position || [0, 0, 0];
+                scene.position.set(nx, ny, nz);
                 scene.rotation.set(0, 0, 0);
                 scene.scale.set(1, 1, 1);
                 scene.updateMatrixWorld(true);
-                setPosition(norm.position);
-                setScale(norm.scale);
+                setPosition([0, 0, 0]);
+                setScale(norm.scale || 1);
             } else if (scene.userData.originalTransform) {
                 const orig = scene.userData.originalTransform;
                 scene.position.copy(orig.position);
@@ -1726,12 +1789,11 @@ const GenericModel = React.memo(React.forwardRef(({
                 const norm = scene.userData?.normalization;
                 const activeRoot = rootTransform || { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } };
                 if (norm) {
-                    const [bx, by, bz] = norm.position || [0, 0, 0];
                     const bScale = norm.scale || 1;
                     modelGroup.position.set(
-                        bx + (activeRoot?.position?.x || 0),
-                        by + (activeRoot?.position?.y || 0),
-                        bz + (activeRoot?.position?.z || 0)
+                        (activeRoot?.position?.x || 0),
+                        (activeRoot?.position?.y || 0),
+                        (activeRoot?.position?.z || 0)
                     );
                     modelGroup.rotation.set(
                         activeRoot?.rotation?.x || 0,
@@ -1816,7 +1878,7 @@ const GenericModel = React.memo(React.forwardRef(({
                     object={transformTarget === modelGroup ? modelGroup : pivotRef.current}
                     mode={transformMode}
                     size={0.8}
-                    space="local"
+                    space={transformMode === 'translate' ? 'world' : 'local'}
                     onPointerDown={(e) => {
                         e.stopPropagation();
                     }}
@@ -1824,12 +1886,10 @@ const GenericModel = React.memo(React.forwardRef(({
                         isGizmoDraggingRef.current = true;
                         if (typeof onTransformStart === 'function') onTransformStart(e);
                     }}
-                    onChange={() => {
+                    onObjectChange={() => {
+                        if (!isGizmoDraggingRef.current) return;
                         if (transformTarget === modelGroup) {
                             const norm = scene.userData?.normalization;
-                            const bx = norm?.position?.[0] ?? 0;
-                            const by = norm?.position?.[1] ?? 0;
-                            const bz = norm?.position?.[2] ?? 0;
                             const bScale = norm?.scale ?? 1;
                             if (typeof onTransformChange === 'function') {
                                 onTransformChange({
@@ -1837,9 +1897,9 @@ const GenericModel = React.memo(React.forwardRef(({
                                     modelId: modelId || scene?.userData?.modelId,
                                     modelName: modelName,
                                     position: {
-                                        x: transformTarget.position.x - bx,
-                                        y: transformTarget.position.y - by,
-                                        z: transformTarget.position.z - bz
+                                        x: transformTarget.position.x,
+                                        y: transformTarget.position.y,
+                                        z: transformTarget.position.z
                                     },
                                     rotation: {
                                         x: transformTarget.rotation.x,

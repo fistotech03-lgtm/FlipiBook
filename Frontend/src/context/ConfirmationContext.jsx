@@ -19,8 +19,10 @@ export const ConfirmationProvider = ({ children }) => {
     message: '',
     confirmText: 'Confirm',
     cancelText: 'Cancel',
+    saveText: '',
     type: 'danger', // 'danger' | 'primary'
     showCancel: true,
+    showSave: false,
     isLoading: false
   });
 
@@ -35,15 +37,17 @@ export const ConfirmationProvider = ({ children }) => {
         message: options.message || 'Please confirm to continue.',
         confirmText: options.confirmText || 'Confirm',
         cancelText: options.cancelText || 'Cancel',
+        saveText: options.saveText || 'Save',
         type: options.type || 'danger',
         showCancel: options.showCancel !== false,
+        showSave: Boolean(options.showSave),
         isLoading: false
       });
     });
   }, []);
 
   const handleClose = useCallback((result = false) => {
-    setModalState(prev => ({ ...prev, isOpen: false }));
+    setModalState(prev => ({ ...prev, isOpen: false, isLoading: false }));
     if (resolverRef.current) {
       resolverRef.current(result);
       resolverRef.current = null;
@@ -106,12 +110,23 @@ export const ConfirmationProvider = ({ children }) => {
                   )}
                   <button
                     type="button"
-                    autoFocus
+                    autoFocus={!modalState.showSave}
                     onClick={() => handleClose(true)}
-                    className={`px-[1.25vw] py-[0.55vw] text-[0.8vw] font-semibold rounded-[0.5vw] transition-all cursor-pointer focus:outline-none active:scale-[0.98] ${confirmBtnStyles[modalState.type] || confirmBtnStyles.danger}`}
+                    className={modalState.showSave
+                      ? "px-[1.1vw] py-[0.55vw] text-[0.8vw] font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-[0.5vw] transition-colors cursor-pointer border border-transparent focus:outline-none"
+                      : `px-[1.25vw] py-[0.55vw] text-[0.8vw] font-semibold rounded-[0.5vw] transition-all cursor-pointer focus:outline-none active:scale-[0.98] ${confirmBtnStyles[modalState.type] || confirmBtnStyles.danger}`}
                   >
                     {modalState.confirmText}
                   </button>
+                  {modalState.showSave && (
+                    <button
+                      type="button"
+                      onClick={() => handleClose('save')}
+                      className="px-[1.25vw] py-[0.55vw] text-[0.8vw] font-semibold text-white bg-[#ea543a] hover:bg-[#d9482f] shadow-sm shadow-orange-500/20 rounded-[0.5vw] transition-all cursor-pointer focus:outline-none active:scale-[0.98]"
+                    >
+                      {modalState.saveText || 'Save'}
+                    </button>
+                  )}
                 </div>
               </motion.div>
             </div>

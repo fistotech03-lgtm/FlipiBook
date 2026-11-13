@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const ThreedModel = require('../../../../shared/models/ThreedModel');
-const InteractionThreedModel = require('../../../../shared/models/InteractionThreedModel');
+const ThreedModel = require('../../../../../shared/models/ThreedModel');
+const InteractionThreedModel = require('../../../../../shared/models/InteractionThreedModel');
 const {
   generateId,
   getUser3DDir,
@@ -78,6 +78,32 @@ const getModelById = async (req, res) => {
         sceneModels: Array.isArray(model.sceneModels) ? model.sceneModels : [],
         hotspots: Array.isArray(model.hotspots) ? model.hotspots : [],
         updatedAt: model.updatedAt || model.createdAt
+      });
+    }
+
+    // Check DefaultModel (Predefined presets from Admin)
+    const DefaultModel = require('../models/defaultModel');
+    const defaultModel = await DefaultModel.findOne({ $or: [{ id: modelId }, { _id: modelId.match(/^[0-9a-fA-F]{24}$/) ? modelId : null }] });
+    if (defaultModel) {
+      const { resolveUrl } = require('../utils/storageHelper');
+      const defObj = defaultModel.toObject ? defaultModel.toObject() : defaultModel;
+      const fullUrl = resolveUrl(req, defObj.url);
+      const thumbUrl = defObj.thumbnailUrl ? resolveUrl(req, defObj.thumbnailUrl) : null;
+      return res.status(200).json({
+        ...defObj,
+        modelId: defObj.id || String(defObj._id),
+        name: defObj.name,
+        displayName: defObj.name,
+        url: fullUrl,
+        thumbnailUrl: thumbUrl,
+        size: defObj.size || '0 MB',
+        type: defObj.type || 'glb',
+        materialSettings: defObj.materialSettings || null,
+        transformValues: defObj.transformValues || null,
+        sceneModels: Array.isArray(defObj.sceneModels) ? defObj.sceneModels : [],
+        hotspots: Array.isArray(defObj.hotspots) ? defObj.hotspots : [],
+        isPreset: true,
+        updatedAt: defObj.createdAt || new Date()
       });
     }
 

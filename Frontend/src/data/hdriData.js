@@ -118,15 +118,25 @@ export const builtInHdris = [
 
 let cachedHdris = null;
 
+export const getRegisteredHdris = () => {
+  return cachedHdris || builtInHdris;
+};
+
 export const fetchHdris = async () => {
-  if (cachedHdris) return cachedHdris;
   try {
     const res = await fetch(`${BACKEND_URL}/api/presets/hdri`);
     if (res.ok) {
       const data = await res.json();
       if (data && Array.isArray(data.hdris) && data.hdris.length > 0) {
-        cachedHdris = data.hdris;
-        return data.hdris;
+        // Merge backend dynamic hdris with builtInHdris (built-ins serve as fallback or base)
+        const combined = [...data.hdris];
+        builtInHdris.forEach((bh) => {
+          if (!combined.some((c) => c.id === bh.id)) {
+            combined.push(bh);
+          }
+        });
+        cachedHdris = combined;
+        return combined;
       }
     }
   } catch (err) {

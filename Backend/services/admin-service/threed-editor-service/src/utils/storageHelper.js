@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 
 let User;
 try {
-  User = require('../../../../shared/models/User');
+  User = require('../../../../../shared/models/User');
 } catch (_) {}
 
 const userFolderCache = new Map();
@@ -26,7 +26,7 @@ const getStorageRoot = () => {
   if (process.env.STORAGE_PATH) {
     return path.resolve(process.env.STORAGE_PATH);
   }
-  const localDefault = path.resolve(__dirname, '../../../../storage');
+  const localDefault = path.resolve(__dirname, '../../../../../storage');
   if (!fs.existsSync(localDefault)) {
     try {
       fs.mkdirSync(localDefault, { recursive: true });

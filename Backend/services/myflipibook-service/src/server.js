@@ -83,6 +83,49 @@ const storageStaticMiddleware = (req, res, next) => {
     } catch (e) {}
   }
 
+  // Fast-Stream In-Flight Page Waiter:
+  const bookPageMatch = relPath.match(/books[/\\]([^/\\]+)[/\\]pages[/\\](\d+)\.(webp|json)$/i);
+  if (bookPageMatch) {
+    const bookId = bookPageMatch[1];
+    const pageNum = bookPageMatch[2];
+    const ext = bookPageMatch[3];
+    const fileName = `${pageNum}.${ext}`;
+
+    try {
+      const topDirs = fs.readdirSync(storageRoot);
+      const candidatePagesDirs = [
+        path.join(storageRoot, 'FLIPI0001', 'books', bookId, 'pages'),
+        ...topDirs.map(d => path.join(storageRoot, d, 'books', bookId, 'pages'))
+      ];
+
+      let targetPagesDir = null;
+      for (const pDir of candidatePagesDirs) {
+        if (fs.existsSync(pDir)) {
+          targetPagesDir = pDir;
+          break;
+        }
+      }
+
+      if (targetPagesDir) {
+        const targetFilePath = path.join(targetPagesDir, fileName);
+        const startTime = Date.now();
+        while (Date.now() - startTime < 8000) {
+          if (fs.existsSync(targetFilePath)) {
+            return res.sendFile(targetFilePath);
+          }
+          const waitSync = (ms) => {
+            const end = Date.now() + ms;
+            while (Date.now() < end) {}
+          };
+          waitSync(200);
+        }
+        if (fs.existsSync(targetFilePath)) {
+          return res.sendFile(targetFilePath);
+        }
+      }
+    } catch (e) {}
+  }
+
   // Fallback for flipbook assets where relative navigation (e.g. ../assets/) skipped the book folder
   const assetMatch = relPath.match(/assets[/\\](Image|video|gif|audio|3D_Model|download)[/\\]([^/\\]+)$/i);
   if (assetMatch) {

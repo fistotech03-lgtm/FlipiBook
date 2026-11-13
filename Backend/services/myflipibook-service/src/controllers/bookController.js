@@ -2776,14 +2776,80 @@ exports.getBook = async (req, res) => {
       } catch (_) {}
     }
 
+    // Fallback: scan all user directories under storageRoot if not found under authenticated user
+    if (!primaryBookDir && fs.existsSync(storageRoot)) {
+      try {
+        const topDirs = fs.readdirSync(storageRoot);
+        for (const td of topDirs) {
+          for (const bn of bookNames) {
+            const p1 = path.join(storageRoot, td, "books", bn);
+            if (fs.existsSync(path.join(p1, "pages"))) {
+              primaryBookDir = p1;
+              break;
+            }
+            const p2 = path.join(storageRoot, td, "books", "default", bn);
+            if (fs.existsSync(path.join(p2, "pages"))) {
+              primaryBookDir = p2;
+              break;
+            }
+          }
+          if (primaryBookDir) break;
+        }
+      } catch (_) {}
+    }
+
     const dirsToSearch = primaryBookDir 
       ? [primaryBookDir, ...candidateDirs.filter(d => d !== primaryBookDir)]
       : candidateDirs;
 
     // 2. Load page data asynchronously in non-blocking parallel to prevent event-loop freezes on 100-page books
-    const sortedRawPages = (book.pages || []).slice().sort(
+    let sortedRawPages = (book.pages || []).slice().sort(
       (a, b) => (Number(a.pageNumber) || 0) - (Number(b.pageNumber) || 0)
     );
+
+    // If server-side extractor generated a full manifest with more pages, hydrate from manifest.json
+    let manifestData = null;
+    const possibleManifestPaths = [];
+    if (primaryBookDir) {
+      possibleManifestPaths.push(path.join(primaryBookDir, 'manifest.json'));
+    }
+    for (const uf of [...userFolders, 'FLIPI0001', 'FLIPI0005']) {
+      possibleManifestPaths.push(
+        path.join(storageRoot, uf, 'books', book.v_id, 'manifest.json'),
+        path.join(storageRoot, uf, 'books', 'default', book.v_id, 'manifest.json')
+      );
+    }
+    for (const mPath of possibleManifestPaths) {
+      try {
+        if (fs.existsSync(mPath)) {
+          const rawM = await fs.promises.readFile(mPath, 'utf8');
+          manifestData = JSON.parse(rawM);
+          if (manifestData && Array.isArray(manifestData.pages)) break;
+        }
+      } catch (_) {}
+    }
+
+    if (manifestData && Array.isArray(manifestData.pages) && manifestData.pages.length > sortedRawPages.length) {
+      sortedRawPages = manifestData.pages.map((mp, mIdx) => {
+        const pNum = mp.pageNumber || mIdx + 1;
+        const existing = (book.pages || []).find(p => Number(p.pageNumber) === pNum);
+        if (existing) return existing;
+        const w = mp.width || manifestData.width || 210;
+        const h = mp.height || manifestData.height || 297;
+        const webpRel = `${manifestData.baseUrl || ''}${mp.image || `${pNum}.webp`}`;
+        const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${w} ${h}" width="100%" height="100%" style="overflow: visible"><g id="g-page-${pNum}" data-name="Page ${pNum}"><image id="img-page-${pNum}" x="0" y="0" width="${w}" height="${h}" href="${webpRel}" xlink:href="${webpRel}" preserveAspectRatio="none" style="image-rendering: -webkit-optimize-contrast; image-rendering: high-quality;" /></g></svg>`;
+        return {
+          pageNumber: pNum,
+          name: `Page ${pNum}`,
+          fileName: `Page ${pNum}.svg`,
+          content: svgContent,
+          html: svgContent,
+          hide: 0
+        };
+      });
+      // Update MongoDB asynchronously with complete page count
+      Flipbook.updateOne({ _id: book._id }, { $set: { pagesCount: sortedRawPages.length } }).catch(() => {});
+    }
     const populatedPages = await Promise.all(sortedRawPages.map(async (p) => {
       const pageObj = p.toObject ? p.toObject() : { ...p };
       let pageContent = "";
@@ -2868,6 +2934,10 @@ exports.getBook = async (req, res) => {
     } catch (_) {}
 
     const formattedMeta = formatBook(book, customizedDoc || {}, null, folderMap, reverseFolderMap);
+    if (populatedPages && populatedPages.length > (formattedMeta.pagesCount || 0)) {
+      formattedMeta.pagesCount = populatedPages.length;
+      formattedMeta.pages = populatedPages.length;
+    }
 
     let resolvedShareId =
       customizedDoc?.Visibility?.shareId ||

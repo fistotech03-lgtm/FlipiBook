@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AuthModal } from "./components/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./Layouts/MainLayout";
+import ScrollToTop from "./components/ScrollToTop";
 
 function AuthRouteRedirect({ mode = "signin" }) {
   const { openAuthModal } = useAuth();
@@ -31,7 +32,16 @@ const Home = lazy(() => import("./pages/Home"));
 const MyFlipbooks = lazy(() => import("./pages/MyFlipbooks"));
 const Templates = lazy(() => import("./pages/Templates"));
 const Explore = lazy(() => import("./pages/Explore"));
-const Features = lazy(() => import("./pages/Features"));
+const Features = lazy(() => import("./pages/Features/index.jsx"));
+const CreationFeatures = lazy(() => import("./pages/Features/CreationFeatures"));
+const ARFeatures = lazy(() => import("./pages/Features/ARFeatures"));
+const ThreeDStudioEditorFeatures = lazy(() => import("./pages/Features/3DStudioEditorFeatures"));
+const ExploreFeatures = lazy(() => import("./pages/Features/ExploreFeatures"));
+const MyShelfFeatures = lazy(() => import("./pages/Features/MyShelfFeatures"));
+const PageEditorFeatures = lazy(() => import("./pages/Features/PageEditorFreatures"));
+const LayoutFeatures = lazy(() => import("./pages/Features/LayoutFeatures"));
+const AnalyticsFeatures = lazy(() => import("./pages/Features/AnalyticsFeatures"));
+const ConverterFeatures = lazy(() => import("./pages/Features/ConverterFeatures"));
 const Help = lazy(() => import("./pages/Help"));
 const Converter = lazy(() => import("./pages/Converter"));
 const Pricing = lazy(() => import("./pages/Pricing"));
@@ -87,6 +97,7 @@ export default function App() {
         <ModernToastProvider>
           <ConfirmationProvider>
             <Router>
+            <ScrollToTop />
             <AuthModal />
             <Routes>
               {/* Direct visits to auth URLs automatically open the Auth Modal over home */}
@@ -254,6 +265,78 @@ export default function App() {
                   element={
                     <Suspense fallback={null}>
                       <Features />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/creation"
+                  element={
+                    <Suspense fallback={null}>
+                      <CreationFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/ar"
+                  element={
+                    <Suspense fallback={null}>
+                      <ARFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/3d-editor-studio"
+                  element={
+                    <Suspense fallback={null}>
+                      <ThreeDStudioEditorFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/explore"
+                  element={
+                    <Suspense fallback={null}>
+                      <ExploreFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/my-shelf"
+                  element={
+                    <Suspense fallback={null}>
+                      <MyShelfFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/page-editor"
+                  element={
+                    <Suspense fallback={null}>
+                      <PageEditorFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/interactive-layout"
+                  element={
+                    <Suspense fallback={null}>
+                      <LayoutFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/analytics"
+                  element={
+                    <Suspense fallback={null}>
+                      <AnalyticsFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/converter"
+                  element={
+                    <Suspense fallback={null}>
+                      <ConverterFeatures />
                     </Suspense>
                   }
                 />

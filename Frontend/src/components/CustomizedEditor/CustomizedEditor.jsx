@@ -12,6 +12,7 @@ import { useCustomizedAutoSave } from './hooks/useCustomizedAutoSave';
 import { useCustomizedActions } from './hooks/useCustomizedActions';
 import { useCustomizedEditorData } from './hooks/useCustomizedEditorData';
 import { loadWindowFromIDB } from '../../utils/pageWindowStore';
+import { clearRasterCache } from '../../utils/pageRasterCache';
 import { queryClient } from '../../queryClient';
 import {
   createDefaultLogoSettings,
@@ -179,21 +180,62 @@ const CustomizedEditor = () => {
     setIsPanelCollapsed(false);
   }, [activeSubView]);
 
-  // Clear previous book from IndexedDB and reset stale Redux book when opening a new book in Customized Editor
+  // Clear previous book from IndexedDB and reset stale states when opening a new book in Customized Editor
+  const activeVIdRef = useRef(v_id);
   useEffect(() => {
-    if (v_id) {
+    if (!v_id) return;
+    if (activeVIdRef.current !== v_id) {
+      activeVIdRef.current = v_id;
       ensureCleanBook(v_id);
-      if (setCurrentBook && currentBook?.v_id && currentBook.v_id !== v_id) {
-        setCurrentBook(prev => ({
-          ...(prev || {}),
-          v_id: v_id,
-          flipbookName: bookName,
-          folder: folder || 'My_Flipbooks',
-          pages: pages && pages.length > 0 ? pages : []
+      clearRasterCache();
+      const newBookName = location.state?.flipbookName || 'Name of the Book';
+      setBookName(newBookName);
+      setProjectBaseUrl(null);
+      setDevicePages({ Desktop: 0, Tablet: 0, Mobile: 0 });
+      setIsDataLoaded(Boolean(location.state?.pages && location.state.pages.length > 0));
+
+      const rawPages = location.state?.pages;
+      const totalCount = Number(location.state?.pageCount) || (Array.isArray(rawPages) ? rawPages.length : 0);
+      if (totalCount > 0) {
+        const initialPages = Array.isArray(rawPages) ? rawPages : [];
+        setPages(Array.from({ length: totalCount }, (_, i) => {
+          const p = initialPages[i];
+          if (p) {
+            const normalized = normalizeSvgMarkup(p.content || p.html || '');
+            return {
+              id: p.id !== undefined ? p.id : i,
+              pageNumber: p.pageNumber || i + 1,
+              name: p.pageName || p.name || `Page ${i + 1}`,
+              html: normalized,
+              content: normalized,
+              isHidden: Boolean(p.isHidden || p.hide === 1),
+              isPlaceholder: Boolean(p.isPlaceholder)
+            };
+          }
+          return {
+            id: i,
+            pageNumber: i + 1,
+            name: `Page ${i + 1}`,
+            html: '',
+            content: '',
+            isHidden: false,
+            isPlaceholder: true
+          };
         }));
+      } else {
+        setPages([]);
+      }
+
+      if (setCurrentBook) {
+        setCurrentBook({
+          v_id: v_id,
+          flipbookName: newBookName,
+          folder: folder || 'My_Flipbooks',
+          pages: Array.isArray(rawPages) ? rawPages : []
+        });
       }
     }
-  }, [v_id]);
+  }, [v_id, location.state]);
 
   // Live listener for background-extracted pages streamed by backgroundExtractionManager (batched to prevent render storms)
   useEffect(() => {

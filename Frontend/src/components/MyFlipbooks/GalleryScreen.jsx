@@ -394,12 +394,12 @@ export default function GalleryScreen({
 
             {/* Drag & Drop Full Overlay */}
             {isDragging && (
-                <div className="absolute inset-0 z-50 bg-blue-600/10 backdrop-blur-2xs border-2 border-dashed border-blue-500 rounded-xl flex flex-col items-center justify-center p-8 pointer-events-none animate-fade-in">
-                    <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg mb-3 animate-bounce">
+                <div className="absolute inset-0 z-50 bg-[#FF5733]/10 backdrop-blur-2xs border-2 border-dashed border-[#FF5733] rounded-xl flex flex-col items-center justify-center p-8 pointer-events-none animate-fade-in">
+                    <div className="w-16 h-16 rounded-full bg-[#FF5733] text-white flex items-center justify-center shadow-lg mb-3 animate-bounce">
                         <UploadCloud size={32} />
                     </div>
-                    <h3 className="text-lg font-bold text-blue-900 mb-1">Drop files here to upload to Gallery</h3>
-                    <p className="text-xs text-blue-700">Images, Videos, GIFs, Audio, and 3D Models (.glb, .gltf)</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">Drop files here to upload to Gallery</h3>
+                    <p className="text-xs text-[#FF5733] font-medium">Images, Videos, GIFs, Audio, and 3D Models (.glb, .gltf)</p>
                 </div>
             )}
 
@@ -430,12 +430,12 @@ export default function GalleryScreen({
                 <div className="flex items-center justify-between mb-[0.8vw]">
                     <div className="flex items-center gap-[0.75vw]">
                         <div className="p-2 bg-white rounded-lg border border-gray-200 shadow-xs">
-                            <Images className="w-5 h-5 text-[#2563eb]" />
+                            <Images className="w-5 h-5 text-[#FF5733]" />
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
                                 <h1 className="text-[1.25vw] font-bold text-gray-900 tracking-tight">My Gallery</h1>
-                                <span className="px-2 py-0.5 text-[0.75vw] font-medium bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+                                <span className="px-2 py-0.5 text-[0.75vw] font-medium bg-orange-50 text-[#FF5733] rounded-full border border-orange-200">
                                     {assets.length} Assets
                                 </span>
                             </div>
@@ -453,7 +453,7 @@ export default function GalleryScreen({
                                 onClick={() => setGroupByCategory(!groupByCategory)}
                                 className={`px-3 py-1.5 rounded-lg text-[0.75vw] font-medium border transition-colors flex items-center gap-1.5 cursor-pointer ${
                                     groupByCategory
-                                        ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                        ? 'bg-orange-50 border-orange-200 text-[#FF5733]'
                                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                                 }`}
                             >
@@ -488,7 +488,7 @@ export default function GalleryScreen({
                         <button
                             disabled={isUploading}
                             onClick={() => fileInputRef.current?.click()}
-                            className="px-3.5 py-1.5 rounded-lg text-[0.78vw] font-semibold bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] text-white shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                            className="px-3.5 py-1.5 rounded-lg text-[0.78vw] font-semibold bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 text-white shadow-2xs hover:shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
                         >
                             <UploadCloud size={15} />
                             <span>{isUploading ? 'Uploading...' : 'Upload Media'}</span>
@@ -506,7 +506,7 @@ export default function GalleryScreen({
                             placeholder="Search by asset name or format..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-lg text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-hidden focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-2xs"
+                            className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-lg text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-hidden focus:border-[#FF5733] focus:ring-1 focus:ring-[#FF5733] transition-all shadow-2xs"
                         />
                         {searchQuery && (
                             <button
@@ -545,12 +545,12 @@ export default function GalleryScreen({
                                             setSortOption(opt);
                                             setIsSortOpen(false);
                                         }}
-                                        className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-blue-50 hover:text-blue-600 transition-colors ${
-                                            sortOption === opt ? 'text-blue-600 font-semibold bg-blue-50/50' : 'text-gray-700'
+                                        className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-orange-50 hover:text-[#FF5733] transition-colors ${
+                                            sortOption === opt ? 'text-[#FF5733] font-semibold bg-orange-50/50' : 'text-gray-700'
                                         }`}
                                     >
                                         <span>{opt}</span>
-                                        {sortOption === opt && <Check size={14} className="text-blue-600" />}
+                                        {sortOption === opt && <Check size={14} className="text-[#FF5733]" />}
                                     </button>
                                 ))}
                             </div>
@@ -612,8 +612,8 @@ export default function GalleryScreen({
                     ) : filteredAssets.length === 0 ? (
                         /* Empty State */
                         <div className="flex flex-col items-center justify-center py-20 text-center">
-                            <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-3 border border-blue-100 shadow-2xs">
-                                <Images className="w-8 h-8 text-blue-500" />
+                            <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center text-[#FF5733] mb-3 border border-orange-100 shadow-2xs">
+                                <Images className="w-8 h-8 text-[#FF5733]" />
                             </div>
                             <h3 className="text-base font-semibold text-gray-900 mb-1">
                                 {searchQuery ? 'No matching assets found' : 'No assets in this category'}
@@ -626,7 +626,7 @@ export default function GalleryScreen({
                             {searchQuery ? (
                                 <button
                                     onClick={() => setSearchQuery('')}
-                                    className="px-3.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
+                                    className="px-3.5 py-1.5 text-xs font-medium text-[#FF5733] bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors cursor-pointer"
                                 >
                                     Clear Search
                                 </button>
@@ -634,7 +634,7 @@ export default function GalleryScreen({
                                 <button
                                     disabled={isUploading}
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="px-4 py-2 text-xs font-semibold text-white bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] rounded-lg shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                                    className="px-4 py-2 text-xs font-semibold text-white bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 rounded-lg shadow-md shadow-orange-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60"
                                 >
                                     <UploadCloud size={16} />
                                     <span>Upload Media to Gallery</span>
@@ -649,7 +649,7 @@ export default function GalleryScreen({
                                     {/* Category Section Header */}
                                     <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100">
                                         <div className="flex items-center gap-2">
-                                            {catName === 'Images' && <ImageIcon size={18} className="text-blue-500" />}
+                                            {catName === 'Images' && <ImageIcon size={18} className="text-[#FF5733]" />}
                                             {catName === 'Videos' && <Video size={18} className="text-purple-500" />}
                                             {catName === 'GIFs' && <Film size={18} className="text-pink-500" />}
                                             {catName === 'Audio' && <Music size={18} className="text-amber-500" />}
@@ -662,7 +662,7 @@ export default function GalleryScreen({
                                         </div>
                                         <button
                                             onClick={() => setActiveCategory(catName)}
-                                            className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 hover:underline cursor-pointer"
+                                            className="text-xs text-[#FF5733] hover:text-[#E04D2D] font-medium flex items-center gap-1 hover:underline cursor-pointer"
                                         >
                                             View all {catName.toLowerCase()} &rarr;
                                         </button>
@@ -745,7 +745,7 @@ export default function GalleryScreen({
                         {/* Modal Header */}
                         <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200">
                             <div className="flex items-center gap-2 overflow-hidden pr-4">
-                                <span className="px-2 py-0.5 text-xs font-semibold uppercase rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                                <span className="px-2 py-0.5 text-xs font-semibold uppercase rounded-md bg-orange-50 text-[#FF5733] border border-orange-200">
                                     {previewAsset.category}
                                 </span>
                                 <h3 className="text-sm font-semibold text-gray-900 truncate" title={previewAsset.name}>
@@ -771,8 +771,8 @@ export default function GalleryScreen({
                                 />
                             ) : previewAsset.type === 'audio' ? (
                                 <div className="flex flex-col items-center justify-center p-8 text-center text-white">
-                                    <div className="w-16 h-16 rounded-full bg-blue-600/30 border border-blue-500 flex items-center justify-center mb-4">
-                                        <Volume2 className="w-8 h-8 text-blue-400" />
+                                    <div className="w-16 h-16 rounded-full bg-[#FF5733]/20 border border-[#FF5733]/60 flex items-center justify-center mb-4">
+                                        <Volume2 className="w-8 h-8 text-[#FF5733]" />
                                     </div>
                                     <p className="text-sm font-medium mb-3">{previewAsset.name}</p>
                                     <audio src={previewAsset.fullUrl} controls className="w-80" />
@@ -889,7 +889,7 @@ function AssetCard({ asset, formatSize, formatDate, onPreview, onCopy, onDownloa
     const is3d = asset.type === '3d';
 
     return (
-        <div className="group bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-blue-400 hover:shadow-md transition-all flex flex-col relative">
+        <div className="group bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-[#FF5733]/60 hover:shadow-md transition-all flex flex-col relative">
             {/* Media Thumbnail Container */}
             <div
                 onClick={onPreview}
@@ -1055,21 +1055,21 @@ function AssetListView({ assets, formatSize, formatDate, onPreview, onCopy, onDo
                                 <div className="flex items-center justify-end gap-1.5 opacity-80 group-hover:opacity-100">
                                     <button
                                         onClick={() => onPreview(asset)}
-                                        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-600 hover:text-blue-600 transition-colors"
+                                        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-600 hover:text-[#FF5733] transition-colors"
                                         title="Preview"
                                     >
                                         <Eye size={14} />
                                     </button>
                                     <button
                                         onClick={() => onCopy(asset)}
-                                        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-600 hover:text-blue-600 transition-colors"
+                                        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-600 hover:text-[#FF5733] transition-colors"
                                         title="Copy Link"
                                     >
                                         <Copy size={14} />
                                     </button>
                                     <button
                                         onClick={() => onDownload(asset)}
-                                        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-600 hover:text-blue-600 transition-colors"
+                                        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-600 hover:text-[#FF5733] transition-colors"
                                         title="Download"
                                     >
                                         <Download size={14} />

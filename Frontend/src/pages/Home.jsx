@@ -11,24 +11,28 @@ import { convertPdfWithInkscape, generatePdfPageSvg, getOfficeDocType, svgToData
 
 // Modular Sections
 import HeroSection from './Home/HeroSection';
+import ThreeDInteractiveDetails from './Home/3dinteractivedetails';
 import InteractiveDemo from './Home/InteractiveDemo';
 import AboutUsSection from './Home/AboutUsSection';
 import WhyChooseFlipibook from './Home/WhyChooseFlipibook';
 import ExploreShowcase from './Home/ExploreShowcase';
 import SmartSolutionsSection from './Home/SmartSolutionsSection';
 import ArIntegrationSection from './Home/ArIntegrationSection';
+import DigitalCatalogue from './Home/digitalCatalogue';
 import ReadingExperienceDark from './Home/ReadingExperienceDark';
 import HowItWorksSection from './Home/HowItWorksSection';
 import FAQSection from './Home/FAQSection';
 import BuildYourDreamCta from './Home/BuildYourDreamCta';
 
 // Assets for Hero Flipbook
-import page1 from '../assets/Home/A4_1.webp';
-import page2 from '../assets/Home/A4_2.webp';
-import page3 from '../assets/Home/A4_3.webp';
-import page4 from '../assets/Home/A4_4.webp';
-import page5 from '../assets/Home/A4_5.webp';
-import page6 from '../assets/Home/A4_6.webp';
+import page1 from '../assets/Home/Home1.png';
+import page2 from '../assets/Home/home2.png';
+import page3 from '../assets/Home/home3.png';
+import page4 from '../assets/Home/home4.png';
+import page5 from '../assets/Home/home5.png';
+import page6 from '../assets/Home/home6.png';
+import page7 from '../assets/Home/home7.png';
+import page8 from '../assets/Home/home8.png';
 
 export default function Home() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -431,26 +435,39 @@ export default function Home() {
         page6={page6}
       />
 
-      {/* 2. INTERACTIVE DEMO: Experience Flipbooks in Action (5 Books shelf) */}
+      {/* 3. FEATURES: IT STARTS WITH A CLICK (3D Model Viewer & Smart Solutions - Explore Every Angle) */}
+      <SmartSolutionsSection />
+
+      {/* 4. AR INTEGRATION: See Products in Your Space */}
+      <ArIntegrationSection />
+
+      {/* 5. DIGITAL CATALOGUE */}
+      <DigitalCatalogue
+        navigate={navigate}
+        page1={page1}
+        page2={page2}
+        page3={page3}
+        page4={page4}
+        page5={page5}
+        page6={page6}
+        page7={page7}
+        page8={page8}
+      />
+
+      {/* 6. INTERACTIVE DEMO: Experience Flipbooks in Action (5 Books shelf) */}
       <InteractiveDemo />
 
-      {/* 3. ABOUT US: We Transform Digital Ideas (Multi-device display) */}
+      {/* 6. ABOUT US: We Transform Digital Ideas (Multi-device display) */}
       <AboutUsSection />
 
-      {/* 4. WHY CHOOSE FLIPBOOK? (Dark Theme with Milestones & Paper Plane curve) */}
+      {/* 7. WHY CHOOSE FLIPBOOK? (Dark Theme with Milestones & Paper Plane curve) */}
       <WhyChooseFlipibook />
 
-      {/* 5. EXPLORE: Discover. Read. Get Inspired (5 Community Cards Slider) */}
+      {/* 8. EXPLORE: Discover. Read. Get Inspired (5 Community Cards Slider) */}
       <ExploreShowcase
         navigate={navigate}
         onOpenCreateModal={handleOpenCreateModal}
       />
-
-      {/* 6. FEATURES: IT STARTS WITH A CLICK (3D Model Viewer & Smart Solutions) */}
-      <SmartSolutionsSection />
-
-      {/* 7. AR INTEGRATION: See Products in Real Space */}
-      <ArIntegrationSection />
 
       {/* 8. FEATURES: Not Just Pages. A 3D Reading Experience (Dark Living Room 3D model) */}
       <ReadingExperienceDark

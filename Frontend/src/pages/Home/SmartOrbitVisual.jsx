@@ -9,11 +9,11 @@ import { Icon } from '@iconify/react';
 const INDUSTRY_SETS = [
   // Set 1: Heavy Industry, Medical & Built Environment
   [
-    { name: 'Manufacturing', icon: 'lucide:factory' },
-    { name: 'Healthcare & Medical', icon: 'lucide:stethoscope' },
-    { name: 'Automotive', icon: 'lucide:car' },
-    { name: 'Construction & Architecture', icon: 'lucide:hard-hat' },
-    { name: 'Industrial Equipment', icon: 'lucide:cog' },
+    { name: 'Architecture', icon: 'lucide:building' },
+    { name: 'Industries', icon: 'lucide:factory' },
+    { name: 'Education', icon: 'lucide:graduation-cap' },
+    { name: 'Medical', icon: 'lucide:plus' },
+    { name: 'Agriculture', icon: 'lucide:wheat' },
   ],
   // Set 2: Tech, Consumer Products & Lifestyle
   [

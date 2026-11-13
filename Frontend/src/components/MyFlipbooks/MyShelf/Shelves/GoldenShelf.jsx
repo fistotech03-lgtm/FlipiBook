@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
+import ShelfBookSlot from './ShelfBookSlot';
 
 // Golden Shelf Assets
 import goldenShelfBase from '../../../../assets/Bookshelf/golden_shelf/base.png';
@@ -8,6 +9,43 @@ import goldenShelfLight from '../../../../assets/Bookshelf/golden_shelf/light.pn
 import goldenShelfDecor from '../../../../assets/Bookshelf/golden_shelf/decor.png';
 import goldenShelfPlant from '../../../../assets/Bookshelf/golden_shelf/plant.png';
 import goldenShelfSwitch from '../../../../assets/Bookshelf/golden_shelf/switch.png';
+
+// ============================================================================
+// MANUAL PERCENTAGE ADJUSTMENT CONFIGURATION FOR GOLDEN SHELF
+// Adjust percentages directly here for both Non-Full View (normal) and Full View (fullView)
+// ============================================================================
+export const GOLDEN_SHELF_CONFIG = {
+  // Non-Full View (Default Inline Shelf Screen)
+  normal: {
+    top: '32.3%',         // Height from top (lands flush at 57.8% on shelf plank)
+    height: '26.5%',      // Container height
+    portraitWidth: '10.5%',
+    landscapeWidth: '14.0%',
+    squareWidth: '12.0%',
+    // Individual book centers under each spotlight
+    slots: {
+      0: { center: '25.4%' }, // Book 1 (Spotlight 1)
+      1: { center: '40.3%' }, // Book 2 (Spotlight 2)
+      2: { center: '53.6%' }, // Book 3 (Spotlight 3)
+      3: { center: '67.5%' }, // Book 4 (Spotlight 4)
+    }
+  },
+
+  // Full View (Fullscreen Mode) - Coupled to shelf plank baseline
+  fullView: {
+    top: '32.3%',
+    height: '26.5%',
+    portraitWidth: '10.5%',
+    landscapeWidth: '14.0%',
+    squareWidth: '12.0%',
+    slots: {
+      0: { center: '25.4%' },
+      1: { center: '40.3%' },
+      2: { center: '53.6%' },
+      3: { center: '67.5%' },
+    }
+  }
+};
 
 const GoldenShelf = ({
   filteredBooks,
@@ -31,7 +69,8 @@ const GoldenShelf = ({
   setShowAddBookModal,
   LazyPreview,
   backendUrl,
-  currentUserEmail
+  currentUserEmail,
+  isFs = false
 }) => {
   return (
     <>
@@ -210,218 +249,94 @@ const GoldenShelf = ({
         </div>
       )}
 
-      {/* 6. Exactly 4 Books Placed Side-by-Side on the Shelf - Landed firmly on top of the shelf plank */}
+      {/* 6. Exactly 4 Books Placed Side-by-Side on the Shelf (Adjustable via GOLDEN_SHELF_CONFIG above) */}
       <div
         className="absolute inset-0 z-20 pointer-events-none"
       >
-        {[
-          { center: '25.4%' },
-          { center: '40.3%' },
-          { center: '53.6%' },
-          { center: '68.2%' }
-        ].map(({ center }, slotIdx) => {
-          const book = filteredBooks && filteredBooks[slotIdx];
-          if (!book) {
+        {(() => {
+          const modeKey = isFs ? 'fullView' : 'normal';
+          const cfg = GOLDEN_SHELF_CONFIG[modeKey];
+          return [0, 1, 2, 3].map((slotIdx) => {
+            const slotCfg = cfg.slots[slotIdx] || { center: '25.4%' };
+            const book = filteredBooks && filteredBooks[slotIdx];
+            const isSlotActive = (hoveredInfoId && (hoveredInfoId.includes(`golden-${slotIdx}`) || hoveredInfoId.includes(`fs-golden-${slotIdx}`))) ||
+              (openMenuId && (openMenuId.includes(`golden-${slotIdx}`) || openMenuId.includes(`fs-golden-${slotIdx}`)));
+
+            if (!book) {
+              return (
+                <div
+                  key={`golden-empty-${slotIdx}`}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, slotIdx)}
+                  className="absolute pointer-events-auto -translate-x-1/2 flex flex-col justify-end items-center z-10"
+                  style={{
+                    left: slotCfg.center,
+                    top: cfg.top,
+                    width: cfg.portraitWidth,
+                    height: cfg.height
+                  }}
+                >
+                  <div
+                    onClick={() => {
+                      setSelectedBookIdsToAdd([]);
+                      setAddBookSearch('');
+                      setShowAddBookModal(true);
+                    }}
+                    className="w-full aspect-[1/1.42] rounded-[0.35vw] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/15 backdrop-blur-[1px] shadow-sm"
+                    title="Add Book"
+                  >
+                    <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                      <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
+                      <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">+</span>
+                    </div>
+                    <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
+                      Add Book
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div
-                key={`golden-empty-${slotIdx}`}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, slotIdx)}
-                className="absolute pointer-events-auto -translate-x-1/2 flex flex-col justify-end items-center"
+                key={book.v_id || `golden-book-${slotIdx}`}
+                className={`absolute pointer-events-auto -translate-x-1/2 flex flex-col justify-end items-center ${
+                  isSlotActive ? 'z-[100]' : 'z-20'
+                }`}
                 style={{
-                  left: center,
-                  top: '35.6%',
-                  width: '9.8%',
-                  height: '26.5%'
+                  left: slotCfg.center,
+                  top: cfg.top,
+                  width: cfg.landscapeWidth,
+                  height: cfg.height
                 }}
               >
-                <div
-                  onClick={() => {
-                    setSelectedBookIdsToAdd([]);
-                    setAddBookSearch('');
-                    setShowAddBookModal(true);
-                  }}
-                  className="w-full aspect-[2.5/3.25] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/15 backdrop-blur-[1px] shadow-sm"
-                  title="Add Book"
-                >
-                  <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                    <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
-                    <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">+</span>
-                  </div>
-                  <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
-                    Add Book
-                  </span>
-                </div>
-              </div>
-            );
-          }
-
-          const targetShareId = book.shareId || book.v_id;
-          const rawAcc = String(book.access || 'public').toLowerCase();
-          const isLandscape = Boolean(
-            book.isLandscape ||
-            book.orientation === 'landscape' ||
-            book.rawBook?.orientation === 'landscape' ||
-            (book.width && book.height && Number(book.width) > Number(book.height)) ||
-            (book.title && /landscape/i.test(book.title)) ||
-            (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
-          );
-
-          return (
-            <div
-              key={book.v_id || `golden-book-${slotIdx}`}
-              draggable
-              onDragStart={(e) => handleDragStart(e, slotIdx)}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, slotIdx)}
-              onDragEnd={handleDragEnd}
-              className={`absolute pointer-events-auto -translate-x-1/2 flex flex-col justify-end items-center group cursor-pointer ${openMenuId === `golden-${slotIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === slotIdx ? 'opacity-50' : ''}`}
-              style={{
-                left: center,
-                top: isLandscape ? '34.6%' : '34.6%',
-                width: isLandscape ? '14%' : '9.8%',
-                height: '26.5%'
-              }}
-              onClick={() => {
-                if (targetShareId) {
-                  window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                }
-              }}
-            >
-              <div className={`w-full ${isLandscape ? 'aspect-[3.25/2.1]' : 'aspect-[2.5/3.25]'} relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.22)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
-                <LazyPreview
-                  v_id={book.v_id}
-                  emailId={book.rawBook?.userEmail || currentUserEmail}
+                <ShelfBookSlot
+                  book={book}
+                  bookIndex={slotIdx}
+                  bIdx={slotIdx}
+                  tooltipPlacement={slotIdx >= 2 ? 'left' : 'right'}
+                  shelfKey={isFs ? `fs-golden-${slotIdx}` : `golden-${slotIdx}`}
+                  openMenuId={openMenuId}
+                  setOpenMenuId={setOpenMenuId}
+                  hoveredInfoId={hoveredInfoId}
+                  setHoveredInfoId={setHoveredInfoId}
+                  handleDragStart={handleDragStart}
+                  handleDragOver={handleDragOver}
+                  handleDrop={handleDrop}
+                  handleDragEnd={handleDragEnd}
+                  draggedBookIndex={draggedBookIndex}
+                  handleRemoveBook={handleRemoveBook}
                   backendUrl={backendUrl}
-                  iframeBaseUrl=""
-                  title={book.title}
-                  imageUrl={null}
+                  currentUserEmail={currentUserEmail}
+                  LazyPreviewComponent={LazyPreview}
+                  landscapeWidth="100%"
+                  portraitWidth="75%"
+                  squareWidth="85%"
                 />
               </div>
-
-              {/* Hover Menu Pill */}
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute top-[2%] -right-[0.4vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto"
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenMenuId(openMenuId === `golden-${slotIdx}` ? null : `golden-${slotIdx}`);
-                  }}
-                  className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
-                >
-                  <Icon icon="mdi:dots-vertical" className="text-[14px]" />
-                </button>
-                <div
-                  className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
-                  onMouseEnter={() => setHoveredInfoId(`golden-${slotIdx}`)}
-                  onMouseLeave={() => setHoveredInfoId(null)}
-                >
-                  <Icon icon="si:info-fill" className="w-4 h-4" />
-
-                  {/* Info Tooltip Bridge & Container */}
-                  <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `golden-${slotIdx}` ? 'block' : 'hidden'} z-[60]`}>
-                    <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
-                      {/* Author Info */}
-                      <div className="flex items-center gap-2">
-                        {book.authorPicture && book.authorPicture !== 'color_only' ? (
-                          <img
-                            src={book.authorPicture}
-                            alt={book.authorName}
-                            className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
-                          />
-                        ) : (
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
-                            style={{ backgroundColor: book.authorBgColor || '#3B82F6' }}
-                          >
-                            {(book.authorName || 'U').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div className="flex flex-col min-w-0 pr-1">
-                          <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName || 'Creator'}</span>
-                          <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
-                            <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
-                            <span className="truncate">{String(book.location || 'Coimbatore').replace(/📍/g, '').trim()}</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Stats */}
-                      <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <span className="text-black font-semibold">{book.pages || 0}</span>
-                          <span className="font-normal text-gray-500">Pages</span>
-                        </div>
-                        <span className="text-gray-300">|</span>
-                        <span className="flex items-center gap-1">
-                          <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
-                          {book.views || '1.2k'}
-                        </span>
-                        <span className="text-gray-300">|</span>
-                        <span className="flex items-center gap-1">
-                          <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
-                          {book.rating || 4.5}
-                        </span>
-                      </div>
-
-                      {/* Title & Desc & Button */}
-                      <div className="relative">
-                        <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
-                        <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
-
-                        {/* Action Button */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (targetShareId) {
-                              window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                            }
-                          }}
-                          className="absolute bottom-0 right-0 bg-black text-white w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md cursor-pointer"
-                        >
-                          <Icon icon="mdi:arrow-top-right" className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Dropdown Menu */}
-              {openMenuId === `golden-${slotIdx}` && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden"
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (targetShareId) {
-                        window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                      }
-                      setOpenMenuId(null);
-                    }}
-                    className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
-                  >
-                    Open Book
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveBook(book.v_id);
-                      setOpenMenuId(null);
-                    }}
-                    className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    Remove Book
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
       </div>
     </>
   );

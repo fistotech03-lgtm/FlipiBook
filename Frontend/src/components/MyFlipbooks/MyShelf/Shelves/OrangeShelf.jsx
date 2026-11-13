@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
+import ShelfBookSlot from './ShelfBookSlot';
 
 // Orange Shelf Assets
 import orangeShelfImg from '../../../../assets/Bookshelf/orange_shelf/orange_shelf.png';
@@ -13,6 +14,56 @@ import orangeShelfPlant from '../../../../assets/Bookshelf/orange_shelf/shelfpla
 import orangeBookDecor from '../../../../assets/Bookshelf/orange_shelf/bookdecor.png';
 import orangePlant from '../../../../assets/Bookshelf/orange_shelf/plant.png';
 import orangeSwitch from '../../../../assets/Bookshelf/orange_shelf/switch.png';
+
+// ============================================================================
+// MANUAL PERCENTAGE ADJUSTMENT CONFIGURATION FOR ORANGE SHELF
+// Adjust percentages directly here for both Non-Full View (normal) and Full View (fullView)
+// ============================================================================
+export const ORANGE_SHELF_CONFIG = {
+  // Non-Full View (Default Inline Shelf Screen)
+  normal: {
+    upperShelf: {
+      left: '28.3%',           // Shift portrait book left / right
+      landscapeLeft: '26.5%',  // Shift landscape book left / right
+      top: '21%',            // Vertical position (lands flush at 46.9% on upper wave tier)
+      height: '24.8%',
+      portraitWidth: '9.8%',
+      landscapeWidth: '13.5%',
+      squareWidth: '11.5%'
+    },
+    lowerShelf: {
+      left: '52.1%',           // Shift portrait book left / right
+      landscapeLeft: '50.2%',  // Shift landscape book left / right
+      top: '33.5%',            // Vertical position (lands flush at 57.3% on lower wave tier)
+      height: '24.8%',
+      portraitWidth: '9.8%',
+      landscapeWidth: '13.5%',
+      squareWidth: '11.5%'
+    }
+  },
+
+  // Full View (Fullscreen Mode) - Coupled to wave shelf baseline
+  fullView: {
+    upperShelf: {
+      left: '28.3%',
+      landscapeLeft: '26.5%',
+      top: '21%',
+      height: '24.8%',
+      portraitWidth: '9.8%',
+      landscapeWidth: '13.5%',
+      squareWidth: '11.5%'
+    },
+    lowerShelf: {
+      left: '52.1%',
+      landscapeLeft: '50.2%',
+      top: '33.5%',
+      height: '24.8%',
+      portraitWidth: '9.8%',
+      landscapeWidth: '13.5%',
+      squareWidth: '11.5%'
+    }
+  }
+};
 
 const OrangeShelf = ({
   filteredBooks,
@@ -35,7 +86,8 @@ const OrangeShelf = ({
   setShowAddBookModal,
   LazyPreview,
   backendUrl,
-  currentUserEmail
+  currentUserEmail,
+  isFs = false
 }) => {
   return (
     <>
@@ -247,24 +299,30 @@ const OrangeShelf = ({
         </div>
       )}
 
-      {/* 8. Book 1 on Upper Shelf Tier */}
-      <div
-        className="absolute z-20 flex items-end justify-center pointer-events-auto"
-        style={{
-          left: '28.3%',
-          top: '21.5%',
-          width: '9.8%',
-          height: '24.8%'
-        }}
-      >
-        {(() => {
-          const book = filteredBooks && filteredBooks[0];
-          if (!book) {
-            return (
+      {/* 8. Book 1 on Upper Shelf Tier (Adjustable via ORANGE_SHELF_CONFIG above) */}
+      {(() => {
+        const modeKey = isFs ? 'fullView' : 'normal';
+        const cfg = ORANGE_SHELF_CONFIG[modeKey].upperShelf;
+        const book = filteredBooks && filteredBooks[0];
+        const rawOri = (book?.orientation || book?.rawBook?.orientation || '').toLowerCase();
+        const isLandscape = rawOri.includes('landscape') || rawOri.includes('horizontal') || book?.isLandscape || /landscape/i.test(book?.title || '') || /landscape/i.test(book?.rawBook?.flipbookName || '');
+        return (
+          <div
+            className={`absolute flex items-end justify-center pointer-events-auto ${
+              (hoveredInfoId?.includes('orange-shelf-0') || openMenuId?.includes('orange-shelf-0')) ? 'z-[100]' : 'z-20'
+            }`}
+            style={{
+              left: isLandscape ? cfg.landscapeLeft : cfg.left,
+              top: cfg.top,
+              width: isLandscape ? cfg.landscapeWidth : cfg.portraitWidth,
+              height: cfg.height
+            }}
+          >
+            {!book ? (
               <div
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, 0)}
-                className="w-full h-full flex flex-col justify-end items-center"
+                className="w-full h-full flex flex-col justify-end items-center z-10"
               >
                 <div
                   onClick={() => {
@@ -272,7 +330,7 @@ const OrangeShelf = ({
                     setAddBookSearch('');
                     setShowAddBookModal(true);
                   }}
-                  className="w-full aspect-[2.5/3.4] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
+                  className="w-full aspect-[1/1.42] rounded-[0.35vw] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
                   title="Add Book"
                 >
                   <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
@@ -284,122 +342,58 @@ const OrangeShelf = ({
                   </span>
                 </div>
               </div>
-            );
-          }
+            ) : (
+              <ShelfBookSlot
+                key={book.v_id || 'orange-book-0'}
+                book={book}
+                bookIndex={0}
+                bIdx={0}
+                tooltipPlacement="right"
+                shelfKey={isFs ? 'fs-orange-shelf-0' : 'orange-shelf-0'}
+                openMenuId={openMenuId}
+                setOpenMenuId={setOpenMenuId}
+                hoveredInfoId={hoveredInfoId}
+                setHoveredInfoId={setHoveredInfoId}
+                handleDragStart={handleDragStart}
+                handleDragOver={handleDragOver}
+                handleDrop={handleDrop}
+                handleDragEnd={handleDragEnd}
+                draggedBookIndex={draggedBookIndex}
+                handleRemoveBook={handleRemoveBook}
+                backendUrl={backendUrl}
+                currentUserEmail={currentUserEmail}
+                LazyPreviewComponent={LazyPreview}
+                widthOverride="100%"
+              />
+            )}
+          </div>
+        );
+      })()}
 
-          const targetShareId = book.shareId || book.v_id;
-          const rawAcc = String(book.access || 'public').toLowerCase();
-          const isLandscape = Boolean(
-            book.isLandscape ||
-            book.orientation === 'landscape' ||
-            book.rawBook?.orientation === 'landscape' ||
-            (book.width && book.height && Number(book.width) > Number(book.height)) ||
-            (book.title && /landscape/i.test(book.title)) ||
-            (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
-          );
-
-          return (
-            <div
-              key={book.v_id || 'orange-book-0'}
-              draggable
-              onDragStart={(e) => handleDragStart(e, 0)}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, 0)}
-              onDragEnd={handleDragEnd}
-              className={`relative w-full h-full flex flex-col justify-end items-center group cursor-pointer ${openMenuId === 'orange-0' ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === 0 ? 'opacity-50' : ''}`}
-              onClick={() => {
-                if (targetShareId) {
-                  window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                }
-              }}
-            >
-              <div className={`w-full ${isLandscape ? 'aspect-[3.4/2.3]' : 'aspect-[2.5/3.4]'} relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.22)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
-                <LazyPreview
-                  v_id={book.v_id}
-                  emailId={book.rawBook?.userEmail || currentUserEmail}
-                  backendUrl={backendUrl}
-                  iframeBaseUrl=""
-                  title={book.title}
-                  imageUrl={null}
-                />
-              </div>
-
-              {/* Hover Menu Pill */}
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute top-[2%] -right-[0.4vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto"
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenMenuId(openMenuId === 'orange-0' ? null : 'orange-0');
-                  }}
-                  className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
-                >
-                  <Icon icon="mdi:dots-vertical" className="text-[14px]" />
-                </button>
-                <div
-                  className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
-                  onMouseEnter={() => setHoveredInfoId('orange-0')}
-                  onMouseLeave={() => setHoveredInfoId(null)}
-                >
-                  <Icon icon="si:info-fill" className="w-4 h-4" />
-                </div>
-              </div>
-
-              {/* Dropdown Menu */}
-              {openMenuId === 'orange-0' && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden"
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (targetShareId) {
-                        window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                      }
-                      setOpenMenuId(null);
-                    }}
-                    className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
-                  >
-                    Open Book
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveBook(book.v_id);
-                      setOpenMenuId(null);
-                    }}
-                    className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    Remove Book
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </div>
-
-      {/* 9. Book 2 on Lower Shelf Tier */}
-      <div
-        className="absolute z-20 flex items-end justify-center pointer-events-auto"
-        style={{
-          left: '52.1%',
-          top: '37.3%',
-          width: '9.8%',
-          height: '24.8%'
-        }}
-      >
-        {(() => {
-          const book = filteredBooks && filteredBooks[1];
-          if (!book) {
-            return (
+      {/* 9. Book 2 on Lower Shelf Tier (Adjustable via ORANGE_SHELF_CONFIG above) */}
+      {(() => {
+        const modeKey = isFs ? 'fullView' : 'normal';
+        const cfg = ORANGE_SHELF_CONFIG[modeKey].lowerShelf;
+        const book = filteredBooks && filteredBooks[1];
+        const rawOri = (book?.orientation || book?.rawBook?.orientation || '').toLowerCase();
+        const isLandscape = rawOri.includes('landscape') || rawOri.includes('horizontal') || book?.isLandscape || /landscape/i.test(book?.title || '') || /landscape/i.test(book?.rawBook?.flipbookName || '');
+        return (
+          <div
+            className={`absolute flex items-end justify-center pointer-events-auto ${
+              (hoveredInfoId?.includes('orange-shelf-1') || openMenuId?.includes('orange-shelf-1')) ? 'z-[100]' : 'z-20'
+            }`}
+            style={{
+              left: isLandscape ? cfg.landscapeLeft : cfg.left,
+              top: cfg.top,
+              width: isLandscape ? cfg.landscapeWidth : cfg.portraitWidth,
+              height: cfg.height
+            }}
+          >
+            {!book ? (
               <div
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, 1)}
-                className="w-full h-full flex flex-col justify-end items-center"
+                className="w-full h-full flex flex-col justify-end items-center z-10"
               >
                 <div
                   onClick={() => {
@@ -407,7 +401,7 @@ const OrangeShelf = ({
                     setAddBookSearch('');
                     setShowAddBookModal(true);
                   }}
-                  className="w-full aspect-[2.5/3.4] rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
+                  className="w-full aspect-[1/1.42] rounded-[0.35vw] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
                   title="Add Book"
                 >
                   <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
@@ -419,103 +413,33 @@ const OrangeShelf = ({
                   </span>
                 </div>
               </div>
-            );
-          }
-
-          const targetShareId = book.shareId || book.v_id;
-          const rawAcc = String(book.access || 'public').toLowerCase();
-          const isLandscape = Boolean(
-            book.isLandscape ||
-            book.orientation === 'landscape' ||
-            book.rawBook?.orientation === 'landscape' ||
-            (book.width && book.height && Number(book.width) > Number(book.height)) ||
-            (book.title && /landscape/i.test(book.title)) ||
-            (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
-          );
-
-          return (
-            <div
-              key={book.v_id || 'orange-book-1'}
-              draggable
-              onDragStart={(e) => handleDragStart(e, 1)}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, 1)}
-              onDragEnd={handleDragEnd}
-              className={`relative w-full h-full flex flex-col justify-end items-center group cursor-pointer ${openMenuId === 'orange-1' ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === 1 ? 'opacity-50' : ''}`}
-              onClick={() => {
-                if (targetShareId) {
-                  window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                }
-              }}
-            >
-              <div className={`w-full ${isLandscape ? 'aspect-[3.4/2.3]' : 'aspect-[2.5/3.4]'} relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.22)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
-                <LazyPreview
-                  v_id={book.v_id}
-                  emailId={book.rawBook?.userEmail || currentUserEmail}
-                  backendUrl={backendUrl}
-                  iframeBaseUrl=""
-                  title={book.title}
-                  imageUrl={null}
-                />
-              </div>
-
-              {/* Hover Menu Pill */}
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute top-[2%] -right-[0.4vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto"
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenMenuId(openMenuId === 'orange-1' ? null : 'orange-1');
-                  }}
-                  className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
-                >
-                  <Icon icon="mdi:dots-vertical" className="text-[14px]" />
-                </button>
-                <div
-                  className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
-                  onMouseEnter={() => setHoveredInfoId('orange-1')}
-                  onMouseLeave={() => setHoveredInfoId(null)}
-                >
-                  <Icon icon="si:info-fill" className="w-4 h-4" />
-                </div>
-              </div>
-
-              {/* Dropdown Menu */}
-              {openMenuId === 'orange-1' && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden"
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (targetShareId) {
-                        window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                      }
-                      setOpenMenuId(null);
-                    }}
-                    className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
-                  >
-                    Open Book
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveBook(book.v_id);
-                      setOpenMenuId(null);
-                    }}
-                    className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    Remove Book
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </div>
+            ) : (
+              <ShelfBookSlot
+                key={book.v_id || 'orange-book-1'}
+                book={book}
+                bookIndex={1}
+                bIdx={1}
+                tooltipPlacement="left"
+                shelfKey={isFs ? 'fs-orange-shelf-1' : 'orange-shelf-1'}
+                openMenuId={openMenuId}
+                setOpenMenuId={setOpenMenuId}
+                hoveredInfoId={hoveredInfoId}
+                setHoveredInfoId={setHoveredInfoId}
+                handleDragStart={handleDragStart}
+                handleDragOver={handleDragOver}
+                handleDrop={handleDrop}
+                handleDragEnd={handleDragEnd}
+                draggedBookIndex={draggedBookIndex}
+                handleRemoveBook={handleRemoveBook}
+                backendUrl={backendUrl}
+                currentUserEmail={currentUserEmail}
+                LazyPreviewComponent={LazyPreview}
+                widthOverride="100%"
+              />
+            )}
+          </div>
+        );
+      })()}
     </>
   );
 };

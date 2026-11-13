@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
+import ShelfBookSlot from './ShelfBookSlot';
 
 // Window Shelf Assets
 import windowShelfWindow from '../../../../assets/Bookshelf/window_shelf/window.png';
@@ -8,6 +9,40 @@ import windowShelfPlank from '../../../../assets/Bookshelf/window_shelf/shelf.pn
 import windowShelfPlant from '../../../../assets/Bookshelf/window_shelf/plant.png';
 import windowShelfLight from '../../../../assets/Bookshelf/window_shelf/light.png';
 import windowShelfSwitch from '../../../../assets/Bookshelf/window_shelf/switch.png';
+
+// ============================================================================
+// MANUAL PERCENTAGE ADJUSTMENT CONFIGURATION FOR WINDOW SHELF
+// Adjust percentages directly here for both Non-Full View (normal) and Full View (fullView)
+// ============================================================================
+export const WINDOW_SHELF_CONFIG = {
+  // Non-Full View (Default Inline Shelf Screen)
+  normal: {
+    container: {
+      left: '44.5%',      // Shift books left / right on the shelf
+      top: '29.8%',       // Vertical position (lands flush on white floating shelf)
+      width: '25.0%',     // Total container width
+      height: '26.0%',    // Container height
+      gap: '12%',         // Gap between Book 1 and Book 2 (adjust percentage here!)
+      portraitWidth: '40%',
+      landscapeWidth: '48%',
+      squareWidth: '44%'
+    }
+  },
+
+  // Full View (Fullscreen Mode) - Coupled to shelf baseline
+  fullView: {
+    container: {
+      left: '44.5%',
+      top: '29.8%',
+      width: '25.0%',
+      height: '26.0%',
+      gap: '10%',
+      portraitWidth: '40%',
+      landscapeWidth: '50%',
+      squareWidth: '44%'
+    }
+  }
+};
 
 const WindowShelf = ({
   filteredBooks,
@@ -32,7 +67,8 @@ const WindowShelf = ({
   setShowAddBookModal,
   LazyPreview,
   backendUrl,
-  currentUserEmail
+  currentUserEmail,
+  isFs = false
 }) => {
   return (
     <>
@@ -236,191 +272,87 @@ const WindowShelf = ({
         </div>
       )}
 
-      {/* 6. Interactive Books on the Floating Shelf */}
-      <div
-        className="absolute z-20 flex items-end justify-center pointer-events-auto"
-        style={{
-          left: '46.0%',
-          top: '32.5%',
-          width: '21.0%',
-          height: '26.0%',
-          gap: '12%'
-        }}
-      >
-        {[0, 1].map((slotIdx) => {
-          const book = filteredBooks && filteredBooks[slotIdx];
-          if (!book) {
-            return (
-              <div
-                key={`window-shelf-empty-${slotIdx}`}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, slotIdx)}
-                className="relative flex-1 h-full flex flex-col justify-end items-center"
-              >
-                <div
-                  onClick={() => {
-                    setSelectedBookIdsToAdd([]);
-                    setAddBookSearch('');
-                    setShowAddBookModal(true);
-                  }}
-                  className="w-full h-full rounded-[6px] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
-                  title="Add Book"
-                >
-                  <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                    <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
-                    <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">
-                      +
-                    </span>
-                  </div>
-                  <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
-                    Add Book
-                  </span>
-                </div>
-              </div>
-            );
-          }
-
-          const targetShareId = book.shareId || book.v_id;
-          const rawAcc = String(book.access || 'public').toLowerCase();
-          const isLandscape = Boolean(
-            book.isLandscape ||
-            book.orientation === 'landscape' ||
-            book.rawBook?.orientation === 'landscape' ||
-            (book.width && book.height && Number(book.width) > Number(book.height)) ||
-            (book.title && /landscape/i.test(book.title)) ||
-            (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
-          );
-
-          return (
-            <div
-              key={book.v_id || `window-shelf-${slotIdx}`}
-              draggable
-              onDragStart={(e) => handleDragStart(e, slotIdx)}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, slotIdx)}
-              onDragEnd={handleDragEnd}
-              className={`relative flex-1 h-full flex flex-col justify-end items-center group cursor-pointer ${openMenuId === `window-shelf-${slotIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === slotIdx ? 'opacity-50' : ''}`}
-              onClick={() => {
-                if (targetShareId) {
-                  window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                }
-              }}
-            >
-              <div className={`w-full ${isLandscape ? 'aspect-[3.4/2.3]' : 'h-full'} relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
-                <LazyPreview
-                  v_id={book.v_id}
-                  emailId={book.rawBook?.userEmail || currentUserEmail}
-                  backendUrl={backendUrl}
-                  iframeBaseUrl=""
-                  title={book.title}
-                  imageUrl={null}
-                />
-              </div>
-
-              {/* Hover Menu Pill */}
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute top-[2%] -right-[0.4vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto"
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenMenuId(openMenuId === `window-shelf-${slotIdx}` ? null : `window-shelf-${slotIdx}`);
-                  }}
-                  className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
-                >
-                  <Icon icon="mdi:dots-vertical" className="text-[14px]" />
-                </button>
-                <div
-                  className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
-                  onMouseEnter={() => setHoveredInfoId(`window-shelf-${slotIdx}`)}
-                  onMouseLeave={() => setHoveredInfoId(null)}
-                >
-                  <Icon icon="si:info-fill" className="w-4 h-4" />
-                  <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `window-shelf-${slotIdx}` ? 'block' : 'hidden'} z-[60]`}>
-                    <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
-                      <div className="flex items-center gap-2">
-                        {book.authorPicture && book.authorPicture !== 'color_only' ? (
-                          <img
-                            src={book.authorPicture}
-                            alt={book.authorName}
-                            className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
-                          />
-                        ) : (
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
-                            style={{ backgroundColor: book.authorBgColor }}
-                          >
-                            {(book.authorName || 'U').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div className="flex flex-col min-w-0 pr-1">
-                          <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
-                          <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
-                            <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
-                            <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <span className="text-black font-semibold">{book.pages || 0}</span>
-                          <span className="font-normal text-gray-500">Pages</span>
-                        </div>
-                        <span className="text-gray-300">|</span>
-                        <span className="flex items-center gap-1">
-                          <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
-                          {book.views || '1.2k'}
-                        </span>
-                        <span className="text-gray-300">|</span>
-                        <span className="flex items-center gap-1">
-                          <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
-                          {book.rating || 4.5}
+      {/* 6. Interactive Books on the Floating Shelf (Adjustable via WINDOW_SHELF_CONFIG above) */}
+      {(() => {
+        const modeKey = isFs ? 'fullView' : 'normal';
+        const cfg = WINDOW_SHELF_CONFIG[modeKey].container;
+        return (
+          <div
+            className={`absolute flex items-end justify-center pointer-events-auto ${
+              [0, 1].some(slotIdx => (hoveredInfoId && (hoveredInfoId.includes(`window-shelf-${slotIdx}`) || hoveredInfoId.includes(`fs-window-shelf-${slotIdx}`))) || (openMenuId && (openMenuId.includes(`window-shelf-${slotIdx}`) || openMenuId.includes(`fs-window-shelf-${slotIdx}`)))) ? 'z-[90]' : 'z-20'
+            }`}
+            style={{
+              left: cfg.left,
+              top: cfg.top,
+              width: cfg.width,
+              height: cfg.height,
+              gap: cfg.gap
+            }}
+          >
+            {[0, 1].map((slotIdx) => {
+              const book = filteredBooks && filteredBooks[slotIdx];
+              if (!book) {
+                return (
+                  <div
+                    key={`window-shelf-empty-${slotIdx}`}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, slotIdx)}
+                    className="relative flex flex-col justify-end items-center z-10"
+                    style={{ width: cfg.portraitWidth || '40%' }}
+                  >
+                    <div
+                      onClick={() => {
+                        setSelectedBookIdsToAdd([]);
+                        setAddBookSearch('');
+                        setShowAddBookModal(true);
+                      }}
+                      className="w-full aspect-[1/1.42] rounded-[0.35vw] border border-dashed border-white/60 hover:border-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group bg-white/10 hover:bg-white/20 backdrop-blur-[1px] shadow-sm"
+                      title="Add Book"
+                    >
+                      <div className="relative flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                        <Icon icon="mdi:book-open-outline" className="w-5 h-5 text-white/90" />
+                        <span className="absolute -bottom-1 -right-1 text-[10px] font-black text-white leading-none">
+                          +
                         </span>
                       </div>
-                      <div className="relative">
-                        <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
-                        <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
-                      </div>
+                      <span className="text-[9px] font-medium text-white/90 group-hover:text-white tracking-wide">
+                        Add Book
+                      </span>
                     </div>
                   </div>
-                </div>
-              </div>
+                );
+              }
 
-              {/* Dropdown Menu */}
-              {openMenuId === `window-shelf-${slotIdx}` && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden"
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (targetShareId) {
-                        window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                      }
-                      setOpenMenuId(null);
-                    }}
-                    className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
-                  >
-                    Open Book
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveBook(book.v_id);
-                      setOpenMenuId(null);
-                    }}
-                    className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    Remove Book
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              return (
+                <ShelfBookSlot
+                  key={book.v_id || `window-shelf-${slotIdx}`}
+                  book={book}
+                  bookIndex={slotIdx}
+                  bIdx={slotIdx}
+                  tooltipPlacement={slotIdx === 1 ? 'left' : 'right'}
+                  shelfKey={isFs ? `fs-window-shelf-${slotIdx}` : `window-shelf-${slotIdx}`}
+                  openMenuId={openMenuId}
+                  setOpenMenuId={setOpenMenuId}
+                  hoveredInfoId={hoveredInfoId}
+                  setHoveredInfoId={setHoveredInfoId}
+                  handleDragStart={handleDragStart}
+                  handleDragOver={handleDragOver}
+                  handleDrop={handleDrop}
+                  handleDragEnd={handleDragEnd}
+                  draggedBookIndex={draggedBookIndex}
+                  handleRemoveBook={handleRemoveBook}
+                  backendUrl={backendUrl}
+                  currentUserEmail={currentUserEmail}
+                  LazyPreviewComponent={LazyPreview}
+                  landscapeWidth={cfg.landscapeWidth || '48%'}
+                  portraitWidth={cfg.portraitWidth || '40%'}
+                  squareWidth={cfg.squareWidth || '44%'}
+                />
+              );
+            })}
+          </div>
+        );
+      })()}
     </>
   );
 };

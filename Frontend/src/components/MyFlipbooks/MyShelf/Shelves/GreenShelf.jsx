@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
+import ShelfBookSlot from './ShelfBookSlot';
 
 // Green Shelf Assets
 import greenLeftWood from '../../../../assets/Bookshelf/greenshelf/Leftwood.png';
@@ -7,6 +8,49 @@ import greenBase from '../../../../assets/Bookshelf/greenshelf/base.png';
 import greenLamp from '../../../../assets/Bookshelf/greenshelf/lamp.png';
 import greenDecor from '../../../../assets/Bookshelf/greenshelf/decor.png';
 import greenSwitch from '../../../../assets/Bookshelf/greenshelf/switch.png';
+
+// ============================================================================
+// GREEN SHELF CONFIGURATION - Adjust percentages easily here!
+// Both 'normal' (inline shelf view) and 'fullView' (fullscreen view) can be tweaked independently.
+// ============================================================================
+export const GREEN_SHELF_CONFIG = {
+  normal: {
+    tier0: {
+      top: '38%',
+      leftShelf: { left: '23.5%', width: '28.8%' },
+      rightShelf: { left: '55.0%', width: '30.1%' }
+    },
+    tier1: {
+      top: '69%',
+      leftShelf: { left: '23.5%', width: '28.8%' },
+      rightShelf: { left: '55.0%', width: '30.1%' }
+    },
+    books: {
+      portraitWidth: '34%',
+      landscapeWidth: '46%',
+      squareWidth: '38%',
+      gap: '4%'
+    }
+  },
+  fullView: {
+    tier0: {
+      top: '38%',
+      leftShelf: { left: '23.5%', width: '28.8%' },
+      rightShelf: { left: '55.0%', width: '30.1%' }
+    },
+    tier1: {
+      top: '69%',
+      leftShelf: { left: '23.5%', width: '28.8%' },
+      rightShelf: { left: '55.0%', width: '30.1%' }
+    },
+    books: {
+      portraitWidth: '34%',
+      landscapeWidth: '46%',
+      squareWidth: '38%',
+      gap: '4%'
+    }
+  }
+};
 
 const GreenShelf = ({
   filteredBooks,
@@ -31,27 +75,35 @@ const GreenShelf = ({
   setShowAddBookModal,
   LazyPreview,
   backendUrl,
-  currentUserEmail
+  currentUserEmail,
+  isFs = false
 }) => {
+  const cfg = GREEN_SHELF_CONFIG[isFs ? 'fullView' : 'normal'] || GREEN_SHELF_CONFIG.normal;
+
   return (
     <>
                   <div className="absolute inset-0 w-full h-full pointer-events-none">
                     {/* 2 Tiers of Shelves: Top tier and Bottom tier */}
                     {[
-                      { tierIdx: 0, top: '38%', books: [0, 1, 2, 3] },
-                      { tierIdx: 1, top: '69%', books: [4, 5, 6, 7] }
-                    ].map(({ tierIdx, top, books }) => (
+                      { tierIdx: 0, tierCfg: cfg.tier0, books: [0, 1, 2, 3] },
+                      { tierIdx: 1, tierCfg: cfg.tier1, books: [4, 5, 6, 7] }
+                    ].map(({ tierIdx, tierCfg, books }) => (
                       <React.Fragment key={`green-tier-${tierIdx}`}>
                         {/* Two split shelves per tier: Left shelf and Right shelf */}
                         {[
-                          { side: 'left', left: '23.5%', width: '28.8%', bookIndices: [books[0], books[1]] },
-                          { side: 'right', left: '55.0%', width: '30.1%', bookIndices: [books[2], books[3]] }
-                        ].map(({ side, left, width, bookIndices }) => (
+                          { side: 'left', left: tierCfg.leftShelf.left, width: tierCfg.leftShelf.width, bookIndices: [books[0], books[1]] },
+                          { side: 'right', left: tierCfg.rightShelf.left, width: tierCfg.rightShelf.width, bookIndices: [books[2], books[3]] }
+                        ].map(({ side, left, width, bookIndices }) => {
+                          const isShelfActive = bookIndices.some(bIdx => (
+                            (hoveredInfoId && (hoveredInfoId.includes(`green-shelf-info-${bIdx}`) || hoveredInfoId.includes(`-${bIdx}`))) ||
+                            (openMenuId && (openMenuId.includes(`green-shelf-${bIdx}`) || openMenuId.includes(`-${bIdx}`)))
+                          ));
+                          return (
                           <div
                             key={`green-shelf-${tierIdx}-${side}`}
-                            className="absolute pointer-events-auto"
+                            className={`absolute pointer-events-auto ${isShelfActive ? 'z-[80]' : 'z-20 hover:z-40'}`}
                             style={{
-                              top,
+                              top: tierCfg.top,
                               left,
                               width
                             }}
@@ -140,8 +192,10 @@ const GreenShelf = ({
 
                               {/* 3. Books sitting on top of the shelf (2 books per shelf plank = 4 books per tier = 8 total) */}
                               <div
-                                className="absolute inset-x-0 bottom-[100%] flex justify-around items-end z-20"
-                                style={{ padding: '0 4%', marginBottom: '-1px' }}
+                                className={`absolute inset-x-0 bottom-[100%] flex justify-around items-end ${
+                                  bookIndices.some(bGlobalIdx => (hoveredInfoId && (hoveredInfoId.includes(`green-shelf-info-${bGlobalIdx}`) || hoveredInfoId.includes(`-${bGlobalIdx}`))) || (openMenuId && (openMenuId.includes(`green-shelf-${bGlobalIdx}`) || openMenuId.includes(`-${bGlobalIdx}`)))) ? 'z-[90]' : 'z-20'
+                                }`}
+                                style={{ padding: `0 ${cfg.books.gap || '4%'}`, marginBottom: '-1px' }}
                               >
                                 {bookIndices.map((bGlobalIdx, slotIdx) => {
                                   const book = filteredBooks[bGlobalIdx];
@@ -151,8 +205,8 @@ const GreenShelf = ({
                                         key={`green-empty-${tierIdx}-${side}-${slotIdx}`}
                                         onDragOver={handleDragOver}
                                         onDrop={(e) => handleDrop(e, bGlobalIdx)}
-                                        className="relative flex justify-center items-end"
-                                        style={{ width: '34%' }}
+                                        className="relative flex justify-center items-end z-10"
+                                        style={{ width: cfg.books.portraitWidth }}
                                       >
                                         <div
                                           onClick={() => {
@@ -177,165 +231,38 @@ const GreenShelf = ({
                                     );
                                   }
 
-                                  const emailFolder = book.rawBook?.userEmail ? book.rawBook.userEmail.replace(/[@.]/g, "_") : '';
-                                  const folderName = (book.rawBook?.folderName && book.rawBook.folderName.length > 0) ? book.rawBook.folderName[0] : (book.rawBook?.folder || '');
-                                  const bookName = book.rawBook?.flipbookName || book.rawBook?.title || '';
-                                  const basePath = '';
-                                  const isLandscape = Boolean(
-                                    book.isLandscape ||
-                                    book.orientation === 'landscape' ||
-                                    book.rawBook?.orientation === 'landscape' ||
-                                    (book.width && book.height && Number(book.width) > Number(book.height)) ||
-                                    (book.title && /landscape/i.test(book.title)) ||
-                                    (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
-                                  );
-
                                   return (
-                                    <div
+                                    <ShelfBookSlot
                                       key={book.v_id || `green-book-${bGlobalIdx}`}
-                                      draggable
-                                      onDragStart={(e) => handleDragStart(e, bGlobalIdx)}
-                                      onDragOver={handleDragOver}
-                                      onDrop={(e) => handleDrop(e, bGlobalIdx)}
-                                      onDragEnd={handleDragEnd}
-                                      className={`relative group cursor-pointer flex justify-center items-end ${openMenuId === `green-${bGlobalIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bGlobalIdx ? 'opacity-50' : ''}`}
-                                      style={{ width: isLandscape ? '46%' : '34%' }}
-                                    >
-                                      {/* Book Cover with 3D drop shadow resting on wood shelf */}
-                                      <div className={`w-full ${isLandscape ? 'aspect-[3.4/2.3]' : 'aspect-[2.5/3.4]'} relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
-                                        <LazyPreview
-                                          v_id={book.v_id}
-                                          emailId={book.rawBook?.userEmail || currentUserEmail}
-                                          backendUrl={backendUrl}
-                                          iframeBaseUrl={basePath}
-                                          title={book.title}
-                                          imageUrl={null}
-                                        />
-                                      </div>
-
-                                      {/* Hover Menu Pill */}
-                                      <div className="absolute top-[2%] -right-[0.4vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto">
-                                        <button
-                                          onClick={() => setOpenMenuId(openMenuId === `green-${bGlobalIdx}` ? null : `green-${bGlobalIdx}`)}
-                                          className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
-                                        >
-                                          <Icon icon="mdi:dots-vertical" className="text-[14px]" />
-                                        </button>
-                                        <div
-                                          className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
-                                          onMouseEnter={() => setHoveredInfoId(`green-${bGlobalIdx}`)}
-                                          onMouseLeave={() => setHoveredInfoId(null)}
-                                        >
-                                          <Icon icon="si:info-fill" className="w-4 h-4" />
-
-                                          {/* Info Tooltip Bridge & Container */}
-                                          <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `green-${bGlobalIdx}` ? 'block' : 'hidden'} z-[60]`}>
-                                            <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
-                                              {/* Author Info */}
-                                              <div className="flex items-center gap-2">
-                                                {book.authorPicture && book.authorPicture !== 'color_only' ? (
-                                                  <img
-                                                    src={book.authorPicture}
-                                                    alt={book.authorName}
-                                                    className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
-                                                  />
-                                                ) : (
-                                                  <div
-                                                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
-                                                    style={{ backgroundColor: book.authorBgColor }}
-                                                  >
-                                                    {(book.authorName || 'U').charAt(0).toUpperCase()}
-                                                  </div>
-                                                )}
-                                                <div className="flex flex-col min-w-0 pr-1">
-                                                  <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
-                                                  <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
-                                                    <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
-                                                    <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
-                                                  </span>
-                                                </div>
-                                              </div>
-
-                                              {/* Stats */}
-                                              <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
-                                                <div className="flex items-center gap-1">
-                                                  <span className="text-black font-semibold">{book.pages || 0}</span>
-                                                  <span className="font-normal text-gray-500">Pages</span>
-                                                </div>
-                                                <span className="text-gray-300">|</span>
-                                                <span className="flex items-center gap-1">
-                                                  <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
-                                                  {book.views || '1.2k'}
-                                                </span>
-                                                <span className="text-gray-300">|</span>
-                                                <span className="flex items-center gap-1">
-                                                  <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
-                                                  {book.rating || 4.5}
-                                                </span>
-                                              </div>
-
-                                              {/* Title & Desc & Button */}
-                                              <div className="relative">
-                                                <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
-                                                <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
-
-                                                {/* Action Button */}
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const targetShareId = book.shareId || book.v_id;
-                                                    const rawAcc = String(book.access || 'public').toLowerCase();
-                                                    if (targetShareId) {
-                                                      window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                                                    }
-                                                  }}
-                                                  className="absolute bottom-0 right-0 bg-black text-white w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md cursor-pointer"
-                                                >
-                                                  <Icon icon="mdi:arrow-top-right" className="w-4 h-4" />
-                                                </button>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      {/* Dropdown Menu */}
-                                      {openMenuId === `green-${bGlobalIdx}` && (
-                                        <div className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              const targetShareId = book.shareId || book.v_id;
-                                              const rawAcc = String(book.access || 'public').toLowerCase();
-                                              if (targetShareId) {
-                                                window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                                              }
-                                              setOpenMenuId(null);
-                                            }}
-                                            className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
-                                          >
-                                            Open Book
-                                          </button>
-
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleRemoveBook(book.v_id);
-                                              setOpenMenuId(null);
-                                            }}
-                                            className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                          >
-                                            Remove Book
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
+                                      book={book}
+                                      bookIndex={bGlobalIdx}
+                                      bIdx={slotIdx}
+                                      tooltipPlacement={side === 'right' ? 'left' : (slotIdx === 1 ? 'left' : 'right')}
+                                      shelfKey="green-shelf"
+                                      openMenuId={openMenuId}
+                                      setOpenMenuId={setOpenMenuId}
+                                      hoveredInfoId={hoveredInfoId}
+                                      setHoveredInfoId={setHoveredInfoId}
+                                      handleDragStart={handleDragStart}
+                                      handleDragOver={handleDragOver}
+                                      handleDrop={handleDrop}
+                                      handleDragEnd={handleDragEnd}
+                                      draggedBookIndex={draggedBookIndex}
+                                      handleRemoveBook={handleRemoveBook}
+                                      backendUrl={backendUrl}
+                                      currentUserEmail={currentUserEmail}
+                                      LazyPreviewComponent={LazyPreview}
+                                      landscapeWidth={cfg.books.landscapeWidth}
+                                      squareWidth={cfg.books.squareWidth}
+                                      portraitWidth={cfg.books.portraitWidth}
+                                    />
                                   );
                                 })}
                               </div>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </React.Fragment>
                     ))}
                   </div>

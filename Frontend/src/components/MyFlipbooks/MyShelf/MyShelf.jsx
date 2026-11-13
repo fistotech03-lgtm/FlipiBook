@@ -106,20 +106,39 @@ const MyShelf = ({
   const handleLogoFile = (file) => {
     if (!file) return;
 
-    const url = file.url || URL.createObjectURL(file);
-    const sizeMB = file.size ? (file.size / (1024 * 1024)).toFixed(1) : '1.0';
-    const sizeStr = file.size ? (file.size > 1024 * 1024 ? `${sizeMB}MB` : `${Math.round(file.size / 1024)}KB`) : '';
+    if (file.url) {
+      const img = new Image();
+      img.onload = () => {
+        setShelfLogo({
+          url: file.url,
+          name: file.name || 'Shelf Logo.png',
+          dimensions: `${img.naturalWidth} X ${img.naturalHeight}`,
+          size: file.size ? `${(file.size / (1024 * 1024)).toFixed(1)}MB` : 'Image',
+        });
+        setHasUnsavedChanges(true);
+      };
+      img.src = file.url;
+      return;
+    }
 
-    const img = new Image();
-    img.onload = () => {
-      setShelfLogo({
-        url,
-        name: file.name || 'Shelf Logo.png',
-        dimensions: `${img.naturalWidth} X ${img.naturalHeight}`,
-        size: sizeStr || 'Image',
-      });
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const sizeMB = file.size ? (file.size / (1024 * 1024)).toFixed(1) : '1.0';
+      const sizeStr = file.size ? (file.size > 1024 * 1024 ? `${sizeMB}MB` : `${Math.round(file.size / 1024)}KB`) : '';
+      const img = new Image();
+      img.onload = () => {
+        setShelfLogo({
+          url: dataUrl,
+          name: file.name || 'Shelf Logo.png',
+          dimensions: `${img.naturalWidth} X ${img.naturalHeight}`,
+          size: sizeStr || 'Image',
+        });
+        setHasUnsavedChanges(true);
+      };
+      img.src = dataUrl;
     };
-    img.src = url;
+    reader.readAsDataURL(file);
   };
 
   const handleLogoUpload = (e) => {
@@ -137,6 +156,7 @@ const MyShelf = ({
     if (logoInputRef.current) {
       logoInputRef.current.value = '';
     }
+    setHasUnsavedChanges(true);
   };
 
   const [defaultLightType, setDefaultLightType] = useState('Turn on');
@@ -153,6 +173,53 @@ const MyShelf = ({
     bookDecor: true,
     bookWithPot: true,
   });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSetActiveShelfStyle = (val) => {
+    setActiveShelfStyle(val);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSetSelectedWallTheme = (val) => {
+    setSelectedWallTheme(val);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSetSelectedLightTheme = (val) => {
+    setSelectedLightTheme(val);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSetLightOpacity = (val) => {
+    setLightOpacity(val);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSetShowLightSwitch = (valOrFn) => {
+    setShowLightSwitch(valOrFn);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSetDefaultLightType = (valOrFn) => {
+    setDefaultLightType(valOrFn);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSetDecors = (valOrFn) => {
+    setDecors(valOrFn);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSetLogoFixType = (val) => {
+    setLogoFixType(val);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSetLogoOpacity = (val) => {
+    setLogoOpacity(val);
+    setHasUnsavedChanges(true);
+  };
   const [shelfStylesPage, setShelfStylesPage] = useState(1);
   const [selectedBookCountFilter, setSelectedBookCountFilter] = useState('All'); // 'All' | '8' | '4' | '2'
   const [isShelfFullscreen, setIsShelfFullscreen] = useState(false);
@@ -179,6 +246,10 @@ const MyShelf = ({
   const [isAddingBooks, setIsAddingBooks] = useState(false);
   const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isShelfLoading, setIsShelfLoading] = useState(false);
+  const [shelfLoadingTitle, setShelfLoadingTitle] = useState('Loading Bookshelf...');
+  const [shelfLoadingSubtitle, setShelfLoadingSubtitle] = useState('Setting up shelf ambiance, decor & flipbooks...');
+  const [isCreatingShelf, setIsCreatingShelf] = useState(false);
 
   const { user: authUser } = useAuth() || {};
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
@@ -409,6 +480,7 @@ const MyShelf = ({
           const backendFolder = actualMyShelf?.folders?.find(f => (f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : f.folderName) === folderName);
           return {
             name: folderName,
+            shelfId: backendFolder?.shelfId || saved?.shelfId || '',
             shelf_design: backendFolder?.shelf_design || saved?.shelf_design || ((rawDesign === 1 || !rawDesign || rawDesign === 4) ? 'customize4' : rawDesign),
             defaultLightType: backendFolder?.defaultLightType || saved?.defaultLightType || 'Turn on',
             lights: backendFolder?.lights !== undefined ? backendFolder.lights : (saved?.lights !== undefined ? saved.lights : true),
@@ -417,7 +489,9 @@ const MyShelf = ({
             showLightSwitch: backendFolder?.showLightSwitch !== undefined ? backendFolder.showLightSwitch : (saved?.showLightSwitch !== undefined ? saved.showLightSwitch : true),
             lightOpacity: backendFolder?.lightOpacity !== undefined ? backendFolder.lightOpacity : (saved?.lightOpacity !== undefined ? saved.lightOpacity : 1),
             decors: backendFolder?.decors || saved?.decors || {},
-            logo: backendFolder?.logo || saved?.logo || '',
+            logo: backendFolder?.logo || saved?.logo || null,
+            logoFixType: backendFolder?.logoFixType || saved?.logoFixType || 'Fit',
+            logoOpacity: backendFolder?.logoOpacity !== undefined ? backendFolder.logoOpacity : (saved?.logoOpacity !== undefined ? saved.logoOpacity : 80),
             ...saved,
             books: folderMap[folderName] || []
           };
@@ -438,7 +512,7 @@ const MyShelf = ({
 
             if (folder.books.length !== dbBookCount) {
               try {
-                const bookIds = folder.books.map(b => b.v_id);
+                const bookIds = folder.books.filter(Boolean).map(b => b.v_id);
                 axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
                   emailId: currentUserEmail,
                   folderName: folder.name,
@@ -486,11 +560,12 @@ const MyShelf = ({
       if (f.name === selectedFolder) {
         return {
           ...f,
-          books: f.books.filter(b => b.v_id !== v_id)
+          books: f.books.filter(b => b && b.v_id !== v_id)
         };
       }
       return f;
     }));
+    setHasUnsavedChanges(true);
 
     try {
       await axios.post(`${backendUrl}/api/profile/remove-from-shelf`, {
@@ -543,32 +618,51 @@ const MyShelf = ({
         };
       });
 
-      let updatedFolderBooks = [];
+      const currentFolder = folders.find(f => f.name === selectedFolder);
+      const existingBooks = (currentFolder?.books || []).filter(Boolean);
+      const existingIds = new Set(existingBooks.map(b => b.v_id));
+      const newUnique = formattedToAppend.filter(b => !existingIds.has(b.v_id));
+      const nextBooks = [...existingBooks, ...newUnique];
+
+      // 1. Update folder state immediately for instant UI update
       setFolders(prev => prev.map(f => {
         if (f.name === selectedFolder) {
-          const existingIds = new Set((f.books || []).map(b => b.v_id));
-          const newUnique = formattedToAppend.filter(b => !existingIds.has(b.v_id));
-          updatedFolderBooks = [...(f.books || []), ...newUnique];
           return {
             ...f,
-            books: updatedFolderBooks
+            books: nextBooks
           };
         }
         return f;
       }));
 
-      const bookIds = updatedFolderBooks.map(b => b.v_id);
-      await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
-        emailId: currentUserEmail,
-        folderName: selectedFolder,
-        bookIds
+      // 2. Persist locally to localStorage
+      const saved = loadSavedShelfSettings(selectedFolder) || {};
+      saveShelfSettings(selectedFolder, {
+        ...saved,
+        books: nextBooks
       });
 
+      // 3. Save to backend immediately with valid non-empty bookIds
+      const bookIds = nextBooks.map(b => b.v_id).filter(Boolean);
+      const currentFolderObj = folders.find(f => f.name === selectedFolder);
+      const orderRes = await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
+        emailId: currentUserEmail,
+        folderName: selectedFolder,
+        shelfId: currentFolderObj?.shelfId,
+        bookIds
+      });
+      if (orderRes.data?.shelfId) {
+        setFolders(prev => prev.map(f => f.name === selectedFolder ? { ...f, shelfId: orderRes.data.shelfId } : f));
+      }
+
+      setHasUnsavedChanges(true);
       setShowAddBookModal(false);
       setSelectedBookIdsToAdd([]);
       setAddBookSearch('');
+      toast?.success?.(`${newUnique.length} ${newUnique.length === 1 ? 'book' : 'books'} added to shelf!`);
     } catch (err) {
       console.error("Failed to add books to shelf:", err);
+      toast?.error?.("Failed to add books to shelf. Please try again.");
     } finally {
       setIsAddingBooks(false);
     }
@@ -644,7 +738,27 @@ const MyShelf = ({
           lights: lightTypeToApply ? lightTypeToApply === 'Turn on' : (saved.lights !== undefined ? saved.lights : true)
         }));
       }
+      if (saved.logo) setShelfLogo(saved.logo);
+      if (saved.logoFixType) setLogoFixType(saved.logoFixType);
+      if (saved.logoOpacity !== undefined) setLogoOpacity(saved.logoOpacity);
+    } else if (currentFolder) {
+      if (currentFolder.selectedWallTheme !== undefined) setSelectedWallTheme(currentFolder.selectedWallTheme);
+      if (currentFolder.selectedLightTheme) setSelectedLightTheme(currentFolder.selectedLightTheme);
+      if (currentFolder.showLightSwitch !== undefined) setShowLightSwitch(currentFolder.showLightSwitch);
+      if (currentFolder.lightOpacity !== undefined) setLightOpacity(currentFolder.lightOpacity);
+      if (currentFolder.decors) {
+        setDecors(prev => ({
+          ...prev,
+          ...currentFolder.decors,
+          lights: lightTypeToApply ? lightTypeToApply === 'Turn on' : (currentFolder.lights !== undefined ? currentFolder.lights : true)
+        }));
+      }
+      if (currentFolder.logo) setShelfLogo(currentFolder.logo);
+      if (currentFolder.logoFixType) setLogoFixType(currentFolder.logoFixType);
+      if (currentFolder.logoOpacity !== undefined) setLogoOpacity(currentFolder.logoOpacity);
     }
+
+    setHasUnsavedChanges(false);
   }, [folders, selectedFolder]);
 
   const handleSaveShelfName = async () => {
@@ -685,17 +799,81 @@ const MyShelf = ({
     toast?.success?.("Shelf renamed successfully!");
   };
 
+  const loadingTimerRef = useRef(null);
+
+  // Clean up any pending loading timer on component unmount only
+  useEffect(() => {
+    return () => {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleOpenShelf = (folderName, styleId) => {
+    if (loadingTimerRef.current) {
+      clearTimeout(loadingTimerRef.current);
+    }
+    setShelfLoadingTitle('Loading Bookshelf...');
+    setIsShelfLoading(true);
+    setSelectedFolder(folderName);
+    if (styleId) {
+      setActiveShelfStyle(styleId);
+    }
+    setSelectedWallTheme(null);
+    setCurrentView('shelf_detail');
+    loadingTimerRef.current = setTimeout(() => {
+      setIsShelfLoading(false);
+      loadingTimerRef.current = null;
+    }, 350);
+  };
+
+  const prevSelectedFolderRef = useRef(selectedFolder);
+  const prevViewRef = useRef(currentView);
+
+  // Trigger loading when switching into shelf detail view or changing shelf folder
+  useEffect(() => {
+    const isEnteringDetail = currentView === 'shelf_detail' && prevViewRef.current === 'overview';
+    const isFolderSwitched = currentView === 'shelf_detail' && prevSelectedFolderRef.current && prevSelectedFolderRef.current !== selectedFolder;
+
+    if (selectedFolder && (isEnteringDetail || isFolderSwitched)) {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
+      setShelfLoadingTitle('Loading Bookshelf...');
+      setIsShelfLoading(true);
+      loadingTimerRef.current = setTimeout(() => {
+        setIsShelfLoading(false);
+        loadingTimerRef.current = null;
+      }, 350);
+    }
+    prevSelectedFolderRef.current = selectedFolder;
+    prevViewRef.current = currentView;
+  }, [selectedFolder, currentView]);
+
   const handleFlipbookSelect = (e) => {
     if (e.target.value === 'add_shelf') {
       setShowAddShelfModal(true);
     } else {
-      setSelectedFolder(e.target.value);
-      const targetFolder = folders.find(f => f.name === e.target.value);
-      if (targetFolder) {
-        const designId = String(targetFolder.shelf_design).startsWith('customize')
-          ? targetFolder.shelf_design
-          : ((!targetFolder.shelf_design || targetFolder.shelf_design === 1) ? 'customize4' : `customize${targetFolder.shelf_design}`);
-        setActiveShelfStyle(designId);
+      const targetName = e.target.value;
+      if (targetName && targetName !== selectedFolder) {
+        if (loadingTimerRef.current) {
+          clearTimeout(loadingTimerRef.current);
+        }
+        setShelfLoadingTitle('Loading Bookshelf...');
+        setIsShelfLoading(true);
+        setSelectedFolder(targetName);
+        const targetFolder = folders.find(f => f.name === targetName);
+        if (targetFolder) {
+          const designId = String(targetFolder.shelf_design).startsWith('customize')
+            ? targetFolder.shelf_design
+            : ((!targetFolder.shelf_design || targetFolder.shelf_design === 1) ? 'customize4' : `customize${targetFolder.shelf_design}`);
+          setActiveShelfStyle(designId);
+        }
+        loadingTimerRef.current = setTimeout(() => {
+          setIsShelfLoading(false);
+          loadingTimerRef.current = null;
+        }, 350);
       }
     }
   };
@@ -709,6 +887,7 @@ const MyShelf = ({
       return;
     }
 
+    setIsSaving(true);
     // Respect the user's current light switch toggle state
     const isLightOn = decors?.lights !== undefined ? decors.lights : (defaultLightType === 'Turn on');
     const effectiveLightType = isLightOn ? 'Turn on' : 'Turn off';
@@ -725,7 +904,10 @@ const MyShelf = ({
       decors: {
         ...decors,
         lights: isLightOn
-      }
+      },
+      logo: shelfLogo,
+      logoFixType: logoFixType || 'Fit',
+      logoOpacity: logoOpacity !== undefined ? logoOpacity : 80
     };
     saveShelfSettings(selectedFolder, settingsToSave);
 
@@ -747,10 +929,11 @@ const MyShelf = ({
     if (currentUserEmail) {
       try {
         const bookIds = existingBooks.map(b => b.v_id).filter(Boolean);
-        await Promise.all([
+        const [designRes] = await Promise.all([
           axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
             emailId: currentUserEmail,
             folderName: selectedFolder,
+            shelfId: currentFolderData?.shelfId,
             shelf_design: targetStyle,
             defaultLightType: effectiveLightType,
             lights: isLightOn,
@@ -762,21 +945,33 @@ const MyShelf = ({
               ...decors,
               lights: isLightOn
             },
-            logo: shelfLogo
+            logo: shelfLogo,
+            logoFixType: logoFixType || 'Fit',
+            logoOpacity: logoOpacity !== undefined ? logoOpacity : 80
           }).catch(err => console.warn("Backend update-shelf-design notice:", err)),
-          bookIds.length > 0
-            ? axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
-                emailId: currentUserEmail,
-                folderName: selectedFolder,
-                bookIds
-              }).catch(() => {})
-            : Promise.resolve()
+          axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
+            emailId: currentUserEmail,
+            folderName: selectedFolder,
+            shelfId: currentFolderData?.shelfId,
+            bookIds
+          }).catch(() => {})
         ]);
+
+        const assignedShelfId = designRes?.data?.shelfId;
+        if (assignedShelfId && assignedShelfId !== currentFolderData?.shelfId) {
+          setFolders(prev => prev.map(f => f.name === selectedFolder ? { ...f, shelfId: assignedShelfId } : f));
+          saveShelfSettings(selectedFolder, {
+            ...settingsToSave,
+            shelfId: assignedShelfId
+          });
+        }
       } catch (err) {
         console.error("Failed to update shelf design:", err);
       }
     }
 
+    setHasUnsavedChanges(false);
+    setIsSaving(false);
     toast?.success?.("Shelf changes saved successfully!");
   };
 
@@ -809,12 +1004,12 @@ const MyShelf = ({
           await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
             emailId: currentUserEmail,
             folderName: newFolderName,
-            bookIds: newFolderBooks.map(b => b.v_id)
+            bookIds: newFolderBooks.filter(Boolean).map(b => b.v_id)
           });
           await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
             emailId: currentUserEmail,
             folderName: selectedFolder,
-            bookIds: updatedSourceBooks.map(b => b.v_id)
+            bookIds: updatedSourceBooks.filter(Boolean).map(b => b.v_id)
           });
         } catch (e) {
           console.error("Failed to sync move", e);
@@ -860,12 +1055,12 @@ const MyShelf = ({
         await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
           emailId: currentUserEmail,
           folderName: targetMoveFolder,
-          bookIds: updatedTargetBooks.map(b => b.v_id)
+          bookIds: updatedTargetBooks.filter(Boolean).map(b => b.v_id)
         });
         await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
           emailId: currentUserEmail,
           folderName: selectedFolder,
-          bookIds: updatedSourceBooks.map(b => b.v_id)
+          bookIds: updatedSourceBooks.filter(Boolean).map(b => b.v_id)
         });
       } catch (e) {
         console.error("Failed to sync move", e);
@@ -896,14 +1091,14 @@ const MyShelf = ({
     const draggedBookObj = filteredBooks[draggedBookIndex];
     if (!draggedBookObj) return;
 
-    const actualDraggedIndex = currentFolder.books.findIndex(b => b.v_id === draggedBookObj.v_id);
+    const actualDraggedIndex = currentFolder.books.findIndex(b => b && b.v_id === draggedBookObj.v_id);
     if (actualDraggedIndex === -1) return;
 
     const targetBookObj = filteredBooks[targetIndex];
     const newBooks = [...currentFolder.books];
 
     if (targetBookObj) {
-      const actualTargetIndex = currentFolder.books.findIndex(b => b.v_id === targetBookObj.v_id);
+      const actualTargetIndex = currentFolder.books.findIndex(b => b && b.v_id === targetBookObj.v_id);
       if (actualTargetIndex !== -1 && actualTargetIndex !== actualDraggedIndex) {
         const temp = newBooks[actualDraggedIndex];
         newBooks[actualDraggedIndex] = newBooks[actualTargetIndex];
@@ -929,12 +1124,14 @@ const MyShelf = ({
     }));
 
     setDraggedBookIndex(null);
+    setHasUnsavedChanges(true);
 
     try {
       const bookIds = newBooks.filter(Boolean).map(b => b.v_id);
       await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
         emailId: currentUserEmail,
         folderName: selectedFolder,
+        shelfId: currentFolder?.shelfId,
         bookIds
       });
     } catch (err) {
@@ -950,6 +1147,7 @@ const MyShelf = ({
 
   const filteredBooks = activeFolderGlobal
     ? activeFolderGlobal.books.filter(b => {
+      if (!b) return true;
       if (selectedStatus === 'All Status') return true;
 
       const isPublic = String(b.access).toLowerCase() === 'public';
@@ -1069,7 +1267,7 @@ const MyShelf = ({
               )}
               <h1 className="text-2xl font-bold mb-1">My Shelf</h1>
             </div>
-            <p className="text-[12px] mt-0.5 text-[#94a3b8]">Mange your subscription, payment methods, billing details and invoices.</p>
+            <p className="text-[12px] mt-0.5 text-[#94a3b8]">Manage your digital flipbook shelves, custom decor and layout showcases.</p>
           </div>
           {currentView === 'shelf_detail' && (
             <div className="flex gap-3">
@@ -1103,9 +1301,19 @@ const MyShelf = ({
           setCurrentView={setCurrentView}
           setShowAddShelfModal={setShowAddShelfModal}
           onDeleteShelf={handleDeleteShelf}
+          onShareShelf={(folderName) => {
+            const targetFolder = folders.find(f => f.name === folderName);
+            setSelectedFolder(folderName);
+            if (targetFolder?.defaultLightType) {
+              setDefaultLightType(targetFolder.defaultLightType);
+            }
+            setShowShareShelfModal(true);
+          }}
+          onOpenShelf={handleOpenShelf}
+          isLoading={isLoading}
         />
       ) : (
-        <div className="flex-1 flex items-stretch gap-6 relative min-h-0">
+        <div className="flex-1 flex items-stretch gap-[1.2vw] relative min-h-0">
           <ShelfDetailView
             view={view}
             setCurrentView={setCurrentView}
@@ -1116,15 +1324,19 @@ const MyShelf = ({
             handleSaveShelfName={handleSaveShelfName}
             selectedFolder={selectedFolder}
             activeShelfStyle={activeShelfStyle}
-            setActiveShelfStyle={setActiveShelfStyle}
+            setActiveShelfStyle={handleSetActiveShelfStyle}
             isShelfFullscreen={isShelfFullscreen}
             toggleShelfFullscreen={toggleShelfFullscreen}
             setShowShareShelfModal={setShowShareShelfModal}
             applyShelfStyle={applyShelfStyle}
+            hasUnsavedChanges={hasUnsavedChanges}
+            isSaving={isSaving}
             activeAssets={activeAssets}
             newTopOffset={newTopOffset}
             newSpacing={newSpacing}
-            isLoading={isLoading}
+            isLoading={isLoading || isShelfLoading}
+            shelfLoadingTitle={shelfLoadingTitle}
+            shelfLoadingSubtitle={shelfLoadingSubtitle}
             filteredBooks={filteredBooks}
             folders={folders}
             handleFlipbookSelect={handleFlipbookSelect}
@@ -1147,11 +1359,12 @@ const MyShelf = ({
             backendUrl={backendUrl}
             currentUserEmail={currentUserEmail}
             decors={decors}
-            setDecors={setDecors}
+            setDecors={handleSetDecors}
             showLightSwitch={showLightSwitch}
             lightOpacity={lightOpacity}
             selectedLightTheme={selectedLightTheme}
             selectedWallTheme={selectedWallTheme}
+            setSelectedWallTheme={handleSetSelectedWallTheme}
             shelfLogo={shelfLogo}
             setShowLogoModal={setShowLogoModal}
             logoOpacity={logoOpacity}
@@ -1171,21 +1384,21 @@ const MyShelf = ({
             setShowLogoModal={setShowLogoModal}
             handleRemoveLogo={handleRemoveLogo}
             logoFixType={logoFixType}
-            setLogoFixType={setLogoFixType}
+            setLogoFixType={handleSetLogoFixType}
             logoOpacity={logoOpacity}
-            setLogoOpacity={setLogoOpacity}
+            setLogoOpacity={handleSetLogoOpacity}
             selectedWallTheme={selectedWallTheme}
-            setSelectedWallTheme={setSelectedWallTheme}
+            setSelectedWallTheme={handleSetSelectedWallTheme}
             defaultLightType={defaultLightType}
-            setDefaultLightType={setDefaultLightType}
+            setDefaultLightType={handleSetDefaultLightType}
             showLightSwitch={showLightSwitch}
-            setShowLightSwitch={setShowLightSwitch}
+            setShowLightSwitch={handleSetShowLightSwitch}
             selectedLightTheme={selectedLightTheme}
-            setSelectedLightTheme={setSelectedLightTheme}
+            setSelectedLightTheme={handleSetSelectedLightTheme}
             lightOpacity={lightOpacity}
-            setLightOpacity={setLightOpacity}
+            setLightOpacity={handleSetLightOpacity}
             decors={decors}
-            setDecors={setDecors}
+            setDecors={handleSetDecors}
             activeShelfStyle={activeShelfStyle}
             activeAssets={activeAssets}
             booksData={booksData}
@@ -1198,6 +1411,7 @@ const MyShelf = ({
         isOpen={showShareShelfModal}
         onClose={() => setShowShareShelfModal(false)}
         selectedFolder={selectedFolder}
+        shelfId={folders.find(f => f.name === selectedFolder)?.shelfId}
         defaultLightType={defaultLightType}
         toast={toast}
       />
@@ -1214,11 +1428,14 @@ const MyShelf = ({
       {/* Add Shelf Modal */}
       <AddShelfModal
         isOpen={showAddShelfModal}
-        onClose={() => setShowAddShelfModal(false)}
+        onClose={() => {
+          if (!isCreatingShelf) setShowAddShelfModal(false);
+        }}
+        isCreating={isCreatingShelf}
         newShelfName={newShelfName}
         setNewShelfName={setNewShelfName}
         onAddShelf={async () => {
-          if (newShelfName.trim()) {
+          if (newShelfName.trim() && !isCreatingShelf) {
             const createdName = newShelfName.trim();
 
             // Check for duplicate shelf / folder name (case-insensitive)
@@ -1231,31 +1448,52 @@ const MyShelf = ({
               return;
             }
 
-            setFolders(prev => [{ name: createdName, books: [], shelf_design: 'customize4' }, ...prev]);
+            setIsCreatingShelf(true);
+            setShelfLoadingTitle('Loading Bookshelf...');
+            setIsShelfLoading(true);
+
+            const tempShelfId = 'sh_' + Math.random().toString(36).substring(2, 8) + Math.random().toString(36).substring(2, 8);
+            setFolders(prev => [{ name: createdName, shelfId: tempShelfId, books: [], shelf_design: 'customize4' }, ...prev]);
             setSelectedFolder(createdName);
             setActiveShelfStyle('customize4');
             setSelectedWallTheme(null);
             setCurrentView('shelf_detail');
 
+            // Close modal smoothly
+            setShowAddShelfModal(false);
+            setNewShelfName('');
+
             if (currentUserEmail) {
               try {
-                await axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
+                const designRes = await axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
                   emailId: currentUserEmail,
                   folderName: createdName,
-                  shelf_design: 'customize4'
+                  shelf_design: 'customize4',
+                  shelfId: tempShelfId
                 });
+                const finalId = designRes.data?.shelfId || tempShelfId;
+                setFolders(prev => prev.map(f => f.name === createdName ? { ...f, shelfId: finalId } : f));
                 await axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
                   emailId: currentUserEmail,
                   folderName: createdName,
-                  bookIds: []
+                  bookIds: [],
+                  shelfId: finalId
                 });
               } catch (e) {
                 console.error("Failed to persist new shelf", e);
               }
             }
 
-            setNewShelfName('');
-            setShowAddShelfModal(false);
+            setIsCreatingShelf(false);
+            toast?.success?.(`Shelf "${createdName}" created successfully!`);
+
+            if (loadingTimerRef.current) {
+              clearTimeout(loadingTimerRef.current);
+            }
+            loadingTimerRef.current = setTimeout(() => {
+              setIsShelfLoading(false);
+              loadingTimerRef.current = null;
+            }, 400);
           }
         }}
       />

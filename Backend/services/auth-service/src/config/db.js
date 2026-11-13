@@ -1,14 +1,12 @@
 const dns = require('dns');
 const path = require('path');
-
-let mongoose;
-try {
-  // Ensure connection binds to the shared root Mongoose instance used by shared/models/User
-  mongoose = require(path.resolve(__dirname, '../../../../node_modules/mongoose'));
-} catch (_) {
-  mongoose = require('mongoose');
-}
+const mongoose = require('mongoose');
 global.mongoose = mongoose;
+
+let rootMongoose = null;
+try {
+  rootMongoose = require(path.resolve(__dirname, '../../../../node_modules/mongoose'));
+} catch (_) {}
 
 // Configure reliable DNS servers for Atlas SRV resolution
 try {
@@ -36,6 +34,19 @@ const connectDB = async () => {
     });
     const dbTarget = conn.connection.name || conn.connection.host || 'connected';
     console.log(`[Auth Service] MongoDB Connected: ${dbTarget}`);
+
+    // If root Mongoose instance exists and differs from local instance, connect it too
+    if (rootMongoose && rootMongoose !== mongoose && rootMongoose.connection.readyState !== 1) {
+      try {
+        await rootMongoose.connect(mongoURI, {
+          serverSelectionTimeoutMS: 10000,
+          socketTimeoutMS: 45000,
+        });
+      } catch (rootErr) {
+        console.warn('[Auth Service] Root Mongoose connection warning:', rootErr.message);
+      }
+    }
+
     return conn;
   } catch (error) {
     console.error(`[Auth Service] Database connection error: ${error.message}`);

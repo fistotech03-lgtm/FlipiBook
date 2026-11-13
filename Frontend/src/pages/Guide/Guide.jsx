@@ -400,18 +400,18 @@ export default function Guide() {
         <div className="flex items-start justify-between pb-[1.4vh] px-[1.5vw]">
           {/* Title on the left */}
           <div className="flex flex-col flex-1 pr-[1.5vw]">
-            <h1 className="text-[1.5vw] font-semibold text-black tracking-tight leading-snug">
+            <h1 className="text-[1.5vw] font-semibold text-[#3F00FF] tracking-tight leading-snug">
               {activeNav === 'Get Started' ? 'Get Started Guide' : activeNav === 'Profile & Account' ? 'Profile & Account Guide' : `${activeNav} Guide`}
             </h1>
             {currentNavItem?.about && (
-              <p className="text-[0.8vw] font-semibold text-gray-400 mt-[0.6vh]">
+              <p className="text-[0.85vw] font-semibold text-gray-700 mt-[0.6vh]">
                 {currentNavItem.about}
               </p>
             )}
           </div>
 
           {/* Right inline controls: Search, Quick Navigation, FAQs */}
-          <div className="flex items-center gap-[0.8vw] shrink-0 mt-[0.3vh]">
+          <div className="flex items-center gap-[0.8vw]  shrink-0 mt-[0.3vh]">
             {/* Search Input Container */}
             <div ref={searchContainerRef} className="relative w-[22vw] min-w-[13rem]">
               <Search

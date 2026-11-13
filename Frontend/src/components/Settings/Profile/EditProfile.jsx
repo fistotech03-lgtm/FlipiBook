@@ -537,14 +537,18 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
         socials: sanitizedSocials
       };
 
-      const email = updatedEditedUser.email || updatedEditedUser.emailId;
+      const email = updatedEditedUser.email || updatedEditedUser.emailId || user?.email || user?.emailId;
       let savedProfile = null;
 
       try {
-        const res = await axios.post(`${backendUrl}/api/profile/save`, {
-          emailId: email,
-          ...updatedEditedUser
-        });
+        const res = await axios.post(
+          `${backendUrl}/api/profile/save`,
+          {
+            emailId: email,
+            ...updatedEditedUser
+          },
+          { withCredentials: true }
+        );
         if (res.data?.success && res.data?.profile) {
           savedProfile = res.data.profile;
         }

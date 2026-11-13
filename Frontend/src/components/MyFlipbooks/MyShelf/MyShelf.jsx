@@ -317,6 +317,11 @@ const MyShelf = ({
           aBg = aBg || '#4c5add';
           aLoc = aLoc || 'Coimbatore';
 
+          const rawOrientation = b.orientation || b.Customized_Settings?.FlipbookInfo?.orientation || b.rawBook?.orientation;
+          const rawW = Number(b.width || b.Customized_Settings?.FlipbookInfo?.width || b.rawBook?.width || 0);
+          const rawH = Number(b.height || b.Customized_Settings?.FlipbookInfo?.height || b.rawBook?.height || 0);
+          const isLandscape = rawOrientation === 'landscape' || (rawW > 0 && rawH > 0 && rawW > rawH);
+
           return {
             rawBook: b,
             v_id: b.v_id,
@@ -332,7 +337,11 @@ const MyShelf = ({
             authorName: aName,
             authorPicture: aPic,
             authorBgColor: aBg,
-            location: aLoc
+            location: aLoc,
+            orientation: rawOrientation,
+            width: rawW,
+            height: rawH,
+            isLandscape
           };
         });
 
@@ -400,7 +409,6 @@ const MyShelf = ({
           const backendFolder = actualMyShelf?.folders?.find(f => (f.folderName === 'My_Flipbooks' ? 'My Flipbooks' : f.folderName) === folderName);
           return {
             name: folderName,
-            books: folderMap[folderName],
             shelf_design: backendFolder?.shelf_design || saved?.shelf_design || ((rawDesign === 1 || !rawDesign || rawDesign === 4) ? 'customize4' : rawDesign),
             defaultLightType: backendFolder?.defaultLightType || saved?.defaultLightType || 'Turn on',
             lights: backendFolder?.lights !== undefined ? backendFolder.lights : (saved?.lights !== undefined ? saved.lights : true),
@@ -410,13 +418,17 @@ const MyShelf = ({
             lightOpacity: backendFolder?.lightOpacity !== undefined ? backendFolder.lightOpacity : (saved?.lightOpacity !== undefined ? saved.lightOpacity : 1),
             decors: backendFolder?.decors || saved?.decors || {},
             logo: backendFolder?.logo || saved?.logo || '',
-            ...saved
+            ...saved,
+            books: folderMap[folderName] || []
           };
         });
 
         setFolders(newFolders);
-        if (newFolders.length > 0 && !selectedFolder) {
-          setSelectedFolder(newFolders[0].name);
+        if (newFolders.length > 0) {
+          const currentExists = selectedFolder && newFolders.some(f => f.name === selectedFolder);
+          if (!currentExists) {
+            setSelectedFolder(newFolders[0].name);
+          }
         }
 
         if (actualMyShelf && actualMyShelf.folders) {
@@ -503,6 +515,11 @@ const MyShelf = ({
         let aBg = b.authorBgColor || profileData?.avatarBgColor || '#4c5add';
         let aLoc = b.city || b.location || profileData?.city || profileData?.state || 'Coimbatore';
 
+        const rawOrientation = b.orientation || b.Customized_Settings?.FlipbookInfo?.orientation || b.rawBook?.orientation;
+        const rawW = Number(b.width || b.Customized_Settings?.FlipbookInfo?.width || b.rawBook?.width || 0);
+        const rawH = Number(b.height || b.Customized_Settings?.FlipbookInfo?.height || b.rawBook?.height || 0);
+        const isLandscape = rawOrientation === 'landscape' || (rawW > 0 && rawH > 0 && rawW > rawH);
+
         return {
           rawBook: b,
           v_id: b.v_id,
@@ -518,7 +535,11 @@ const MyShelf = ({
           authorName: aName,
           authorPicture: aPic,
           authorBgColor: aBg,
-          location: aLoc
+          location: aLoc,
+          orientation: rawOrientation,
+          width: rawW,
+          height: rawH,
+          isLandscape
         };
       });
 
@@ -550,6 +571,31 @@ const MyShelf = ({
       console.error("Failed to add books to shelf:", err);
     } finally {
       setIsAddingBooks(false);
+    }
+  };
+
+  const handleDeleteShelf = async (folderNameToDelete) => {
+    if (!folderNameToDelete) return;
+
+    // Optimistically remove shelf from state
+    setFolders(prev => prev.filter(f => f.name !== folderNameToDelete));
+
+    // Clear local storage key for that shelf
+    try {
+      localStorage.removeItem(getShelfStorageKey(folderNameToDelete));
+    } catch (_) {}
+
+    if (currentUserEmail) {
+      try {
+        await axios.post(`${backendUrl}/api/profile/delete-shelf`, {
+          emailId: currentUserEmail,
+          folderName: folderNameToDelete
+        });
+        toast?.success?.(`Shelf "${folderNameToDelete}" removed successfully!`);
+      } catch (err) {
+        console.error("Failed to delete shelf:", err);
+        toast?.error?.("Failed to delete shelf from database.");
+      }
     }
   };
 
@@ -608,6 +654,16 @@ const MyShelf = ({
       return;
     }
 
+    // Check for duplicate shelf / folder name when renaming
+    const isDuplicate = folders.some(
+      f => f.name !== selectedFolder && (f.name || '').toLowerCase() === trimmed.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      toast?.error?.(`A shelf named "${trimmed}" already exists!`);
+      return;
+    }
+
     const oldName = selectedFolder;
     setSelectedFolder(trimmed);
     setIsEditingShelfName(false);
@@ -653,11 +709,14 @@ const MyShelf = ({
       return;
     }
 
-    const isLightOn = defaultLightType === 'Turn on';
+    // Respect the user's current light switch toggle state
+    const isLightOn = decors?.lights !== undefined ? decors.lights : (defaultLightType === 'Turn on');
+    const effectiveLightType = isLightOn ? 'Turn on' : 'Turn off';
+    setDefaultLightType(effectiveLightType);
 
     const settingsToSave = {
       shelf_design: targetStyle,
-      defaultLightType: defaultLightType,
+      defaultLightType: effectiveLightType,
       lights: isLightOn,
       selectedWallTheme: selectedWallTheme,
       selectedLightTheme: selectedLightTheme,
@@ -670,27 +729,49 @@ const MyShelf = ({
     };
     saveShelfSettings(selectedFolder, settingsToSave);
 
-    setFolders(prev => prev.map(f => f.name === selectedFolder ? { ...f, ...settingsToSave } : f));
+    const currentFolderData = folders.find(f => f.name === selectedFolder);
+    const existingBooks = currentFolderData?.books || [];
+
+    setFolders(prev => prev.map(f => {
+      if (f.name === selectedFolder) {
+        return {
+          ...f,
+          ...settingsToSave,
+          books: f.books && f.books.length > 0 ? f.books : existingBooks
+        };
+      }
+      return f;
+    }));
     setDecors(prev => ({ ...prev, lights: isLightOn }));
 
     if (currentUserEmail) {
       try {
-        await axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
-          emailId: currentUserEmail,
-          folderName: selectedFolder,
-          shelf_design: targetStyle,
-          defaultLightType: defaultLightType,
-          lights: isLightOn,
-          selectedWallTheme: selectedWallTheme,
-          selectedLightTheme: selectedLightTheme,
-          showLightSwitch: showLightSwitch,
-          lightOpacity: lightOpacity,
-          decors: {
-            ...decors,
-            lights: isLightOn
-          },
-          logo: shelfLogo
-        }).catch(err => console.warn("Backend update-shelf-design notice:", err));
+        const bookIds = existingBooks.map(b => b.v_id).filter(Boolean);
+        await Promise.all([
+          axios.post(`${backendUrl}/api/profile/update-shelf-design`, {
+            emailId: currentUserEmail,
+            folderName: selectedFolder,
+            shelf_design: targetStyle,
+            defaultLightType: effectiveLightType,
+            lights: isLightOn,
+            selectedWallTheme: selectedWallTheme,
+            selectedLightTheme: selectedLightTheme,
+            showLightSwitch: showLightSwitch,
+            lightOpacity: lightOpacity,
+            decors: {
+              ...decors,
+              lights: isLightOn
+            },
+            logo: shelfLogo
+          }).catch(err => console.warn("Backend update-shelf-design notice:", err)),
+          bookIds.length > 0
+            ? axios.post(`${backendUrl}/api/profile/update-shelf-order`, {
+                emailId: currentUserEmail,
+                folderName: selectedFolder,
+                bookIds
+              }).catch(() => {})
+            : Promise.resolve()
+        ]);
       } catch (err) {
         console.error("Failed to update shelf design:", err);
       }
@@ -1021,6 +1102,7 @@ const MyShelf = ({
           setSelectedWallTheme={setSelectedWallTheme}
           setCurrentView={setCurrentView}
           setShowAddShelfModal={setShowAddShelfModal}
+          onDeleteShelf={handleDeleteShelf}
         />
       ) : (
         <div className="flex-1 flex items-stretch gap-6 relative min-h-0">
@@ -1138,6 +1220,17 @@ const MyShelf = ({
         onAddShelf={async () => {
           if (newShelfName.trim()) {
             const createdName = newShelfName.trim();
+
+            // Check for duplicate shelf / folder name (case-insensitive)
+            const isDuplicate = folders.some(
+              f => (f.name || '').toLowerCase() === createdName.toLowerCase()
+            );
+
+            if (isDuplicate) {
+              toast?.error?.(`A shelf named "${createdName}" already exists!`);
+              return;
+            }
+
             setFolders(prev => [{ name: createdName, books: [], shelf_design: 'customize4' }, ...prev]);
             setSelectedFolder(createdName);
             setActiveShelfStyle('customize4');

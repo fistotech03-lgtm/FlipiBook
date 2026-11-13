@@ -843,12 +843,19 @@ const Profile = () => {
                     )}
 
                     {/* Profile Type */}
-                    <div>
-                      <p className="text-[0.70vw] text-gray-400 font-normal leading-none">Profile Type</p>
-                      <p className="text-[0.78vw] text-gray-800 font-medium leading-snug mt-[0.15vw]">
-                        {displayUser.profileType || 'Individual'}
-                      </p>
-                    </div>
+                    {displayUser.profileType ? (
+                      <div>
+                        <p className="text-[0.82vw] text-gray-400 font-normal leading-none">Profile Type</p>
+                        <p className="text-[0.82vw] text-gray-700 font-normal leading-snug mt-[0.35vw]">
+                          {displayUser.profileType}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-[0.35vw]">
+                        <p className="text-[0.82vw] text-gray-400 font-normal leading-none">Profile Type</p>
+                        <span className="text-[0.74vw] text-gray-400 font-normal leading-none">-</span>
+                      </div>
+                    )}
 
                     {/* Conditional Fields based on Profile Type */}
                     {(!displayUser.profileType || displayUser.profileType === 'Individual') ? (

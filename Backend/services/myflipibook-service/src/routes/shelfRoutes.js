@@ -44,6 +44,19 @@ const getOrCreateShelf = async (emailId) => {
 
   if (!Array.isArray(shelf.folders)) {
     shelf.folders = [];
+  } else {
+    let modified = false;
+    const crypto = require('crypto');
+    shelf.folders.forEach((f) => {
+      if (!f.shelfId) {
+        f.shelfId = 'sh_' + crypto.randomBytes(6).toString('hex');
+        modified = true;
+      }
+    });
+    if (modified) {
+      shelf.markModified('folders');
+      shelf.save().catch(e => console.error("Error backfilling shelfId:", e));
+    }
   }
   return shelf;
 };
@@ -294,29 +307,46 @@ router.post('/update-shelf-order', async (req, res) => {
       req.user?.email ||
       ''
     ).trim().toLowerCase();
-    const { folderName, bookIds, oldFolderName } = req.body;
-    if (!emailId || !folderName) {
+    const { folderName, bookIds, oldFolderName, shelfId } = req.body;
+    if (!emailId || (!folderName && !shelfId)) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
     const shelf = await getOrCreateShelf(emailId);
+    const targetShelfId = (shelfId || '').trim();
 
     // Handle renaming shelf folder if oldFolderName is passed
-    if (oldFolderName && oldFolderName !== folderName) {
-      const existingFolder = shelf.folders.find((f) => f.folderName === oldFolderName);
+    if (oldFolderName && folderName && oldFolderName !== folderName) {
+      const existingFolder = shelf.folders.find((f) => 
+        (targetShelfId && f.shelfId === targetShelfId) ||
+        f.folderName === oldFolderName ||
+        (f.folderName && f.folderName.trim().toLowerCase() === oldFolderName.trim().toLowerCase())
+      );
       if (existingFolder) {
         existingFolder.folderName = folderName;
       }
     }
 
-    let folder = shelf.folders.find((f) => f.folderName === folderName);
+    let folder = shelf.folders.find((f) => 
+      (targetShelfId && f.shelfId === targetShelfId) ||
+      f.folderName === folderName ||
+      (f.folderName && f.folderName.trim().toLowerCase() === (folderName || '').trim().toLowerCase()) ||
+      (folderName === 'My Flipbooks' && (f.folderName === 'My_Flipbooks' || f.folderName === 'My Flipbooks')) ||
+      (folderName === 'My_Flipbooks' && (f.folderName === 'My_Flipbooks' || f.folderName === 'My Flipbooks'))
+    );
+
     if (!folder) {
+      const crypto = require('crypto');
+      const newShelfId = targetShelfId || ('sh_' + crypto.randomBytes(6).toString('hex'));
       shelf.folders.push({
-        folderName,
+        shelfId: newShelfId,
+        folderName: folderName || 'My Bookshelf',
         shelf_design: 'customize4',
         books: []
       });
-      folder = shelf.folders.find((f) => f.folderName === folderName);
+      folder = shelf.folders.find((f) => f.shelfId === newShelfId || f.folderName === folderName);
+    } else if (targetShelfId && !folder.shelfId) {
+      folder.shelfId = targetShelfId;
     }
 
     if (Array.isArray(bookIds)) {
@@ -331,7 +361,7 @@ router.post('/update-shelf-order', async (req, res) => {
     shelf.markModified('folders');
     await shelf.save();
 
-    return res.json({ success: true, message: 'Shelf order updated successfully' });
+    return res.json({ success: true, message: 'Shelf order updated successfully', shelfId: folder?.shelfId });
   } catch (error) {
     console.error('Error in update-shelf-order:', error);
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
@@ -350,6 +380,7 @@ router.post('/update-shelf-design', async (req, res) => {
     ).trim().toLowerCase();
     const {
       folderName,
+      shelfId,
       shelf_design,
       defaultLightType,
       lights,
@@ -358,31 +389,49 @@ router.post('/update-shelf-design', async (req, res) => {
       showLightSwitch,
       lightOpacity,
       decors,
-      logo
+      logo,
+      logoFixType,
+      logoOpacity
     } = req.body;
 
-    if (!emailId || !folderName) {
+    if (!emailId || (!folderName && !shelfId)) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
     const shelf = await getOrCreateShelf(emailId);
+    const targetShelfId = (shelfId || '').trim();
 
-    let folder = shelf.folders.find((f) => f.folderName === folderName);
+    let folder = shelf.folders.find((f) => 
+      (targetShelfId && f.shelfId === targetShelfId) ||
+      f.folderName === folderName ||
+      (f.folderName && f.folderName.trim().toLowerCase() === (folderName || '').trim().toLowerCase()) ||
+      (folderName === 'My Flipbooks' && (f.folderName === 'My_Flipbooks' || f.folderName === 'My Flipbooks')) ||
+      (folderName === 'My_Flipbooks' && (f.folderName === 'My_Flipbooks' || f.folderName === 'My Flipbooks'))
+    );
+
     if (!folder) {
+      const crypto = require('crypto');
+      const newShelfId = targetShelfId || ('sh_' + crypto.randomBytes(6).toString('hex'));
       shelf.folders.push({
-        folderName,
+        shelfId: newShelfId,
+        folderName: folderName || 'My Bookshelf',
         shelf_design: shelf_design || 'customize4',
         defaultLightType: defaultLightType || 'Turn on',
         lights: lights !== undefined ? lights : true,
         selectedWallTheme: selectedWallTheme || null,
         selectedLightTheme: selectedLightTheme || null,
         showLightSwitch: showLightSwitch !== undefined ? showLightSwitch : true,
-        lightOpacity: lightOpacity !== undefined ? lightOpacity : 1,
+        lightOpacity: lightOpacity !== undefined ? lightOpacity : 100,
         decors: decors || {},
-        logo: logo || '',
+        logo: logo || null,
+        logoFixType: logoFixType || 'Fit',
+        logoOpacity: logoOpacity !== undefined ? logoOpacity : 80,
         books: []
       });
+      folder = shelf.folders.find((f) => f.shelfId === newShelfId || f.folderName === folderName);
     } else {
+      if (targetShelfId && !folder.shelfId) folder.shelfId = targetShelfId;
+      if (folderName && folder.folderName !== folderName) folder.folderName = folderName;
       if (shelf_design !== undefined) folder.shelf_design = shelf_design;
       if (defaultLightType !== undefined) folder.defaultLightType = defaultLightType;
       if (lights !== undefined) folder.lights = lights;
@@ -392,15 +441,114 @@ router.post('/update-shelf-design', async (req, res) => {
       if (lightOpacity !== undefined) folder.lightOpacity = lightOpacity;
       if (decors !== undefined) folder.decors = decors;
       if (logo !== undefined) folder.logo = logo;
+      if (logoFixType !== undefined) folder.logoFixType = logoFixType;
+      if (logoOpacity !== undefined) folder.logoOpacity = logoOpacity;
     }
 
     shelf.updatedAt = new Date();
     shelf.markModified('folders');
     await shelf.save();
 
-    return res.json({ success: true, message: 'Shelf design updated successfully' });
+    return res.json({ success: true, message: 'Shelf design updated successfully', shelfId: folder?.shelfId });
   } catch (error) {
     console.error('Error in update-shelf-design:', error);
+    return res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+});
+
+// GET /api/shelf/public/:shelfId or /api/profile/public-shelf/:shelfId
+router.get(['/public/:shelfId', '/public-shelf/:shelfId'], async (req, res) => {
+  try {
+    const { shelfId } = req.params;
+    if (!shelfId) {
+      return res.status(400).json({ success: false, message: 'Shelf ID is required' });
+    }
+
+    // Set aggressive anti-cache headers so reloading always fetches fresh updates
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    // Find the shelf document that contains this shelfId
+    const shelfDoc = await ShelfCustomizations.findOne({
+      'folders.shelfId': shelfId
+    }).lean();
+
+    if (!shelfDoc || !Array.isArray(shelfDoc.folders)) {
+      return res.status(404).json({ success: false, message: 'Shelf not found' });
+    }
+
+    const folder = shelfDoc.folders.find((f) => f.shelfId === shelfId);
+    if (!folder) {
+      return res.status(404).json({ success: false, message: 'Shelf not found' });
+    }
+
+    // Extract book IDs from the folder
+    const bookIds = (folder.books || [])
+      .map((b) => (typeof b === 'string' ? b : b.v_id))
+      .filter(Boolean);
+
+    // Fetch flipbooks
+    const allBooks = await Flipbook.find({
+      v_id: { $in: bookIds },
+      trash: { $ne: true }
+    }).lean();
+
+    // Fetch creator profile
+    const creatorEmail = (shelfDoc.emailId || '').toLowerCase();
+    const creatorProfile = await Profile.findOne({ emailId: creatorEmail }).lean();
+
+    const authorName = creatorProfile?.name || (creatorEmail ? creatorEmail.split('@')[0] : 'Creator');
+    const city = creatorProfile?.city || creatorProfile?.state || (creatorProfile?.country && creatorProfile?.country !== 'INDIA' ? creatorProfile?.country : '') || 'Coimbatore';
+    const authorPicture = creatorProfile?.picture || null;
+    const authorBgColor = creatorProfile?.avatarBgColor || '#E8D4C8';
+
+    // Format books
+    const booksMap = new Map();
+    allBooks.forEach((book) => {
+      const pageCount = Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : 0);
+      booksMap.set(book.v_id, {
+        ...book,
+        isAddedToShelf: true,
+        authorName,
+        city,
+        authorPicture,
+        authorBgColor,
+        pages: pageCount
+      });
+    });
+
+    // Maintain the custom shelf ordering
+    const orderedBooks = bookIds.map((id) => booksMap.get(id)).filter(Boolean);
+
+    return res.json({
+      success: true,
+      shelf: {
+        shelfId: folder.shelfId,
+        folderName: folder.folderName,
+        shelf_design: folder.shelf_design,
+        defaultLightType: folder.defaultLightType,
+        lights: folder.lights,
+        selectedWallTheme: folder.selectedWallTheme,
+        selectedLightTheme: folder.selectedLightTheme,
+        showLightSwitch: folder.showLightSwitch,
+        lightOpacity: folder.lightOpacity,
+        decors: folder.decors,
+        logo: folder.logo,
+        logoFixType: folder.logoFixType || 'Fit',
+        logoOpacity: folder.logoOpacity !== undefined ? folder.logoOpacity : 80,
+        books: orderedBooks
+      },
+      creator: {
+        name: authorName,
+        email: creatorEmail,
+        city,
+        picture: authorPicture,
+        avatarBgColor: authorBgColor
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching public shelf:', error);
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 });

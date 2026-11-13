@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, memo } from 'react';
 import axios from 'axios';
 import { BookOpen } from 'lucide-react';
 import { flipbookApi } from '../../api/flipbookApi';
-import { resolveUploadsPath } from '../../utils/assetUtils';
+import { resolveUploadsPath, getAssetBaseUrl } from '../../utils/assetUtils';
 import { sanitizeSvgXml } from '../../utils/editorUtils';
 
 // Global font cache across all preview cards to prevent duplicate Google Fonts requests
@@ -25,6 +25,7 @@ function LazyPreviewComponent({
         }
         return null;
     });
+    const [fetchedBaseUrl, setFetchedBaseUrl] = useState('');
     const [loaded, setLoaded] = useState(Boolean(firstPageContent));
     const [fetching, setFetching] = useState(false);
 
@@ -52,6 +53,16 @@ function LazyPreviewComponent({
                 // 1. Primary: fetch preview HTML/SVG from flipbookApi
                 const res = await flipbookApi.getPreview(v_id, emailId, abortController.signal);
                 if (!isMounted) return;
+
+                if (res.data?.book) {
+                    const b = res.data.book;
+                    const uFolder = b.userID || b.userFolder || b.userId || emailId?.replace(/[@.]/g, '_');
+                    const fName = b.folderName || 'default';
+                    const bName = b.realName || b.flipbookName || b.title || title;
+                    if (uFolder && bName) {
+                        setFetchedBaseUrl(getAssetBaseUrl(uFolder, fName, bName));
+                    }
+                }
 
                 if (res.data?.html && typeof res.data.html === 'string' && res.data.html.trim().length > 0) {
                     const fontsToLoad = new Set();
@@ -158,15 +169,24 @@ function LazyPreviewComponent({
             {/* Actual preview — rendered on top once ready */}
             {html ? (() => {
                 let processedContent = sanitizeSvgXml(html.content || '');
-                const cleanBaseUrl = (iframeBaseUrl || '').trim();
+                const cleanBaseUrl = (iframeBaseUrl || fetchedBaseUrl || '').trim();
                 let effectiveBaseHref = cleanBaseUrl;
                 if (cleanBaseUrl) {
                     const bookBaseUrl = cleanBaseUrl.endsWith('/') ? cleanBaseUrl : `${cleanBaseUrl}/`;
                     effectiveBaseHref = `${bookBaseUrl}pages/`;
                     const assetsBaseUrl = `${bookBaseUrl}assets/`;
-                    processedContent = processedContent
-                        .replace(/(?:href|xlink:href)=["'](?:\.\.\/|\.\/)?assets\/([^"']+)["']/gi, `href="${assetsBaseUrl}$1" xlink:href="${assetsBaseUrl}$1"`)
-                        .replace(/src=["'](?:\.\.\/|\.\/)?assets\/([^"']+)["']/gi, `src="${assetsBaseUrl}$1"`);
+                    processedContent = processedContent.replace(
+                        /(\b(?:href|xlink:href|src)=["'])(?:\.\.\/|\.\/)*assets\/([^"']+)["']/gi,
+                        (match, prefix, path) => `${prefix}${assetsBaseUrl}${path}"`
+                    );
+                }
+
+                const backend = (backendUrl || (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_BACKEND_URL : '') || '').trim().replace(/\/+$/, '');
+                if (backend) {
+                    processedContent = processedContent.replace(
+                        /(\b(?:href|xlink:href|src)=["'])\/(storage|uploads)\/([^"']+)["']/gi,
+                        `$1${backend}/$2/$3"`
+                    );
                 }
 
                 if (processedContent.includes('preserveAspectRatio')) {

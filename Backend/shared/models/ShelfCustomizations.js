@@ -1,4 +1,7 @@
 const mongoose = global.mongoose || require('mongoose');
+const crypto = require('crypto');
+
+const generateShelfId = () => 'sh_' + crypto.randomBytes(6).toString('hex');
 
 const shelfBookSchema = new mongoose.Schema(
   {
@@ -20,6 +23,11 @@ const shelfBookSchema = new mongoose.Schema(
 
 const shelfFolderSchema = new mongoose.Schema(
   {
+    shelfId: {
+      type: String,
+      default: generateShelfId,
+      index: true
+    },
     folderName: {
       type: String,
       default: ''
@@ -50,19 +58,27 @@ const shelfFolderSchema = new mongoose.Schema(
     },
     lightOpacity: {
       type: Number,
-      default: 1
+      default: 100
     },
     decors: {
       type: mongoose.Schema.Types.Mixed,
       default: {}
     },
     logo: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null
+    },
+    logoFixType: {
       type: String,
-      default: ''
+      default: 'Fit'
+    },
+    logoOpacity: {
+      type: Number,
+      default: 80
     },
     books: [shelfBookSchema]
   },
-  { _id: false }
+  { _id: false, strict: false }
 );
 
 const shelfCustomizationsSchema = new mongoose.Schema(

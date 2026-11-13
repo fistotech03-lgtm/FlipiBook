@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
+import { getAssetBaseUrl } from '../../../../utils/assetUtils';
+import ShelfBookSlot from '../Shelves/ShelfBookSlot';
 import BlueShelf from '../Shelves/BlueShelf';
 import BlueRopeShelf from '../Shelves/BlueRopeShelf';
 import WindowShelf from '../Shelves/WindowShelf';
@@ -21,6 +23,65 @@ import {
   goldenShelfImg,
   listFrame,
 } from '../constants';
+import CustomScrollbar from '../../../CustomScrollbar';
+import ShelfLoadingOverlay from './ShelfLoadingOverlay';
+
+const ShelfDetailBookItem = ({
+  book,
+  bookIndex,
+  i,
+  bIdx,
+  activeShelfStyle,
+  activeAssets,
+  draggedBookIndex,
+  openMenuId,
+  setOpenMenuId,
+  hoveredInfoId,
+  setHoveredInfoId,
+  handleRemoveBook,
+  handleDragStart,
+  handleDragOver,
+  handleDrop,
+  handleDragEnd,
+  backendUrl,
+  currentUserEmail,
+  LazyPreviewComponent,
+  isFs = false,
+}) => {
+  const customTransform =
+    activeShelfStyle === 'customize2'
+      ? (i === activeAssets?.rowCount - 1 ? 'translate-y-4' : 'translate-y-0')
+      : activeShelfStyle === 'customize4'
+      ? 'translate-y-0'
+      : 'translate-y-2';
+
+  return (
+    <ShelfBookSlot
+      book={book}
+      bookIndex={bookIndex}
+      i={i}
+      bIdx={bIdx}
+      className={customTransform}
+      shelfKey={isFs ? `fs-shelf-${i}` : `shelf-${i}`}
+      openMenuId={openMenuId}
+      setOpenMenuId={setOpenMenuId}
+      hoveredInfoId={hoveredInfoId}
+      setHoveredInfoId={setHoveredInfoId}
+      handleDragStart={handleDragStart}
+      handleDragOver={handleDragOver}
+      handleDrop={handleDrop}
+      handleDragEnd={handleDragEnd}
+      draggedBookIndex={draggedBookIndex}
+      handleRemoveBook={handleRemoveBook}
+      backendUrl={backendUrl}
+      currentUserEmail={currentUserEmail}
+      LazyPreviewComponent={LazyPreviewComponent}
+      landscapeWidth="22%"
+      squareWidth="18%"
+      portraitWidth={activeAssets?.bookWidth || '12%'}
+    />
+  );
+};
 
 const ShelfDetailView = ({
   view,
@@ -37,10 +98,14 @@ const ShelfDetailView = ({
   toggleShelfFullscreen,
   setShowShareShelfModal,
   applyShelfStyle,
+  hasUnsavedChanges = false,
+  isSaving = false,
   activeAssets,
   newTopOffset,
   newSpacing,
   isLoading,
+  shelfLoadingTitle,
+  shelfLoadingSubtitle,
   filteredBooks = [],
   folders = [],
   handleFlipbookSelect,
@@ -68,6 +133,7 @@ const ShelfDetailView = ({
   lightOpacity,
   selectedLightTheme,
   selectedWallTheme,
+  setSelectedWallTheme,
   shelfLogo,
   setShowLogoModal,
   logoOpacity,
@@ -83,14 +149,14 @@ const ShelfDetailView = ({
     return (
       <div className="flex-1 flex flex-col justify-between min-w-0 h-full">
         {/* Shelf View Header scoped to Shelf width */}
-        <div className="flex flex-col mb-3 w-full -mt-1">
+        <div className="flex flex-col mb-[0.7vw] w-full -mt-[0.2vw]">
           {/* Back to My Shelf Link */}
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-[0.4vw] mb-[0.3vw]">
             <button
               onClick={() => setCurrentView('overview')}
-              className="flex items-center gap-1 text-[#FF5733] hover:text-[#E04D2D] text-xs font-semibold transition-colors"
+              className="flex items-center gap-[0.2vw] text-[#FF5733] hover:text-[#E04D2D] text-[0.8vw] font-semibold transition-colors cursor-pointer"
             >
-              <Icon icon="lucide:chevron-left" className="w-4 h-4" />
+              <Icon icon="lucide:chevron-left" className="w-[0.9vw] h-[0.9vw]" />
               <span>My Shelf</span>
             </button>
           </div>
@@ -98,9 +164,9 @@ const ShelfDetailView = ({
           {/* Title Row aligned straight with Action Buttons at the shelf right edge */}
           <div className="w-full">
             <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-[0.5vw]">
                 {isEditingShelfName ? (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-[0.35vw]">
                     <input
                       type="text"
                       value={editingShelfNameValue}
@@ -110,26 +176,26 @@ const ShelfDetailView = ({
                         if (e.key === 'Escape') setIsEditingShelfName(false);
                       }}
                       autoFocus
-                      className="text-xl font-bold text-gray-900 border-b-2 border-[#FF5733] bg-transparent outline-none px-1 py-0.5"
+                      className="text-[1.1vw] font-bold text-gray-900 border-b-2 border-[#FF5733] bg-transparent outline-none px-[0.2vw] py-[0.1vw]"
                     />
                     <button
                       onClick={handleSaveShelfName}
-                      className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded"
+                      className="w-[1.7vw] h-[1.7vw] flex items-center justify-center text-green-600 hover:text-green-700 hover:bg-green-50 rounded-[0.4vw] transition-colors cursor-pointer"
                       title="Save name"
                     >
-                      <Icon icon="lucide:check" className="w-4 h-4" />
+                      <Icon icon="lucide:check" className="w-[0.9vw] h-[0.9vw]" />
                     </button>
                     <button
                       onClick={() => setIsEditingShelfName(false)}
-                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                      className="w-[1.7vw] h-[1.7vw] flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[0.4vw] transition-colors cursor-pointer"
                       title="Cancel"
                     >
-                      <Icon icon="lucide:x" className="w-4 h-4" />
+                      <Icon icon="lucide:x" className="w-[0.9vw] h-[0.9vw]" />
                     </button>
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-xl font-bold text-gray-900 tracking-tight leading-none">
+                    <h2 className="text-[1.1vw] font-bold text-gray-900 tracking-tight leading-none">
                       {selectedFolder || (activeShelfStyle === 'customize_golden' ? 'Golden Shelf' : activeShelfStyle === 'customize_orange' ? 'Orange Shelf' : activeShelfStyle === 'customize_windowshelf' ? 'Window Shelf' : activeShelfStyle === 'customize_bluerope' ? 'Blue Rope Shelf' : activeShelfStyle === 'customize_plantlight' ? 'Plant-Light Shelf' : activeShelfStyle === 'customize_light' ? 'Light Shelf' : activeShelfStyle === 'customize_greenlight' ? 'Green-Light Shelf' : activeShelfStyle === 'customize_green' ? 'Green Shelf' : 'My Shelf')}
                     </h2>
                     <button
@@ -137,38 +203,49 @@ const ShelfDetailView = ({
                         setEditingShelfNameValue(selectedFolder || '');
                         setIsEditingShelfName(true);
                       }}
-                      className="text-gray-400 hover:text-[#FF5733] transition-colors p-0.5 cursor-pointer"
+                      className="text-gray-400 hover:text-[#FF5733] transition-colors p-[0.2vw] rounded-[0.4vw] hover:bg-orange-50/50 cursor-pointer"
                       title="Rename shelf"
                     >
-                      <Icon icon="lucide:edit-3" className="w-3.5 h-3.5" />
+                      <Icon icon="lucide:edit-3" className="w-[0.85vw] h-[0.85vw]" />
                     </button>
                   </>
                 )}
               </div>
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-[0.5vw]">
                 <button
                   onClick={toggleShelfFullscreen}
-                  className="flex items-center justify-center p-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
+                  className="flex items-center justify-center w-[2vw] h-[2vw] border border-gray-300 rounded-[0.4vw] text-gray-700 bg-white hover:bg-gray-50 shadow-2xs hover:border-gray-400 active:scale-95 transition-all cursor-pointer"
                   title={isShelfFullscreen ? "Exit Fullscreen" : "Fullscreen Shelf"}
                 >
-                  <Icon icon={isShelfFullscreen ? "lucide:minimize" : "lucide:maximize"} className="w-3.5 h-3.5 text-gray-600" />
+                  <Icon icon={isShelfFullscreen ? "lucide:minimize" : "lucide:maximize"} className="w-[0.85vw] h-[0.85vw] text-gray-600" />
                 </button>
 
                 <button
                   onClick={() => setShowShareShelfModal(true)}
-                  className="flex items-center gap-2 px-3.5 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
+                  className="flex items-center gap-[0.4vw] h-[2vw] px-[0.85vw] border border-gray-300 rounded-[0.4vw] text-[0.8vw] font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-2xs hover:border-gray-400 active:scale-95 transition-all cursor-pointer"
                 >
-                  <Icon icon="lucide:share-2" className="w-3.5 h-3.5 text-gray-600" />
+                  <Icon icon="lucide:share-2" className="w-[0.85vw] h-[0.85vw] text-gray-600" />
                   <span>Share Shelf</span>
                 </button>
 
                 <button
+                  type="button"
                   onClick={applyShelfStyle}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+                  disabled={!hasUnsavedChanges || isSaving}
+                  className={`flex items-center gap-[0.35vw] h-[2vw] px-[0.95vw] text-[0.8vw] font-medium rounded-[0.4vw] transition-all ${
+                    hasUnsavedChanges && !isSaving
+                      ? 'bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 text-white shadow-2xs hover:shadow-sm cursor-pointer'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none'
+                  }`}
+                  title={hasUnsavedChanges ? "Save your shelf customizations" : "No unsaved changes"}
                 >
-                  <Icon icon="lucide:check" className="w-3.5 h-3.5" />
-                  <span>Save Changes</span>
+                  {isSaving ? (
+                    <Icon icon="eos-icons:loading" className="w-[0.85vw] h-[0.85vw]" />
+                  ) : (
+                    <Icon icon="lucide:check" className="w-[0.85vw] h-[0.85vw]" />
+                  )}
+                  <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>
             </div>
@@ -200,12 +277,10 @@ const ShelfDetailView = ({
               <span className="text-xs font-semibold tracking-wide">Exit Full Screen</span>
             </button>
 
-            {isLoading && (
-              <div className="absolute inset-0 z-50 flex gap-2 items-center justify-center bg-white/50 backdrop-blur-sm">
-                <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
-                <span className="text-base font-semibold text-gray-700">Shelf Loading...</span>
-              </div>
-            )}
+            <ShelfLoadingOverlay
+              isLoading={isLoading}
+              title={shelfLoadingTitle}
+            />
 
             {/* If bg is an array, map over it to render wall blocks */}
             {Array.isArray(activeAssets.bg) && (
@@ -296,27 +371,29 @@ const ShelfDetailView = ({
                               }
 
                               return (
-                                <div
+                                <ShelfDetailBookItem
                                   key={book.v_id || `fs-book-${bIdx}`}
-                                  draggable
-                                  onDragStart={(e) => handleDragStart(e, bookIndex)}
-                                  onDragOver={handleDragOver}
-                                  onDrop={(e) => handleDrop(e, bookIndex)}
-                                  onDragEnd={handleDragEnd}
-                                  className={`relative group cursor-pointer flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'} ${openMenuId === `fs-${i}-${bIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
-                                  style={{ width: activeAssets.bookWidth || '12%' }}
-                                >
-                                  <div className={`w-[100%] ${activeShelfStyle === 'customize4' ? 'aspect-[2.5/3.25]' : 'aspect-[2.5/3.5]'} relative rounded-[3px] drop-shadow-md transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
-                                    <LazyPreview
-                                      v_id={book.v_id}
-                                      emailId={book.rawBook?.userEmail || currentUserEmail}
-                                      backendUrl={backendUrl}
-                                      iframeBaseUrl=""
-                                      title={book.title}
-                                      imageUrl={null}
-                                    />
-                                  </div>
-                                </div>
+                                  book={book}
+                                  bookIndex={bookIndex}
+                                  i={i}
+                                  bIdx={bIdx}
+                                  activeShelfStyle={activeShelfStyle}
+                                  activeAssets={activeAssets}
+                                  draggedBookIndex={draggedBookIndex}
+                                  openMenuId={openMenuId}
+                                  setOpenMenuId={setOpenMenuId}
+                                  hoveredInfoId={hoveredInfoId}
+                                  setHoveredInfoId={setHoveredInfoId}
+                                  handleRemoveBook={handleRemoveBook}
+                                  handleDragStart={handleDragStart}
+                                  handleDragOver={handleDragOver}
+                                  handleDrop={handleDrop}
+                                  handleDragEnd={handleDragEnd}
+                                  backendUrl={backendUrl}
+                                  currentUserEmail={currentUserEmail}
+                                  LazyPreviewComponent={LazyPreview}
+                                  isFs={true}
+                                />
                               );
                             });
                           })()}
@@ -353,6 +430,7 @@ const ShelfDetailView = ({
                 LazyPreview={LazyPreview}
                 backendUrl={backendUrl}
                 currentUserEmail={currentUserEmail}
+                isFs={true}
               />
             )}
 
@@ -381,6 +459,7 @@ const ShelfDetailView = ({
                 LazyPreview={LazyPreview}
                 backendUrl={backendUrl}
                 currentUserEmail={currentUserEmail}
+                isFs={true}
               />
             )}
 
@@ -409,6 +488,7 @@ const ShelfDetailView = ({
                 LazyPreview={LazyPreview}
                 backendUrl={backendUrl}
                 currentUserEmail={currentUserEmail}
+                isFs={true}
               />
             )}
 
@@ -437,6 +517,7 @@ const ShelfDetailView = ({
                 LazyPreview={LazyPreview}
                 backendUrl={backendUrl}
                 currentUserEmail={currentUserEmail}
+                isFs={true}
               />
             )}
 
@@ -465,6 +546,7 @@ const ShelfDetailView = ({
                 LazyPreview={LazyPreview}
                 backendUrl={backendUrl}
                 currentUserEmail={currentUserEmail}
+                isFs={true}
               />
             )}
 
@@ -493,6 +575,7 @@ const ShelfDetailView = ({
                 LazyPreview={LazyPreview}
                 backendUrl={backendUrl}
                 currentUserEmail={currentUserEmail}
+                isFs={true}
               />
             )}
 
@@ -521,6 +604,7 @@ const ShelfDetailView = ({
                 LazyPreview={LazyPreview}
                 backendUrl={backendUrl}
                 currentUserEmail={currentUserEmail}
+                isFs={true}
               />
             )}
 
@@ -549,6 +633,7 @@ const ShelfDetailView = ({
                 LazyPreview={LazyPreview}
                 backendUrl={backendUrl}
                 currentUserEmail={currentUserEmail}
+                isFs={true}
               />
             )}
 
@@ -577,6 +662,7 @@ const ShelfDetailView = ({
                 LazyPreview={LazyPreview}
                 backendUrl={backendUrl}
                 currentUserEmail={currentUserEmail}
+                isFs={true}
               />
             )}
 
@@ -622,7 +708,7 @@ const ShelfDetailView = ({
                 }}
               >
                 <img
-                  src={shelfLogo.url}
+                  src={typeof shelfLogo === 'object' ? (shelfLogo?.url || '') : shelfLogo}
                   alt="Shelf Logo"
                   className="w-full h-full block rounded-md"
                   style={{
@@ -657,12 +743,10 @@ const ShelfDetailView = ({
             />
           </button>
 
-          {isLoading && (
-            <div className="absolute inset-0 z-50 flex gap-2 items-center justify-center bg-white/50 backdrop-blur-sm">
-              <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
-              <span className="text-base font-semibold text-gray-700">Shelf Loading...</span>
-            </div>
-          )}
+          <ShelfLoadingOverlay
+            isLoading={isLoading}
+            title={shelfLoadingTitle}
+          />
 
           {/* If bg is an array, map over it to render wall blocks */}
           {Array.isArray(activeAssets.bg) && (
@@ -753,27 +837,29 @@ const ShelfDetailView = ({
                             }
 
                             return (
-                              <div
+                              <ShelfDetailBookItem
                                 key={book.v_id || `book-${bIdx}`}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, bookIndex)}
-                                onDragOver={handleDragOver}
-                                onDrop={(e) => handleDrop(e, bookIndex)}
-                                onDragEnd={handleDragEnd}
-                                className={`relative group cursor-pointer flex justify-center items-end ${activeShelfStyle === 'customize2' ? (i === activeAssets.rowCount - 1 ? 'translate-y-4' : 'translate-y-0') : activeShelfStyle === 'customize4' ? 'translate-y-0' : 'translate-y-2'} ${openMenuId === `${i}-${bIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
-                                style={{ width: activeAssets.bookWidth || '12%' }}
-                              >
-                                <div className={`w-[100%] ${activeShelfStyle === 'customize4' ? 'aspect-[2.5/3.25]' : 'aspect-[2.5/3.5]'} relative rounded-[3px] drop-shadow-md transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
-                                  <LazyPreview
-                                    v_id={book.v_id}
-                                    emailId={book.rawBook?.userEmail || currentUserEmail}
-                                    backendUrl={backendUrl}
-                                    iframeBaseUrl=""
-                                    title={book.title}
-                                    imageUrl={null}
-                                  />
-                                </div>
-                              </div>
+                                book={book}
+                                bookIndex={bookIndex}
+                                i={i}
+                                bIdx={bIdx}
+                                activeShelfStyle={activeShelfStyle}
+                                activeAssets={activeAssets}
+                                draggedBookIndex={draggedBookIndex}
+                                openMenuId={openMenuId}
+                                setOpenMenuId={setOpenMenuId}
+                                hoveredInfoId={hoveredInfoId}
+                                setHoveredInfoId={setHoveredInfoId}
+                                handleRemoveBook={handleRemoveBook}
+                                handleDragStart={handleDragStart}
+                                handleDragOver={handleDragOver}
+                                handleDrop={handleDrop}
+                                handleDragEnd={handleDragEnd}
+                                backendUrl={backendUrl}
+                                currentUserEmail={currentUserEmail}
+                                LazyPreviewComponent={LazyPreview}
+                                isFs={false}
+                              />
                             );
                           });
                         })()}
@@ -810,6 +896,7 @@ const ShelfDetailView = ({
               LazyPreview={LazyPreview}
               backendUrl={backendUrl}
               currentUserEmail={currentUserEmail}
+              isFs={false}
             />
           )}
 
@@ -838,6 +925,7 @@ const ShelfDetailView = ({
               LazyPreview={LazyPreview}
               backendUrl={backendUrl}
               currentUserEmail={currentUserEmail}
+              isFs={false}
             />
           )}
 
@@ -866,6 +954,7 @@ const ShelfDetailView = ({
               LazyPreview={LazyPreview}
               backendUrl={backendUrl}
               currentUserEmail={currentUserEmail}
+              isFs={false}
             />
           )}
 
@@ -894,6 +983,7 @@ const ShelfDetailView = ({
               LazyPreview={LazyPreview}
               backendUrl={backendUrl}
               currentUserEmail={currentUserEmail}
+              isFs={false}
             />
           )}
 
@@ -922,6 +1012,7 @@ const ShelfDetailView = ({
               LazyPreview={LazyPreview}
               backendUrl={backendUrl}
               currentUserEmail={currentUserEmail}
+              isFs={false}
             />
           )}
 
@@ -950,6 +1041,7 @@ const ShelfDetailView = ({
               LazyPreview={LazyPreview}
               backendUrl={backendUrl}
               currentUserEmail={currentUserEmail}
+              isFs={false}
             />
           )}
 
@@ -978,6 +1070,7 @@ const ShelfDetailView = ({
               LazyPreview={LazyPreview}
               backendUrl={backendUrl}
               currentUserEmail={currentUserEmail}
+              isFs={false}
             />
           )}
 
@@ -1006,6 +1099,7 @@ const ShelfDetailView = ({
               LazyPreview={LazyPreview}
               backendUrl={backendUrl}
               currentUserEmail={currentUserEmail}
+              isFs={false}
             />
           )}
 
@@ -1034,6 +1128,7 @@ const ShelfDetailView = ({
               LazyPreview={LazyPreview}
               backendUrl={backendUrl}
               currentUserEmail={currentUserEmail}
+              isFs={false}
             />
           )}
 
@@ -1069,7 +1164,7 @@ const ShelfDetailView = ({
               aspectRatio: '16 / 9'
             }}
           >
-            {shelfLogo?.url ? (
+            {(typeof shelfLogo === 'object' ? shelfLogo?.url : shelfLogo) ? (
               <div
                 className="w-full h-full flex items-center justify-center overflow-hidden transition-all duration-200"
                 style={{
@@ -1077,7 +1172,7 @@ const ShelfDetailView = ({
                 }}
               >
                 <img
-                  src={shelfLogo.url}
+                  src={typeof shelfLogo === 'object' ? (shelfLogo?.url || '') : shelfLogo}
                   alt="Shelf Logo"
                   className="w-full h-full block rounded-md"
                   style={{
@@ -1128,9 +1223,9 @@ const ShelfDetailView = ({
             return (
               <>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-xs font-bold text-gray-900 tracking-tight">Shelf Styles</h3>
-                    <div className="inline-flex items-center bg-gray-100/90 p-0.5 rounded-full border border-gray-200/80 shadow-2xs">
+                  <div className="flex items-center gap-[0.8vw]">
+                    <h3 className="text-[0.85vw] font-semibold text-gray-900 tracking-tight">Shelf Styles</h3>
+                    <div className="inline-flex items-center bg-gray-100/90 p-[0.15vw] rounded-full border border-gray-200/80 shadow-2xs">
                       {[
                         { id: 'All', label: 'All' },
                         { id: '8', label: '8 Books' },
@@ -1144,9 +1239,9 @@ const ShelfDetailView = ({
                             setSelectedBookCountFilter(tab.id);
                             setShelfStylesPage(1);
                           }}
-                          className={`px-2.5 py-0.5 text-[11px] font-semibold rounded-full transition-all duration-150 cursor-pointer ${
+                          className={`px-[0.6vw] py-[0.15vw] text-[0.72vw] font-medium rounded-full transition-all duration-150 cursor-pointer ${
                             selectedBookCountFilter === tab.id
-                              ? 'bg-[#FF5733] text-white shadow-xs'
+                              ? 'bg-[#FF5733] text-white shadow-2xs'
                               : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
                           }`}
                         >
@@ -1156,50 +1251,67 @@ const ShelfDetailView = ({
                     </div>
                   </div>
 
-                  <span className="text-[11px] text-gray-500 font-medium">
+                  <span className="text-[0.75vw] text-gray-500 font-medium">
                     {currentPage} / {totalPages}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-[0.4vw]">
                   <button
+                    type="button"
                     onClick={() => setShelfStylesPage(prev => (prev > 1 ? prev - 1 : totalPages))}
-                    className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
+                    className="w-[1.8vw] h-[1.8vw] rounded-[0.4vw] border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 shadow-2xs flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0"
+                    title="Previous page"
                   >
-                    <Icon icon="lucide:chevron-left" className="w-3.5 h-3.5" />
+                    <Icon icon="lucide:chevron-left" className="w-[0.9vw] h-[0.9vw]" />
                   </button>
 
-                  <div className="grid grid-cols-5 gap-2 flex-1">
-                    {visibleStyles.map((style) => {
-                      const isSelected = activeShelfStyle === style.id;
-                      return (
-                        <div
-                          key={style.id}
-                          onClick={() => {
-                            setActiveShelfStyle(style.id);
-                            if (setSelectedWallTheme) setSelectedWallTheme(null);
-                          }}
-                          className={`aspect-[354/200] rounded-lg overflow-hidden border-2 cursor-pointer transition-all duration-150 relative group bg-white shadow-xs ${
-                            isSelected
-                              ? 'border-[#FF5733] ring-2 ring-orange-200/70 shadow-sm'
-                              : 'border-gray-200/90 hover:border-gray-300'
-                          }`}
-                        >
-                          <img
-                            src={style.img}
-                            alt={style.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                          />
-                        </div>
-                      );
-                    })}
+                  {/* Smooth Sliding Track Container */}
+                  <div className="overflow-hidden flex-1 rounded-[0.45vw]">
+                    <div
+                      className="flex transition-transform duration-500 ease-out"
+                      style={{ transform: `translateX(-${(currentPage - 1) * 100}%)` }}
+                    >
+                      {Array.from({ length: totalPages }, (_, pIdx) => {
+                        const pageStyles = filteredStyles.slice(pIdx * itemsPerPage, (pIdx + 1) * itemsPerPage);
+                        return (
+                          <div key={pIdx} className="grid grid-cols-5 gap-[0.5vw] w-full shrink-0">
+                            {pageStyles.map((style) => {
+                              const isSelected = activeShelfStyle === style.id;
+                              return (
+                                <div
+                                  key={style.id}
+                                  onClick={() => {
+                                    setActiveShelfStyle(style.id);
+                                    if (typeof setSelectedWallTheme === 'function') setSelectedWallTheme(null);
+                                  }}
+                                  className={`aspect-[354/200] rounded-[0.45vw] overflow-hidden border-2 cursor-pointer transition-all duration-200 relative group bg-white shadow-2xs hover:shadow-md hover:scale-[1.02] ${
+                                    isSelected
+                                      ? 'border-[#FF5733] ring-2 ring-orange-200/70 shadow-sm'
+                                      : 'border-gray-200/90 hover:border-gray-300'
+                                  }`}
+                                >
+                                  <img
+                                    src={style.img}
+                                    alt={style.title}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => setShelfStylesPage(prev => (prev < totalPages ? prev + 1 : 1))}
-                    className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
+                    className="w-[1.8vw] h-[1.8vw] rounded-[0.4vw] border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 shadow-2xs flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0"
+                    title="Next page"
                   >
-                    <Icon icon="lucide:chevron-right" className="w-3.5 h-3.5" />
+                    <Icon icon="lucide:chevron-right" className="w-[0.9vw] h-[0.9vw]" />
                   </button>
                 </div>
               </>
@@ -1212,35 +1324,40 @@ const ShelfDetailView = ({
 
   // List View Column
   return (
-    <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pr-2 pb-4">
+    <CustomScrollbar
+      color="#d1d5db"
+      hoverColor="#9ca3af"
+      width="4px"
+      className="flex-1 flex flex-col min-w-0 pr-[0.5vw] pb-[1vw]"
+    >
       {listDropdown && (
         <div
           className="fixed inset-0 z-10"
           onClick={() => setListDropdown(null)}
         />
       )}
-      <div className="flex gap-4 mb-4 relative z-20">
-        <div className="relative flex-1 max-w-xs">
-          <svg className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" placeholder="Search Flipbook..." className="w-full pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none" />
+      <div className="flex gap-[0.8vw] mb-[1vw] relative z-20">
+        <div className="relative flex-1 max-w-[18vw]">
+          <svg className="absolute left-[0.7vw] top-1/2 transform -translate-y-1/2 text-gray-400 w-[0.9vw] h-[0.9vw]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" placeholder="Search Flipbook..." className="w-full h-[2vw] pl-[2.2vw] pr-[0.8vw] border border-gray-300 rounded-[0.4vw] text-[0.8vw] font-medium text-gray-700 placeholder-gray-400 focus:outline-none focus:border-gray-400 shadow-2xs" />
         </div>
 
         {/* Flipbook Dropdown */}
         <div className="relative">
           <button
             onClick={() => setListDropdown(listDropdown === 'flipbooks' ? null : 'flipbooks')}
-            className="flex items-center justify-between w-40 px-4 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none"
+            className="flex items-center justify-between w-[9.5vw] h-[2vw] px-[0.8vw] bg-white border border-gray-300 rounded-[0.4vw] text-[0.8vw] font-medium shadow-2xs hover:bg-gray-50 focus:outline-none transition-colors cursor-pointer"
           >
-            <span className="text-[#5B738B]">{selectedFolder === 'add_shelf' ? 'Add Shelf' : selectedFolder}</span>
-            <Icon icon={listDropdown === 'flipbooks' ? "mdi:chevron-up" : "mdi:chevron-down"} className="w-4 h-4 text-[#8BA3BA]" />
+            <span className="text-gray-700 truncate">{selectedFolder === 'add_shelf' ? 'Add Shelf' : selectedFolder}</span>
+            <Icon icon={listDropdown === 'flipbooks' ? "mdi:chevron-up" : "mdi:chevron-down"} className="w-[0.9vw] h-[0.9vw] text-gray-500 shrink-0 ml-[0.3vw]" />
           </button>
 
           {listDropdown === 'flipbooks' && (
-            <div className="absolute z-50 w-full mt-1.5 bg-white border border-gray-100 rounded-lg shadow-[0_4px_20px_rgb(0,0,0,0.08)] py-1 overflow-hidden">
+            <div className="absolute z-50 w-full mt-[0.3vw] bg-white border border-gray-100 rounded-[0.45vw] shadow-xl py-[0.25vw] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
               {folders.map(folder => (
                 <div
                   key={folder.name}
-                  className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors ${selectedFolder === folder.name ? 'bg-gray-50 text-[#334155]' : 'text-[#475569]'}`}
+                  className={`px-[0.8vw] py-[0.4vw] text-[0.8vw] font-medium cursor-pointer hover:bg-gray-50 transition-colors ${selectedFolder === folder.name ? 'bg-gray-50 text-[#FF5733] font-semibold' : 'text-gray-700'}`}
                   onClick={() => {
                     handleFlipbookSelect({ target: { value: folder.name } });
                     setListDropdown(null);
@@ -1250,7 +1367,7 @@ const ShelfDetailView = ({
                 </div>
               ))}
               <div
-                className={`px-4 py-2 text-sm cursor-pointer border-t border-gray-100 hover:bg-gray-50 transition-colors ${selectedFolder === 'add_shelf' ? 'bg-gray-50 text-[#334155]' : 'text-[#475569]'}`}
+                className={`px-[0.8vw] py-[0.4vw] text-[0.8vw] font-medium cursor-pointer border-t border-gray-100 hover:bg-gray-50 transition-colors ${selectedFolder === 'add_shelf' ? 'bg-gray-50 text-[#FF5733] font-semibold' : 'text-gray-700'}`}
                 onClick={() => {
                   handleFlipbookSelect({ target: { value: 'add_shelf' } });
                   setListDropdown(null);
@@ -1266,18 +1383,18 @@ const ShelfDetailView = ({
         <div className="relative">
           <button
             onClick={() => setListDropdown(listDropdown === 'status' ? null : 'status')}
-            className="flex items-center justify-between w-48 px-4 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none"
+            className="flex items-center justify-between w-[11.5vw] h-[2vw] px-[0.8vw] bg-white border border-gray-300 rounded-[0.4vw] text-[0.8vw] font-medium shadow-2xs hover:bg-gray-50 focus:outline-none transition-colors cursor-pointer"
           >
-            <span className="text-[#5B738B] truncate mr-2 text-left w-full">{selectedStatus}</span>
-            <Icon icon={listDropdown === 'status' ? "mdi:chevron-up" : "mdi:chevron-down"} className="w-4 h-4 text-[#8BA3BA] shrink-0" />
+            <span className="text-gray-700 truncate mr-[0.4vw] text-left w-full">{selectedStatus}</span>
+            <Icon icon={listDropdown === 'status' ? "mdi:chevron-up" : "mdi:chevron-down"} className="w-[0.9vw] h-[0.9vw] text-gray-500 shrink-0" />
           </button>
 
           {listDropdown === 'status' && (
-            <div className="absolute z-50 w-full mt-1.5 bg-white border border-gray-100 rounded-lg shadow-[0_4px_20px_rgb(0,0,0,0.08)] py-1 overflow-hidden">
+            <div className="absolute z-50 w-full mt-[0.3vw] bg-white border border-gray-100 rounded-[0.45vw] shadow-xl py-[0.25vw] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
               {['All Status', 'Published - Public', 'Published - Private', 'Unpublished - Public', 'Unpublished - Private'].map((status) => (
                 <div
                   key={status}
-                  className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors ${selectedStatus === status ? 'bg-gray-50 text-[#334155]' : 'text-[#475569]'}`}
+                  className={`px-[0.8vw] py-[0.4vw] text-[0.8vw] font-medium cursor-pointer hover:bg-gray-50 transition-colors ${selectedStatus === status ? 'bg-gray-50 text-[#FF5733] font-semibold' : 'text-gray-700'}`}
                   onClick={() => {
                     setSelectedStatus(status);
                     setListDropdown(null);
@@ -1297,32 +1414,32 @@ const ShelfDetailView = ({
           onClick={() => setOpenMenuId(null)}
         />
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[1.2vw]">
         {isLoading ? (
-          <div className="col-span-full py-20 flex justify-center items-center">
-            <div className="flex flex-col items-center gap-3 bg-white px-6 py-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100">
-              <Icon icon="eos-icons:loading" className="w-8 h-8 text-blue-600" />
-              <span className="text-sm font-semibold text-gray-700">Loading Flipbooks...</span>
-            </div>
+          <div className="col-span-full py-16 flex justify-center items-center relative min-h-[30vh]">
+            <ShelfLoadingOverlay
+              isLoading={true}
+              title={shelfLoadingTitle || "Loading Bookshelf..."}
+            />
           </div>
         ) : filteredBooks.length === 0 ? (
-          <div className="col-span-full py-10 flex justify-center text-gray-500">No flipbooks found.</div>
+          <div className="col-span-full py-10 flex justify-center text-gray-500 text-[0.82vw] font-medium">No flipbooks found.</div>
         ) : (
           filteredBooks.map((book, idx) => (
-            <div key={book.v_id || idx} className="bg-white rounded-2xl overflow-hidden flex flex-col shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-shadow border border-transparent hover:border-gray-100">
+            <div key={book.v_id || idx} className="bg-white rounded-[0.55vw] overflow-hidden flex flex-col shadow-2xs hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-gray-300">
               {/* Image Area Wrapper */}
               <div className="relative w-full aspect-square bg-[#e2b58d] overflow-hidden">
-                <img src={book.cover || listFrame} alt={book.title || "Flipbook"} className="w-full h-full object-cover" />
+                <img src={book.cover || listFrame} alt={book.title || "Flipbook"} className="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
 
                 <button
                   onClick={() => setOpenMenuId(openMenuId === book.v_id ? null : book.v_id)}
-                  className="absolute top-3 right-3 text-white hover:text-gray-200 bg-black/20 rounded-md p-0.5 transition-colors z-30"
+                  className="absolute top-[0.6vw] right-[0.6vw] text-white hover:text-white bg-black/35 hover:bg-black/55 rounded-[0.35vw] p-[0.3vw] transition-colors z-30 cursor-pointer"
                 >
-                  <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
+                  <Icon icon="mdi:dots-vertical" className="w-[1vw] h-[1vw]" />
                 </button>
 
                 {openMenuId === book.v_id && (
-                  <div className="absolute top-[2.5vw] right-[0.8vw] bg-white rounded-[0.5vw] shadow-xl border border-gray-100 py-[0.5vw] w-[9vw] z-40 overflow-hidden">
+                  <div className="absolute top-[2.2vw] right-[0.6vw] bg-white rounded-[0.45vw] shadow-xl border border-gray-100 py-[0.25vw] w-[8.5vw] z-40 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                     <button
                       onClick={() => {
                         const targetShareId = book.shareId || book.v_id;
@@ -1332,10 +1449,10 @@ const ShelfDetailView = ({
                         }
                         setOpenMenuId(null);
                       }}
-                      className="w-full text-left px-[1vw] py-[0.5vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 flex items-center gap-[0.5vw] transition-colors"
+                      className="w-full text-left px-[0.7vw] py-[0.4vw] text-[0.75vw] font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 flex items-center gap-[0.4vw] transition-colors cursor-pointer"
                     >
-                      <Icon icon="mdi:book-open-outline" className="w-[1vw] h-[1vw] text-gray-400" />
-                      Open Book
+                      <Icon icon="mdi:book-open-outline" className="w-[0.9vw] h-[0.9vw] text-gray-400" />
+                      <span>Open Book</span>
                     </button>
 
                     <button
@@ -1344,64 +1461,66 @@ const ShelfDetailView = ({
                         handleRemoveBook(book.v_id);
                         setOpenMenuId(null);
                       }}
-                      className="w-full text-left px-[1vw] py-[0.5vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 flex items-center gap-[0.5vw] transition-colors"
+                      className="w-full text-left px-[0.7vw] py-[0.4vw] text-[0.75vw] font-medium text-red-600 hover:bg-red-50 flex items-center gap-[0.4vw] transition-colors cursor-pointer"
                     >
-                      <Icon icon="mdi:trash-can-outline" className="w-[1vw] h-[1vw] text-red-400" />
-                      Remove Book
+                      <Icon icon="mdi:trash-can-outline" className="w-[0.9vw] h-[0.9vw] text-red-500" />
+                      <span>Remove Book</span>
                     </button>
                   </div>
                 )}
               </div>
 
               {/* Card Details */}
-              <div className="p-4 flex flex-col flex-1 bg-white">
+              <div className="p-[0.9vw] flex flex-col flex-1 bg-white">
                 {/* Author Info */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-[0.6vw]">
                   {book.authorPicture && book.authorPicture !== 'color_only' ? (
                     <img
                       src={book.authorPicture}
                       alt={book.authorName}
-                      className="w-9 h-9 rounded-full border border-gray-200 object-cover shrink-0"
+                      className="w-[2vw] h-[2vw] rounded-full border border-gray-200 object-cover shrink-0"
                     />
                   ) : (
                     <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-inner"
+                      className="w-[2vw] h-[2vw] rounded-full flex items-center justify-center text-white text-[0.8vw] font-bold shrink-0 shadow-inner"
                       style={{ backgroundColor: book.authorBgColor }}
                     >
                       {(book.authorName || 'U').charAt(0).toUpperCase()}
                     </div>
                   )}
                   <div className="flex flex-col min-w-0 pr-1">
-                    <span className="text-sm font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
-                    <span className="flex items-center gap-1 text-[11px] text-gray-400 mt-0.5 truncate">
-                      <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
+                    <span className="text-[0.82vw] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
+                    <span className="flex items-center gap-[0.2vw] text-[0.7vw] text-gray-400 mt-[0.1vw] truncate">
+                      <Icon icon="lucide:map-pin" className="w-[0.75vw] h-[0.75vw] text-gray-400 shrink-0" />
                       <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
                     </span>
                   </div>
                 </div>
 
                 {/* Stats */}
-                <div className="flex items-center gap-2 justify-start text-xs text-gray-700 font-medium mt-4 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <span className="text-black font-semibold">{book.pages || 0}</span>
-                    <span className="font-normal text-gray-500">Pages</span>
+                <div className="flex items-center gap-[0.5vw] justify-start text-[0.72vw] text-gray-600 font-medium mt-[0.7vw] whitespace-nowrap">
+                  <div className="flex items-center gap-[0.2vw]">
+                    <span className="text-gray-900 font-semibold">
+                      {Array.isArray(book.pages) ? book.pages.length : (typeof book.pages === 'number' ? book.pages : 0)}
+                    </span>
+                    <span className="text-gray-500">Pages</span>
                   </div>
                   <span className="text-gray-300">|</span>
-                  <span className="flex items-center gap-1">
-                    <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
-                    {book.views || '1.2k'}
+                  <span className="flex items-center gap-[0.2vw]">
+                    <Icon icon="lucide:eye" className="w-[0.8vw] h-[0.8vw] text-gray-400" />
+                    <span>{book.views || '1.2k'}</span>
                   </span>
                   <span className="text-gray-300">|</span>
-                  <span className="flex items-center gap-1">
-                    <Icon icon="material-symbols:star" className="w-4 h-4 text-yellow-400" />
-                    {book.rating || 4.5}
+                  <span className="flex items-center gap-[0.2vw]">
+                    <Icon icon="material-symbols:star" className="w-[0.85vw] h-[0.85vw] text-yellow-400" />
+                    <span>{book.rating || 4.5}</span>
                   </span>
                 </div>
 
                 {/* Title & Desc & Button */}
-                <div className="relative flex-1 mt-3">
-                  <h4 className="text-[15px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
-                  <p className="text-[12px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
+                <div className="relative flex-1 mt-[0.6vw]">
+                  <h4 className="text-[0.85vw] font-semibold text-gray-900 truncate tracking-tight mb-[0.2vw]">{book.title}</h4>
+                  <p className="text-[0.72vw] text-gray-500 font-medium leading-relaxed pr-[2.2vw] line-clamp-2">{book.description}</p>
 
                   <button
                     onClick={() => {
@@ -1411,9 +1530,9 @@ const ShelfDetailView = ({
                         window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
                       }
                     }}
-                    className="absolute bottom-0 right-0 bg-black text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md cursor-pointer"
+                    className="absolute bottom-0 right-0 bg-gray-900 hover:bg-[#FF5733] text-white w-[1.8vw] h-[1.8vw] rounded-full flex items-center justify-center transition-colors shadow-2xs active:scale-95 cursor-pointer"
                   >
-                    <Icon icon="mdi:arrow-top-right" className="w-5 h-5" />
+                    <Icon icon="mdi:arrow-top-right" className="w-[1vw] h-[1vw]" />
                   </button>
                 </div>
               </div>
@@ -1421,7 +1540,7 @@ const ShelfDetailView = ({
           ))
         )}
       </div>
-    </div>
+    </CustomScrollbar>
   );
 };
 

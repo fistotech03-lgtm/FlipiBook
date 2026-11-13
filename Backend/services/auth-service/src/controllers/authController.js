@@ -1422,6 +1422,11 @@ const getUserIdentityQueries = async (user) => {
       dbUser = await User.findOne({ emailId: rawEmail }).select('_id userID emailId');
     } catch (_) {}
   }
+  if (!dbUser && rawUserId) {
+    try {
+      dbUser = await User.findOne({ userID: rawUserId }).select('_id userID emailId');
+    } catch (_) {}
+  }
 
   const queries = [];
   const seenUserIds = new Set();
@@ -1441,7 +1446,6 @@ const getUserIdentityQueries = async (user) => {
       if (!seenEmails.has(lower)) {
         seenEmails.add(lower);
         queries.push({ emailId: lower });
-        queries.push({ emailId: { $regex: new RegExp(`^${lower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } });
       }
     }
   };
@@ -1451,8 +1455,9 @@ const getUserIdentityQueries = async (user) => {
       const s = String(oid);
       if (!seenObjIds.has(s)) {
         seenObjIds.add(s);
-        queries.push({ userObjectId: new mongoose.Types.ObjectId(oid) });
-        queries.push({ userObjectId: s });
+        try {
+          queries.push({ userObjectId: new mongoose.Types.ObjectId(s) });
+        } catch (_) {}
       }
     }
   };
@@ -1694,7 +1699,7 @@ const verifySession = async (req, res) => {
         if (user) {
           // Auto-repair cookie session with current active user _id
           const repairedAccessToken = generateToken({
-            userId: user.userID,
+            userId: user.userID || `FLIPI${String(user._id).slice(-4).toUpperCase()}`,
             emailId: user.emailId,
             id: user._id,
           });
@@ -1800,12 +1805,14 @@ const getActiveSessions = async (req, res) => {
         const ipAddress = getClientIp(req);
         const location = resolveLocation(req, ipAddress);
         const assignedDeviceId = callerDeviceId || `dev_${callerBrowser.toLowerCase()}_${crypto.randomBytes(8).toString("hex")}`;
+        const safeEmailId = emailId || req.user?.emailId || 'account@flipibook.com';
+        const safeUserId = userId || req.user?.userId || (userObjectId ? `FLIPI${userObjectId.toString().slice(-4).toUpperCase()}` : 'FLIPI0001');
 
         const createdSession = await LoginLog.create({
           _id: sessionObjectId,
-          userId: userId || `FLIPI${req.user.id?.toString().slice(-4).toUpperCase()}`,
+          userId: safeUserId,
           userObjectId: userObjectId || (req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? new mongoose.Types.ObjectId(req.user.id) : undefined),
-          emailId: emailId || req.user.emailId,
+          emailId: safeEmailId,
           sessionId: sessionObjectId.toString(),
           deviceId: assignedDeviceId,
           ipAddress,
@@ -1917,7 +1924,9 @@ const getActiveSessions = async (req, res) => {
     console.error("[Get Active Sessions Error]:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to retrieve active sessions",
+      message: "Failed to retrieve active sessions: " + error.message,
+      error: error.message,
+      stack: error.stack,
     });
   }
 };
@@ -2091,12 +2100,14 @@ const getRecentActivities = async (req, res) => {
           const sessionObjectId = new mongoose.Types.ObjectId();
           const ipAddress = getClientIp(req);
           const location = resolveLocation(req, ipAddress);
+          const safeEmailId = emailId || req.user?.emailId || 'account@flipibook.com';
+          const safeUserId = userId || req.user?.userId || (userObjectId ? `FLIPI${userObjectId.toString().slice(-4).toUpperCase()}` : 'FLIPI0001');
 
           const initialLog = await LoginLog.create({
             _id: sessionObjectId,
-            userId: userId || `FLIPI${req.user.id?.toString().slice(-4).toUpperCase()}`,
+            userId: safeUserId,
             userObjectId: userObjectId || (req.user.id && mongoose.Types.ObjectId.isValid(req.user.id) ? new mongoose.Types.ObjectId(req.user.id) : undefined),
-            emailId: emailId || req.user.emailId,
+            emailId: safeEmailId,
             sessionId: sessionObjectId.toString(),
             deviceId: callerDeviceId,
             ipAddress,
@@ -2166,7 +2177,9 @@ const getRecentActivities = async (req, res) => {
     console.error("[Get Recent Activities Error]:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to retrieve login activities",
+      message: "Failed to retrieve login activities: " + error.message,
+      error: error.message,
+      stack: error.stack,
     });
   }
 };

@@ -210,20 +210,31 @@ const formatBook = (doc, settingsDoc = null, currentUserId = null, folderMap = n
   const s = settingsDoc || doc.Customized_Settings || {};
   const bookVId = doc.book_v_id || doc.v_id;
 
+  // Normalize tokens of the requesting user (objectId, email, customUserId)
+  const tokensToCheck = Array.isArray(currentUserId)
+    ? currentUserId.map(t => String(t).trim().toLowerCase())
+    : (currentUserId ? [String(currentUserId).trim().toLowerCase()] : []);
+
+  // Determine if requesting user is the owner
   const isOwner = Boolean(
-    currentUserId && (
-      (doc.userObjectID && String(doc.userObjectID) === String(currentUserId)) ||
-      (doc.userID && String(doc.userID) === String(currentUserId))
+    tokensToCheck.length > 0 && (
+      (doc.userObjectID && tokensToCheck.includes(String(doc.userObjectID).toLowerCase())) ||
+      (doc.userID && tokensToCheck.includes(String(doc.userID).toLowerCase())) ||
+      (doc.userEmail && tokensToCheck.includes(String(doc.userEmail).trim().toLowerCase())) ||
+      (doc.emailId && tokensToCheck.includes(String(doc.emailId).trim().toLowerCase()))
     )
   );
 
   const cleanFavList = Array.isArray(doc.isFavorite)
     ? doc.isFavorite.filter(u => u && u !== false && String(u) !== 'false' && String(u) !== '[ false ]')
     : [];
+
+  // A user can NEVER favorite their own book.
+  // For other users' books, it's only a favorite if THIS requesting user's token is in the book's isFavorite list.
   const isFav = isOwner ? false : (
-    Array.isArray(doc.isFavorite)
-      ? (currentUserId ? cleanFavList.some(u => String(u) === String(currentUserId)) : cleanFavList.length > 0)
-      : (typeof doc.isFavorite === 'boolean' && !isOwner ? doc.isFavorite : false)
+    tokensToCheck.length > 0
+      ? cleanFavList.some(u => tokensToCheck.includes(String(u).trim().toLowerCase()))
+      : false
   );
 
   const extractedPagesSize = Array.isArray(doc.pages)
@@ -415,7 +426,14 @@ exports.getBooks = async (req, res) => {
       }
     }
 
-    const physicalBooks = rawBooks.map((b) => formatBook(b, settingsMap.get(b.v_id) || {}, null, folderMap, reverseFolderMap));
+    const auth = getAuthUser(req);
+    const userTokens = [
+      auth.objectId ? auth.objectId.toString() : null,
+      auth.emailId ? auth.emailId.trim().toLowerCase() : null,
+      auth.customUserId || null
+    ].filter(Boolean);
+
+    const physicalBooks = rawBooks.map((b) => formatBook(b, settingsMap.get(b.v_id) || {}, userTokens, folderMap, reverseFolderMap));
 
     const hasRecentTag = (doc) => {
       if (doc.trash) return false;
@@ -441,7 +459,7 @@ exports.getBooks = async (req, res) => {
     );
 
     const recentBooks = recentDocs.map((doc) => {
-      const base = formatBook(doc, settingsMap.get(doc.v_id) || {}, null, folderMap, reverseFolderMap);
+      const base = formatBook(doc, settingsMap.get(doc.v_id) || {}, userTokens, folderMap, reverseFolderMap);
       return {
         ...base,
         id: `Recent_${doc.v_id || doc._id.toString()}`,
@@ -455,13 +473,6 @@ exports.getBooks = async (req, res) => {
     });
 
     // Fetch other customers' books that this user has favorited
-    const auth = getAuthUser(req);
-    const userTokens = [
-      auth.objectId ? auth.objectId.toString() : null,
-      auth.emailId ? auth.emailId.trim().toLowerCase() : null,
-      auth.customUserId || null
-    ].filter(Boolean);
-
     let favoriteOtherBooks = [];
     if (userTokens.length > 0) {
       const favQuery = {
@@ -470,6 +481,10 @@ exports.getBooks = async (req, res) => {
       };
       if (auth.objectId) favQuery.userObjectID = { $ne: auth.objectId };
       if (auth.customUserId) favQuery.userID = { $ne: auth.customUserId };
+      if (auth.emailId) {
+        favQuery.userEmail = { $ne: auth.emailId.trim().toLowerCase() };
+        favQuery.emailId = { $ne: auth.emailId.trim().toLowerCase() };
+      }
 
       try {
         const favDocs = await Flipbook.find(favQuery).lean();
@@ -485,7 +500,7 @@ exports.getBooks = async (req, res) => {
           }
 
           favoriteOtherBooks = favDocs.map((doc) => {
-            const base = formatBook(doc, favSettingsMap.get(doc.v_id) || {}, null, null, null);
+            const base = formatBook(doc, favSettingsMap.get(doc.v_id) || {}, userTokens, null, null);
             return {
               ...base,
               folder: "Favorites",

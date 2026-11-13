@@ -5,6 +5,7 @@ const ShareShelfModal = ({
   isOpen,
   onClose,
   selectedFolder,
+  shelfId,
   defaultLightType,
   toast
 }) => {
@@ -13,8 +14,12 @@ const ShareShelfModal = ({
   if (!isOpen) return null;
 
   const shareShelfUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/my-flipbooks?shelf=${encodeURIComponent(selectedFolder || 'My Shelf')}&light=${defaultLightType === 'Turn off' ? 'off' : 'on'}`
-    : `https://flipibook.com/my-flipbooks?shelf=${encodeURIComponent(selectedFolder || 'My Shelf')}&light=${defaultLightType === 'Turn off' ? 'off' : 'on'}`;
+    ? (shelfId
+        ? `${window.location.origin}/shelf/${shelfId}`
+        : `${window.location.origin}/my-flipbooks?shelf=${encodeURIComponent(selectedFolder || 'My Shelf')}&light=${defaultLightType === 'Turn off' ? 'off' : 'on'}`)
+    : (shelfId
+        ? `https://flipibook.com/shelf/${shelfId}`
+        : `https://flipibook.com/my-flipbooks?shelf=${encodeURIComponent(selectedFolder || 'My Shelf')}&light=${defaultLightType === 'Turn off' ? 'off' : 'on'}`);
 
   const handleSocialShare = (appName) => {
     const encUrl = encodeURIComponent(shareShelfUrl);
@@ -64,45 +69,45 @@ const ShareShelfModal = ({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-[540px] max-w-[95vw] overflow-hidden flex flex-col"
+        className="bg-white rounded-[0.75vw] shadow-2xl border border-gray-100 w-[34vw] min-w-[340px] max-w-[95vw] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-[#FF5733]">
-              <Icon icon="lucide:share-2" className="w-5 h-5" />
+        <div className="flex items-center justify-between px-[1.2vw] py-[0.8vw] border-b border-gray-100">
+          <div className="flex items-center gap-[0.6vw]">
+            <div className="w-[2vw] h-[2vw] rounded-[0.4vw] bg-orange-50 border border-orange-100 flex items-center justify-center text-[#FF5733]">
+              <Icon icon="lucide:share-2" className="w-[1vw] h-[1vw]" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900 leading-tight">Share Shelf</h2>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <h2 className="text-[0.95vw] font-bold text-gray-900 leading-tight">Share Shelf</h2>
+              <p className="text-[0.75vw] text-gray-500 font-medium mt-[0.1vw]">
                 Share this bookshelf collection with your audience or friends
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 rounded-full p-2 cursor-pointer"
+            className="w-[1.8vw] h-[1.8vw] rounded-[0.4vw] text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 flex items-center justify-center cursor-pointer"
             title="Close"
           >
-            <Icon icon="mdi:close" className="w-4 h-4" />
+            <Icon icon="mdi:close" className="w-[1vw] h-[1vw]" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 flex flex-col gap-5 bg-white">
+        <div className="p-[1.2vw] flex flex-col gap-[1vw] bg-white">
           {/* Share Link Box */}
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+            <label className="block text-[0.8vw] font-semibold text-gray-700 mb-[0.3vw]">
               Shareable Shelf Link
             </label>
-            <div className="flex items-center gap-2 p-1.5 pl-3 border border-gray-200 rounded-xl bg-gray-50/80 focus-within:border-[#FF5733] focus-within:bg-white transition-all">
-              <Icon icon="lucide:link" className="w-4 h-4 text-gray-400 shrink-0" />
+            <div className="flex items-center gap-[0.4vw] p-[0.3vw] pl-[0.7vw] border border-gray-300 rounded-[0.4vw] bg-white focus-within:border-gray-400 shadow-2xs transition-all">
+              <Icon icon="lucide:link" className="w-[0.85vw] h-[0.85vw] text-gray-400 shrink-0" />
               <input
                 type="text"
                 readOnly
                 value={shareShelfUrl}
-                className="w-full bg-transparent text-xs text-gray-700 font-medium focus:outline-none select-all truncate"
+                className="w-full bg-transparent text-[0.78vw] text-gray-700 font-medium focus:outline-none select-all truncate"
               />
               <button
                 onClick={() => {
@@ -112,13 +117,13 @@ const ShareShelfModal = ({
                   setShelfLinkCopied(true);
                   setTimeout(() => setShelfLinkCopied(false), 2000);
                 }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 shadow-xs cursor-pointer ${
+                className={`flex items-center gap-[0.3vw] px-[0.8vw] h-[1.9vw] rounded-[0.4vw] text-[0.78vw] font-medium transition-all shrink-0 shadow-2xs cursor-pointer active:scale-95 ${
                   shelfLinkCopied
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-[#FF5733] hover:bg-[#E04D2D] active:scale-95 text-white'
+                    : 'bg-[#FF5733] hover:bg-[#E04D2D] text-white'
                 }`}
               >
-                <Icon icon={shelfLinkCopied ? "lucide:check" : "lucide:copy"} className="w-3.5 h-3.5" />
+                <Icon icon={shelfLinkCopied ? "lucide:check" : "lucide:copy"} className="w-[0.8vw] h-[0.8vw]" />
                 <span>{shelfLinkCopied ? "Copied!" : "Copy Link"}</span>
               </button>
             </div>
@@ -126,10 +131,10 @@ const ShareShelfModal = ({
 
           {/* Social Media Apps */}
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2.5">
+            <label className="block text-[0.8vw] font-semibold text-gray-700 mb-[0.4vw]">
               Share on Social Media
             </label>
-            <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-[0.6vw]">
               {[
                 { name: 'WhatsApp', icon: 'logos:whatsapp-icon', bg: 'hover:bg-emerald-50 hover:border-emerald-200' },
                 { name: 'Facebook', icon: 'logos:facebook', bg: 'hover:bg-blue-50 hover:border-blue-200' },
@@ -146,12 +151,12 @@ const ShareShelfModal = ({
                   key={app.name}
                   type="button"
                   onClick={() => handleSocialShare(app.name)}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border border-gray-100 bg-gray-50/60 transition-all duration-150 group cursor-pointer hover:shadow-sm hover:-translate-y-0.5 ${app.bg}`}
+                  className={`flex flex-col items-center justify-center p-[0.6vw] rounded-[0.5vw] border border-gray-200 bg-white transition-all duration-200 group cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-[0.1vw] active:scale-95 ${app.bg}`}
                 >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
-                    <Icon icon={app.icon} className={`w-6 h-6 ${app.color || ''}`} />
+                  <div className="w-[2vw] h-[2vw] rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
+                    <Icon icon={app.icon} className={`w-[1.2vw] h-[1.2vw] ${app.color || ''}`} />
                   </div>
-                  <span className="text-[11px] font-medium text-gray-700 mt-1.5 group-hover:text-gray-900 truncate max-w-full">
+                  <span className="text-[0.7vw] font-medium text-gray-700 mt-[0.3vw] group-hover:text-gray-900 truncate max-w-full">
                     {app.name}
                   </span>
                 </button>
@@ -161,13 +166,13 @@ const ShareShelfModal = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-gray-100 flex items-center justify-between bg-gray-50/60">
-          <span className="text-[11px] text-gray-400">
+        <div className="px-[1.2vw] py-[0.7vw] border-t border-gray-100 flex items-center justify-between bg-gray-50/60">
+          <span className="text-[0.72vw] text-gray-400 font-medium">
             Anyone with the link can view this shelf
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 bg-white hover:bg-gray-50 hover:text-gray-800 transition-colors shadow-2xs cursor-pointer"
+            className="px-[0.9vw] h-[2vw] border border-gray-300 rounded-[0.4vw] text-[0.8vw] font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-2xs cursor-pointer active:scale-95"
           >
             Close
           </button>
@@ -178,4 +183,3 @@ const ShareShelfModal = ({
 };
 
 export default ShareShelfModal;
-

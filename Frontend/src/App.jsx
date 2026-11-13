@@ -38,10 +38,14 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const Forum = lazy(() => import("./pages/Forum"));
 const Overview = lazy(() => import("./pages/Overview"));
 const Guide = lazy(() => import("./pages/Guide/Guide"));
+const TermsAndConditions = lazy(() => import("./pages/LegalTerms"));
+const PrivacyPolicy = lazy(() => import("./pages/LegalPrivacy"));
+const CookiePolicy = lazy(() => import("./pages/LegalCookies"));
 
 // Preview & Share Pages
 const PreviewPage = lazy(() => import("./pages/PreviewPage"));
 const ShareViewBook = lazy(() => import("./pages/shareviewbook"));
+const PublicShelfView = lazy(() => import("./pages/PublicShelfView"));
 const ARView = lazy(() => import("./pages/ARView"));
 const ComingSoonBanner = lazy(() => import("./pages/ComingSoonBanner"));
 
@@ -144,6 +148,14 @@ export default function App() {
                   </Suspense>
                 }
               />
+              <Route
+                path="/shelf/:shelfId"
+                element={
+                  <Suspense fallback={null}>
+                    <PublicShelfView />
+                  </Suspense>
+                }
+              />
 
               {/* Protected Owner Preview Route */}
               <Route
@@ -187,6 +199,16 @@ export default function App() {
                 />
                 <Route
                   path="/my-flipbooks"
+                  element={
+                    <ProtectedRoute>
+                      <Suspense fallback={null}>
+                        <MyFlipbooks />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/my-flipbooks/:section"
                   element={
                     <ProtectedRoute>
                       <Suspense fallback={null}>
@@ -265,6 +287,72 @@ export default function App() {
                   element={
                     <Suspense fallback={null}>
                       <Forum />
+                    </Suspense>
+                  }
+                />
+
+                {/* Legal & Policy Routes */}
+                <Route
+                  path="/terms-and-conditions"
+                  element={
+                    <Suspense fallback={null}>
+                      <TermsAndConditions />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/terms"
+                  element={
+                    <Suspense fallback={null}>
+                      <TermsAndConditions />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/terms-of-use"
+                  element={
+                    <Suspense fallback={null}>
+                      <TermsAndConditions />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/terms-of-service"
+                  element={
+                    <Suspense fallback={null}>
+                      <TermsAndConditions />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/privacy-policy"
+                  element={
+                    <Suspense fallback={null}>
+                      <PrivacyPolicy />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/privacy"
+                  element={
+                    <Suspense fallback={null}>
+                      <PrivacyPolicy />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/cookie-policy"
+                  element={
+                    <Suspense fallback={null}>
+                      <CookiePolicy />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/cookies"
+                  element={
+                    <Suspense fallback={null}>
+                      <CookiePolicy />
                     </Suspense>
                   }
                 />

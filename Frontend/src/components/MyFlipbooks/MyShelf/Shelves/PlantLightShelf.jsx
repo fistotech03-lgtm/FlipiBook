@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
+import ShelfBookSlot from './ShelfBookSlot';
 
 // Plant-Light Shelf Assets
 import plantLightShadowSheet from '../../../../assets/Bookshelf/plant-light/shadowsheet.png';
@@ -12,6 +13,47 @@ import plantLightDecor from '../../../../assets/Bookshelf/plant-light/decor.png'
 import plantLightLeaf from '../../../../assets/Bookshelf/plant-light/leaf.png';
 import plantLightLamp from '../../../../assets/Bookshelf/plant-light/lamp.png';
 import plantLightSwitch from '../../../../assets/Bookshelf/plant-light/switch.png';
+
+// ============================================================================
+// PLANT LIGHT SHELF CONFIGURATION - Adjust percentages easily here!
+// Both 'normal' (inline shelf view) and 'fullView' (fullscreen view) can be tweaked independently.
+// ============================================================================
+export const PLANT_LIGHT_SHELF_CONFIG = {
+  normal: {
+    tier0: {
+      shelfTop: '35.5%',
+      left: '8.25%',
+      width: '91.75%'
+    },
+    tier1: {
+      shelfTop: '70.46%',
+      left: '8.37%',
+      width: '77.08%'
+    },
+    centers: ['30.5%', '44.5%', '58.5%', '72.5%'],
+    books: {
+      portraitWidth: '11.5%',
+      landscapeWidth: '16.5%'
+    }
+  },
+  fullView: {
+    tier0: {
+      shelfTop: '35.5%',
+      left: '8.25%',
+      width: '91.75%'
+    },
+    tier1: {
+      shelfTop: '70.46%',
+      left: '8.37%',
+      width: '77.08%'
+    },
+    centers: ['30.5%', '44.5%', '58.5%', '72.5%'],
+    books: {
+      portraitWidth: '11.5%',
+      landscapeWidth: '16.5%'
+    }
+  }
+};
 
 const PlantLightShelf = ({
   filteredBooks,
@@ -35,8 +77,10 @@ const PlantLightShelf = ({
   setShowAddBookModal,
   LazyPreview,
   backendUrl,
-  currentUserEmail
+  currentUserEmail,
+  isFs = false
 }) => {
+  const cfg = PLANT_LIGHT_SHELF_CONFIG[isFs ? 'fullView' : 'normal'] || PLANT_LIGHT_SHELF_CONFIG.normal;
   return (
     <>
                   <div className="absolute inset-0 w-full h-full pointer-events-none">
@@ -96,9 +140,9 @@ const PlantLightShelf = ({
                     <div
                       className="absolute pointer-events-none z-10 transition-all duration-300"
                       style={{
-                        top: '35.5%',
-                        left: '8.25%',
-                        width: '91.75%'
+                        top: cfg.tier0.shelfTop,
+                        left: cfg.tier0.left,
+                        width: cfg.tier0.width
                       }}
                     >
                       <img
@@ -116,7 +160,7 @@ const PlantLightShelf = ({
                       <div
                         className="absolute pointer-events-none z-25"
                         style={{
-                          top: '35.5%',
+                          top: cfg.tier0.shelfTop,
                           left: '8.8%',
                           width: '14.0%',
                           transform: 'translateY(-62%)'
@@ -134,9 +178,9 @@ const PlantLightShelf = ({
                     <div
                       className="absolute pointer-events-none z-10 transition-all duration-300"
                       style={{
-                        top: '70.46%',
-                        left: '8.37%',
-                        width: '77.08%'
+                        top: cfg.tier1.shelfTop,
+                        left: cfg.tier1.left,
+                        width: cfg.tier1.width
                       }}
                     >
                       <img
@@ -154,7 +198,7 @@ const PlantLightShelf = ({
                       <div
                         className="absolute pointer-events-none z-25"
                         style={{
-                          top: '70.46%',
+                          top: cfg.tier1.shelfTop,
                           left: '8.97%',
                           width: '13.0%',
                           transform: 'translateY(-85%)'
@@ -170,12 +214,17 @@ const PlantLightShelf = ({
 
                     {/* 2 Tiers of Books: Tier 0 (Shelf 1) & Tier 1 (Shelf 2) */}
                     {[
-                      { tierIdx: 0, shelfTop: '35.5%', books: [0, 1, 2, 3] },
-                      { tierIdx: 1, shelfTop: '70.46%', books: [4, 5, 6, 7] }
+                      { tierIdx: 0, shelfTop: cfg.tier0.shelfTop, books: [0, 1, 2, 3] },
+                      { tierIdx: 1, shelfTop: cfg.tier1.shelfTop, books: [4, 5, 6, 7] }
                     ].map(({ tierIdx, shelfTop, books }) => (
                       <div
                         key={`plantlight-tier-${tierIdx}`}
-                        className="absolute pointer-events-none z-20"
+                        className={`absolute pointer-events-none ${
+                          books.some(bIdx => (
+                            (hoveredInfoId && (hoveredInfoId.includes(`plantlight-info-${bIdx}`) || hoveredInfoId.includes(`-${bIdx}`))) ||
+                            (openMenuId && (openMenuId.includes(`plantlight-${bIdx}`) || openMenuId.includes(`-${bIdx}`)))
+                          )) ? 'z-[80]' : 'z-20'
+                        }`}
                         style={{
                           top: shelfTop,
                           left: 0,
@@ -184,12 +233,8 @@ const PlantLightShelf = ({
                           height: '1px'
                         }}
                       >
-                        {[
-                          { bookIndex: books[0], center: '30.5%' },
-                          { bookIndex: books[1], center: '44.5%' },
-                          { bookIndex: books[2], center: '58.5%' },
-                          { bookIndex: books[3], center: '72.5%' }
-                        ].map(({ bookIndex, center }, slotIdx) => {
+                        {books.map((bookIndex, slotIdx) => {
+                          const center = cfg.centers[slotIdx] || '50%';
                           const book = filteredBooks[bookIndex];
                           if (!book) {
                             return (
@@ -197,10 +242,10 @@ const PlantLightShelf = ({
                                 key={`plantlight-empty-${tierIdx}-${slotIdx}`}
                                 onDragOver={handleDragOver}
                                 onDrop={(e) => handleDrop(e, bookIndex)}
-                                className="pointer-events-auto absolute -translate-x-1/2 bottom-0 flex justify-center items-end"
+                                className="pointer-events-auto absolute -translate-x-1/2 bottom-0 flex justify-center items-end z-10"
                                 style={{
                                   left: center,
-                                  width: '10.5%',
+                                  width: cfg.books.portraitWidth,
                                   aspectRatio: '2.5 / 3.35'
                                 }}
                               >
@@ -227,155 +272,41 @@ const PlantLightShelf = ({
                             );
                           }
 
-                          const emailFolder = book.rawBook?.userEmail ? book.rawBook.userEmail.replace(/[@.]/g, "_") : '';
-                          const folderName = (book.rawBook?.folderName && book.rawBook.folderName.length > 0) ? book.rawBook.folderName[0] : (book.rawBook?.folder || '');
-                          const bookName = book.rawBook?.flipbookName || book.rawBook?.title || '';
-                          const basePath = '';
-
-                          const isLandscape = Boolean(
-                            book.isLandscape ||
-                            book.orientation === 'landscape' ||
-                            book.rawBook?.orientation === 'landscape' ||
-                            (book.width && book.height && Number(book.width) > Number(book.height)) ||
-                            (book.title && /landscape/i.test(book.title)) ||
-                            (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
-                          );
+                          const isSlotActive = (hoveredInfoId && (hoveredInfoId.includes(`plantlight-info-${bookIndex}`) || hoveredInfoId.includes(`-${bookIndex}`))) ||
+                            (openMenuId && (openMenuId.includes(`plantlight-${bookIndex}`) || openMenuId.includes(`-${bookIndex}`)));
 
                           return (
                             <div
                               key={book.v_id || `plantlight-book-${bookIndex}`}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, bookIndex)}
-                              onDragOver={handleDragOver}
-                              onDrop={(e) => handleDrop(e, bookIndex)}
-                              onDragEnd={handleDragEnd}
-                              className={`pointer-events-auto absolute -translate-x-1/2 bottom-0 group cursor-pointer flex justify-center items-end ${openMenuId === `plantlight-${bookIndex}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
+                              className={`pointer-events-auto absolute -translate-x-1/2 bottom-0 flex justify-center items-end ${
+                                isSlotActive ? 'z-[100]' : 'z-20'
+                              }`}
                               style={{
                                 left: center,
-                                width: isLandscape ? '13.5%' : '10.0%'
+                                width: book?.card_orientation === 'landscape' ? cfg.books.landscapeWidth : cfg.books.portraitWidth
                               }}
                             >
-                              <div className={`w-full ${isLandscape ? 'aspect-[3.35/2.2]' : 'aspect-[2.5/3.35]'} relative rounded-[3px] shadow-sm transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
-                                <LazyPreview
-                                  v_id={book.v_id}
-                                  emailId={book.rawBook?.userEmail || currentUserEmail}
-                                  backendUrl={backendUrl}
-                                  iframeBaseUrl={basePath}
-                                  title={book.title}
-                                  imageUrl={null}
-                                />
-                              </div>
-
-                              {/* Hover Menu Pill */}
-                              <div className="absolute top-[2%] -right-[0.2vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto">
-                                <button
-                                  onClick={() => setOpenMenuId(openMenuId === `plantlight-${bookIndex}` ? null : `plantlight-${bookIndex}`)}
-                                  className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
-                                >
-                                  <Icon icon="mdi:dots-vertical" className="text-[14px]" />
-                                </button>
-                                <div
-                                  className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
-                                  onMouseEnter={() => setHoveredInfoId(`plantlight-${bookIndex}`)}
-                                  onMouseLeave={() => setHoveredInfoId(null)}
-                                >
-                                  <Icon icon="si:info-fill" className="w-4 h-4" />
-
-                                  {/* Info Tooltip Bridge & Container */}
-                                  <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `plantlight-${bookIndex}` ? 'block' : 'hidden'} z-[60]`}>
-                                    <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
-                                      <div className="flex items-center gap-2">
-                                        {book.authorPicture && book.authorPicture !== 'color_only' ? (
-                                          <img
-                                            src={book.authorPicture}
-                                            alt={book.authorName}
-                                            className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
-                                          />
-                                        ) : (
-                                          <div
-                                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
-                                            style={{ backgroundColor: book.authorBgColor }}
-                                          >
-                                            {(book.authorName || 'U').charAt(0).toUpperCase()}
-                                          </div>
-                                        )}
-                                        <div className="flex flex-col min-w-0 pr-1">
-                                          <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
-                                          <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
-                                            <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
-                                            <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-black font-semibold">{book.pages || 0}</span>
-                                          <span className="font-normal text-gray-500">Pages</span>
-                                        </div>
-                                        <span className="text-gray-300">|</span>
-                                        <span className="flex items-center gap-1">
-                                          <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
-                                          {book.views || '1.2k'}
-                                        </span>
-                                        <span className="text-gray-300">|</span>
-                                        <span className="flex items-center gap-1">
-                                          <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
-                                          {book.rating || 4.5}
-                                        </span>
-                                      </div>
-
-                                      <div className="relative">
-                                        <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
-                                        <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            const targetShareId = book.shareId || book.v_id;
-                                            const rawAcc = String(book.access || 'public').toLowerCase();
-                                            if (targetShareId) {
-                                              window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                                            }
-                                          }}
-                                          className="absolute bottom-0 right-0 bg-black text-white w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md cursor-pointer"
-                                        >
-                                          <Icon icon="mdi:arrow-top-right" className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {openMenuId === `plantlight-${bookIndex}` && (
-                                <div className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const targetShareId = book.shareId || book.v_id;
-                                      const rawAcc = String(book.access || 'public').toLowerCase();
-                                      if (targetShareId) {
-                                        window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                                      }
-                                      setOpenMenuId(null);
-                                    }}
-                                    className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
-                                  >
-                                    Open Book
-                                  </button>
-
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveBook(book.v_id);
-                                      setOpenMenuId(null);
-                                    }}
-                                    className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                  >
-                                    Remove Book
-                                  </button>
-                                </div>
-                              )}
+                              <ShelfBookSlot
+                                book={book}
+                                bookIndex={bookIndex}
+                                bIdx={bookIndex % 4}
+                                tooltipPlacement={(bookIndex % 4) >= 2 ? 'left' : 'right'}
+                                shelfKey="plantlight"
+                                openMenuId={openMenuId}
+                                setOpenMenuId={setOpenMenuId}
+                                hoveredInfoId={hoveredInfoId}
+                                setHoveredInfoId={setHoveredInfoId}
+                                handleDragStart={handleDragStart}
+                                handleDragOver={handleDragOver}
+                                handleDrop={handleDrop}
+                                handleDragEnd={handleDragEnd}
+                                draggedBookIndex={draggedBookIndex}
+                                handleRemoveBook={handleRemoveBook}
+                                backendUrl={backendUrl}
+                                currentUserEmail={currentUserEmail}
+                                LazyPreviewComponent={LazyPreview}
+                                widthOverride="100%"
+                              />
                             </div>
                           );
                         })}

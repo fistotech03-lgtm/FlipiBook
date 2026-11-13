@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
+import ShelfBookSlot from './ShelfBookSlot';
 
 // Green-Light Shelf Assets
 import greenLightSheet from '../../../../assets/Bookshelf/greenlight/sheet.png';
@@ -10,6 +11,51 @@ import greenLightPlant from '../../../../assets/Bookshelf/greenlight/plant.png';
 import greenLightBase from '../../../../assets/Bookshelf/greenlight/base.png';
 import greenLightFixture from '../../../../assets/Bookshelf/greenlight/light.png';
 import greenLightSwitch from '../../../../assets/Bookshelf/greenlight/switch.png';
+
+// ============================================================================
+// GREEN LIGHT SHELF CONFIGURATION - Adjust percentages easily here!
+// Both 'normal' (inline shelf view) and 'fullView' (fullscreen view) can be tweaked independently.
+// ============================================================================
+export const GREEN_LIGHT_SHELF_CONFIG = {
+  normal: {
+    tier0: {
+      shelfTop: '35.5%',
+      lightTop: '5.5%'
+    },
+    tier1: {
+      shelfTop: '70.0%',
+      lightTop: '40.5%'
+    },
+    shelf: {
+      left: '24.0%',
+      width: '68.0%'
+    },
+    centers: ['9.91%', '36.62%', '63.33%', '90.04%'],
+    books: {
+      portraitWidth: '13.5%',
+      landscapeWidth: '18.5%'
+    }
+  },
+  fullView: {
+    tier0: {
+      shelfTop: '35.5%',
+      lightTop: '5.5%'
+    },
+    tier1: {
+      shelfTop: '70.0%',
+      lightTop: '40.5%'
+    },
+    shelf: {
+      left: '24.0%',
+      width: '68.0%'
+    },
+    centers: ['9.91%', '36.62%', '63.33%', '90.04%'],
+    books: {
+      portraitWidth: '13.5%',
+      landscapeWidth: '18.5%'
+    }
+  }
+};
 
 const GreenLightShelf = ({
   filteredBooks,
@@ -34,8 +80,10 @@ const GreenLightShelf = ({
   setShowAddBookModal,
   LazyPreview,
   backendUrl,
-  currentUserEmail
+  currentUserEmail,
+  isFs = false
 }) => {
+  const cfg = GREEN_LIGHT_SHELF_CONFIG[isFs ? 'fullView' : 'normal'] || GREEN_LIGHT_SHELF_CONFIG.normal;
   return (
     <>
                   <div className="absolute inset-0 w-full h-full pointer-events-none">
@@ -93,8 +141,8 @@ const GreenLightShelf = ({
 
                     {/* 2 Tiers of Shelves and Spotlights */}
                     {[
-                      { tierIdx: 0, shelfTop: '35.5%', lightTop: '5.5%', books: [0, 1, 2, 3] },
-                      { tierIdx: 1, shelfTop: '70.0%', lightTop: '40.5%', books: [4, 5, 6, 7] }
+                      { tierIdx: 0, shelfTop: cfg.tier0.shelfTop, lightTop: cfg.tier0.lightTop, books: [0, 1, 2, 3] },
+                      { tierIdx: 1, shelfTop: cfg.tier1.shelfTop, lightTop: cfg.tier1.lightTop, books: [4, 5, 6, 7] }
                     ].map(({ tierIdx, shelfTop, lightTop, books }) => (
                       <React.Fragment key={`greenlight-tier-${tierIdx}`}>
                         {/* Shelf row: 4 floating shelf segments stretched across the width */}
@@ -102,8 +150,8 @@ const GreenLightShelf = ({
                           className="absolute pointer-events-none z-10"
                           style={{
                             top: shelfTop,
-                            left: '24.0%',
-                            width: '68.0%'
+                            left: cfg.shelf.left,
+                            width: cfg.shelf.width
                           }}
                         >
                           <img
@@ -135,18 +183,13 @@ const GreenLightShelf = ({
                             className="absolute pointer-events-none z-15 transition-opacity duration-150"
                             style={{
                               top: lightTop,
-                              left: '24.0%',
-                              width: '68.0%',
+                              left: cfg.shelf.left,
+                              width: cfg.shelf.width,
                               height: '100%',
                               opacity: (Number(lightOpacity ?? 100) / 100)
                             }}
                           >
-                            {[
-                              { center: '9.91%' },
-                              { center: '36.62%' },
-                              { center: '63.33%' },
-                              { center: '90.04%' }
-                            ].map(({ center }, beamIdx) => (
+                            {cfg.centers.map((center, beamIdx) => (
                               <React.Fragment key={`spotlight-beam-${tierIdx}-${beamIdx}`}>
                                 {/* 1. Pure Vertical Downward Beam: Narrow at top fixture, smoothly diffusing vertically down over the book */}
                                 <div
@@ -214,21 +257,22 @@ const GreenLightShelf = ({
 
                         {/* 4 Book Positions for this tier - sized proportionally so spotlight & shadow are clearly visible above */}
                         <div
-                          className="absolute pointer-events-none z-20"
+                          className={`absolute pointer-events-none ${
+                            books.some(bIdx => (
+                              (hoveredInfoId && (hoveredInfoId.includes(`greenlight-info-${bIdx}`) || hoveredInfoId.includes(`-${bIdx}`))) ||
+                              (openMenuId && (openMenuId.includes(`greenlight-${bIdx}`) || openMenuId.includes(`-${bIdx}`)))
+                            )) ? 'z-[80]' : 'z-20'
+                          }`}
                           style={{
                             top: shelfTop,
-                            left: '24.0%',
-                            width: '68.0%',
+                            left: cfg.shelf.left,
+                            width: cfg.shelf.width,
                             transform: 'translateY(-100%)',
                             height: '1px'
                           }}
                         >
-                          {[
-                            { bookIndex: books[0], center: '9.91%' },
-                            { bookIndex: books[1], center: '36.62%' },
-                            { bookIndex: books[2], center: '63.33%' },
-                            { bookIndex: books[3], center: '90.04%' }
-                          ].map(({ bookIndex, center }, slotIdx) => {
+                          {books.map((bookIndex, slotIdx) => {
+                            const center = cfg.centers[slotIdx] || '50%';
                             const book = filteredBooks[bookIndex];
                             if (!book) {
                               return (
@@ -236,10 +280,10 @@ const GreenLightShelf = ({
                                   key={`greenlight-empty-${tierIdx}-${slotIdx}`}
                                   onDragOver={handleDragOver}
                                   onDrop={(e) => handleDrop(e, bookIndex)}
-                                  className="pointer-events-auto absolute -translate-x-1/2 bottom-0 flex justify-center items-end"
+                                  className="pointer-events-auto absolute -translate-x-1/2 bottom-0 flex justify-center items-end z-10"
                                   style={{
                                     left: center,
-                                    width: '13.0%',
+                                    width: cfg.books.portraitWidth,
                                     aspectRatio: '2.5 / 3.35'
                                   }}
                                 >
@@ -266,157 +310,44 @@ const GreenLightShelf = ({
                               );
                             }
 
-                            const emailFolder = book.rawBook?.userEmail ? book.rawBook.userEmail.replace(/[@.]/g, "_") : '';
-                            const folderName = (book.rawBook?.folderName && book.rawBook.folderName.length > 0) ? book.rawBook.folderName[0] : (book.rawBook?.folder || '');
-                            const bookName = book.rawBook?.flipbookName || book.rawBook?.title || '';
-                            const basePath = '';
-                            const isLandscape = Boolean(
-                              book.isLandscape ||
-                              book.orientation === 'landscape' ||
-                              book.rawBook?.orientation === 'landscape' ||
-                              (book.width && book.height && Number(book.width) > Number(book.height)) ||
-                              (book.title && /landscape/i.test(book.title)) ||
-                              (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
-                            );
+                            const isSlotActive = (hoveredInfoId && (hoveredInfoId.includes(`greenlight-info-${bookIndex}`) || hoveredInfoId.includes(`-${bookIndex}`))) ||
+                              (openMenuId && (openMenuId.includes(`greenlight-${bookIndex}`) || openMenuId.includes(`-${bookIndex}`)));
 
-                            return (
-                              <div
-                                key={book.v_id || `greenlight-book-${bookIndex}`}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, bookIndex)}
-                                onDragOver={handleDragOver}
-                                onDrop={(e) => handleDrop(e, bookIndex)}
-                                onDragEnd={handleDragEnd}
-                                className={`pointer-events-auto absolute -translate-x-1/2 bottom-0 group cursor-pointer flex justify-center items-end ${openMenuId === `greenlight-${bookIndex}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
-                                style={{
-                                  left: center,
-                                  width: isLandscape ? '18%' : '13.0%'
-                                }}
-                              >
-                                <div className={`w-full ${isLandscape ? 'aspect-[3.35/2.2]' : 'aspect-[2.5/3.35]'} relative rounded-[3px] shadow-sm transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
-                                  <LazyPreview
-                                    v_id={book.v_id}
-                                    emailId={book.rawBook?.userEmail || currentUserEmail}
-                                    backendUrl={backendUrl}
-                                    iframeBaseUrl={basePath}
-                                    title={book.title}
-                                    imageUrl={null}
-                                  />
-                                </div>
-
-                                {/* Hover Menu Pill */}
-                                <div className="absolute top-[2%] -right-[0.2vw] w-[1vw] h-[3vw] bg-[#E8E6E1] rounded-full flex flex-col items-center justify-between py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-30 pointer-events-none group-hover:pointer-events-auto">
-                                  <button
-                                    onClick={() => setOpenMenuId(openMenuId === `greenlight-${bookIndex}` ? null : `greenlight-${bookIndex}`)}
-                                    className="text-black hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center mt-0.5 transition-colors"
-                                  >
-                                    <Icon icon="mdi:dots-vertical" className="text-[14px]" />
-                                  </button>
-                                  <div
-                                    className="text-[#4A4A4A] hover:text-black flex items-center justify-center mb-0.5 transition-colors relative cursor-pointer"
-                                    onMouseEnter={() => setHoveredInfoId(`greenlight-${bookIndex}`)}
-                                    onMouseLeave={() => setHoveredInfoId(null)}
-                                  >
-                                    <Icon icon="si:info-fill" className="w-4 h-4" />
-
-                                    {/* Info Tooltip Bridge & Container */}
-                                    <div className={`absolute top-1/2 right-full pr-3 -translate-y-1/2 ${hoveredInfoId === `greenlight-${bookIndex}` ? 'block' : 'hidden'} z-[60]`}>
-                                      <div className="w-[170px] bg-white rounded-xl p-4 text-gray-800 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex flex-col gap-3 cursor-default text-left border border-gray-100 relative">
-                                        <div className="flex items-center gap-2">
-                                          {book.authorPicture && book.authorPicture !== 'color_only' ? (
-                                            <img
-                                              src={book.authorPicture}
-                                              alt={book.authorName}
-                                              className="w-8 h-8 rounded-full border border-gray-200 object-cover shrink-0"
-                                            />
-                                          ) : (
-                                            <div
-                                              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-inner"
-                                              style={{ backgroundColor: book.authorBgColor }}
-                                            >
-                                              {(book.authorName || 'U').charAt(0).toUpperCase()}
-                                            </div>
-                                          )}
-                                          <div className="flex flex-col min-w-0 pr-1">
-                                            <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{book.authorName}</span>
-                                            <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 truncate">
-                                              <Icon icon="lucide:map-pin" className="w-3 h-3 text-gray-400 shrink-0" />
-                                              <span className="truncate">{String(book.location).replace(/📍/g, '').trim()}</span>
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2 justify-start text-[11px] text-gray-700 font-medium whitespace-nowrap">
-                                          <div className="flex items-center gap-1">
-                                            <span className="text-black font-semibold">{book.pages || 0}</span>
-                                            <span className="font-normal text-gray-500">Pages</span>
-                                          </div>
-                                          <span className="text-gray-300">|</span>
-                                          <span className="flex items-center gap-1">
-                                            <Icon icon="lucide:eye" className="w-3.5 h-3.5 text-gray-400" />
-                                            {book.views || '1.2k'}
-                                          </span>
-                                          <span className="text-gray-300">|</span>
-                                          <span className="flex items-center gap-1">
-                                            <Icon icon="material-symbols:star" className="w-3.5 h-3.5 text-yellow-400" />
-                                            {book.rating || 4.5}
-                                          </span>
-                                        </div>
-
-                                        <div className="relative">
-                                          <h4 className="text-[14px] font-semibold text-black truncate tracking-tight mb-1">{book.title}</h4>
-                                          <p className="text-[11px] text-gray-500 leading-relaxed pr-10 line-clamp-2">{book.description}</p>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              const targetShareId = book.shareId || book.v_id;
-                                              const rawAcc = String(book.access || 'public').toLowerCase();
-                                              if (targetShareId) {
-                                                window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                                              }
-                                            }}
-                                            className="absolute bottom-0 right-0 bg-black text-white w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md cursor-pointer"
-                                          >
-                                            <Icon icon="mdi:arrow-top-right" className="w-4 h-4" />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {openMenuId === `greenlight-${bookIndex}` && (
-                                  <div className="absolute top-[2%] -right-[0.5vw] bg-white rounded-[0.5vw] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-[0.2vw] w-[7vw] z-50 overflow-hidden">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const targetShareId = book.shareId || book.v_id;
-                                        const rawAcc = String(book.access || 'public').toLowerCase();
-                                        if (targetShareId) {
-                                          window.open(`/share=${rawAcc}/${targetShareId}`, '_blank');
-                                        }
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
-                                    >
-                                      Open Book
-                                    </button>
-
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRemoveBook(book.v_id);
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="w-full text-left px-[1vw] py-[0.3vw] text-[0.75vw] font-medium text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                    >
-                                      Remove Book
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
+                          return (
+                            <div
+                              key={book.v_id || `greenlight-book-${bookIndex}`}
+                              className={`pointer-events-auto absolute -translate-x-1/2 bottom-0 flex justify-center items-end ${
+                                isSlotActive ? 'z-[100]' : 'z-20'
+                              }`}
+                              style={{
+                                left: center,
+                                width: book?.card_orientation === 'landscape' ? cfg.books.landscapeWidth : cfg.books.portraitWidth
+                              }}
+                            >
+                              <ShelfBookSlot
+                                book={book}
+                                bookIndex={bookIndex}
+                                bIdx={bookIndex % 4}
+                                tooltipPlacement={(bookIndex % 4) >= 2 ? 'left' : 'right'}
+                                shelfKey="greenlight"
+                                openMenuId={openMenuId}
+                                setOpenMenuId={setOpenMenuId}
+                                hoveredInfoId={hoveredInfoId}
+                                setHoveredInfoId={setHoveredInfoId}
+                                handleDragStart={handleDragStart}
+                                handleDragOver={handleDragOver}
+                                handleDrop={handleDrop}
+                                handleDragEnd={handleDragEnd}
+                                draggedBookIndex={draggedBookIndex}
+                                handleRemoveBook={handleRemoveBook}
+                                backendUrl={backendUrl}
+                                currentUserEmail={currentUserEmail}
+                                LazyPreviewComponent={LazyPreview}
+                                widthOverride="100%"
+                              />
+                            </div>
+                          );
+                        })}
                         </div>
                       </React.Fragment>
                     ))}

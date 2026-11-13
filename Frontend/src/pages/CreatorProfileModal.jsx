@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { resolveUploadsPath, getSupabaseBaseUrl } from '../utils/assetUtils';
+import { resolveUploadsPath, getSupabaseBaseUrl, getAssetBaseUrl } from '../utils/assetUtils';
 import { sanitizeSvgXml } from '../utils/editorUtils';
 import { useAuth } from '../context/AuthContext';
 import { getInitialUser } from '../utils/authUtils';
@@ -48,6 +48,7 @@ const defaultMockBooks = [
 const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl, onOrientationDetected }) => {
     const containerRef = useRef(null);
     const [html, setHtml] = useState(null);
+    const [fetchedBaseUrl, setFetchedBaseUrl] = useState('');
     const [loaded, setLoaded] = useState(false);
     const [fetching, setFetching] = useState(false);
 
@@ -64,6 +65,16 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
                     axios
                         .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { withCredentials: true })
                         .then((res) => {
+                            if (res.data?.book) {
+                                const b = res.data.book;
+                                const uFolder = b.userID || b.userFolder || b.userId || emailId?.replace(/[@.]/g, '_');
+                                const fName = b.folderName || 'default';
+                                const bName = b.realName || b.flipbookName || b.title || title;
+                                if (uFolder && bName) {
+                                    setFetchedBaseUrl(getAssetBaseUrl(uFolder, fName, bName));
+                                }
+                            }
+
                             if (res.data?.html) {
                                 const htmlStr = res.data.html;
 
@@ -137,15 +148,24 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
 
             {html ? (() => {
                 let processedContent = sanitizeSvgXml(html.content || '');
-                const cleanBaseUrl = (iframeBaseUrl || '').trim();
+                const cleanBaseUrl = (iframeBaseUrl || fetchedBaseUrl || '').trim();
                 let effectiveBaseHref = cleanBaseUrl;
                 if (cleanBaseUrl) {
                     const bookBaseUrl = cleanBaseUrl.endsWith('/') ? cleanBaseUrl : `${cleanBaseUrl}/`;
                     effectiveBaseHref = `${bookBaseUrl}pages/`;
                     const assetsBaseUrl = `${bookBaseUrl}assets/`;
-                    processedContent = processedContent
-                        .replace(/(?:href|xlink:href)=["'](?:\.\.\/|\.\/)?assets\/([^"']+)["']/gi, `href="${assetsBaseUrl}$1" xlink:href="${assetsBaseUrl}$1"`)
-                        .replace(/src=["'](?:\.\.\/|\.\/)?assets\/([^"']+)["']/gi, `src="${assetsBaseUrl}$1"`);
+                    processedContent = processedContent.replace(
+                        /(\b(?:href|xlink:href|src)=["'])(?:\.\.\/|\.\/)*assets\/([^"']+)["']/gi,
+                        (match, prefix, path) => `${prefix}${assetsBaseUrl}${path}"`
+                    );
+                }
+
+                const backend = (backendUrl || BACKEND_URL || (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_BACKEND_URL : '') || '').trim().replace(/\/+$/, '');
+                if (backend) {
+                    processedContent = processedContent.replace(
+                        /(\b(?:href|xlink:href|src)=["'])\/(storage|uploads)\/([^"']+)["']/gi,
+                        `$1${backend}/$2/$3"`
+                    );
                 }
 
                 if (processedContent.includes('preserveAspectRatio')) {
@@ -220,20 +240,27 @@ const BookCoverItem = ({ book, onOpenBook, backendUrl, className = "" }) => {
                             : 'h-full aspect-[1/1.42]'
                     }`}
                 >
-                    {book.v_id ? (
-                        <LazyPreview
-                            v_id={book.v_id}
-                            emailId={book.rawBook?.userEmail}
-                            backendUrl={backendUrl || BACKEND_URL}
-                            title={book.title || 'Flipbook'}
-                            imageUrl={book.rawBook?.image || null}
-                            onOrientationDetected={(detected) => {
-                                if (detected && detected !== orientation) {
-                                    setOrientation(detected);
-                                }
-                            }}
-                        />
-                    ) : (
+                    {book.v_id ? (() => {
+                        const userFolder = book.rawBook?.userID || book.rawBook?.userId || book.rawBook?.userEmail?.replace(/[@.]/g, '_') || book.userEmail?.replace(/[@.]/g, '_');
+                        const folderName = book.rawBook?.folderName || 'default';
+                        const resolvedTitle = book.rawBook?.flipbookName || book.rawBook?.realName || book.title;
+                        const resolvedIframeBaseUrl = getAssetBaseUrl(userFolder, folderName, resolvedTitle);
+                        return (
+                            <LazyPreview
+                                v_id={book.v_id}
+                                emailId={book.rawBook?.userEmail}
+                                backendUrl={backendUrl || BACKEND_URL}
+                                iframeBaseUrl={resolvedIframeBaseUrl}
+                                title={book.title || 'Flipbook'}
+                                imageUrl={book.rawBook?.image || null}
+                                onOrientationDetected={(detected) => {
+                                    if (detected && detected !== orientation) {
+                                        setOrientation(detected);
+                                    }
+                                }}
+                            />
+                        );
+                    })() : (
                         <img
                             src={book.cover}
                             alt={book.title || 'Flipbook'}
@@ -369,13 +396,22 @@ const CreatorFlipbookCard = ({ book, creator, onOpenBook, isFavorited: propIsFav
         >
             {/* Image Area Wrapper (1st page preview) */}
             <div className="relative w-full aspect-[4/3] bg-white rounded-t-xl overflow-hidden flex items-center justify-center border-b border-gray-100">
-                <LazyPreview
-                    v_id={v_id}
-                    emailId={rawBook?.userEmail || creator?.emailId || creator?.email}
-                    backendUrl={BACKEND_URL}
-                    title={bookTitle || "Flipbook"}
-                    imageUrl={rawBook?.image || book?.cover || null}
-                />
+                {(() => {
+                    const userFolder = rawBook?.userID || rawBook?.userId || rawBook?.userEmail?.replace(/[@.]/g, '_') || creator?.emailId?.replace(/[@.]/g, '_') || creator?.email?.replace(/[@.]/g, '_');
+                    const folderName = rawBook?.folderName || 'default';
+                    const bookTitleResolved = rawBook?.flipbookName || rawBook?.realName || bookTitle;
+                    const resolvedIframeBaseUrl = getAssetBaseUrl(userFolder, folderName, bookTitleResolved);
+                    return (
+                        <LazyPreview
+                            v_id={v_id}
+                            emailId={rawBook?.userEmail || creator?.emailId || creator?.email}
+                            backendUrl={BACKEND_URL}
+                            iframeBaseUrl={resolvedIframeBaseUrl}
+                            title={bookTitle || "Flipbook"}
+                            imageUrl={rawBook?.image || book?.cover || null}
+                        />
+                    );
+                })()}
             </div>
 
             {/* Top Right Floating Action Buttons (Heart + Three-Dots) - Visible on hover */}

@@ -40,13 +40,13 @@ export default function ConverterFeatures() {
             <div className="relative z-10 w-full max-w-[94vw] mx-auto px-[3vw] py-[2vw]">
               <div className="max-w-[40vw]">
                 <div className="flex items-center gap-[0.5vw] mb-[0.8vw]">
-                  <span className="text-[0.72vw] font-bold tracking-[0.22em] text-[#94A3B8] uppercase">
+                  <span className="text-[0.72vw] font-semibold tracking-[0.22em] text-[#94A3B8] uppercase">
                     CONVERTER
                   </span>
                   <span className="w-[2.5vw] h-[1.5px] bg-[#CBD5E1]"></span>
                 </div>
 
-                <h1 className="text-[3.2vw] font-bold tracking-tight text-[#111827] leading-[1.12]">
+                <h1 className="text-[3.2vw] font-semibold tracking-tight text-[#111827] leading-[1.12]">
                   Convert &amp; Compress <br />
                   <span className="text-[#EA580C]">Your Media</span>
                 </h1>
@@ -89,85 +89,60 @@ export default function ConverterFeatures() {
             <div className="grid grid-cols-6 lg:grid-cols-10 gap-[2.5vw] items-center">
               {/* Left Column: Details */}
               <div className="lg:col-span-4 flex flex-col justify-center">
-                <span className="text-[0.85vw] font-bold tracking-[0.22em] text-[#94A3B8] uppercase block mb-[0.6vw]">
-                  IMAGE CONVERTER
-                </span>
-                <h2 className="text-[2.3vw] font-bold tracking-tight text-[#111827] leading-[1.2]">
+                <div className="flex items-center gap-[0.5vw] mb-[0.6vw]">
+                  <span className="text-[0.85vw] font-semibold tracking-[0.22em] text-[#94A3B8] uppercase">
+                    IMAGE CONVERTER
+                  </span>
+                  <span className="w-[2.2vw] h-[2px] bg-[#EA580C]"></span>
+                </div>
+                <h2 className="text-[2.3vw] font-semibold tracking-tight text-[#111827] leading-[1.2]">
                   Image Converter <br />
-                  <span className="text-[#EA580C]">&amp; Compressor</span>
+                  &amp; Compressor
                 </h2>
                 <p className="mt-[0.9vw] text-[0.95vw] text-[#64748B] leading-relaxed">
-                  Convert, compress, and optimize your images for maximum visual quality and small file sizes.
+                  Convert, compress and optimize your images for crystal-clear quality and smaller file sizes.
                 </p>
 
                 {/* Feature Bullet List */}
                 <div className="mt-[1.8vw] space-y-[1.2vw]">
                   <div className="flex items-start gap-[0.9vw]">
                     <div className="w-[2.6vw] h-[2.6vw] rounded-[0.65vw] bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center shrink-0 border border-[#FFEDD5]">
-                      <Icon icon="lucide:shuffle" className="w-[1.3vw] h-[1.3vw]" />
+                      <Icon icon="lucide:arrow-left-right" className="w-[1.3vw] h-[1.3vw]" />
                     </div>
                     <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        Multi-Format Conversion
+                      <h4 className="text-[1.02vw] font-semibold text-[#1E293B]">
+                        Multi-Format Conversion &amp; Compression
                       </h4>
                       <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Convert your images to WEBP, PNG, and JPEG formats with one click.
+                        Convert your images into WEBP, PNG and JPG formats.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-[0.9vw]">
                     <div className="w-[2.6vw] h-[2.6vw] rounded-[0.65vw] bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center shrink-0 border border-[#FFEDD5]">
-                      <Icon icon="lucide:minimize-2" className="w-[1.3vw] h-[1.3vw]" />
+                      <Icon icon="lucide:bar-chart-2" className="w-[1.3vw] h-[1.3vw]" />
                     </div>
                     <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        Smart Image Compression
-                      </h4>
-                      <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Reduce image file sizes with flexible compression options.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-[0.9vw]">
-                    <div className="w-[2.6vw] h-[2.6vw] rounded-[0.65vw] bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center shrink-0 border border-[#FFEDD5]">
-                      <Icon icon="lucide:sliders" className="w-[1.3vw] h-[1.3vw]" />
-                    </div>
-                    <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        Image Resolution Details
-                      </h4>
-                      <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Keep original aspect ratios or scale resolutions dynamically.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-[0.9vw]">
-                    <div className="w-[2.6vw] h-[2.6vw] rounded-[0.65vw] bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center shrink-0 border border-[#FFEDD5]">
-                      <Icon icon="lucide:sparkles" className="w-[1.3vw] h-[1.3vw]" />
-                    </div>
-                    <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
+                      <h4 className="text-[1.02vw] font-semibold text-[#1E293B]">
                         Background Removal
                       </h4>
                       <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Remove unwanted backgrounds instantly with an automatic toggle.
+                        Remove unwanted backgrounds with a simple toggle.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-[0.9vw]">
                     <div className="w-[2.6vw] h-[2.6vw] rounded-[0.65vw] bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center shrink-0 border border-[#FFEDD5]">
-                      <Icon icon="lucide:download-cloud" className="w-[1.3vw] h-[1.3vw]" />
+                      <Icon icon="lucide:download" className="w-[1.3vw] h-[1.3vw]" />
                     </div>
                     <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        Easy File Conversion
+                      <h4 className="text-[1.02vw] font-semibold text-[#1E293B]">
+                        Easy File Download
                       </h4>
                       <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Convert and download optimized assets ready for instant publication.
+                        Convert and download optimized images in one click.
                       </p>
                     </div>
                   </div>
@@ -212,15 +187,18 @@ export default function ConverterFeatures() {
 
               {/* Right Column: Details */}
               <div className="w-full lg:col-span-4 flex flex-col justify-center">
-                <span className="text-[0.85vw] font-bold tracking-[0.22em] text-[#94A3B8] uppercase block mb-[0.6vw]">
-                  VIDEO CONVERTER
-                </span>
-                <h2 className="text-[2.3vw] font-bold tracking-tight text-[#111827] leading-[1.2]">
+                <div className="flex items-center gap-[0.5vw] mb-[0.6vw]">
+                  <span className="text-[0.85vw] font-semibold tracking-[0.22em] text-[#94A3B8] uppercase">
+                    VIDEO CONVERTER
+                  </span>
+                  <span className="w-[2.2vw] h-[2px] bg-[#CBD5E1]"></span>
+                </div>
+                <h2 className="text-[2.3vw] font-semibold tracking-tight text-[#111827] leading-[1.2]">
                   Video Converter <br />
-                  <span className="text-[#EA580C]">&amp; Compressor</span>
+                  &amp; Compressor
                 </h2>
                 <p className="mt-[0.9vw] text-[0.95vw] text-[#64748B] leading-relaxed">
-                  Optimize your videos with flexible format and resolution options to ensure seamless and fast loading.
+                  Optimize your videos with flexible format and resolution options for smoother playback and faster loading.
                 </p>
 
                 {/* Feature Bullet List */}
@@ -230,11 +208,11 @@ export default function ConverterFeatures() {
                       <Icon icon="lucide:arrow-left-right" className="w-[1.3vw] h-[1.3vw]" />
                     </div>
                     <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        Multiple Formats
+                      <h4 className="text-[1.02vw] font-semibold text-[#1E293B]">
+                        Multiple Formats Conversion &amp; Compression
                       </h4>
                       <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Convert your video into MP4 and WEBM formats with high fidelity.
+                        Convert your videos into MP4 and WEBM formats.
                       </p>
                     </div>
                   </div>
@@ -244,53 +222,25 @@ export default function ConverterFeatures() {
                       <Icon icon="lucide:bar-chart-2" className="w-[1.3vw] h-[1.3vw]" />
                     </div>
                     <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        Smart Compression
-                      </h4>
-                      <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Reduce video file sizes with flexible bitrate compression options.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-[0.9vw]">
-                    <div className="w-[2.6vw] h-[2.6vw] rounded-[0.65vw] bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center shrink-0 border border-[#FFEDD5]">
-                      <Icon icon="lucide:layers" className="w-[1.3vw] h-[1.3vw]" />
-                    </div>
-                    <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
+                      <h4 className="text-[1.02vw] font-semibold text-[#1E293B]">
                         Resolution Settings
                       </h4>
                       <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Choose from 1080p, 720p, or 480p resolution presets effortlessly.
+                        Choose from 1080p, 720p and 480p resolutions.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-[0.9vw]">
                     <div className="w-[2.6vw] h-[2.6vw] rounded-[0.65vw] bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center shrink-0 border border-[#FFEDD5]">
-                      <Icon icon="lucide:play-circle" className="w-[1.3vw] h-[1.3vw]" />
+                      <Icon icon="lucide:download" className="w-[1.3vw] h-[1.3vw]" />
                     </div>
                     <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        Video Preview
+                      <h4 className="text-[1.02vw] font-semibold text-[#1E293B]">
+                        Easy Download
                       </h4>
                       <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Preview your videos between conversions to verify output quality.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-[0.9vw]">
-                    <div className="w-[2.6vw] h-[2.6vw] rounded-[0.65vw] bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center shrink-0 border border-[#FFEDD5]">
-                      <Icon icon="lucide:check-circle" className="w-[1.3vw] h-[1.3vw]" />
-                    </div>
-                    <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        Easy Conversion
-                      </h4>
-                      <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Convert and compress or optimize videos in one click.
+                        Convert and download optimized videos in one click.
                       </p>
                     </div>
                   </div>
@@ -313,15 +263,18 @@ export default function ConverterFeatures() {
             <div className="grid grid-cols-1 lg:grid-cols-10 gap-[2.5vw] items-center">
               {/* Left Column: Details */}
               <div className="lg:col-span-4 flex flex-col justify-center">
-                <span className="text-[0.85vw] font-bold tracking-[0.22em] text-[#94A3B8] uppercase block mb-[0.6vw]">
-                  3D MODEL CONVERTER
-                </span>
-                <h2 className="text-[2.3vw] font-bold tracking-tight text-[#111827] leading-[1.2]">
+                <div className="flex items-center gap-[0.5vw] mb-[0.6vw]">
+                  <span className="text-[0.85vw] font-semibold tracking-[0.22em] text-[#94A3B8] uppercase">
+                    3D MODEL CONVERTER
+                  </span>
+                  <span className="w-[2.2vw] h-[2px] bg-[#EA580C]"></span>
+                </div>
+                <h2 className="text-[2.3vw] font-semibold tracking-tight text-[#111827] leading-[1.2]">
                   3D Model Converter <br />
-                  <span className="text-[#EA580C]">&amp; Compressor</span>
+                  &amp; Compressor
                 </h2>
                 <p className="mt-[0.9vw] text-[0.95vw] text-[#64748B] leading-relaxed">
-                  Convert and optimize your 3D models for faster loading, efficient storage, and seamless interactive experience.
+                  Convert and optimize your 3D models for faster loading, efficient storage and seamless interactive experiences.
                 </p>
 
                 {/* Feature Bullet List */}
@@ -331,53 +284,25 @@ export default function ConverterFeatures() {
                       <Icon icon="lucide:box" className="w-[1.3vw] h-[1.3vw]" />
                     </div>
                     <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        Multi-Format Conversion
+                      <h4 className="text-[1.02vw] font-semibold text-[#1E293B]">
+                        Multi-Format Conversion &amp; Compression
                       </h4>
                       <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Convert your 3D models into GLB, GLTF, and OBJ formats seamlessly.
+                        Convert your images into WEBP, PNG and JPG formats.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-[0.9vw]">
                     <div className="w-[2.6vw] h-[2.6vw] rounded-[0.65vw] bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center shrink-0 border border-[#FFEDD5]">
-                      <Icon icon="lucide:bar-chart-2" className="w-[1.3vw] h-[1.3vw]" />
+                      <Icon icon="lucide:refresh-cw" className="w-[1.3vw] h-[1.3vw]" />
                     </div>
                     <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        Smart Compression
+                      <h4 className="text-[1.02vw] font-semibold text-[#1E293B]">
+                        360 Degree Preview
                       </h4>
                       <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Optimize your 3D models with Draco texture and mesh compression.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-[0.9vw]">
-                    <div className="w-[2.6vw] h-[2.6vw] rounded-[0.65vw] bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center shrink-0 border border-[#FFEDD5]">
-                      <Icon icon="lucide:cpu" className="w-[1.3vw] h-[1.3vw]" />
-                    </div>
-                    <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        Polygon Optimization
-                      </h4>
-                      <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Reduce polygon counts to improve model loading performance.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-[0.9vw]">
-                    <div className="w-[2.6vw] h-[2.6vw] rounded-[0.65vw] bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center shrink-0 border border-[#FFEDD5]">
-                      <Icon icon="lucide:eye" className="w-[1.3vw] h-[1.3vw]" />
-                    </div>
-                    <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
-                        3D Model Preview
-                      </h4>
-                      <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Inspect and rotate your 3D models in 360° before converting.
+                        Preview and rotate your 3D models before converting.
                       </p>
                     </div>
                   </div>
@@ -387,11 +312,11 @@ export default function ConverterFeatures() {
                       <Icon icon="lucide:download" className="w-[1.3vw] h-[1.3vw]" />
                     </div>
                     <div>
-                      <h4 className="text-[1.02vw] font-bold text-[#1E293B]">
+                      <h4 className="text-[1.02vw] font-semibold text-[#1E293B]">
                         Easy Model Conversion
                       </h4>
                       <p className="text-[0.85vw] text-[#64748B] mt-[0.15vw]">
-                        Convert and download optimized 3D models in seconds.
+                        Convert and download optimized 3D models in one click.
                       </p>
                     </div>
                   </div>
@@ -419,7 +344,7 @@ export default function ConverterFeatures() {
           <div className="max-w-[92vw] mx-auto px-[2vw]">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-[2vw]">
               <div className="max-w-[44vw]">
-                <span className="text-[0.72vw] font-bold tracking-[0.22em] text-[#94A3B8] uppercase block mb-[0.6vw]">
+                <span className="text-[0.72vw] font-semibold tracking-[0.22em] text-[#94A3B8] uppercase block mb-[0.6vw]">
                   READY TO CONVERT?
                 </span>
                 <h3 className="text-[2vw] font-semibold tracking-tight text-[#111827] leading-[1.18]">

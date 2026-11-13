@@ -111,21 +111,21 @@ const PlantLightShelf = ({
                       />
                     </div>
 
-                    {/* Shelf 1 Plant Image (Over Shelf 1): Hanging leafy vine on left, dried floral vase on right */}
+                    {/* Shelf 1 Plant Image (Over Shelf 1 on Left Side): Reduced size placed over left side of shelf */}
                     {decors.plant !== false && (
                       <div
                         className="absolute pointer-events-none z-25"
                         style={{
                           top: '35.5%',
                           left: '8.8%',
-                          width: '85.0%',
-                          transform: 'translateY(-58%)'
+                          width: '14.0%',
+                          transform: 'translateY(-62%)'
                         }}
                       >
                         <img
                           src={plantLightPlant}
-                          alt="Shelf 1 Plants and Vase"
-                          className="w-full h-auto block"
+                          alt="Shelf 1 Plant"
+                          className="w-full h-auto block drop-shadow-md"
                         />
                       </div>
                     )}
@@ -185,10 +185,10 @@ const PlantLightShelf = ({
                         }}
                       >
                         {[
-                          { bookIndex: books[0], center: '31.5%' },
-                          { bookIndex: books[1], center: '44.7%' },
-                          { bookIndex: books[2], center: '57.9%' },
-                          { bookIndex: books[3], center: '71.1%' }
+                          { bookIndex: books[0], center: '30.5%' },
+                          { bookIndex: books[1], center: '44.5%' },
+                          { bookIndex: books[2], center: '58.5%' },
+                          { bookIndex: books[3], center: '72.5%' }
                         ].map(({ bookIndex, center }, slotIdx) => {
                           const book = filteredBooks[bookIndex];
                           if (!book) {
@@ -232,6 +232,15 @@ const PlantLightShelf = ({
                           const bookName = book.rawBook?.flipbookName || book.rawBook?.title || '';
                           const basePath = '';
 
+                          const isLandscape = Boolean(
+                            book.isLandscape ||
+                            book.orientation === 'landscape' ||
+                            book.rawBook?.orientation === 'landscape' ||
+                            (book.width && book.height && Number(book.width) > Number(book.height)) ||
+                            (book.title && /landscape/i.test(book.title)) ||
+                            (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
+                          );
+
                           return (
                             <div
                               key={book.v_id || `plantlight-book-${bookIndex}`}
@@ -243,10 +252,10 @@ const PlantLightShelf = ({
                               className={`pointer-events-auto absolute -translate-x-1/2 bottom-0 group cursor-pointer flex justify-center items-end ${openMenuId === `plantlight-${bookIndex}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
                               style={{
                                 left: center,
-                                width: '10.5%'
+                                width: isLandscape ? '13.5%' : '10.0%'
                               }}
                             >
-                              <div className="w-full aspect-[2.5/3.35] relative rounded-[3px] shadow-sm transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+                              <div className={`w-full ${isLandscape ? 'aspect-[3.35/2.2]' : 'aspect-[2.5/3.35]'} relative rounded-[3px] shadow-sm transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
                                 <LazyPreview
                                   v_id={book.v_id}
                                   emailId={book.rawBook?.userEmail || currentUserEmail}

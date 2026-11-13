@@ -9,6 +9,9 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
   const [loaded, setLoaded] = useState(false);
   const [fetching, setFetching] = useState(false);
 
+  // Detect aspect ratio from SVG viewBox or dimensions if available
+  const [svgRatio, setSvgRatio] = useState(null);
+
   useEffect(() => {
     if (!v_id || loaded) return;
     const el = containerRef.current;
@@ -23,16 +26,26 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
             .get(`${backendUrl}/api/flipbook/preview/${v_id}`, { withCredentials: true })
             .then((res) => {
               if (res.data?.html) {
+                const rawSvg = res.data.html;
+                const vbMatch = rawSvg.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*["']/i);
+                if (vbMatch) {
+                  const vbW = parseFloat(vbMatch[3]);
+                  const vbH = parseFloat(vbMatch[4]);
+                  if (vbW > 0 && vbH > 0) {
+                    setSvgRatio(vbW / vbH);
+                  }
+                }
+
                 const fontsToLoad = new Set();
                 const cssRegex = /font-family\s*:\s*(?:['"]([^'"]+)['"]|([^;}'"\s]+))/g;
                 const attrRegex = /font-family\s*=\s*['"]([^'"]+)['"]/g;
                 let match;
-                while ((match = cssRegex.exec(res.data.html)) !== null) {
+                while ((match = cssRegex.exec(rawSvg)) !== null) {
                   let f = match[1] || match[2];
                   if (f) f = f.split(',')[0].replace(/['"]/g, '').trim();
                   if (f && !['sans-serif', 'serif', 'monospace', 'inherit'].includes(f.toLowerCase())) fontsToLoad.add(f);
                 }
-                while ((match = attrRegex.exec(res.data.html)) !== null) {
+                while ((match = attrRegex.exec(rawSvg)) !== null) {
                   let f = match[1].split(',')[0].replace(/['"]/g, '').trim();
                   if (f && !['sans-serif', 'serif', 'monospace', 'inherit'].includes(f.toLowerCase())) fontsToLoad.add(f);
                 }
@@ -43,7 +56,7 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
                   fontImports = `<link href="https://fonts.googleapis.com/css?family=${fontList}:300,400,500,600,700,800,900&display=swap" rel="stylesheet">`;
                 }
 
-                setHtml({ content: res.data.html, fontImports });
+                setHtml({ content: rawSvg, fontImports });
               }
             })
             .catch(() => { })
@@ -69,8 +82,13 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
       {html ? (
         <iframe
           title={`Preview of ${title}`}
-          className="w-full h-full border-none pointer-events-none object-fill"
-          srcDoc={`<!DOCTYPE html><html><head>${html.fontImports}<base href="${iframeBaseUrl}"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:white;}svg{width:100%;height:100%;max-width:100%;max-height:100%;}[data-name="Free Frame"]{stroke:transparent !important;fill:transparent !important;}</style></head><body>${html.content.replace(/<svg/, '<svg preserveAspectRatio="none"')}</body></html>`}
+          className="w-full h-full border-none pointer-events-none"
+          srcDoc={`<!DOCTYPE html><html><head>${html.fontImports}<base href="${iframeBaseUrl}"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:white;}svg{width:100%;height:100%;max-width:100%;max-height:100%;display:block;}[data-name="Free Frame"]{stroke:transparent !important;fill:transparent !important;}</style></head><body>${html.content.replace(/<svg\b([^>]*)/i, (m, attrs) => {
+            if (/preserveAspectRatio=/i.test(attrs)) {
+              return m;
+            }
+            return `<svg preserveAspectRatio="xMidYMid meet"${attrs}`;
+          })}</body></html>`}
         />
       ) : loaded && imageUrl ? (
         <img src={resolveUploadsPath(imageUrl)} alt={title} className="w-full h-full object-fill bg-white" />

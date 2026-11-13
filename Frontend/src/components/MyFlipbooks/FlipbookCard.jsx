@@ -465,7 +465,7 @@ function FlipbookCard({
                 <div className="w-[7.6vw] h-[5.7vw] aspect-[4/3] bg-gray-100 rounded-[0.6vw] overflow-hidden flex-shrink-0 border border-gray-200 shadow-xs flex items-center justify-center relative">
                     <LazyPreview
                         v_id={book.v_id || book.id || book._id}
-                        emailId={emailId}
+                        emailId={book.userEmail || book.emailId || emailId}
                         backendUrl={backendUrl}
                         iframeBaseUrl={resolvedIframeBaseUrl}
                         title={book.title || book.realName || book.flipbookName}

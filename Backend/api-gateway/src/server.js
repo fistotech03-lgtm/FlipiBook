@@ -611,7 +611,7 @@ app.use(
 );
 
 // Proxy Bookshelf endpoints to MyFlipibook Service
-['/my-shelf-books', '/add-to-shelf', '/remove-from-shelf', '/update-shelf-order', '/update-shelf-design'].forEach((shelfEndpoint) => {
+['/my-shelf-books', '/add-to-shelf', '/remove-from-shelf', '/delete-shelf', '/update-shelf-order', '/update-shelf-design'].forEach((shelfEndpoint) => {
   app.use(
     `/api/profile${shelfEndpoint}`,
     createProxyMiddleware({

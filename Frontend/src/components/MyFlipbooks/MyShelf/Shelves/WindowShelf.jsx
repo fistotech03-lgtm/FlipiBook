@@ -282,6 +282,14 @@ const WindowShelf = ({
 
           const targetShareId = book.shareId || book.v_id;
           const rawAcc = String(book.access || 'public').toLowerCase();
+          const isLandscape = Boolean(
+            book.isLandscape ||
+            book.orientation === 'landscape' ||
+            book.rawBook?.orientation === 'landscape' ||
+            (book.width && book.height && Number(book.width) > Number(book.height)) ||
+            (book.title && /landscape/i.test(book.title)) ||
+            (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
+          );
 
           return (
             <div
@@ -298,7 +306,7 @@ const WindowShelf = ({
                 }
               }}
             >
-              <div className="w-full h-full relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+              <div className={`w-full ${isLandscape ? 'aspect-[3.4/2.3]' : 'h-full'} relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
                 <LazyPreview
                   v_id={book.v_id}
                   emailId={book.rawBook?.userEmail || currentUserEmail}

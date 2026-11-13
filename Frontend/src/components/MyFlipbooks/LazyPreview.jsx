@@ -169,7 +169,9 @@ function LazyPreviewComponent({
                         .replace(/src=["'](?:\.\.\/|\.\/)?assets\/([^"']+)["']/gi, `src="${assetsBaseUrl}$1"`);
                 }
 
-                if (!processedContent.includes('preserveAspectRatio')) {
+                if (processedContent.includes('preserveAspectRatio')) {
+                    processedContent = processedContent.replace(/preserveAspectRatio=["'][^"']*["']/i, 'preserveAspectRatio="xMidYMid meet"');
+                } else {
                     processedContent = processedContent.replace(/<svg\b/i, '<svg preserveAspectRatio="xMidYMid meet" ');
                 }
                 if (!processedContent.includes('viewBox')) {

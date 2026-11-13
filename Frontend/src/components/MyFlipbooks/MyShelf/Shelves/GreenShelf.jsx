@@ -181,6 +181,14 @@ const GreenShelf = ({
                                   const folderName = (book.rawBook?.folderName && book.rawBook.folderName.length > 0) ? book.rawBook.folderName[0] : (book.rawBook?.folder || '');
                                   const bookName = book.rawBook?.flipbookName || book.rawBook?.title || '';
                                   const basePath = '';
+                                  const isLandscape = Boolean(
+                                    book.isLandscape ||
+                                    book.orientation === 'landscape' ||
+                                    book.rawBook?.orientation === 'landscape' ||
+                                    (book.width && book.height && Number(book.width) > Number(book.height)) ||
+                                    (book.title && /landscape/i.test(book.title)) ||
+                                    (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
+                                  );
 
                                   return (
                                     <div
@@ -191,10 +199,10 @@ const GreenShelf = ({
                                       onDrop={(e) => handleDrop(e, bGlobalIdx)}
                                       onDragEnd={handleDragEnd}
                                       className={`relative group cursor-pointer flex justify-center items-end ${openMenuId === `green-${bGlobalIdx}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bGlobalIdx ? 'opacity-50' : ''}`}
-                                      style={{ width: '34%' }}
+                                      style={{ width: isLandscape ? '46%' : '34%' }}
                                     >
                                       {/* Book Cover with 3D drop shadow resting on wood shelf */}
-                                      <div className="w-full aspect-[2.5/3.4] relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+                                      <div className={`w-full ${isLandscape ? 'aspect-[3.4/2.3]' : 'aspect-[2.5/3.4]'} relative rounded-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
                                         <LazyPreview
                                           v_id={book.v_id}
                                           emailId={book.rawBook?.userEmail || currentUserEmail}

@@ -131,40 +131,40 @@ export default function Features() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full bg-[#f5f5f5] border-b border-gray-100 px-[5vw]"
+          className="w-full bg-[#f5f5f5] border-b border-gray-100 px-4 sm:px-6 md:px-[5vw]"
         >
-          <div className="max-w-[85vw] mx-auto flex flex-col md:flex-row items-center justify-between gap-[3vw]">
+          <div className="max-w-[85vw] mx-auto flex flex-col md:flex-row items-center justify-between gap-6 md:gap-[3vw]">
             {/* Left Text Block */}
-            <div className="max-w-[44vw] space-y-[1.8vh] py-[3vh]">
-              <h1 className="text-[3.2vw] text-gray-900 font-normal tracking-tight leading-tight">
+            <div className="w-full md:max-w-[44vw] space-y-3 md:space-y-[1.8vh] py-6 md:py-[3vh] text-center md:text-left">
+              <h1 className="text-2xl sm:text-3xl lg:text-[3.2vw] text-gray-900 font-semibold md:font-normal tracking-tight leading-tight">
                 Key Features
               </h1>
 
-              <p className="text-[0.9vw] text-gray-600 font-normal leading-relaxed">
+              <p className="text-sm sm:text-base md:text-[0.9vw] text-gray-600 font-normal leading-relaxed">
                 Discover immersive digital catalogues created by businesses, designers, and creators worldwide. Explore interactive flipbooks enhanced with 3D models, hotspots, videos, animations, and rich multimedia experiences.
               </p>
 
-              <div className="w-[7vw] h-[0.3vh] min-h-[2px] bg-gray-800 rounded-full mt-[1.8vh]"></div>
+              <div className="w-14 md:w-[7vw] h-1 md:h-[0.3vh] min-h-[2px] bg-gray-800 rounded-full mt-3 md:mt-[1.8vh] mx-auto md:mx-0"></div>
             </div>
 
             {/* Right Hero Graphic */}
-            <div className="relative flex justify-center md:justify-end self-end">
+            <div className="relative flex justify-center md:justify-end self-center md:self-end">
               <img
                 src={exploreHeroImg}
                 alt="FlipiBook Key Features Hero Graphic"
-                className="h-[35vh] max-h-[400px] w-auto object-contain object-bottom shrink-0 block"
+                className="h-[220px] sm:h-[280px] md:h-[35vh] max-h-[400px] w-auto object-contain object-bottom shrink-0 block"
               />
             </div>
           </div>
         </motion.div>
 
         {/* Subheading: Feature */}
-        <section className="w-full max-w-[94vw] lg:max-w-[88vw] mx-auto pt-9 pb-9 px-4 sm:px-6">
+        <section className="w-full max-w-[94vw] lg:max-w-[88vw] mx-auto pt-6 sm:pt-9 pb-4 sm:pb-9 px-4 sm:px-6">
           <div>
-            <h2 className="text-[1.5vw] font-semibold text-[#111827] tracking-tight">
+            <h2 className="text-lg sm:text-xl md:text-[1.5vw] font-semibold text-[#111827] tracking-tight">
               Explore Our Features
             </h2>
-            <p className="text-xs md:text-[0.9vw] text-[#94A3B8] mt-0.5">
+            <p className="text-xs sm:text-sm md:text-[0.9vw] text-[#94A3B8] mt-0.5">
               Share ideas, solve problems, and improve your workflow.
             </p>
           </div>
@@ -202,11 +202,11 @@ export default function Features() {
 
                 {/* Card Title & Description */}
                 <div className="pt-2.5 pb-0.5 px-1 text-center">
-                  <h3 className="text-sm sm:text-base md:text-[1.05vw] lg:text-[1.12vw] font-semibold text-[#111827] tracking-tight leading-snug group-hover:text-[#EC5137] transition-colors">
+                  <h3 className="text-sm sm:text-base md:text-[1vw] lg:text-[1vw] font-semibold text-[#EC5137] tracking-tight leading-snug transition-colors">
                     <span>{card.titlePrefix}</span>
-                    <span className="font-semibold text-[#334155] group-hover:text-[#EC5137]">{card.title}</span>
+                    <span className="font-semibold text-gray-700">{card.title}</span>
                   </h3>
-                  <p className="text-xs sm:text-[13px] md:text-[0.85vw] text-[#64748B] mt-0.5 font-normal">
+                  <p className="text-xs sm:text-sm md:text-[0.8vw] text-gray-700 mt-0.5 font-normal">
                     {card.subtitle}
                   </p>
                 </div>

@@ -17,7 +17,7 @@ export default function PageEditorFeatures() {
           {/* Top Banner / Laptop Floating Background */}
           <div className="relative w-full max-w-[100vw] mx-auto flex items-center">
             {/* The laptop + rock 3D illustration background */}
-            <div className="absolute inset-0 z-0 pointer-events-none select-none flex justify-end items-center">
+            <div className="absolute inset-0 z-0 pointer-events-none select-none flex justify-end items-center opacity-25 md:opacity-100">
               <img
                 src={heroBg}
                 alt="FlipiBook Page Editor Preview"
@@ -26,36 +26,48 @@ export default function PageEditorFeatures() {
             </div>
 
             {/* Left Content Column */}
-            <div className="relative z-10 w-full max-w-[94vw] mx-auto px-[3vw] py-[2vw]">
-              <div className="max-w-[40vw]">
-                <div className="flex items-center gap-[0.5vw] mb-[0.8vw]">
-                  <span className="text-[0.72vw] font-semibold tracking-[0.22em] text-[#94A3B8] uppercase">
+            <div className="relative z-10 w-full max-w-[94vw] mx-auto px-4 sm:px-6 md:px-[3vw] pt-3 pb-4 md:py-[1.8vw]">
+              {/* Back to Features Button */}
+              <div className="mb-2.5 md:mb-3 ml-0 md:ml-[-4vw] mt-0 md:mt-[-0.8vw]">
+                <button
+                  type="button"
+                  onClick={() => navigate('/features')}
+                  className="inline-flex items-center gap-1.5 md:gap-[0.5vw] px-3 md:px-3.5 py-1.5 rounded-sm border border-gray-200 bg-white/90 text-gray-600 text-xs sm:text-sm md:text-[0.9vw] font-semibold shadow-xs transition-all cursor-pointer backdrop-blur-xs hover:bg-white"
+                >
+                  <Icon icon="lucide:arrow-left" className="w-3.5 h-3.5 md:w-[1vw] md:h-[1vw] text-gray-600" />
+                  <span>Back to Features</span>
+                </button>
+              </div>
+
+              <div className="w-full max-w-full md:max-w-[44vw] lg:max-w-[40vw]">
+                <div className="flex items-center gap-2 md:gap-[0.5vw] mb-2 md:mb-[0.8vw]">
+                  <span className="text-[11px] sm:text-xs md:text-[0.72vw] font-semibold tracking-[0.22em] text-[#94A3B8] uppercase">
                     PAGE EDITOR
                   </span>
-                  <span className="w-[2.5vw] h-[1.5px] bg-[#CBD5E1]"></span>
+                  <span className="w-8 md:w-[2.5vw] h-[1.5px] bg-[#CBD5E1]"></span>
                 </div>
 
-                <h1 className="text-[3.2vw] font-semibold tracking-tight text-[#111827] leading-[1.12]">
-                  Craft Interactive <br />
+                <h1 className="text-2xl sm:text-3xl md:text-[3.2vw] font-semibold tracking-tight text-[#111827] leading-tight md:leading-[1.12]">
+                  Craft Interactive <br className="hidden sm:inline" />
                   <span className="text-[#EA580C]">Pages</span> With Precision
                 </h1>
 
-                <p className="mt-[0.9vw] text-[0.86vw] text-[#64748B] leading-relaxed max-w-[34vw]">
+                <p className="mt-2 md:mt-[0.9vw] text-xs sm:text-sm md:text-[0.86vw] text-[#64748B] leading-relaxed max-w-full md:max-w-[34vw]">
                   Drag and drop multimedia elements, audio clips, interactive links, buttons, and animations seamlessly onto every page.
                 </p>
 
                 {/* Pill Feature Badges */}
-                <div className="flex flex-wrap items-center gap-[0.6vw] mt-[1.4vw]">
-                  <span className="inline-flex items-center gap-[0.4vw] px-[0.9vw] py-[0.4vw] rounded-full bg-white/95 border border-[#E2E8F0] shadow-xs text-[0.74vw] font-medium text-[#475569]">
-                    <Icon icon="lucide:sparkles" className="w-[0.9vw] h-[0.9vw] text-[#EA580C]" />
+                <div className="flex flex-wrap items-center gap-2 md:gap-[0.6vw] mt-3.5 md:mt-[1.4vw]">
+                  <span className="inline-flex items-center gap-1.5 md:gap-[0.4vw] px-2.5 sm:px-3 md:px-[0.9vw] py-1 md:py-[0.4vw] rounded-full bg-white/95 border border-[#E2E8F0] shadow-xs text-xs md:text-[0.74vw] font-medium text-[#475569]">
+                    <Icon icon="lucide:sparkles" className="w-3.5 h-3.5 md:w-[0.9vw] md:h-[0.9vw] text-[#EA580C]" />
                     Drag &amp; Drop Editor
                   </span>
-                  <span className="inline-flex items-center gap-[0.4vw] px-[0.9vw] py-[0.4vw] rounded-full bg-white/95 border border-[#E2E8F0] shadow-xs text-[0.74vw] font-medium text-[#475569]">
-                    <Icon icon="lucide:badge-check" className="w-[0.9vw] h-[0.9vw] text-[#EA580C]" />
+                  <span className="inline-flex items-center gap-1.5 md:gap-[0.4vw] px-2.5 sm:px-3 md:px-[0.9vw] py-1 md:py-[0.4vw] rounded-full bg-white/95 border border-[#E2E8F0] shadow-xs text-xs md:text-[0.74vw] font-medium text-[#475569]">
+                    <Icon icon="lucide:badge-check" className="w-3.5 h-3.5 md:w-[0.9vw] md:h-[0.9vw] text-[#EA580C]" />
                     High Quality Output
                   </span>
-                  <span className="inline-flex items-center gap-[0.4vw] px-[0.9vw] py-[0.4vw] rounded-full bg-white/95 border border-[#E2E8F0] shadow-xs text-[0.74vw] font-medium text-[#475569]">
-                    <Icon icon="lucide:shield-check" className="w-[0.9vw] h-[0.9vw] text-[#EA580C]" />
+                  <span className="inline-flex items-center gap-1.5 md:gap-[0.4vw] px-2.5 sm:px-3 md:px-[0.9vw] py-1 md:py-[0.4vw] rounded-full bg-white/95 border border-[#E2E8F0] shadow-xs text-xs md:text-[0.74vw] font-medium text-[#475569]">
+                    <Icon icon="lucide:shield-check" className="w-3.5 h-3.5 md:w-[0.9vw] md:h-[0.9vw] text-[#EA580C]" />
                     Secure &amp; Private
                   </span>
                 </div>
@@ -65,7 +77,7 @@ export default function PageEditorFeatures() {
         </section>
 
         {/* Content Body */}
-        <section className="relative w-full py-16 bg-[#FBFBFC]">
+        <section className="relative w-full py-8 md:py-16 bg-[#FBFBFC]">
           <div className="max-w-[92vw] mx-auto px-4">
             <button
               onClick={() => navigate('/features')}
@@ -73,10 +85,10 @@ export default function PageEditorFeatures() {
             >
               <Icon icon="lucide:arrow-left" className="w-4 h-4" /> Back to Features
             </button>
-            <h2 className="text-2xl md:text-3xl font-semibold text-[#111827] tracking-tight mb-4">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[#111827] tracking-tight mb-4">
               Precision Page Customization
             </h2>
-            <p className="text-base text-[#64748B] max-w-3xl leading-relaxed">
+            <p className="text-sm sm:text-base text-[#64748B] max-w-3xl leading-relaxed">
               Design pages with complete creative control. Add hotspots, embed YouTube/Vimeo videos, configure background music, and insert clickable call-to-actions anywhere on the canvas.
             </p>
           </div>

@@ -68,6 +68,7 @@ const ShelfDetailView = ({
   lightOpacity,
   selectedLightTheme,
   selectedWallTheme,
+  setSelectedWallTheme,
   shelfLogo,
   setShowLogoModal,
   logoOpacity,

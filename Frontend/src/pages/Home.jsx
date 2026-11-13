@@ -11,12 +11,12 @@ import { convertPdfWithInkscape, generatePdfPageSvg, getOfficeDocType, svgToData
 
 // Modular Sections
 import HeroSection from './Home/HeroSection';
+import ThreeDInteractiveDetails from './Home/3dinteractivedetails';
 import InteractiveDemo from './Home/InteractiveDemo';
 import AboutUsSection from './Home/AboutUsSection';
 import WhyChooseFlipibook from './Home/WhyChooseFlipibook';
 import ExploreShowcase from './Home/ExploreShowcase';
 import SmartSolutionsSection from './Home/SmartSolutionsSection';
-import ArIntegrationSection from './Home/ArIntegrationSection';
 import ReadingExperienceDark from './Home/ReadingExperienceDark';
 import HowItWorksSection from './Home/HowItWorksSection';
 import FAQSection from './Home/FAQSection';
@@ -431,26 +431,26 @@ export default function Home() {
         page6={page6}
       />
 
-      {/* 2. INTERACTIVE DEMO: Experience Flipbooks in Action (5 Books shelf) */}
+      {/* 2. 3D INTERACTIVE DETAILS: Give Customers a Closer Look at Your Products */}
+      <ThreeDInteractiveDetails navigate={navigate} />
+
+      {/* 3. FEATURES: IT STARTS WITH A CLICK (3D Model Viewer & Smart Solutions - Explore Every Angle) */}
+      <SmartSolutionsSection />
+
+      {/* 4. INTERACTIVE DEMO: Experience Flipbooks in Action (5 Books shelf) */}
       <InteractiveDemo />
 
-      {/* 3. ABOUT US: We Transform Digital Ideas (Multi-device display) */}
+      {/* 6. ABOUT US: We Transform Digital Ideas (Multi-device display) */}
       <AboutUsSection />
 
-      {/* 4. WHY CHOOSE FLIPBOOK? (Dark Theme with Milestones & Paper Plane curve) */}
+      {/* 7. WHY CHOOSE FLIPBOOK? (Dark Theme with Milestones & Paper Plane curve) */}
       <WhyChooseFlipibook />
 
-      {/* 5. EXPLORE: Discover. Read. Get Inspired (5 Community Cards Slider) */}
+      {/* 8. EXPLORE: Discover. Read. Get Inspired (5 Community Cards Slider) */}
       <ExploreShowcase
         navigate={navigate}
         onOpenCreateModal={handleOpenCreateModal}
       />
-
-      {/* 6. FEATURES: IT STARTS WITH A CLICK (3D Model Viewer & Smart Solutions) */}
-      <SmartSolutionsSection />
-
-      {/* 7. AR INTEGRATION: See Products in Real Space */}
-      <ArIntegrationSection />
 
       {/* 8. FEATURES: Not Just Pages. A 3D Reading Experience (Dark Living Room 3D model) */}
       <ReadingExperienceDark

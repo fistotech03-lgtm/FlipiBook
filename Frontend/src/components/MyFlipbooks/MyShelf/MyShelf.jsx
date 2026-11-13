@@ -1152,6 +1152,7 @@ const MyShelf = ({
             lightOpacity={lightOpacity}
             selectedLightTheme={selectedLightTheme}
             selectedWallTheme={selectedWallTheme}
+            setSelectedWallTheme={setSelectedWallTheme}
             shelfLogo={shelfLogo}
             setShowLogoModal={setShowLogoModal}
             logoOpacity={logoOpacity}

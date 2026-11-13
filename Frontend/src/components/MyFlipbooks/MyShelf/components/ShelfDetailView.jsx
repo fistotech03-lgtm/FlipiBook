@@ -1175,7 +1175,10 @@ const ShelfDetailView = ({
                       return (
                         <div
                           key={style.id}
-                          onClick={() => setActiveShelfStyle(style.id)}
+                          onClick={() => {
+                            setActiveShelfStyle(style.id);
+                            if (setSelectedWallTheme) setSelectedWallTheme(null);
+                          }}
                           className={`aspect-[354/200] rounded-lg overflow-hidden border-2 cursor-pointer transition-all duration-150 relative group bg-white shadow-xs ${
                             isSelected
                               ? 'border-[#FF5733] ring-2 ring-orange-200/70 shadow-sm'

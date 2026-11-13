@@ -245,6 +245,14 @@ const LightShelf = ({
                             const folderName = (book.rawBook?.folderName && book.rawBook.folderName.length > 0) ? book.rawBook.folderName[0] : (book.rawBook?.folder || '');
                             const bookName = book.rawBook?.flipbookName || book.rawBook?.title || '';
                             const basePath = '';
+                            const isLandscape = Boolean(
+                              book.isLandscape ||
+                              book.orientation === 'landscape' ||
+                              book.rawBook?.orientation === 'landscape' ||
+                              (book.width && book.height && Number(book.width) > Number(book.height)) ||
+                              (book.title && /landscape/i.test(book.title)) ||
+                              (book.rawBook?.flipbookName && /landscape/i.test(book.rawBook.flipbookName))
+                            );
 
                             return (
                               <div
@@ -257,10 +265,10 @@ const LightShelf = ({
                                 className={`pointer-events-auto absolute -translate-x-1/2 bottom-0 group cursor-pointer flex justify-center items-end ${openMenuId === `lightshelf-${bookIndex}` ? 'z-40' : 'hover:z-30'} ${draggedBookIndex === bookIndex ? 'opacity-50' : ''}`}
                                 style={{
                                   left: center,
-                                  width: '11.5%'
+                                  width: isLandscape ? '16%' : '11.5%'
                                 }}
                               >
-                                <div className="w-full aspect-[2.5/3.35] relative rounded-[3px] shadow-sm transition-transform origin-bottom group-hover:scale-105 overflow-hidden">
+                                <div className={`w-full ${isLandscape ? 'aspect-[3.35/2.2]' : 'aspect-[2.5/3.35]'} relative rounded-[3px] shadow-sm transition-transform origin-bottom group-hover:scale-105 overflow-hidden`}>
                                   <LazyPreview
                                     v_id={book.v_id}
                                     emailId={book.rawBook?.userEmail || currentUserEmail}

@@ -2,6 +2,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import homes2Img from '../../assets/Home/homes2.png';
+import arrow1Img from '../../assets/Home/arrow1.png';
+import arrow2Img from '../../assets/Home/arrow2.png';
+import arrow3Img from '../../assets/Home/arrow3.png';
+import arrow4Img from '../../assets/Home/arrow4.png';
+import arrow5Img from '../../assets/Home/arrow5.png';
 
 export default function ThreeDInteractiveDetails({ navigate }) {
   const features = [
@@ -138,81 +143,66 @@ export default function ThreeDInteractiveDetails({ navigate }) {
               className="w-full h-auto max-h-[56vh] sm:max-h-[66vh] lg:max-h-[80vh] xl:max-h-[85vh] object-contain select-none pointer-events-none drop-shadow-[0_20px_45px_rgba(0,0,0,0.9)] scale-x-120 scale-y-124 origin-bottom"
             />
 
-            {/* Exact Dot 1: Outer Wall Corner of Kitchen */}
-            <span className="hidden lg:block absolute top-[11.8%] left-[28.7%] w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#EC5137] rounded-full shadow-[0_0_10px_#EC5137] z-20 -translate-x-1/2 -translate-y-1/2"></span>
+            {/* Arrow Images positioned individually */}
+            {/* Arrow 1: 3D Product Models */}
+            <img
+              src={arrow1Img}
+              alt="Arrow 1"
+              style={{
+                top: '-12.0%',
+                left: '39.2%',
+                width: '58%',
+              }}
+              className="hidden lg:block absolute object-contain pointer-events-none select-none z-20 origin-left"
+            />
 
-            {/* Exact Dot 2: Right side hallway/stair landing edge */}
-            <span className="hidden lg:block absolute top-[33.2%] left-[67.8%] w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#EC5137] rounded-full shadow-[0_0_10px_#EC5137] z-20 -translate-x-1/2 -translate-y-1/2"></span>
+            {/* Arrow 2: 360° Product View */}
+            <img
+              src={arrow2Img}
+              alt="Arrow 2"
+              style={{
+                top: '9.5%',
+                left: '84%',
+                width: '18%',
+              }}
+              className="hidden lg:block absolute object-contain pointer-events-none select-none z-20 origin-left"
+            />
 
-            {/* Exact Dot 3: Stone accent wall in living area */}
-            <span className="hidden lg:block absolute top-[61.5%] left-[66.4%] w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#EC5137] rounded-full shadow-[0_0_10px_#EC5137] z-20"></span>
+            {/* Arrow 3: Materials & Textures */}
+            <img
+              src={arrow3Img}
+              alt="Arrow 3"
+              style={{
+                top: '30.5%',
+                left: '70.5%',
+                width: '30.5%',
+              }}
+              className="hidden lg:block absolute object-contain pointer-events-none select-none z-20 origin-left"
+            />
 
-            {/* Exact Dot 4: Bottom living sofa edge */}
-            <span className="hidden lg:block absolute top-[85.8%] left-[47.2%] w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#EC5137] rounded-full shadow-[0_0_10px_#EC5137] z-20"></span>
+            {/* Arrow 4: Lighting & Shadows */}
+            <img
+              src={arrow4Img}
+              alt="Arrow 4"
+              style={{
+                top: '51.5%',
+                left: '69.5%',
+                width: '28%',
+              }}
+              className="hidden lg:block absolute object-contain pointer-events-none select-none z-20 origin-left"
+            />
 
-            {/* Exact Dot 5: Bottom right lamp / table corner */}
-            <span className="hidden lg:block absolute top-[80.4%] left-[63.2%] w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#EC5137] rounded-full shadow-[0_0_10px_#EC5137] z-20"></span>
-
-            {/* SVG Connecting Dashed Lines */}
-            <svg
-              className="hidden lg:block absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-            >
-              <defs>
-                <marker
-                  id="dash-arrow"
-                  viewBox="0 0 10 10"
-                  refX="6"
-                  refY="5"
-                  markerWidth="3.6"
-                  markerHeight="3.6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 1.5 L 6 5 L 0 8.5" fill="none" stroke="#EC5137" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </marker>
-              </defs>
-
-              {/* 1. From Dot 1 (Outer Top Kitchen Corner) -> short diagonal rise and curve into straight horizontal to 3D Product Models */}
-              <path
-                d="M 28.7 11.8 L 31.2 7.0 Q 32.5 5.2 35.0 5.2 L 96 5.2"
-                fill="none"
-                stroke="#EC5137"
-                strokeWidth="0.22"
-                strokeDasharray="1.0, 0.9"
-                markerEnd="url(#dash-arrow)"
-              />
-
-              {/* 2. From Dot 2 (Stairs) -> Straight horizontal to 360° Product View */}
-              <path
-                d="M 68.2 33.2 L 70.8 33.2 L 96 33.2"
-                fill="none"
-                stroke="#EC5137"
-                strokeWidth="0.22"
-                strokeDasharray="1.0, 0.9"
-                markerEnd="url(#dash-arrow)"
-              />
-
-              {/* 3. From Dot 3 (Stone Wall) -> Zig-zag step path into Lighting & Shadows */}
-              <path
-                d="M 66.8 63.2 L 72.8 80.5 L 77.2 67.5 L 96 67.5"
-                fill="none"
-                stroke="#EC5137"
-                strokeWidth="0.22"
-                strokeDasharray="1.0, 0.9"
-                markerEnd="url(#dash-arrow)"
-              />
-
-              {/* 4. From Dot 4 (Bottom Sofa) -> Horizontal right through living room */}
-              <path
-                d="M 47.7 86.2 L 96 86.2"
-                fill="none"
-                stroke="#EC5137"
-                strokeWidth="0.22"
-                strokeDasharray="1.0, 0.9"
-                markerEnd="url(#dash-arrow)"
-              />
-            </svg>
+            {/* Arrow 5: Background Colors */}
+            <img
+              src={arrow5Img}
+              alt="Arrow 5"
+              style={{
+                top: '80.5%',
+                left: '43.5%',
+                width: '51%',
+              }}
+              className="hidden lg:block absolute object-contain pointer-events-none select-none z-20 origin-left"
+            />
 
           </div>
         </motion.div>

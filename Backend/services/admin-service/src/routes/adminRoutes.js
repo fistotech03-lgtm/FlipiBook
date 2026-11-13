@@ -4,6 +4,7 @@ const adminDashboardRoutes = require('./adminDashboardRoutes');
 const adminUserRoutes = require('./adminUserRoutes');
 const adminBookRoutes = require('./adminBookRoutes');
 const adminForumRoutes = require('./adminForumRoutes');
+const editor3dRoutes = require('../3d_editor/routes');
 
 const router = express.Router();
 
@@ -15,5 +16,6 @@ router.use('/dashboard', adminDashboardRoutes);
 router.use('/users', adminUserRoutes);
 router.use('/flipbooks', adminBookRoutes);
 router.use('/forum', adminForumRoutes);
+router.use('/3d-editor', editor3dRoutes);
 
 module.exports = router;

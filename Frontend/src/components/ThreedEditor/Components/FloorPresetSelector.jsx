@@ -52,14 +52,6 @@ export default function FloorPresetSelector({
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-[0.78vw] font-bold text-gray-900">Floor Preset</span>
-        <button
-          type="button"
-          onClick={() => setShowAllModal(true)}
-          className="text-[0.68vw] font-bold text-[#ea543a] hover:text-[#d43d24] flex items-center gap-[0.2vw] transition-colors cursor-pointer"
-        >
-          <span>See All ({FLOOR_PRESETS.length})</span>
-          <Icon icon="solar:alt-arrow-right-bold" className="w-[0.75vw] h-[0.75vw]" />
-        </button>
       </div>
 
       {/* Top 5 Quick Presets */}
@@ -90,11 +82,11 @@ export default function FloorPresetSelector({
       <div className="flex items-center justify-between px-[0.6vw] py-[0.35vw] bg-gray-50 border border-gray-200/80 rounded-[0.45vw]">
         <div className="flex items-center gap-[0.4vw] min-w-0">
           <Icon icon={currentPreset.icon} className="w-[0.9vw] h-[0.9vw] text-[#ea543a] shrink-0" />
-          <span className="text-[0.72vw] font-bold text-gray-800 truncate">
+          <span className="text-[0.72vw] font-medium text-gray-800 truncate">
             {currentPreset.name}
           </span>
         </div>
-        <span className="text-[0.62vw] px-[0.35vw] py-[0.1vw] bg-white border border-gray-200 rounded text-gray-500 font-medium shrink-0">
+        <span className="text-[0.62vw] px-[0.35vw] py-[0.1vw] bg-white border border-gray-200 rounded text-gray-500 font-normal shrink-0">
           {currentPreset.category}
         </span>
       </div>

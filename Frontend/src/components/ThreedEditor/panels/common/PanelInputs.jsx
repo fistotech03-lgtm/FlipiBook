@@ -143,7 +143,7 @@ export function AxisInput({ axis, value = 0, onChange, step = 0.1, min, max, cla
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        className="w-full text-right text-[0.74vw] font-medium text-gray-900 bg-transparent outline-none pl-[0.1vw] pr-[0.1vw] min-w-0"
+        className="w-full text-right text-[0.74vw] font-normal text-gray-900 bg-transparent outline-none pl-[0.1vw] pr-[0.1vw] min-w-0"
       />
     </div>
   );
@@ -155,6 +155,7 @@ export function DualAxisInput({
   yVal = 210,
   onChangeX,
   onChangeY,
+  onChangeLinked,
   isLinked = true,
   onToggleLink,
   step = 1,
@@ -172,8 +173,16 @@ export function DualAxisInput({
             axis="X"
             value={xVal}
             onChange={(v) => {
-              onChangeX && onChangeX(v);
-              if (isLinked && onChangeY) onChangeY(v);
+              if (isLinked) {
+                if (onChangeLinked) {
+                  onChangeLinked(v);
+                } else {
+                  onChangeX && onChangeX(v);
+                  if (onChangeY) onChangeY(v);
+                }
+              } else {
+                onChangeX && onChangeX(v);
+              }
             }}
             step={step}
             min={min}
@@ -195,8 +204,16 @@ export function DualAxisInput({
             axis="Y"
             value={yVal}
             onChange={(v) => {
-              onChangeY && onChangeY(v);
-              if (isLinked && onChangeX) onChangeX(v);
+              if (isLinked) {
+                if (onChangeLinked) {
+                  onChangeLinked(v);
+                } else {
+                  onChangeY && onChangeY(v);
+                  if (onChangeX) onChangeX(v);
+                }
+              } else {
+                onChangeY && onChangeY(v);
+              }
             }}
             step={step}
             min={min}

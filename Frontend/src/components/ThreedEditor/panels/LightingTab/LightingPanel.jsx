@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import ColorPicker from "../../ColorPicker";
-import { AxisInput } from "../common/PanelInputs";
+import { AxisInput, ToggleSwitch } from "../common/PanelInputs";
 import { builtInHdris, fetchHdris } from "../../../../data/hdriData";
 import FloorPresetSelector from "../../Components/FloorPresetSelector";
 
@@ -103,7 +103,7 @@ const LightingSlider = ({
   return (
     <div className="flex items-center justify-between gap-[0.5vw] py-[0.15vw]">
       {/* Label */}
-      <span className="text-[0.74vw] font-medium text-gray-700 w-[7.2vw] shrink-0 truncate">
+      <span className="text-[0.74vw] font-normal text-gray-800 w-[7.2vw] shrink-0 truncate">
         {label} :
       </span>
 
@@ -149,7 +149,7 @@ const LightingSlider = ({
           onChange={handleInputChange}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className="w-full bg-transparent text-center text-[0.7vw] font-semibold text-gray-700 outline-none tabular-nums p-0 leading-none cursor-text"
+          className="w-full bg-transparent text-center text-[0.7vw] font-normal text-gray-800 outline-none tabular-nums p-0 leading-none cursor-text"
         />
       </div>
     </div>
@@ -228,6 +228,7 @@ export function LightingPanel({
       name: hdr.name,
       category: hdr.category || "Other",
       preview: hdr.preview,
+      file: hdr.file,
       envValue: `builtin_${hdr.id}`,
     })),
   ], [dynamicHdris]);
@@ -274,10 +275,10 @@ export function LightingPanel({
     return [
       {
         id: "light_1",
-        name: "Key Light",
+        name: "Light 1",
         enabled: true,
         position: currentControls.lightPosition || { x: 0, y: 10, z: 10 },
-        color: currentControls.lightColor || "#EC5137",
+        color: currentControls.lightColor || "#ffffff",
         intensity: currentControls.lightIntensity ?? 100,
         shadowDensity: currentControls.shadowDensity ?? currentControls.shadow ?? 100,
         shadowSoftness: currentControls.shadowSoftness ?? currentControls.softness ?? 100,
@@ -302,6 +303,7 @@ export function LightingPanel({
     if (activeLightIndex === 0) {
       if (key === "position") handleUpdate("lightPosition", value);
       if (key === "color") handleUpdate("lightColor", value);
+      if (key === "opacity") handleUpdate("lightOpacity", value);
       if (key === "intensity") handleUpdate("lightIntensity", value);
       if (key === "shadowDensity") {
         handleUpdate("shadowDensity", value);
@@ -320,10 +322,10 @@ export function LightingPanel({
     const nextIdx = lightsArray.length + 1;
     const newLight = {
       id: `light_${Date.now()}`,
-      name: nextIdx === 2 ? "Fill Light" : "Rim Light",
+      name: `Light ${nextIdx}`,
       enabled: true,
       position: nextIdx === 2 ? { x: -8, y: 8, z: 8 } : { x: 0, y: -10, z: 12 },
-      color: nextIdx === 2 ? "#5D5EFC" : "#FFA500",
+      color: "#ffffff",
       intensity: 70,
       shadowDensity: 50,
       shadowSoftness: 80,
@@ -345,10 +347,16 @@ export function LightingPanel({
 
   // Toggle light enabled state
   const handleToggleLightEnabled = (indexToToggle, e) => {
-    e.stopPropagation();
-    const updated = lightsArray.map((l, i) => {
+    if (e && typeof e.stopPropagation === "function") {
+      e.stopPropagation();
+    }
+    const currentList = Array.isArray(currentControls.lights) && currentControls.lights.length > 0
+      ? currentControls.lights
+      : lightsArray;
+    const updated = currentList.map((l, i) => {
       if (i === indexToToggle) {
-        return { ...l, enabled: !l.enabled };
+        const isCurrentEnabled = l.enabled !== false;
+        return { ...l, enabled: !isCurrentEnabled };
       }
       return l;
     });
@@ -356,7 +364,8 @@ export function LightingPanel({
   };
 
   // Active Light parameters
-  const lightColor = activeLight.color || "#EC5137";
+  const lightColor = activeLight.color || "#ffffff";
+  const lightOpacity = activeLight.opacity ?? 100;
   const lightIntensity = activeLight.intensity ?? 100;
   const shadowDensity = activeLight.shadowDensity ?? 100;
   const shadowSoftness = activeLight.shadowSoftness ?? 100;
@@ -481,7 +490,7 @@ export function LightingPanel({
       <div className="flex flex-col gap-[0.6vw] relative">
         {/* Section Header */}
         <div className="flex items-center gap-[0.5vw]">
-          <span className="text-[0.82vw] font-bold text-gray-900">Environment</span>
+          <span className="text-[0.85vw] font-semibold text-gray-900">Environment</span>
           <div className="h-[0.08vw] bg-gray-200 flex-1"></div>
         </div>
 
@@ -510,7 +519,7 @@ export function LightingPanel({
                   className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-[0.82vw] font-bold text-gray-800 truncate">
+              <span className="text-[0.75vw] font-medium text-gray-800 truncate">
                 {environmentOptions.find(
                   (e) => e.envValue === activeEnv || (e.id === "studio" && activeEnv === "studio")
                 )?.name || "Studio"}
@@ -559,6 +568,11 @@ export function LightingPanel({
                       type="button"
                       onClick={() => {
                         handleUpdate("environment", item.envValue);
+                        if (item.file) {
+                          handleUpdate("customEnvMap", item.file);
+                        } else {
+                          handleUpdate("customEnvMap", null);
+                        }
                         setShowAllEnvironments(false);
                       }}
                       className={`flex flex-col items-center gap-[0.2vw] p-[0.2vw] rounded-[0.38vw] group cursor-pointer text-left transition-all ${
@@ -646,11 +660,11 @@ export function LightingPanel({
       </div>
 
       {/* ── 2. SECTION: LIGHTS (STUDIO MULTI-LIGHT CONTROLS) ── */}
-      <div className="flex flex-col gap-[0.6vw]">
+      <div className="flex flex-col gap-[0.6vw] mt-[0.2vw]">
         {/* Section Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-[0.5vw] flex-1">
-            <span className="text-[0.82vw] font-bold text-gray-900">Lights & Shadows</span>
+            <span className="text-[0.85vw] font-semibold text-gray-900">Lights & Shadows</span>
             <div className="h-[0.08vw] bg-gray-200 flex-1"></div>
           </div>
 
@@ -658,7 +672,7 @@ export function LightingPanel({
             <button
               type="button"
               onClick={handleAddLight}
-              className="flex items-center gap-[0.2vw] px-[0.45vw] py-[0.15vw] rounded-[0.35vw] text-gray-600 hover:text-[#ea543a] bg-gray-50 hover:bg-orange-50/50 border border-gray-200 hover:border-orange-200 text-[0.68vw] font-semibold transition-all cursor-pointer shadow-2xs ml-[0.6vw] shrink-0"
+              className="flex items-center gap-[0.2vw] px-[0.45vw] py-[0.15vw] rounded-[0.35vw] text-gray-600 hover:text-[#ea543a] bg-gray-50 hover:bg-orange-50/50 border border-gray-200 hover:border-orange-200 text-[0.68vw] font-medium transition-all cursor-pointer shadow-2xs ml-[0.6vw] shrink-0"
               title="Add another light source (up to 3)"
             >
               <Icon icon="heroicons:plus-20-solid" className="w-[0.75vw] h-[0.75vw] text-[#ea543a]" />
@@ -674,7 +688,7 @@ export function LightingPanel({
             {lightsArray.map((light, idx) => {
               const isSelected = activeLightIndex === idx;
               const isEnabled = light.enabled !== false;
-              const roleName = idx === 0 ? "Key" : idx === 1 ? "Fill" : "Rim";
+              const displayName = `Light ${idx + 1}`;
               return (
                 <button
                   key={light.id || idx}
@@ -682,18 +696,18 @@ export function LightingPanel({
                   onClick={() => setActiveLightIndex(idx)}
                   className={`flex-1 h-[2.1vw] px-[0.5vw] rounded-[0.42vw] flex items-center justify-center gap-[0.4vw] transition-all cursor-pointer select-none ${
                     isSelected
-                      ? "bg-white text-gray-900 shadow-xs border border-gray-200/90 font-bold"
-                      : "text-gray-500 hover:text-gray-800 hover:bg-white/60 border border-transparent font-medium"
+                      ? "bg-white text-gray-900 shadow-xs border border-gray-200/90 font-medium"
+                      : "text-gray-500 hover:text-gray-800 hover:bg-white/60 border border-transparent font-normal"
                   }`}
                 >
                   <span
-                    className="w-[0.55vw] h-[0.55vw] rounded-full shrink-0 shadow-2xs border border-black/10 transition-colors"
+                    className="w-[0.55vw] h-[0.55vw] rounded-full shrink-0 shadow-2xs border border-black/20 transition-colors"
                     style={{
-                      backgroundColor: isEnabled ? (light.color || "#EC5137") : "#9ca3af",
+                      backgroundColor: isEnabled ? (light.color || "#ffffff") : "#9ca3af",
                     }}
                   />
                   <span className="text-[0.73vw] whitespace-nowrap">
-                    {roleName}
+                    {displayName}
                   </span>
                   {!isEnabled && (
                     <span className="text-[0.55vw] font-bold px-[0.25vw] py-[0.02vw] rounded bg-gray-200/80 text-gray-500">
@@ -708,39 +722,50 @@ export function LightingPanel({
           {/* Active Light Status & Actions Sub-bar */}
           <div className="flex items-center justify-between px-[0.2vw]">
             <div className="flex items-center gap-[0.35vw]">
-              <span className="text-[0.68vw] font-bold text-gray-700">
-                Light {activeLightIndex + 1}:
-              </span>
-              <span className="text-[0.68vw] font-semibold text-gray-500">
-                {activeLightIndex === 0 ? "Key Light" : activeLightIndex === 1 ? "Fill Light" : "Rim Light"}
+              <span className="text-[0.75vw] font-medium text-gray-700">
+                Light {activeLightIndex + 1}
               </span>
             </div>
 
-            <div className="flex items-center gap-[0.3vw]">
-              {/* Toggle Current Light ON/OFF Button */}
-              <button
-                type="button"
+            <div className="flex items-center gap-[0.4vw]">
+              {/* Toggle Current Light ON/OFF Switch (Compact) */}
+              <div
+                className="flex items-center gap-[0.4vw] cursor-pointer select-none"
                 onClick={(e) => handleToggleLightEnabled(activeLightIndex, e)}
-                className={`h-[1.55vw] px-[0.45vw] rounded-[0.35vw] flex items-center gap-[0.2vw] border text-[0.63vw] font-bold transition-all cursor-pointer shadow-2xs ${
-                  activeLight.enabled
-                    ? "bg-emerald-50 border-emerald-300/80 text-emerald-700 hover:bg-emerald-100"
-                    : "bg-gray-100 border-gray-300 text-gray-500 hover:bg-gray-200"
-                }`}
-                title={activeLight.enabled ? "Turn Off this light" : "Turn On this light"}
               >
-                <Icon
-                  icon={activeLight.enabled ? "solar:sun-2-bold" : "solar:sun-dim-outline"}
-                  className="w-[0.75vw] h-[0.75vw]"
-                />
-                <span>{activeLight.enabled ? "Enabled" : "Disabled"}</span>
-              </button>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={activeLight.enabled !== false}
+                  className="relative inline-flex items-center w-[1.55vw] h-[0.82vw] cursor-pointer transition-colors focus:outline-none shrink-0"
+                  title={activeLight.enabled !== false ? "Turn Off this light" : "Turn On this light"}
+                >
+                  {/* Pill track / Outline ring */}
+                  <span
+                    className={`w-full h-[0.6vw] rounded-full border-[0.1vw] transition-colors duration-200 bg-white ${
+                      activeLight.enabled !== false ? "border-[#ea543a]" : "border-gray-300"
+                    }`}
+                  />
+                  {/* Thumb / Knob */}
+                  <span
+                    className={`absolute top-1/2 -translate-y-1/2 w-[0.85vw] h-[0.85vw] rounded-full shadow-xs transition-all duration-200 ${
+                      activeLight.enabled !== false
+                        ? "translate-x-[0.8vw] bg-[#ea543a]"
+                        : "translate-x-0 bg-gray-400"
+                    }`}
+                  />
+                </button>
+                <span className={`text-[0.62vw] font-normal ${activeLight.enabled !== false ? "text-gray-700" : "text-gray-400"}`}>
+                  {activeLight.enabled !== false ? "Enabled" : "Disabled"}
+                </span>
+              </div>
 
               {/* Delete Active Light (only if > 1 light) */}
               {lightsArray.length > 1 && (
                 <button
                   type="button"
                   onClick={(e) => handleRemoveLight(activeLightIndex, e)}
-                  className="h-[1.55vw] px-[0.35vw] rounded-[0.35vw] bg-white hover:bg-red-50 text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-200 flex items-center gap-[0.15vw] text-[0.63vw] font-semibold transition-all cursor-pointer shadow-2xs"
+                  className="h-[1.55vw] px-[0.35vw] rounded-[0.35vw] bg-white hover:bg-red-50 text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-200 flex items-center gap-[0.15vw] text-[0.63vw] font-semibold transition-all cursor-pointer shadow-2xs ml-[0.2vw]"
                   title="Remove this light source"
                 >
                   <Icon icon="heroicons:trash-20-solid" className="w-[0.75vw] h-[0.75vw]" />
@@ -749,42 +774,6 @@ export function LightingPanel({
               )}
             </div>
           </div>
-        </div>
-
-        {/* Quick Position Presets (Equal 4-column Grid) */}
-        <div className="grid grid-cols-4 gap-[0.3vw] w-full">
-          <button
-            type="button"
-            onClick={() => updateActiveLight("position", { x: -8, y: 12, z: 12 })}
-            className="py-[0.22vw] px-[0.2vw] rounded-[0.35vw] bg-[#f9fafb] hover:bg-orange-50 hover:text-[#ea543a] hover:border-orange-200 text-gray-600 text-[0.66vw] font-semibold border border-gray-200 shadow-2xs transition-all cursor-pointer text-center truncate"
-            title="Front-Left Key Light"
-          >
-            Front-L
-          </button>
-          <button
-            type="button"
-            onClick={() => updateActiveLight("position", { x: 8, y: 8, z: 10 })}
-            className="py-[0.22vw] px-[0.2vw] rounded-[0.35vw] bg-[#f9fafb] hover:bg-orange-50 hover:text-[#ea543a] hover:border-orange-200 text-gray-600 text-[0.66vw] font-semibold border border-gray-200 shadow-2xs transition-all cursor-pointer text-center truncate"
-            title="Front-Right Fill Light"
-          >
-            Front-R
-          </button>
-          <button
-            type="button"
-            onClick={() => updateActiveLight("position", { x: 0, y: -12, z: 14 })}
-            className="py-[0.22vw] px-[0.2vw] rounded-[0.35vw] bg-[#f9fafb] hover:bg-orange-50 hover:text-[#ea543a] hover:border-orange-200 text-gray-600 text-[0.66vw] font-semibold border border-gray-200 shadow-2xs transition-all cursor-pointer text-center truncate"
-            title="Backlight / Rim Light"
-          >
-            Back Rim
-          </button>
-          <button
-            type="button"
-            onClick={() => updateActiveLight("position", { x: 0, y: 0, z: 25 })}
-            className="py-[0.22vw] px-[0.2vw] rounded-[0.35vw] bg-[#f9fafb] hover:bg-orange-50 hover:text-[#ea543a] hover:border-orange-200 text-gray-600 text-[0.66vw] font-semibold border border-gray-200 shadow-2xs transition-all cursor-pointer text-center truncate"
-            title="Overhead Top Light"
-          >
-            Overhead
-          </button>
         </div>
 
         {/* Compass & Sun Height Widget for Active Light */}
@@ -866,8 +855,8 @@ export function LightingPanel({
 
         {/* Position X, Y, Z Controls */}
         <div className="flex items-center justify-between gap-[0.5vw] mt-[0.2vw]">
-          <span className="text-[0.78vw] font-semibold text-gray-900 w-[4.5vw] shrink-0">
-            Position
+          <span className="text-[0.78vw] font-normal text-gray-900 w-[4.5vw] shrink-0">
+            Position:
           </span>
 
           <div className="grid grid-cols-3 gap-[0.35vw] flex-1">
@@ -894,7 +883,7 @@ export function LightingPanel({
 
         {/* Light Color Selector */}
         <div className="flex items-center justify-between gap-[0.5vw] mt-[0.3vw]">
-          <span className="text-[0.74vw] font-medium text-gray-700 w-[7.2vw] shrink-0">
+          <span className="text-[0.74vw] font-normal text-gray-700 w-[7.2vw] shrink-0">
             Light Color :
           </span>
 
@@ -909,9 +898,9 @@ export function LightingPanel({
             />
 
             {/* Hex and percentage display pill */}
-            <div className="flex-1 h-[1.65vw] bg-white border border-gray-200 rounded-[0.35vw] px-[0.55vw] flex items-center justify-between text-[0.72vw] text-gray-800 font-medium">
+            <div className="flex-1 h-[1.65vw] bg-white border border-gray-200 rounded-[0.35vw] px-[0.55vw] flex items-center justify-between text-[0.72vw] text-gray-800 font-normal">
               <span className="uppercase">{lightColor}</span>
-              <span className="text-gray-600 font-medium">100%</span>
+              <span className="text-gray-600 font-normal">{Math.round(lightOpacity)}%</span>
             </div>
 
             {/* Color Picker Popover */}
@@ -920,6 +909,8 @@ export function LightingPanel({
                 <ColorPicker
                   color={lightColor}
                   onChange={(c) => updateActiveLight("color", c)}
+                  opacity={lightOpacity}
+                  onOpacityChange={(op) => updateActiveLight("opacity", op)}
                   onClose={() => setIsColorPickerOpen(false)}
                 />
               </div>

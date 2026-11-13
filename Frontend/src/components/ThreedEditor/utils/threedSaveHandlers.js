@@ -348,149 +348,133 @@ export async function executeSave3D({
     let primarySavedModelId = null;
     const defaultBaseName = customName || (modelName || nextModels[0]?.displayName || nextModels[0]?.name || "Scene").replace(/\.[^/.]+$/, "");
 
-    for (let i = 0; i < nextModels.length; i++) {
-      const currentModel = nextModels[i];
-      const isPrimary = i === 0;
-      const modelProgressBase = 25 + Math.round((i / nextModels.length) * 60);
+    // =========================================================================
+    // COMBINED SCENE SAVING:
+    // If the editor has multiple models in the viewport (models added into the scene),
+    // bake the entire combined scene into ONE unified 3D model asset under the primary model,
+    // so it doesn't create duplicate separate models on the Dashboard.
+    // =========================================================================
+    const isMultiModelScene = nextModels.length > 1;
+    let exportSourceScene = null;
 
-      // If it's a secondary imported model that already has a permanent remote URL (not a transient local blob),
-      // keep its asset reference intact in the scene without re-uploading and without touching the master dashboard model!
-      const isExistingRemoteUrl = typeof currentModel.url === 'string' &&
-        !currentModel.url.startsWith('blob:') &&
-        !currentModel.url.startsWith('data:') &&
-        !currentModel.file;
-
-      if (!isPrimary && isExistingRemoteUrl) {
-        updatedModels.push({
-          ...currentModel,
-          transform: currentModel.transform || { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } }
-        });
-        continue;
-      }
-
-      const liveScene = resolveLiveScene(currentModel.id, i);
-      if (!liveScene) {
-        updatedModels.push(currentModel);
-        continue;
-      }
-
-      updateProgress(
-        modelProgressBase,
-        isSaveAs
-          ? (nextModels.length > 1
-              ? `Baking materials for "${currentModel.displayName || currentModel.name}" (${i + 1}/${nextModels.length})...`
-              : "Baking customized materials & textures...")
-          : (nextModels.length > 1
-              ? `Exporting materials for "${currentModel.displayName || currentModel.name}" (${i + 1}/${nextModels.length})...`
-              : "Exporting updated materials & textures...")
-      );
-      await new Promise((r) => setTimeout(r, 80));
-
-      const glbBuffer = await exportSingleModelGlb(
-        liveScene,
-        isPrimary ? transformValues : (currentModel.transform || null),
-        deletedMaterials,
-        currentModel.animations || liveScene.animations || []
-      );
-
-      const originalFileName = isSaveAs || !isPrimary ? null : currentModel.fileName;
-      const currentBaseName = isPrimary
-        ? (customName || defaultBaseName)
-        : (currentModel.displayName || currentModel.name || `Model_${i + 1}`);
-
-      const sanitizedBaseName = currentBaseName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_");
-
-      const exportFileName = isSaveAs || !isPrimary
-        ? `${sanitizedBaseName}_${Date.now().toString().slice(-4)}.glb`
-        : originalFileName || `${sanitizedBaseName}.glb`;
-
-      const glbBlob = new Blob([glbBuffer]);
-      const glbSize = glbBlob.size;
-      const totalGlbChunks = Math.ceil(glbSize / CHUNK_SIZE);
-      const glbUploadId = Date.now().toString() + Math.random().toString(36).substring(7);
-      let glbRes = null;
-
-      for (let chunkIndex = 0; chunkIndex < totalGlbChunks; chunkIndex++) {
-        const uploadPct = modelProgressBase + Math.round(((chunkIndex + 1) / totalGlbChunks) * 15);
-        const stageText = isSaveAs
-          ? (totalGlbChunks > 1
-              ? `Uploading ${currentBaseName} (Part ${chunkIndex + 1} of ${totalGlbChunks})...`
-              : `Uploading ${currentBaseName}...`)
-          : (totalGlbChunks > 1
-              ? `Uploading ${currentBaseName} updates (Part ${chunkIndex + 1} of ${totalGlbChunks})...`
-              : `Uploading ${currentBaseName} updates...`);
-
-        updateProgress(uploadPct, stageText);
-
-        const start = chunkIndex * CHUNK_SIZE;
-        const end = Math.min(start + CHUNK_SIZE, glbSize);
-        const chunk = glbBlob.slice(start, end);
-
-        const formData = new FormData();
-        formData.append("uploadId", glbUploadId);
-        formData.append("chunkIndex", chunkIndex);
-        formData.append("totalChunks", totalGlbChunks);
-        formData.append("fileName", exportFileName);
-        formData.append("displayName", isPrimary ? (customName || defaultBaseName) : currentBaseName);
-        formData.append("emailId", userEmail);
-        const resolvedUserId = activeUser?.userID || activeUser?.userId;
-        if (resolvedUserId) {
-          formData.append("userID", resolvedUserId);
-        }
-        // CRITICAL: Only pass modelId for the primary active model if not Save As — NEVER overwrite secondary dashboard models!
-        if (isPrimary && !isSaveAs && currentModel.modelId) {
-          formData.append("modelId", currentModel.modelId);
-        }
-        formData.append("chunk", chunk);
-        formData.append("hotspots", JSON.stringify(hotspots || []));
-        formData.append("materialSettings", JSON.stringify(materialSettings || {}));
-        formData.append("transformValues", JSON.stringify(isPrimary ? (transformValues || {}) : (currentModel.transform || {})));
-
-        const res = await axios.post(`${backendUrl}/api/3d-models/upload-chunk`, formData, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
-        glbRes = res;
-      }
-
-      if (glbRes && glbRes.data && glbRes.data.url) {
-        const rawUrl = glbRes.data.url;
-        const baseUrl = rawUrl.startsWith("http://") || rawUrl.startsWith("https://") ? rawUrl : `${backendUrl}${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
-        const resolvedBaseUrl = resolveUploadsPath(baseUrl);
-
-        const timestamp = Date.now();
-        const targetGlbUrl = resolvedBaseUrl.includes("?") ? `${resolvedBaseUrl}&t=${timestamp}` : `${resolvedBaseUrl}?t=${timestamp}`;
-
-        const modelIdToUse = isPrimary && !isSaveAs && currentModel.id ? currentModel.id : `model_${timestamp}_${i}`;
-        const savedModelId = glbRes.data.modelId || (isPrimary && !isSaveAs ? currentModel.modelId : null) || modelIdToUse;
-        const finalDisplayName = isPrimary ? (customName || glbRes.data.displayName || defaultBaseName) : (currentModel.displayName || glbRes.data.displayName || currentBaseName);
-
-        const activeModelUrl = targetGlbUrl;
-        const activeModelId = savedModelId || modelIdToUse;
-
-        if (isPrimary) {
-          primarySavedModelId = savedModelId;
-          setModelName(finalDisplayName);
-          setModelUrl(activeModelUrl);
-        }
-
-        const updatedModel = {
-          ...currentModel,
-          id: activeModelId,
-          url: activeModelUrl,
-          name: exportFileName,
-          displayName: finalDisplayName,
-          fileName: exportFileName,
-          type: "glb",
-          file: null,
-          modelId: savedModelId,
-          hotspots: hotspots || []
-        };
-
-        updatedModels.push(updatedModel);
-      } else {
-        updatedModels.push(currentModel);
-      }
+    if (isMultiModelScene && sceneWrapperRef?.current) {
+      exportSourceScene = sceneWrapperRef.current;
+    } else {
+      exportSourceScene = resolveLiveScene(nextModels[0]?.id, 0);
     }
+
+    if (!exportSourceScene) {
+      console.error("No scene found to export");
+      setIsSaving(false);
+      if (typeof setManualLoading === "function") setManualLoading(false);
+      return;
+    }
+
+    updateProgress(35, isSaveAs ? "Baking combined 3D scene & materials..." : "Baking scene changes & materials...");
+    await new Promise((r) => setTimeout(r, 80));
+
+    // Export the combined scene (or single model) into a clean GLB buffer
+    const glbBuffer = await exportSingleModelGlb(
+      exportSourceScene,
+      isMultiModelScene ? null : transformValues,
+      deletedMaterials,
+      nextModels[0]?.animations || exportSourceScene.animations || []
+    );
+
+    const primaryModel = nextModels[0];
+    const originalFileName = isSaveAs ? null : primaryModel.fileName;
+    const currentBaseName = customName || defaultBaseName;
+    const sanitizedBaseName = currentBaseName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_");
+
+    const exportFileName = isSaveAs
+      ? `${sanitizedBaseName}_${Date.now().toString().slice(-4)}.glb`
+      : originalFileName || `${sanitizedBaseName}.glb`;
+
+    const glbBlob = new Blob([glbBuffer]);
+    const glbSize = glbBlob.size;
+    const totalGlbChunks = Math.ceil(glbSize / CHUNK_SIZE);
+    const glbUploadId = Date.now().toString() + Math.random().toString(36).substring(7);
+    let glbRes = null;
+
+    for (let chunkIndex = 0; chunkIndex < totalGlbChunks; chunkIndex++) {
+      const uploadPct = 40 + Math.round(((chunkIndex + 1) / totalGlbChunks) * 45);
+      const stageText = isSaveAs
+        ? (totalGlbChunks > 1
+            ? `Uploading ${currentBaseName} (Part ${chunkIndex + 1} of ${totalGlbChunks})...`
+            : `Uploading ${currentBaseName}...`)
+        : (totalGlbChunks > 1
+            ? `Uploading ${currentBaseName} updates (Part ${chunkIndex + 1} of ${totalGlbChunks})...`
+            : `Uploading ${currentBaseName} updates...`);
+
+      updateProgress(uploadPct, stageText);
+
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, glbSize);
+      const chunk = glbBlob.slice(start, end);
+
+      const formData = new FormData();
+      formData.append("uploadId", glbUploadId);
+      formData.append("chunkIndex", chunkIndex);
+      formData.append("totalChunks", totalGlbChunks);
+      formData.append("fileName", exportFileName);
+      formData.append("displayName", currentBaseName);
+      formData.append("emailId", userEmail);
+      const resolvedUserId = activeUser?.userID || activeUser?.userId;
+      if (resolvedUserId) {
+        formData.append("userID", resolvedUserId);
+      }
+      if (!isSaveAs && primaryModel.modelId) {
+        formData.append("modelId", primaryModel.modelId);
+      }
+      formData.append("chunk", chunk);
+      formData.append("hotspots", JSON.stringify(hotspots || []));
+      formData.append("materialSettings", JSON.stringify(materialSettings || {}));
+      formData.append("transformValues", JSON.stringify(transformValues || {}));
+
+      const res = await axios.post(`${backendUrl}/api/3d-models/upload-chunk`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      glbRes = res;
+    }
+
+    const resData = glbRes?.data || {};
+    const returnedModel = resData.model || {};
+    const rawUrl = resData.url || returnedModel.url;
+
+    if (!rawUrl) {
+      console.error("[threedSaveHandlers] Upload response missing url:", resData);
+      throw new Error("Upload failed to return valid model data");
+    }
+
+    const baseUrl = rawUrl.startsWith("http://") || rawUrl.startsWith("https://") ? rawUrl : `${backendUrl}${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
+    const resolvedBaseUrl = resolveUploadsPath(baseUrl);
+
+    const timestamp = Date.now();
+    const targetGlbUrl = resolvedBaseUrl.includes("?") ? `${resolvedBaseUrl}&t=${timestamp}` : `${resolvedBaseUrl}?t=${timestamp}`;
+
+    const modelIdToUse = !isSaveAs && primaryModel.id ? primaryModel.id : `model_${timestamp}_0`;
+    const savedModelId = resData.modelId || returnedModel.modelId || (!isSaveAs ? primaryModel.modelId : null) || modelIdToUse;
+    const finalDisplayName = customName || resData.displayName || returnedModel.displayName || defaultBaseName;
+
+    primarySavedModelId = savedModelId;
+    setModelName(finalDisplayName);
+    setModelUrl(targetGlbUrl);
+
+    // In a multi-model scene, the saved combined GLB is now the consolidated single model
+    const consolidatedPrimaryModel = {
+      ...primaryModel,
+      id: savedModelId,
+      url: targetGlbUrl,
+      name: exportFileName,
+      displayName: finalDisplayName,
+      fileName: exportFileName,
+      type: "glb",
+      file: null,
+      modelId: savedModelId,
+      hotspots: hotspots || []
+    };
+
+    updatedModels.push(consolidatedPrimaryModel);
 
     updateProgress(92, isSaveAs ? "Registering new 3D model in database..." : "Finalizing scene configuration & state...");
 

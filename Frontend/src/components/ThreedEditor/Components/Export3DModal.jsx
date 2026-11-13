@@ -5,7 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import { View, OrbitControls, Environment, PerspectiveCamera, ContactShadows, Html, Center } from "@react-three/drei";
 import RenderModel from "./ModelLoaders";
 import { GlobalLoader } from "./GlobalLoader";
-import { builtInHdris } from "../../../data/hdriData";
+import { builtInHdris, getRegisteredHdris } from "../../../data/hdriData";
 const ModelThumbnail = React.memo(({ 
     materialName, 
     models, 
@@ -103,24 +103,34 @@ const ModelThumbnail = React.memo(({
                   </group>
 
 
-                  <Environment
-                      files={
-                          materialSettings?.environment?.startsWith('builtin_')
-                              ? (builtInHdris.find(h => `builtin_${h.id}` === materialSettings?.environment || h.aliases?.some(a => `builtin_${a}` === materialSettings?.environment))?.file || null)
-                              : (materialSettings?.environment?.startsWith('custom_') || (!materialSettings?.environment && (materialSettings?.customEnvMap || materialSettings?.maps?.envMap)))
-                                  ? (materialSettings?.customEnvMap || materialSettings?.maps?.envMap || null)
-                                  : null
-                      }
-                      preset={
-                          (materialSettings?.environment?.startsWith('builtin_') || materialSettings?.environment?.startsWith('custom_') || (!materialSettings?.environment && (materialSettings?.customEnvMap || materialSettings?.maps?.envMap)))
-                              ? null
-                              : (['apartment', 'city', 'dawn', 'forest', 'lobby', 'night', 'park', 'studio', 'sunset', 'warehouse'].includes(materialSettings?.environment) ? materialSettings.environment : 'studio')
-                      }
-                      background={false}
-                      blur={0.5}
-                      environmentIntensity={(materialSettings?.reflection ?? 50) / 50}
-                      rotation={[0, (materialSettings?.envRotation || 0) * (Math.PI / 180), 0]}
-                  />
+                  {(() => {
+                    const allKnownHdris = getRegisteredHdris();
+                    const envSetting = materialSettings?.environment;
+                    const isBuiltin = typeof envSetting === 'string' && envSetting.startsWith('builtin_');
+                    const isCustom = (typeof envSetting === 'string' && envSetting.startsWith('custom_')) || (!envSetting && (materialSettings?.customEnvMap || materialSettings?.maps?.envMap));
+
+                    let resolvedFile = null;
+                    if (isBuiltin) {
+                      const found = allKnownHdris.find(h => `builtin_${h.id}` === envSetting || h.aliases?.some(a => `builtin_${a}` === envSetting));
+                      resolvedFile = found?.file || materialSettings?.customEnvMap || null;
+                    } else if (isCustom) {
+                      resolvedFile = materialSettings?.customEnvMap || materialSettings?.maps?.envMap || null;
+                    }
+                    if (!resolvedFile && materialSettings?.customEnvMap) {
+                      resolvedFile = materialSettings.customEnvMap;
+                    }
+                    const usePreset = resolvedFile ? null : (['apartment', 'city', 'dawn', 'forest', 'lobby', 'night', 'park', 'studio', 'sunset', 'warehouse'].includes(envSetting) ? envSetting : 'studio');
+
+                    return (
+                      <Environment
+                        {...(resolvedFile ? { files: resolvedFile } : { preset: usePreset })}
+                        background={false}
+                        blur={0.5}
+                        environmentIntensity={(materialSettings?.reflection ?? 50) / 50}
+                        rotation={[0, (materialSettings?.envRotation || 0) * (Math.PI / 180), 0]}
+                      />
+                    );
+                  })()}
               </Suspense>
           </View>
       </div>
@@ -552,24 +562,32 @@ export default function Export3DModal({
                                                  />
                                              ))}
                                          </group>
-                                          <Environment
-                                              files={
-                                                  materialSettings?.environment?.startsWith('builtin_')
-                                                      ? (builtInHdris.find(h => `builtin_${h.id}` === materialSettings?.environment || h.aliases?.some(a => `builtin_${a}` === materialSettings?.environment))?.file || null)
-                                                      : (materialSettings?.environment?.startsWith('custom_') || (!materialSettings?.environment && (materialSettings?.customEnvMap || materialSettings?.maps?.envMap)))
-                                                          ? (materialSettings?.customEnvMap || materialSettings?.maps?.envMap || null)
-                                                          : null
+                                          {(() => {
+                                              const allKnownHdris = getRegisteredHdris();
+                                              const envSetting = materialSettings?.environment;
+                                              const isBuiltin = typeof envSetting === 'string' && envSetting.startsWith('builtin_');
+                                              const isCustom = (typeof envSetting === 'string' && envSetting.startsWith('custom_')) || (!envSetting && (materialSettings?.customEnvMap || materialSettings?.maps?.envMap));
+                                              let resolvedFile = null;
+                                              if (isBuiltin) {
+                                                const found = allKnownHdris.find(h => `builtin_${h.id}` === envSetting || h.aliases?.some(a => `builtin_${a}` === envSetting));
+                                                resolvedFile = found?.file || materialSettings?.customEnvMap || null;
+                                              } else if (isCustom) {
+                                                resolvedFile = materialSettings?.customEnvMap || materialSettings?.maps?.envMap || null;
                                               }
-                                              preset={
-                                                  (materialSettings?.environment?.startsWith('builtin_') || materialSettings?.environment?.startsWith('custom_') || (!materialSettings?.environment && (materialSettings?.customEnvMap || materialSettings?.maps?.envMap)))
-                                                      ? null
-                                                      : (['apartment', 'city', 'dawn', 'forest', 'lobby', 'night', 'park', 'studio', 'sunset', 'warehouse'].includes(materialSettings?.environment) ? materialSettings.environment : 'studio')
+                                              if (!resolvedFile && materialSettings?.customEnvMap) {
+                                                resolvedFile = materialSettings.customEnvMap;
                                               }
-                                              background={false}
-                                              blur={0.5}
-                                              environmentIntensity={(materialSettings?.reflection ?? 50) / 50}
-                                              rotation={[0, (materialSettings?.envRotation || 0) * (Math.PI / 180), 0]}
-                                          />
+                                              const usePreset = resolvedFile ? null : (['apartment', 'city', 'dawn', 'forest', 'lobby', 'night', 'park', 'studio', 'sunset', 'warehouse'].includes(envSetting) ? envSetting : 'studio');
+                                              return (
+                                                <Environment
+                                                  {...(resolvedFile ? { files: resolvedFile } : { preset: usePreset })}
+                                                  background={false}
+                                                  blur={0.5}
+                                                  environmentIntensity={(materialSettings?.reflection ?? 50) / 50}
+                                                  rotation={[0, (materialSettings?.envRotation || 0) * (Math.PI / 180), 0]}
+                                                />
+                                              );
+                                          })()}
                                          <OrbitControls 
                                              enableZoom={false} 
                                              enablePan={false}

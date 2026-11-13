@@ -971,7 +971,7 @@ export default function ThreeDDashboard({
                 {previewModel.url ? (
                   <Canvas
                     style={{ width: '100%', height: '100%' }}
-                    camera={{ fov: 32, position: [2.5, 2.0, 3.8] }}
+                    camera={{ fov: 32, position: [0, 0, 5] }}
                   >
                     <Suspense
                       fallback={
@@ -988,16 +988,14 @@ export default function ThreeDDashboard({
                       <directionalLight position={[-5, 8, 5]} intensity={1.2} />
 
                       <Center>
-                        <AutoFitModel targetSize={2.0}>
-                          <ThumbnailErrorBoundary>
-                            <RenderModel
-                              type={previewModel.type}
-                              url={buildVersionedUrl(previewModel.url, previewModel.updatedAt, previewModel.uploadedAt)}
-                              isSelectionDisabled={true}
-                              shouldClone={true}
-                            />
-                          </ThumbnailErrorBoundary>
-                        </AutoFitModel>
+                        <ThumbnailErrorBoundary>
+                          <RenderModel
+                            type={previewModel.type}
+                            url={buildVersionedUrl(previewModel.url, previewModel.updatedAt, previewModel.uploadedAt)}
+                            isSelectionDisabled={true}
+                            shouldClone={true}
+                          />
+                        </ThumbnailErrorBoundary>
                       </Center>
 
                       <Environment preset="city" />

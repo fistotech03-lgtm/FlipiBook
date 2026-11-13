@@ -11,12 +11,14 @@ export default function CameraBottomTray({
   onCaptureSnapshot,
   isCapturing = false,
   modelName = "Model",
+  onExportingChange,
 }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [quality, setQuality] = useState("Medium");
   const [isQualityOpen, setIsQualityOpen] = useState(false);
   const [fileType, setFileType] = useState("PNG");
   const [isFileTypeOpen, setIsFileTypeOpen] = useState(false);
+  const [exportWithLabel, setExportWithLabel] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [isExporting, setIsExporting] = useState(false);
@@ -27,6 +29,9 @@ export default function CameraBottomTray({
   const scrollContainerRef = useRef(null);
   const lastSelectedIdRef = useRef(null);
 
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, snap }
+  const contextMenuRef = useRef(null);
+
   // Auto-select latest snapshot or all by default if newly captured
   useEffect(() => {
     if (snapshots.length > 0 && selectedIds.size === 0) {
@@ -34,7 +39,7 @@ export default function CameraBottomTray({
     }
   }, [snapshots]);
 
-  // Click outside listener for dropdowns
+  // Click outside listener for dropdowns & context menu
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -49,9 +54,19 @@ export default function CameraBottomTray({
       ) {
         setIsFileTypeOpen(false);
       }
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(e.target)
+      ) {
+        setContextMenu(null);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    window.addEventListener("scroll", () => setContextMenu(null), true);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", () => setContextMenu(null), true);
+    };
   }, []);
 
   const handleToggleSelect = (id, e, index) => {
@@ -122,6 +137,56 @@ export default function CameraBottomTray({
       setSelectedIds(new Set(snapshots.map((s) => s.id)));
       lastSelectedIdRef.current = snapshots[snapshots.length - 1]?.id || null;
     }
+  };
+
+  // Delete all selected snapshots
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    selectedIds.forEach((id) => {
+      onDeleteSnapshot?.(id);
+    });
+    setSelectedIds(new Set());
+    lastSelectedIdRef.current = null;
+    setContextMenu(null);
+  };
+
+  // Single card download (e.g. from right-click context menu)
+  const handleDownloadSingle = async (snap) => {
+    setContextMenu(null);
+    if (!snap || isExporting) return;
+    setIsExporting(true);
+    onExportingChange?.(true, "Preparing snapshot download...");
+    try {
+      const rendered = await renderSnapshotWithTitle(snap, fileType.toLowerCase(), quality);
+      const cleanName = (modelName || "model").toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+      const titleSlug = (snap.title || "angle").replace(/\s+/g, "_");
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const dateTimeStr = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      const ext = fileType.toLowerCase() === "jpeg" ? "jpg" : fileType.toLowerCase();
+
+      const link = document.createElement("a");
+      link.href = rendered.dataUrl;
+      link.download = `${cleanName}_${titleSlug}_${dateTimeStr}.${ext}`;
+      link.click();
+    } catch (err) {
+      console.error("Failed to download snapshot:", err);
+    } finally {
+      setIsExporting(false);
+      onExportingChange?.(false);
+    }
+  };
+
+  // Handle right-click on snapshot card
+  const handleCardContextMenu = (e, snap) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Position menu clamped to viewport
+    const menuWidth = 140;
+    const menuHeight = 90;
+    const x = Math.min(e.clientX, window.innerWidth - menuWidth - 10);
+    const y = Math.min(e.clientY - menuHeight, window.innerHeight - menuHeight - 10);
+    setContextMenu({ x, y: Math.max(10, y), snap });
   };
 
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -213,26 +278,26 @@ export default function CameraBottomTray({
     ctx.drawImage(img, 0, 0, w, h);
 
     const titleText = (snap.title || "").trim();
-    if (titleText) {
+    if (exportWithLabel && titleText) {
       ctx.save();
-      const fontSize = Math.max(26, Math.round(h * 0.038));
-      ctx.font = `600 ${fontSize}px sans-serif`;
-      const paddingX = Math.round(fontSize * 0.85);
-      const paddingY = Math.round(fontSize * 0.45);
+      const fontSize = Math.max(16, Math.round(h * 0.022));
+      ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      const paddingX = Math.round(fontSize * 0.75);
+      const paddingY = Math.round(fontSize * 0.38);
       const textMetrics = ctx.measureText(titleText);
       const textWidth = textMetrics.width;
       const badgeWidth = textWidth + paddingX * 2;
       const badgeHeight = fontSize + paddingY * 2;
-      const margin = Math.round(h * 0.04);
+      const margin = Math.round(h * 0.025);
       const badgeX = margin;
       const badgeY = h - margin - badgeHeight;
-      const radius = Math.round(badgeHeight * 0.28);
+      const radius = Math.round(badgeHeight * 0.3);
 
-      // Sleek rounded badge with backdrop
-      ctx.shadowColor = "rgba(0, 0, 0, 0.28)";
-      ctx.shadowBlur = 12;
-      ctx.shadowOffsetY = 4;
-      ctx.fillStyle = "rgba(23, 32, 44, 0.85)";
+      // Sleek rounded badge with subtle shadow
+      ctx.shadowColor = "rgba(0, 0, 0, 0.22)";
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 2;
+      ctx.fillStyle = "rgba(23, 32, 44, 0.82)";
 
       ctx.beginPath();
       ctx.moveTo(badgeX + radius, badgeY);
@@ -272,6 +337,7 @@ export default function CameraBottomTray({
     }
 
     setIsExporting(true);
+    onExportingChange?.(true, toExport.length > 1 ? `Exporting ${toExport.length} snapshots...` : "Preparing snapshot download...");
     const cleanName = (modelName || "model")
       .toLowerCase()
       .replace(/[^a-z0-9_-]/g, "_");
@@ -360,6 +426,7 @@ export default function CameraBottomTray({
       console.error("Failed to export angle snapshots:", err);
     } finally {
       setIsExporting(false);
+      onExportingChange?.(false);
     }
   };
 
@@ -395,7 +462,7 @@ export default function CameraBottomTray({
           <button
             type="button"
             onClick={() => setIsMinimized((prev) => !prev)}
-            className="flex items-center gap-[0.35vw] px-[0.5vw] py-[0.22vw] rounded-[0.4vw] bg-gray-100/90 hover:bg-orange-50 hover:text-[#EC5137] text-gray-700 transition-all cursor-pointer shadow-2xs group"
+            className="flex items-center gap-[0.35vw] px-[0.55vw] py-[0.25vw] rounded-[0.4vw] bg-gray-100/90 hover:bg-orange-50 hover:text-[#EC5137] text-gray-700 transition-all cursor-pointer shadow-2xs group"
             title={isMinimized ? "Expand Saved Angles Tray" : "Minimize Tray"}
           >
             <Icon
@@ -404,16 +471,16 @@ export default function CameraBottomTray({
                 isMinimized ? "rotate-0" : "rotate-180"
               }`}
             />
-            <span className="text-[0.72vw] font-bold">
+            <span className="text-[0.72vw] font-medium">
               {isMinimized ? "Expand" : "Minimize"}
             </span>
           </button>
 
           <div className="flex items-center gap-[0.45vw]">
-            <h3 className="text-[0.86vw] font-bold text-gray-900 tracking-normal">
+            <h3 className="text-[0.84vw] font-semibold text-gray-900 tracking-normal whitespace-nowrap">
               Saved Angles Preview
             </h3>
-            <span className="text-[0.68vw] font-bold px-[0.45vw] py-[0.08vw] rounded-full bg-orange-50 text-[#EC5137] border border-orange-200/60">
+            <span className="inline-flex items-center text-[0.66vw] font-medium px-[0.45vw] py-[0.12vw] rounded-full bg-orange-50 text-[#EC5137] border border-orange-200/60 leading-none whitespace-nowrap">
               {snapshots.length} {snapshots.length === 1 ? "Angle" : "Angles"}
             </span>
           </div>
@@ -422,46 +489,85 @@ export default function CameraBottomTray({
             <button
               type="button"
               onClick={handleToggleSelectAll}
-              className="flex items-center gap-[0.3vw] px-[0.55vw] py-[0.2vw] rounded-[0.4vw] bg-white border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 transition-colors shadow-2xs cursor-pointer group ml-[0.3vw]"
+              className="flex items-center gap-[0.35vw] px-[0.6vw] py-[0.25vw] rounded-[0.4vw] bg-white border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 transition-colors shadow-2xs cursor-pointer group"
               title={isAllSelected ? "Unselect all angles" : "Select all angles"}
             >
               {isAllSelected ? (
                 <Icon
                   icon="ant-design:check-circle-filled"
-                  className="w-[0.9vw] h-[0.9vw] text-[#EC5137]"
+                  className="w-[0.85vw] h-[0.85vw] text-[#EC5137] shrink-0"
                 />
               ) : isPartiallySelected ? (
                 <Icon
                   icon="ant-design:minus-circle-filled"
-                  className="w-[0.9vw] h-[0.9vw] text-[#EC5137]"
+                  className="w-[0.85vw] h-[0.85vw] text-[#EC5137] shrink-0"
                 />
               ) : (
-                <div className="w-[0.8vw] h-[0.8vw] rounded-full border-[1.5px] border-gray-300 bg-white group-hover:border-gray-400" />
+                <div className="w-[0.8vw] h-[0.8vw] rounded-full border-[1.5px] border-gray-300 bg-white group-hover:border-gray-400 shrink-0" />
               )}
-              <span className="text-[0.7vw] font-semibold">
+              <span className="text-[0.7vw] font-medium whitespace-nowrap">
                 {isAllSelected ? "Unselect All" : "Select All"}
               </span>
-              <span className="text-[0.62vw] text-gray-400 font-bold">
+              <span className="text-[0.64vw] text-gray-400 font-normal whitespace-nowrap">
                 ({selectedIds.size}/{snapshots.length})
               </span>
             </button>
           )}
+
+          {/* Delete Selected Button (Only trash icon) */}
+          {!isMinimized && selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={handleDeleteSelected}
+              className="flex items-center justify-center p-[0.32vw] rounded-[0.4vw] bg-white border border-red-200 hover:border-red-400 text-red-600 hover:bg-red-50 transition-all shadow-2xs cursor-pointer group"
+              title={`Delete ${selectedIds.size} selected ${selectedIds.size === 1 ? 'angle' : 'angles'}`}
+            >
+              <Icon
+                icon="heroicons:trash-20-solid"
+                className="w-[0.9vw] h-[0.9vw] text-red-500 group-hover:scale-110 transition-transform shrink-0"
+              />
+            </button>
+          )}
         </div>
 
-        {/* Right: Controls (Quality, Type, Export) */}
-        <div className="flex items-center gap-[0.9vw]">
+        {/* Right: Controls (Quality, Type, Export With Label, Export) */}
+        <div className="flex items-center gap-[0.75vw]">
+          {/* Export with Label toggle */}
+          <div className="flex items-center gap-[0.35vw]">
+            <span className="text-[0.72vw] font-medium text-gray-600 whitespace-nowrap">
+              Export with label
+            </span>
+            <button
+              type="button"
+              onClick={() => setExportWithLabel((prev) => !prev)}
+              role="switch"
+              aria-checked={exportWithLabel}
+              className={`relative inline-flex h-[1.1vw] w-[2vw] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                exportWithLabel ? "bg-[#EC5137]" : "bg-gray-200"
+              }`}
+              title={exportWithLabel ? "Label will appear on exported image" : "Label will not appear on exported image"}
+            >
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none inline-block h-[0.88vw] w-[0.88vw] transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  exportWithLabel ? "translate-x-[0.9vw]" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
           {/* Quality dropdown */}
-          <div className="flex items-center gap-[0.4vw] relative" ref={qualityDropdownRef}>
-            <span className="text-[0.75vw] font-semibold text-gray-700">Quality</span>
+          <div className="flex items-center gap-[0.35vw] relative" ref={qualityDropdownRef}>
+            <span className="text-[0.72vw] font-medium text-gray-600 whitespace-nowrap">Quality</span>
             <button
               type="button"
               onClick={() => setIsQualityOpen((prev) => !prev)}
-              className="flex items-center justify-between gap-[0.6vw] px-[0.65vw] py-[0.26vw] bg-white border border-gray-200 rounded-[0.4vw] text-[0.74vw] font-semibold text-gray-700 min-w-[5.6vw] hover:border-gray-300 transition-colors cursor-pointer shadow-2xs"
+              className="flex items-center justify-between gap-[0.5vw] px-[0.6vw] py-[0.24vw] bg-white border border-gray-200 rounded-[0.4vw] text-[0.72vw] font-medium text-gray-700 min-w-[5.2vw] hover:border-gray-300 transition-colors cursor-pointer shadow-2xs"
             >
               <span>{quality}</span>
               <Icon
                 icon="heroicons:chevron-down-20-solid"
-                className={`w-[0.8vw] h-[0.8vw] text-gray-400 transition-transform ${
+                className={`w-[0.75vw] h-[0.75vw] text-gray-400 transition-transform ${
                   isQualityOpen ? "rotate-180" : ""
                 }`}
               />
@@ -478,7 +584,7 @@ export default function CameraBottomTray({
                       setIsQualityOpen(false);
                     }}
                     className={`w-full text-left px-[0.7vw] py-[0.28vw] text-[0.72vw] hover:bg-gray-50 transition-colors cursor-pointer ${
-                      quality === q ? "font-bold text-[#EC5137]" : "text-gray-700"
+                      quality === q ? "font-semibold text-[#EC5137]" : "text-gray-700 font-normal"
                     }`}
                   >
                     {q}
@@ -489,17 +595,17 @@ export default function CameraBottomTray({
           </div>
 
           {/* Type dropdown */}
-          <div className="flex items-center gap-[0.4vw] relative" ref={fileTypeDropdownRef}>
-            <span className="text-[0.75vw] font-semibold text-gray-700">Type</span>
+          <div className="flex items-center gap-[0.35vw] relative" ref={fileTypeDropdownRef}>
+            <span className="text-[0.72vw] font-medium text-gray-600 whitespace-nowrap">Type</span>
             <button
               type="button"
               onClick={() => setIsFileTypeOpen((prev) => !prev)}
-              className="flex items-center justify-between gap-[0.6vw] px-[0.65vw] py-[0.26vw] bg-white border border-gray-200 rounded-[0.4vw] text-[0.74vw] font-semibold text-gray-700 min-w-[5vw] hover:border-gray-300 transition-colors cursor-pointer shadow-2xs"
+              className="flex items-center justify-between gap-[0.5vw] px-[0.6vw] py-[0.24vw] bg-white border border-gray-200 rounded-[0.4vw] text-[0.72vw] font-medium text-gray-700 min-w-[4.8vw] hover:border-gray-300 transition-colors cursor-pointer shadow-2xs"
             >
               <span>{fileType}</span>
               <Icon
                 icon="heroicons:chevron-down-20-solid"
-                className={`w-[0.8vw] h-[0.8vw] text-gray-400 transition-transform ${
+                className={`w-[0.75vw] h-[0.75vw] text-gray-400 transition-transform ${
                   isFileTypeOpen ? "rotate-180" : ""
                 }`}
               />
@@ -516,7 +622,7 @@ export default function CameraBottomTray({
                       setIsFileTypeOpen(false);
                     }}
                     className={`w-full text-left px-[0.7vw] py-[0.28vw] text-[0.72vw] hover:bg-gray-50 transition-colors cursor-pointer ${
-                      fileType === t ? "font-bold text-[#EC5137]" : "text-gray-700"
+                      fileType === t ? "font-semibold text-[#EC5137]" : "text-gray-700 font-normal"
                     }`}
                   >
                     {t}
@@ -531,17 +637,17 @@ export default function CameraBottomTray({
             type="button"
             disabled={selectedIds.size === 0 || isExporting}
             onClick={handleExportClick}
-            className={`flex items-center gap-[0.35vw] px-[1.1vw] py-[0.34vw] rounded-[0.4vw] text-[0.78vw] font-bold text-white transition-all cursor-pointer shadow-sm active:scale-95 ${
+            className={`flex items-center gap-[0.35vw] px-[0.95vw] py-[0.26vw] rounded-[0.4vw] text-[0.74vw] font-medium text-white transition-all cursor-pointer shadow-sm active:scale-95 whitespace-nowrap ${
               selectedIds.size === 0 || isExporting
                 ? "bg-gray-300 cursor-not-allowed shadow-none"
                 : "bg-[#EC5137] hover:bg-[#d9442a]"
             }`}
           >
             <Icon
-              icon="solar:export-linear"
-              className="w-[0.95vw] h-[0.95vw] stroke-2"
+              icon={isExporting ? "line-md:loading-loop" : "solar:export-linear"}
+              className="w-[0.88vw] h-[0.88vw]"
             />
-            <span>Export</span>
+            <span>{isExporting ? "Exporting..." : "Export"}</span>
           </button>
         </div>
       </div>
@@ -586,6 +692,7 @@ export default function CameraBottomTray({
                     <div
                       key={snap.id}
                       onClick={(e) => handleToggleSelect(snap.id, e, index)}
+                      onContextMenu={(e) => handleCardContextMenu(e, snap)}
                       className={`relative flex flex-col shrink-0 w-[11.2vw] bg-white rounded-[0.55vw] overflow-hidden border-2 transition-all duration-200 cursor-pointer group shadow-2xs ${
                         isSelected
                           ? "border-[#EC5137] ring-2 ring-[#EC5137]/15 shadow-sm"
@@ -645,10 +752,10 @@ export default function CameraBottomTray({
                               if (e.key === "Escape") setEditingId(null);
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-[0.75vw] font-bold text-gray-800 bg-gray-50 border border-[#EC5137] rounded px-[0.3vw] py-[0.1vw] outline-none w-full mr-[0.3vw]"
+                            className="text-[0.72vw] font-medium text-gray-800 bg-gray-50 border border-[#EC5137] rounded px-[0.3vw] py-[0.1vw] outline-none w-full mr-[0.3vw]"
                           />
                         ) : (
-                          <span className="text-[0.75vw] font-bold text-gray-800 truncate">
+                          <span className="text-[0.72vw] font-medium text-gray-700 truncate">
                             {snap.title || "Top Angle"}
                           </span>
                         )}
@@ -686,6 +793,52 @@ export default function CameraBottomTray({
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* ── CARD RIGHT-CLICK CONTEXT MENU (Download, Delete) ── */}
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          style={{
+            position: "fixed",
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+            zIndex: 9999,
+          }}
+          className="bg-white border border-gray-200/90 rounded-[0.5vw] shadow-xl py-[0.25vw] min-w-[7.5vw] flex flex-col font-sans select-none animate-in fade-in zoom-in-95 duration-100"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Download Action */}
+          <button
+            type="button"
+            onClick={() => handleDownloadSingle(contextMenu.snap)}
+            className="flex items-center gap-[0.45vw] px-[0.7vw] py-[0.38vw] text-[0.74vw] font-medium text-gray-700 hover:bg-[#fff5f3] hover:text-[#EC5137] cursor-pointer transition-colors text-left"
+          >
+            <Icon icon="solar:download-minimalistic-linear" className="w-[0.9vw] h-[0.9vw] text-gray-500 hover:text-[#EC5137]" />
+            <span>Download</span>
+          </button>
+
+          {/* Delete Action */}
+          <button
+            type="button"
+            onClick={() => {
+              const snapId = contextMenu.snap?.id;
+              setContextMenu(null);
+              if (snapId) {
+                onDeleteSnapshot?.(snapId);
+                setSelectedIds((prev) => {
+                  const next = new Set(prev);
+                  next.delete(snapId);
+                  return next;
+                });
+              }
+            }}
+            className="flex items-center gap-[0.45vw] px-[0.7vw] py-[0.38vw] text-[0.74vw] font-medium text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors text-left border-t border-gray-100"
+          >
+            <Icon icon="heroicons:trash-20-solid" className="w-[0.85vw] h-[0.85vw] text-rose-500" />
+            <span>Delete</span>
+          </button>
         </div>
       )}
 

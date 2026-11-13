@@ -104,6 +104,8 @@ export default function ThreedEditor() {
   const [cameraViewMode, setCameraViewMode] = useState("Perspective");
   const [isShades, setIsShades] = useState(true);
   const [navMode, setNavMode] = useState("orbit");
+  const [isCameraExporting, setIsCameraExporting] = useState(false);
+  const [cameraExportText, setCameraExportText] = useState("");
   const [manualLoading, setManualLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -646,6 +648,7 @@ export default function ThreedEditor() {
   const [screenshotPreview, setScreenshotPreview] = useState(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [formatErrorModal, setFormatErrorModal] = useState({ isOpen: false, title: 'Invalid Model Format', message: '' });
+  const cameraFrameRef = useRef(null);
 
   // ==========================================================================
   // SECTION 7: UNDO / REDO HISTORY MANAGEMENT
@@ -2792,6 +2795,7 @@ export default function ThreedEditor() {
                     setActiveAccordion("position");
                   }
                 }}
+                showTransformDock={activeLeftTab !== "lighting"}
                 canTransform={models.length > 0}
               />
             )}
@@ -2823,34 +2827,43 @@ export default function ThreedEditor() {
             {activeLeftTab === "camera" && (() => {
               const activeFrame = CAMERA_FRAME_OPTIONS.find((f) => f.id === selectedFrameId || f.id === selectedFrameId?.replace(/_[a-c]$/, ''));
               if (!activeFrame || !activeFrame.aspect) return null;
-              const isSquare = activeFrame.aspect === 1;
-              const isWide = activeFrame.aspect > 1;
+              const ratio = activeFrame.aspect; // e.g. 16/9 for Full HD (1920x1080), 1/1 for Square
               return (
-                <div className="absolute inset-0 pb-[4.5vw] pointer-events-none z-20 flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 pb-[4.5vw] pointer-events-none z-20 flex items-center justify-center overflow-hidden p-[1.5vw]">
                   <div
-                    className="relative border border-white/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)] transition-all duration-300 rounded-[0.4vw]"
+                    ref={cameraFrameRef}
+                    className="relative border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] transition-all duration-300 rounded-[0.4vw]"
                     style={{
-                      width: isSquare
-                        ? "min(72vh, 72%, 72vw)"
-                        : isWide
-                          ? "min(94%, 90vw)"
-                          : `calc(min(84vh, 84%) * ${activeFrame.aspect})`,
-                      height: isSquare
-                        ? "min(72vh, 72%, 72vw)"
-                        : isWide
-                          ? `calc(min(94%, 90vw) / ${activeFrame.aspect})`
-                          : "min(84vh, 84%)",
-                      maxHeight: isSquare ? "72vh" : "84%",
-                      maxWidth: isSquare ? "72vh" : "94%",
+                      aspectRatio: `${ratio}`,
+                      width: `min(90%, calc((100vh - 12vw) * ${ratio}))`,
+                      maxWidth: "92%",
+                      maxHeight: "82%",
                     }}
                   >
-                    <div className="absolute top-[0.5vw] left-[0.6vw] bg-black/70 text-white text-[0.68vw] font-semibold px-[0.5vw] py-[0.18vw] rounded-[0.3vw] backdrop-blur-xs select-none shadow-sm">
+                    <div className="absolute top-[0.5vw] left-[0.6vw] bg-black/75 text-white text-[0.68vw] font-semibold px-[0.5vw] py-[0.18vw] rounded-[0.3vw] backdrop-blur-xs select-none shadow-sm">
                       {activeFrame.name || activeFrame.ratio} ({activeFrame.ratio})
                     </div>
                   </div>
                 </div>
               );
             })()}
+
+            {/* Camera Tab Snapshot Export Loading Spinner Overlay over 3D Model */}
+            {activeLeftTab === "camera" && isCameraExporting && (
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/20 backdrop-blur-[2px] select-none pointer-events-auto transition-all animate-in fade-in duration-200">
+                <div className="bg-white/95 rounded-[0.75vw] shadow-2xl px-[1.5vw] py-[1.1vw] flex flex-col items-center gap-[0.6vw] border border-gray-100 max-w-[20vw] text-center">
+                  <div className="w-[2.2vw] h-[2.2vw] border-[0.25vw] border-orange-200 border-t-[#EC5137] rounded-full animate-spin" />
+                  <div className="flex flex-col items-center gap-[0.2vw]">
+                    <span className="text-[0.78vw] font-semibold text-gray-800">
+                      {cameraExportText || "Processing Snapshot..."}
+                    </span>
+                    <span className="text-[0.66vw] font-normal text-gray-500">
+                      Please wait until download begins
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <ThreedCanvasViewport
               models={models}
@@ -2885,6 +2898,7 @@ export default function ThreedEditor() {
               deletedMaterials={deletedMaterials}
               handleMaterialSync={handleMaterialSync}
               selectedTexture={selectedTexture}
+              onSelectTexture={handleSelectTexture}
               resetKey={resetKey}
               transformResetKey={transformResetKey}
               sceneResetTrigger={sceneResetTrigger}
@@ -2936,11 +2950,37 @@ export default function ThreedEditor() {
                 }}
                 onCaptureSnapshot={async (captureOpts = {}) => {
                   const activeFrame = CAMERA_FRAME_OPTIONS.find((f) => f.id === selectedFrameId || f.id === selectedFrameId?.replace(/_[a-c]$/, ''));
+                  
+                  // Compute exact crop rectangle relative to WebGL canvas
+                  let cropRect = null;
+                  if (activeFrame && activeFrame.aspect && cameraFrameRef.current && glInstanceRef.current?.domElement) {
+                    const canvasEl = glInstanceRef.current.domElement;
+                    const canvasBounds = canvasEl.getBoundingClientRect();
+                    const frameBounds = cameraFrameRef.current.getBoundingClientRect();
+
+                    const cropX = Math.max(0, frameBounds.left - canvasBounds.left);
+                    const cropY = Math.max(0, frameBounds.top - canvasBounds.top);
+                    const cropW = Math.min(canvasBounds.width - cropX, frameBounds.width);
+                    const cropH = Math.min(canvasBounds.height - cropY, frameBounds.height);
+
+                    if (cropW > 0 && cropH > 0 && canvasBounds.width > 0 && canvasBounds.height > 0) {
+                      cropRect = {
+                        x: cropX,
+                        y: cropY,
+                        width: cropW,
+                        height: cropH,
+                        canvasWidth: canvasBounds.width,
+                        canvasHeight: canvasBounds.height
+                      };
+                    }
+                  }
+
                   const snapUrl = await handleCaptureSnapshot({
                     bgType: cameraBgType,
                     solidColor: cameraBgColor,
                     bgOpacity: cameraBgOpacity,
                     aspectRatio: activeFrame?.aspect || null,
+                    cropRect,
                     quality: captureOpts?.quality || "High"
                   });
                   if (snapUrl) {
@@ -2956,6 +2996,10 @@ export default function ThreedEditor() {
                 }}
                 isCapturing={isCapturing}
                 modelName={modelName}
+                onExportingChange={(exporting, statusText) => {
+                  setIsCameraExporting(Boolean(exporting));
+                  setCameraExportText(statusText || "Preparing and downloading snapshot...");
+                }}
               />
             )}
           </div>

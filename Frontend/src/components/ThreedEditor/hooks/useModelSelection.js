@@ -42,7 +42,8 @@ export function useModelSelection({ scene, modelName, modelId, deletedMaterials,
             return [];
         }
 
-        const isFullModel = selMat.isAll || (modelName && (selMat.name === modelName || selMat === modelName)) || selMat.name === "All Meshes";
+        const isExplicitAll = Boolean(selMat.isAll || selMat.name === "All Meshes" || selMat.name === "All Models");
+        const isFullModel = isExplicitAll || (!selMat.isModel && modelName && (selMat.name === modelName || selMat === modelName));
         if (isFullModel) {
             if (isExplicitOtherModel) return [];
             const all = [];
@@ -168,7 +169,11 @@ export function useModelSelection({ scene, modelName, modelId, deletedMaterials,
             return null;
         }
 
-        const isFullModel = !selMat || (modelName && (selMat.name === modelName || selMat === modelName)) || selMat.name === "Scene" || selMat === "Scene" || selMat.name === "All Meshes" || selMat.isAll;
+        if (selMat?.isModel || (!selMat.isAll && selMat.name !== "All Meshes" && (selMat.name === modelName || selMat.name === "Scene"))) {
+            return null;
+        }
+
+        const isFullModel = !selMat || selMat.name === "All Meshes" || selMat.isAll;
         if (isFullModel) {
             let firstMat = null;
             scene.traverse(child => {

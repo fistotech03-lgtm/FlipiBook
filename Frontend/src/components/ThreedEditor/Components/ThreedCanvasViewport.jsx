@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useState, useRef, useEffect, useCallback } from "react";
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { TransformControls, Environment } from "@react-three/drei";
@@ -9,7 +9,7 @@ import FloorRenderer from "./FloorRenderer";
 import SmoothOrbitControls from "./SmoothOrbitControls";
 import AnimatedGizmo from "./AnimatedGizmo";
 import Hotspot3DOverlay from "./Hotspot3DOverlay";
-import { builtInHdris } from "../../../data/hdriData";
+import { builtInHdris, getRegisteredHdris } from "../../../data/hdriData";
 
 class ModelErrorBoundary extends React.Component {
   constructor(props) {
@@ -116,7 +116,8 @@ export default function ThreedCanvasViewport({
   isPlacingHotspotRef,
   activeLeftTab = "model",
   cameraBgType = "transparent",
-  cameraBgColor = "#F3F3F3"
+  cameraBgColor = "#F3F3F3",
+  onSelectTexture
 }) {
   const rawX = materialSettings.lightPosition?.x ?? 10;
   const rawY = materialSettings.lightPosition?.y ?? 10;
@@ -126,8 +127,430 @@ export default function ThreedCanvasViewport({
   const sunY = Math.max(1.5, rawZ);
   const sunZ = -(Math.abs(rawX) < 0.001 && Math.abs(rawY) < 0.001 ? 0.01 : rawY);
 
+  const containerRef = useRef(null);
+  const [marqueeBox, setMarqueeBox] = useState(null); // { startX, startY, currentX, currentY }
+  const marqueeDragRef = useRef({ isDown: false, startX: 0, startY: 0, hasDragged: false });
+
+  // Handle Box/Marquee Selection (Left-click drag when in "model" tab)
+  const handleViewportPointerDown = useCallback((e) => {
+    // Only engage box selection on left click (button === 0) when in model tab, not placing hotspots, and not panning
+    if (activeLeftTab !== "model" || isPlacingHotspot || navMode === "pan" || e.button !== 0) {
+      return;
+    }
+    // Don't intercept clicks on UI overlays/gizmo
+    if (e.target && e.target.closest && e.target.closest('.pointer-events-auto, .lucide, button, input')) {
+      return;
+    }
+
+    // Check if user is clicking or dragging the TransformControls gizmo
+    const gl = glInstanceRef.current;
+    const camera = cameraInstanceRef.current;
+    const scene = sceneInstanceRef.current;
+    if (gl && camera && scene) {
+      const rect = gl.domElement.getBoundingClientRect();
+      const mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+
+      let hitGizmo = false;
+      scene.traverse((obj) => {
+        if (hitGizmo) return;
+        if (obj.isTransformControls || obj.isTransformControlsGizmo || obj.isTransformControlsPlane || (obj.name && (obj.name.includes('TransformControls') || obj.name.includes('Gizmo')))) {
+          const hits = raycaster.intersectObject(obj, true);
+          if (hits && hits.length > 0) {
+            hitGizmo = true;
+          }
+        }
+      });
+      if (hitGizmo) {
+        return; // Click is on the gizmo handles/planes, do not trigger marquee box selection!
+      }
+    }
+
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    marqueeDragRef.current = {
+      isDown: true,
+      startX: x,
+      startY: y,
+      hasDragged: false
+    };
+  }, [activeLeftTab, isPlacingHotspot, navMode, glInstanceRef, cameraInstanceRef, sceneInstanceRef]);
+
+  useEffect(() => {
+    const handlePointerMove = (e) => {
+      if (!marqueeDragRef.current.isDown) return;
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+
+      const dx = Math.abs(currentX - marqueeDragRef.current.startX);
+      const dy = Math.abs(currentY - marqueeDragRef.current.startY);
+
+      if (!marqueeDragRef.current.hasDragged && (dx > 5 || dy > 5)) {
+        marqueeDragRef.current.hasDragged = true;
+      }
+
+      if (marqueeDragRef.current.hasDragged) {
+        setMarqueeBox({
+          startX: marqueeDragRef.current.startX,
+          startY: marqueeDragRef.current.startY,
+          currentX,
+          currentY
+        });
+      }
+    };
+
+    const handlePointerUp = (e) => {
+      if (!marqueeDragRef.current.isDown) return;
+      const wasDragging = marqueeDragRef.current.hasDragged;
+      const startX = marqueeDragRef.current.startX;
+      const startY = marqueeDragRef.current.startY;
+      marqueeDragRef.current = { isDown: false, startX: 0, startY: 0, hasDragged: false };
+      setMarqueeBox(null);
+
+      if (!wasDragging) return;
+
+      const container = containerRef.current;
+      const camera = cameraInstanceRef.current;
+      const sceneWrapper = sceneWrapperRef.current;
+      if (!container || !camera || !sceneWrapper) return;
+
+      const rect = container.getBoundingClientRect();
+      const endX = e.clientX - rect.left;
+      const endY = e.clientY - rect.top;
+
+      const boxLeft = Math.min(startX, endX);
+      const boxRight = Math.max(startX, endX);
+      const boxTop = Math.min(startY, endY);
+      const boxBottom = Math.max(startY, endY);
+
+      // Check if box has reasonable size (at least 8x8 px)
+      if (boxRight - boxLeft < 8 && boxBottom - boxTop < 8) return;
+
+      const cWidth = rect.width;
+      const cHeight = rect.height;
+      if (cWidth <= 0 || cHeight <= 0) return;
+
+      // Project 3D meshes to screen-space 2D coordinates
+      // Group meshes by model / root group
+      const selectedMeshes = [];
+      const tempVec = new THREE.Vector3();
+      const tempBox = new THREE.Box3();
+
+      sceneWrapper.traverse((child) => {
+        if (!child.isMesh || child.visible === false) return;
+        if (deletedMaterials && (deletedMaterials.has(child.uuid) || (child.name && deletedMaterials.has(child.name)))) {
+          return;
+        }
+
+        // Get world bounding box of mesh
+        child.updateWorldMatrix(true, false);
+        if (!child.geometry) return;
+
+        if (!child.geometry.boundingBox) {
+          child.geometry.computeBoundingBox();
+        }
+        if (!child.geometry.boundingBox) return;
+
+        tempBox.copy(child.geometry.boundingBox).applyMatrix4(child.matrixWorld);
+
+        // Project center and 8 corners to 2D
+        const points = [
+          tempBox.getCenter(new THREE.Vector3()),
+          new THREE.Vector3(tempBox.min.x, tempBox.min.y, tempBox.min.z),
+          new THREE.Vector3(tempBox.max.x, tempBox.min.y, tempBox.min.z),
+          new THREE.Vector3(tempBox.min.x, tempBox.max.y, tempBox.min.z),
+          new THREE.Vector3(tempBox.max.x, tempBox.max.y, tempBox.min.z),
+          new THREE.Vector3(tempBox.min.x, tempBox.min.y, tempBox.max.z),
+          new THREE.Vector3(tempBox.max.x, tempBox.min.y, tempBox.max.z),
+          new THREE.Vector3(tempBox.min.x, tempBox.max.y, tempBox.max.z),
+          new THREE.Vector3(tempBox.max.x, tempBox.max.y, tempBox.max.z),
+        ];
+
+        let minProjX = Infinity, maxProjX = -Infinity;
+        let minProjY = Infinity, maxProjY = -Infinity;
+        let isBehindCamera = false;
+
+        for (const pt of points) {
+          tempVec.copy(pt);
+          tempVec.project(camera);
+
+          // Check if behind camera
+          if (tempVec.z > 1) {
+            isBehindCamera = true;
+          }
+
+          const screenX = ((tempVec.x + 1) / 2) * cWidth;
+          const screenY = ((-tempVec.y + 1) / 2) * cHeight;
+
+          if (screenX < minProjX) minProjX = screenX;
+          if (screenX > maxProjX) maxProjX = screenX;
+          if (screenY < minProjY) minProjY = screenY;
+          if (screenY > maxProjY) maxProjY = screenY;
+        }
+
+        if (isBehindCamera) return;
+
+        // Check 2D bounding box intersection with marquee box
+        const intersects = !(
+          maxProjX < boxLeft ||
+          minProjX > boxRight ||
+          maxProjY < boxTop ||
+          minProjY > boxBottom
+        );
+
+        if (intersects) {
+          selectedMeshes.push(child);
+        }
+      });
+
+      if (selectedMeshes.length === 0) {
+        if (selectedMaterial) setSelectedMaterial(null);
+        return;
+      }
+
+      // Check if all meshes of a model are selected
+      // Collect all meshes in each model
+      const modelTotalMeshesMap = new Map();
+      sceneWrapper.traverse((child) => {
+        if (!child.isMesh || child.visible === false) return;
+        if (deletedMaterials && (deletedMaterials.has(child.uuid) || (child.name && deletedMaterials.has(child.name)))) return;
+
+        // Find which model this belongs to
+        let cur = child;
+        let foundModelId = null;
+        while (cur && cur !== sceneWrapper) {
+          if (cur.userData?.modelId) {
+            foundModelId = cur.userData.modelId;
+            break;
+          }
+          cur = cur.parent;
+        }
+        if (!foundModelId && models[0]) foundModelId = models[0].id;
+
+        if (foundModelId) {
+          if (!modelTotalMeshesMap.has(foundModelId)) modelTotalMeshesMap.set(foundModelId, []);
+          modelTotalMeshesMap.get(foundModelId).push(child);
+        }
+      });
+
+      // Check if selected meshes comprise all meshes of all models or single model
+      const selectedUuids = new Set(selectedMeshes.map(m => m.uuid));
+      const fullySelectedModelIds = [];
+
+      modelTotalMeshesMap.forEach((allMeshes, mId) => {
+        if (allMeshes.length > 0 && allMeshes.every(m => selectedUuids.has(m.uuid))) {
+          fullySelectedModelIds.push(mId);
+        }
+      });
+
+      // If all models in the entire scene are enclosed and more than 1 model exists
+      if (models.length > 1 && fullySelectedModelIds.length === models.length) {
+        handleSelectMaterial({
+          name: "All Models",
+          isAll: true,
+          isModel: true,
+          isShift: e.shiftKey
+        });
+        return;
+      }
+
+      // If a single model is completely enclosed and ONLY its meshes are selected
+      if (fullySelectedModelIds.length === 1 && selectedMeshes.length === (modelTotalMeshesMap.get(fullySelectedModelIds[0])?.length || 0)) {
+        const fullModel = models.find(m => m.id === fullySelectedModelIds[0]);
+        if (fullModel) {
+          handleSelectMaterial({
+            name: fullModel.name,
+            isAll: false,
+            isModel: true,
+            modelId: fullModel.id,
+            id: fullModel.id,
+            parentGroup: fullModel.name,
+            isShift: e.shiftKey
+          });
+          return;
+        }
+      }
+
+      // If single mesh selected
+      if (selectedMeshes.length === 1) {
+        const singleMesh = selectedMeshes[0];
+        const m = singleMesh.userData?.__preXrayMaterial || singleMesh.material;
+        const mat = Array.isArray(m) ? m[0] : m;
+        // Find which model it belongs to
+        let cur = singleMesh;
+        let ownerModel = null;
+        while (cur && cur !== sceneWrapper) {
+          if (cur.userData?.modelId) {
+            ownerModel = models.find(mod => mod.id === cur.userData.modelId);
+            break;
+          }
+          cur = cur.parent;
+        }
+        if (!ownerModel && models.length === 1) ownerModel = models[0];
+
+        handleSelectMaterial({
+          name: singleMesh.name || "Mesh",
+          meshName: singleMesh.name,
+          uuid: singleMesh.uuid,
+          meshUuid: singleMesh.uuid,
+          material: mat?.name || "Solid Material",
+          modelId: ownerModel?.id || null,
+          parentGroup: ownerModel?.name || null,
+          isMesh: true,
+          isShift: e.shiftKey
+        });
+        return;
+      }
+
+      // Multiple meshes/materials selected (Batch multi-select across or within models)
+      const multiItems = selectedMeshes.map(mesh => {
+        const m = mesh.userData?.__preXrayMaterial || mesh.material;
+        const mat = Array.isArray(m) ? m[0] : m;
+        let cur = mesh;
+        let ownerModel = null;
+        while (cur && cur !== sceneWrapper) {
+          if (cur.userData?.modelId) {
+            ownerModel = models.find(mod => mod.id === cur.userData.modelId);
+            break;
+          }
+          cur = cur.parent;
+        }
+        if (!ownerModel && models.length === 1) ownerModel = models[0];
+
+        return {
+          uuid: mesh.uuid,
+          meshUuid: mesh.uuid,
+          name: mesh.name || "Mesh",
+          meshName: mesh.name || "Mesh",
+          material: mat?.name || "Solid Material",
+          modelId: ownerModel?.id || null,
+          parentGroup: ownerModel?.name || null,
+          isMesh: true
+        };
+      });
+
+      handleSelectMaterial({
+        name: "Multiple Selection",
+        isGroup: true,
+        isMultiSelect: true,
+        items: multiItems,
+        uuids: multiItems.map(it => it.uuid),
+        meshNames: multiItems.map(it => it.meshName),
+        materials: multiItems.map(it => it.material),
+        isShift: e.shiftKey
+      });
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [
+    activeLeftTab,
+    models,
+    deletedMaterials,
+    cameraInstanceRef,
+    sceneWrapperRef,
+    handleSelectMaterial,
+    selectedMaterial,
+    setSelectedMaterial
+  ]);
+
+  const handleViewportDragOver = useCallback((e) => {
+    const isMaterialDrag = e.dataTransfer.types.includes("application/json");
+    if (isMaterialDrag) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  const handleViewportDrop = useCallback((e) => {
+    const rawJson = e.dataTransfer.getData("application/json");
+    if (!rawJson) return;
+
+    try {
+      const materialItem = JSON.parse(rawJson);
+      if (materialItem && (materialItem.id || materialItem.name)) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Raycast to find the exact mesh hovered under mouse
+        const gl = glInstanceRef.current;
+        const camera = cameraInstanceRef.current;
+        const scene = sceneInstanceRef.current;
+        if (gl && camera && scene) {
+          const rect = gl.domElement.getBoundingClientRect();
+          const mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          const mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+          const raycaster = new THREE.Raycaster();
+          raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+
+          const meshes = [];
+          scene.traverse((obj) => {
+            if (obj.isMesh && obj.visible) meshes.push(obj);
+          });
+
+          const hits = raycaster.intersectObjects(meshes, true);
+          if (hits && hits.length > 0) {
+            const hitMesh = hits[0].object;
+            const mat = hitMesh.material;
+            const singleMat = Array.isArray(mat) ? mat[0] : mat;
+            handleSelectMaterial?.({
+              id: hitMesh.uuid,
+              uuid: hitMesh.uuid,
+              meshUuid: hitMesh.uuid,
+              name: hitMesh.name || "Mesh",
+              meshName: hitMesh.name || "Mesh",
+              material: singleMat?.name || "Solid Material",
+              isMesh: true
+            });
+          }
+        }
+
+        // Apply texture
+        if (onSelectTexture) {
+          onSelectTexture(materialItem);
+        }
+      }
+    } catch {
+      // not a valid material drop item
+    }
+  }, [glInstanceRef, cameraInstanceRef, sceneInstanceRef, handleSelectMaterial, onSelectTexture]);
+
   return (
-    <div className={`flex-1 h-full w-full relative ${isPlacingHotspot ? "cursor-crosshair" : navMode === "pan" ? "cursor-grab active:cursor-grabbing" : ""}`}>
+    <div
+      ref={containerRef}
+      onPointerDown={handleViewportPointerDown}
+      onDragOver={handleViewportDragOver}
+      onDrop={handleViewportDrop}
+      className={`flex-1 h-full w-full relative select-none ${isPlacingHotspot ? "cursor-crosshair" : navMode === "pan" ? "cursor-grab active:cursor-grabbing" : ""}`}
+    >
+      {/* 2D Marquee Box Selection Overlay */}
+      {marqueeBox && (
+        <div
+          className="absolute border border-white/90 bg-white/10 pointer-events-none z-30 rounded-[1px] shadow-sm"
+          style={{
+            left: Math.min(marqueeBox.startX, marqueeBox.currentX),
+            top: Math.min(marqueeBox.startY, marqueeBox.currentY),
+            width: Math.abs(marqueeBox.currentX - marqueeBox.startX),
+            height: Math.abs(marqueeBox.currentY - marqueeBox.startY),
+            borderStyle: "dashed",
+            borderWidth: "1.5px"
+          }}
+        />
+      )}
       {!isSyncing && (
         <Canvas
           camera={{ position: [2.0, 1.8, 2.7], fov: 45, near: 0.05, far: 1000 }}
@@ -182,6 +605,9 @@ export default function ThreedCanvasViewport({
             const lSunY = Math.max(1.5, lRawZ);
             const lSunZ = -(Math.abs(lRawX) < 0.001 && Math.abs(lRawY) < 0.001 ? 0.01 : lRawY);
 
+            const lightOpacityMultiplier = (light.opacity ?? 100) / 100;
+            const effectiveIntensity = (light.intensity ?? 100) * lightOpacityMultiplier;
+
             return (
               <React.Fragment key={light.id || lIdx}>
                 <DirectionalSunLight
@@ -189,14 +615,14 @@ export default function ThreedCanvasViewport({
                   specular={materialSettings.specular}
                   softness={light.shadowSoftness ?? 50}
                   color={light.color || "#ffffff"}
-                  intensity={light.intensity ?? 100}
-                  shadowDensity={lIdx === 0 || light.castShadow ? (light.shadowDensity ?? 100) : 0}
+                  intensity={effectiveIntensity}
+                  shadowDensity={lIdx === 0 || light.castShadow ? (light.shadowDensity ?? 100) * lightOpacityMultiplier : 0}
                 />
 
                 {/* Soft auxiliary fill bounce per active light */}
                 <directionalLight
                   position={[-lSunX * 0.4, Math.max(lSunY * 0.5, 3), -lSunZ * 0.4]}
-                  intensity={0.25 * ((light.intensity ?? 100) / 100)}
+                  intensity={0.25 * (effectiveIntensity / 100)}
                   color={light.color || "#ffffff"}
                   castShadow={false}
                 />
@@ -268,7 +694,7 @@ export default function ThreedCanvasViewport({
                 mode={transformMode}
                 size={0.8}
                 onMouseDown={handleTransformStart}
-                onChange={() => {
+                onObjectChange={() => {
                   if (handleTransformChange && sceneWrapperRef.current) {
                     handleTransformChange({
                       isModelLevel: true,
@@ -341,6 +767,7 @@ export default function ThreedCanvasViewport({
             minDistance={0.5}
             maxDistance={100}
             navMode={navMode}
+            isModelTab={activeLeftTab === "model"}
             onChange={handleControlsChange}
           />
 
@@ -366,23 +793,41 @@ export default function ThreedCanvasViewport({
           )}
 
           <Suspense fallback={null}>
-            <Environment
-              files={
-                materialSettings?.environment?.startsWith('builtin_')
-                  ? (builtInHdris.find(h => `builtin_${h.id}` === materialSettings?.environment || h.aliases?.some(a => `builtin_${a}` === materialSettings?.environment))?.file || null)
-                  : (materialSettings?.environment?.startsWith('custom_') || (!materialSettings?.environment && (materialSettings?.customEnvMap || materialSettings?.maps?.envMap)))
-                    ? (materialSettings?.customEnvMap || materialSettings?.maps?.envMap || null)
-                    : null
+            {(() => {
+              const allKnownHdris = getRegisteredHdris();
+              const envSetting = materialSettings?.environment;
+              const isBuiltin = typeof envSetting === 'string' && envSetting.startsWith('builtin_');
+              const isCustom = (typeof envSetting === 'string' && envSetting.startsWith('custom_')) || (!envSetting && (materialSettings?.customEnvMap || materialSettings?.maps?.envMap));
+
+              let resolvedFile = null;
+              if (isBuiltin) {
+                const found = allKnownHdris.find(h => `builtin_${h.id}` === envSetting || h.aliases?.some(a => `builtin_${a}` === envSetting));
+                resolvedFile = found?.file || materialSettings?.customEnvMap || null;
+              } else if (isCustom) {
+                resolvedFile = materialSettings?.customEnvMap || materialSettings?.maps?.envMap || null;
               }
-              preset={
-                (materialSettings?.environment?.startsWith('builtin_') || materialSettings?.environment?.startsWith('custom_') || (!materialSettings?.environment && (materialSettings?.customEnvMap || materialSettings?.maps?.envMap)))
-                  ? null
-                  : (materialSettings?.environment || 'studio')
+
+              // Only fall back to customEnvMap if current environment is not an explicit standard preset
+              const standardPresets = ['apartment', 'city', 'dawn', 'forest', 'lobby', 'night', 'park', 'studio', 'sunset', 'warehouse'];
+              const isStandardPreset = standardPresets.includes(envSetting);
+
+              if (isStandardPreset) {
+                resolvedFile = null;
+              } else if (!resolvedFile && materialSettings?.customEnvMap) {
+                resolvedFile = materialSettings.customEnvMap;
               }
-              background={!isCapturing && activeLeftTab !== "camera"}
-              blur={(materialSettings?.worldBlur ?? 0) / 100}
-              environmentIntensity={(materialSettings?.reflection ?? 18) <= 50 ? ((materialSettings?.reflection ?? 18) / 50) : 1.0 + (((materialSettings?.reflection ?? 18) - 50) / 50) * 2.0}
-            />
+
+              const usePreset = resolvedFile ? null : (isStandardPreset ? envSetting : 'studio');
+
+              return (
+                <Environment
+                  {...(resolvedFile ? { files: resolvedFile } : { preset: usePreset })}
+                  background={!isCapturing && activeLeftTab !== "camera"}
+                  blur={(materialSettings?.worldBlur ?? 0) / 100}
+                  environmentIntensity={(materialSettings?.reflection ?? 18) <= 50 ? ((materialSettings?.reflection ?? 18) / 50) : 1.0 + (((materialSettings?.reflection ?? 18) - 50) / 50) * 2.0}
+                />
+              );
+            })()}
             <SceneEnvironmentController
               envRotation={materialSettings?.envRotation || 0}
               worldOpacity={materialSettings?.worldOpacity ?? 0}

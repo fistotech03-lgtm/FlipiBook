@@ -108,15 +108,6 @@ export const ConfirmationProvider = ({ children }) => {
                       {modalState.cancelText}
                     </button>
                   )}
-                  {modalState.showSave && (
-                    <button
-                      type="button"
-                      onClick={() => handleClose('save')}
-                      className="px-[1.25vw] py-[0.55vw] text-[0.8vw] font-semibold text-white bg-[#ea543a] hover:bg-[#d9482f] shadow-sm shadow-orange-500/20 rounded-[0.5vw] transition-all cursor-pointer focus:outline-none active:scale-[0.98]"
-                    >
-                      {modalState.saveText || 'Save'}
-                    </button>
-                  )}
                   <button
                     type="button"
                     autoFocus={!modalState.showSave}
@@ -127,6 +118,15 @@ export const ConfirmationProvider = ({ children }) => {
                   >
                     {modalState.confirmText}
                   </button>
+                  {modalState.showSave && (
+                    <button
+                      type="button"
+                      onClick={() => handleClose('save')}
+                      className="px-[1.25vw] py-[0.55vw] text-[0.8vw] font-semibold text-white bg-[#ea543a] hover:bg-[#d9482f] shadow-sm shadow-orange-500/20 rounded-[0.5vw] transition-all cursor-pointer focus:outline-none active:scale-[0.98]"
+                    >
+                      {modalState.saveText || 'Save'}
+                    </button>
+                  )}
                 </div>
               </motion.div>
             </div>

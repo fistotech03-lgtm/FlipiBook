@@ -297,12 +297,28 @@ export function useThreedModelLoader({
   }, [backendUrl, models, modelName, startModelLoading, setModels, setModelUrl, setModelFile, setModelType, setModelName, setSelectedMaterial, setModelStats, setHotspots, setThreedState, commitHistoryNow, buildSnapshot, setIsSidebarCollapsed, startMountingBridgeTicker, loadingProgressRef, navigate]);
 
   const handleDragOver = useCallback((e) => {
+    // If dragging an internal material/texture item, let viewport handle it
+    if (e.dataTransfer?.types?.includes('application/json')) {
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'copy';
   }, []);
 
   const handleDrop = useCallback(async (e) => {
+    // If dropping an internal material/texture item, ignore here
+    if (e.dataTransfer?.types?.includes('application/json') || e.dataTransfer?.getData('application/json')) {
+      return;
+    }
+
+    // If no actual files were dropped, do nothing
+    const hasFiles = (e.dataTransfer?.files && e.dataTransfer.files.length > 0) ||
+      (e.dataTransfer?.items && Array.from(e.dataTransfer.items).some(item => item.kind === 'file'));
+    if (!hasFiles) {
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
     try {
@@ -317,6 +333,8 @@ export function useThreedModelLoader({
       }
     } catch (err) {
       console.warn("Drop processing fallback:", err.message);
+      setManualLoading(false);
+      setLoadingText("");
       const file = e.dataTransfer?.files?.[0];
       if (file) processFile(file);
     }

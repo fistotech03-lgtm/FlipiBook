@@ -9,7 +9,8 @@ import {
   Activity,
   ShieldCheck,
   Database,
-  ChevronRight
+  ChevronRight,
+  Box
 } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
 
@@ -18,6 +19,7 @@ export default function AdminSidebar() {
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: '3D Editor Assets', path: '/3d-assets', icon: Box },
     { name: 'User Management', path: '/users', icon: Users },
     { name: 'Flipbook Moderation', path: '/flipbooks', icon: BookOpen },
     { name: 'Forum & Feedback', path: '/forum', icon: MessageSquare },

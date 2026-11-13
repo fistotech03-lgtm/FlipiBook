@@ -166,7 +166,7 @@ export default function LeftSidebar({
           className="w-9 h-9 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-[#ea543a] text-gray-600 hover:text-white transition-all cursor-pointer shadow-2xs mb-4"
           title="Expand sidebar"
         >
-          <Icon icon="heroicons:chevron-double-right-20-solid" className="w-4 h-4" />
+          <Icon icon="solar:double-alt-arrow-right-linear" className="w-5 h-5" />
         </button>
 
         {/* Minimized Quick Navigation Icons */}
@@ -230,12 +230,12 @@ export default function LeftSidebar({
     >
       {/* ── 1. TOP HEADER CARD (File Name + Size + Edit Pencil + Minimize Button) ── */}
       <div className="bg-white border border-gray-200/80 rounded-[0.75vw] p-[0.7vw] shadow-2xs hover:shadow-xs transition-shadow mb-[0.8vw] relative flex items-center justify-between group shrink-0">
-        <div className="flex items-center gap-[0.6vw] min-w-0 flex-1 pr-[2.2vw]">
-          {/* Red/Orange File Icon */}
-          <div className="w-[2.2vw] h-[2.2vw] min-w-[28px] min-h-[28px] rounded-[0.45vw] flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-[0.6vw] min-w-0 flex-1 pr-[2.8vw]">
+          {/* Red/Orange File Icon - Outlined & Larger */}
+          <div className="w-[2.5vw] h-[2.5vw] min-w-[34px] min-h-[34px] rounded-[0.55vw] bg-[#ea543a]/10 flex items-center justify-center shrink-0">
             <Icon
-              icon="solar:document-text-outline"
-              className="w-[1.8vw] h-[1.8vw] min-w-[22px] min-h-[22px] text-[#ea543a]"
+              icon="solar:document-text-linear"
+              className="w-[1.9vw] h-[1.9vw] min-w-[26px] min-h-[26px] text-[#ea543a]"
             />
           </div>
 
@@ -267,25 +267,25 @@ export default function LeftSidebar({
           </div>
         </div>
 
-        {/* Action Buttons: Rename + Minimize */}
-        <div className="absolute top-[0.45vw] right-[0.45vw] flex items-center gap-[0.2vw]">
+        {/* Action Buttons: Rename + Minimize - Outlined & Larger */}
+        <div className="absolute top-[0.45vw] right-[0.45vw] flex items-center gap-[0.25vw]">
           <button
             type="button"
             onClick={startEdit}
             disabled={disableRename || !models || models.length === 0}
-            className="text-gray-400 hover:text-[#ea543a] hover:scale-110 active:scale-95 transition-all cursor-pointer p-[0.2vw] rounded"
+            className="text-gray-400 hover:text-[#ea543a] hover:bg-orange-50 hover:scale-110 active:scale-95 transition-all cursor-pointer p-[0.3vw] rounded-[0.35vw]"
             title="Rename Model"
           >
-            <Icon icon="solar:pen-new-square-bold" className="w-[0.9vw] h-[0.9vw] min-w-[14px] min-h-[14px]" />
+            <Icon icon="solar:pen-new-square-linear" className="w-[1.15vw] h-[1.15vw] min-w-[18px] min-h-[18px]" />
           </button>
 
           <button
             type="button"
             onClick={() => setIsMinimized(true)}
-            className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 hover:scale-110 active:scale-95 transition-all cursor-pointer p-[0.2vw] rounded"
+            className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 hover:scale-110 active:scale-95 transition-all cursor-pointer p-[0.3vw] rounded-[0.35vw]"
             title="Minimize sidebar"
           >
-            <Icon icon="heroicons:chevron-double-left-20-solid" className="w-[0.95vw] h-[0.95vw] min-w-[15px] min-h-[15px]" />
+            <Icon icon="solar:double-alt-arrow-left-linear" className="w-[1.2vw] h-[1.2vw] min-w-[18px] min-h-[18px]" />
           </button>
         </div>
       </div>

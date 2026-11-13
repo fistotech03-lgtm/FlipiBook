@@ -32,9 +32,28 @@ export function useModelMaterialApplier({
         const isFullModel = isExplicitFullModel;
 
         const rawScale = materialSettings.scale !== undefined ? Number(materialSettings.scale) : 50;
+        const scaleVal = materialSettings.scale !== undefined ? Number(materialSettings.scale) : 50;
+        const scaleX = materialSettings.textureScale?.x !== undefined ? Number(materialSettings.textureScale.x) : scaleVal;
+        const scaleY = materialSettings.textureScale?.y !== undefined ? Number(materialSettings.textureScale.y) : scaleVal;
+        const tileX = materialSettings.tile?.x !== undefined ? Number(materialSettings.tile.x) : null;
+        const tileY = materialSettings.tile?.y !== undefined ? Number(materialSettings.tile.y) : null;
+
         const safeScale = Math.max(1, Math.min(1000, isNaN(rawScale) ? 100 : rawScale));
-        const texScaleX = 100 / safeScale;
-        const texScaleY = 100 / safeScale;
+        const safeScaleX = Math.max(1, Math.min(1000, isNaN(scaleX) ? 100 : scaleX));
+        const safeScaleY = Math.max(1, Math.min(1000, isNaN(scaleY) ? 100 : scaleY));
+
+        let texScaleX = 1;
+        let texScaleY = 1;
+        if (materialSettings.lastChangedProp === 'scale' || materialSettings.lastChangedProp === 'textureScale') {
+            texScaleX = 100 / safeScaleX;
+            texScaleY = 100 / safeScaleY;
+        } else if (materialSettings.lastChangedProp === 'tile') {
+            texScaleX = (tileX !== null && !isNaN(tileX)) ? (tileX / 100) : (100 / safeScaleX);
+            texScaleY = (tileY !== null && !isNaN(tileY)) ? (tileY / 100) : (100 / safeScaleY);
+        } else {
+            texScaleX = (tileX !== null && !isNaN(tileX)) ? (tileX / 100) : (100 / safeScaleX);
+            texScaleY = (tileY !== null && !isNaN(tileY)) ? (tileY / 100) : (100 / safeScaleY);
+        }
         const texRotation = (materialSettings.rotation ?? 0) * (Math.PI / 180);
         const texOffsetX = (materialSettings.offset?.x ?? 0) / 100;
         const texOffsetY = (materialSettings.offset?.y ?? 0) / 100;
@@ -77,11 +96,12 @@ export function useModelMaterialApplier({
                         scene.userData?.__pristineMaterialRegistry?.get(m.name) ||
                         scene.userData?.__pristineMaterialRegistry?.get(m.userData?.baseMaterialName);
 
+                    const isModelContainer = Boolean(selMat?.isModel || (!isFullModel && (selMat?.name === modelName || selMat?.name === 'Scene')));
                     // Check if this mesh/material is specifically targeted by selectedMaterial.
                     // Must ONLY be true if an explicit selection exists and targets this mesh/material.
                     // Never default to true when no selection exists (!selMat), preventing full-model coloring!
                     const isTargetedMesh = Boolean(
-                        selMat && (
+                        selMat && !isModelContainer && (
                             isFullModel ||
                             undoTargetMeshSet.has(child) ||
                             (selMat.meshUuid && (child.uuid === selMat.meshUuid || child.userData?.meshUuid === selMat.meshUuid)) ||
@@ -299,24 +319,60 @@ export function useModelMaterialApplier({
                         }
 
                         const hasCustomUV = customSetting.scale !== undefined ||
+                            customSetting.tile?.x !== undefined ||
+                            customSetting.tile?.y !== undefined ||
+                            customSetting.textureScale?.x !== undefined ||
+                            customSetting.textureScale?.y !== undefined ||
                             customSetting.rotation !== undefined ||
                             customSetting.offset?.x !== undefined ||
                             customSetting.offset?.y !== undefined ||
                             customSetting.appliedTexture;
 
+                        const cTileX = customSetting.tile?.x !== undefined ? Number(customSetting.tile.x) : null;
+                        const cTileY = customSetting.tile?.y !== undefined ? Number(customSetting.tile.y) : null;
                         const cScale = customSetting.scale !== undefined ? Number(customSetting.scale) : 50;
-                        const cSafeScale = Math.max(1, Math.min(1000, isNaN(cScale) ? 100 : cScale));
-                        const cTexScaleX = 100 / cSafeScale;
-                        const cTexScaleY = 100 / cSafeScale;
+                        const cScaleX = customSetting.textureScale?.x !== undefined ? Number(customSetting.textureScale.x) : cScale;
+                        const cScaleY = customSetting.textureScale?.y !== undefined ? Number(customSetting.textureScale.y) : cScale;
+
+                        const cSafeScaleX = Math.max(1, Math.min(1000, isNaN(cScaleX) ? 100 : cScaleX));
+                        const cSafeScaleY = Math.max(1, Math.min(1000, isNaN(cScaleY) ? 100 : cScaleY));
+
+                        const cTexScaleX = (cTileX !== null && !isNaN(cTileX)) ? (cTileX / 100) : (100 / cSafeScaleX);
+                        const cTexScaleY = (cTileY !== null && !isNaN(cTileY)) ? (cTileY / 100) : (100 / cSafeScaleY);
                         const cTexRotation = (customSetting.rotation ?? 0) * (Math.PI / 180);
                         const cTexOffsetX = (customSetting.offset?.x ?? 0) / 100;
                         const cTexOffsetY = (customSetting.offset?.y ?? 0) / 100;
 
                         if (hasCustomUV) {
-                            const surfaceTextures = [
-                                m.map, m.normalMap, m.roughnessMap, m.metalnessMap,
-                                m.bumpMap, m.alphaMap, m.emissiveMap
-                            ];
+                            const surfacePropNames = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'bumpMap', 'alphaMap', 'emissiveMap'];
+                            surfacePropNames.forEach(prop => {
+                                const tex = m[prop];
+                                if (tex && tex.isTexture) {
+                                    let isTexShared = false;
+                                    scene.traverse(other => {
+                                        if (isTexShared) return;
+                                        if (other.isMesh && other !== child && other.material) {
+                                            const oMats = Array.isArray(other.material) ? other.material : [other.material];
+                                            for (const om of oMats) {
+                                                if (om && om[prop] === tex) {
+                                                    isTexShared = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    });
+                                    if (isTexShared) {
+                                        const clonedTex = tex.clone();
+                                        clonedTex.needsUpdate = true;
+                                        m[prop] = clonedTex;
+                                        if (m.userData && m.userData.appliedMap === tex) {
+                                            m.userData.appliedMap = clonedTex;
+                                        }
+                                    }
+                                }
+                            });
+
+                            const surfaceTextures = surfacePropNames.map(p => m[p]).filter(Boolean);
                             surfaceTextures.forEach(tex => {
                                 if (tex && tex.isTexture && tex !== m.aoMap && tex !== m.lightMap) {
                                     if (tex.wrapS !== THREE.RepeatWrapping || tex.wrapT !== THREE.RepeatWrapping) {
@@ -332,7 +388,7 @@ export function useModelMaterialApplier({
                                     if (typeof tex.updateMatrix === 'function') tex.updateMatrix();
                                 }
                             });
-                            m.userData.__textureScale = cSafeScale;
+                            m.userData.__textureScale = cSafeScaleX;
                         } else {
                             const texProps = [
                                 ['map', m.map],
@@ -556,8 +612,10 @@ export function useModelMaterialApplier({
                 const materials = Array.isArray(child.material) ? child.material : [child.material];
                 const selMatName = typeof selMat?.material === 'string' ? selMat.material : selMat?.material?.name;
 
+                const isModelContainer = Boolean(selMat?.isModel || (!isFullModel && (selMat?.name === modelName || selMat?.name === 'Scene')));
+
                 materials.forEach(m => {
-                    const isMatch = isFullModel || !selMatName || !Array.isArray(child.material) || m.name === selMatName || m.userData?.baseMaterialName === selMatName;
+                    const isMatch = isFullModel || (!isModelContainer && (!selMatName || !Array.isArray(child.material) || m.name === selMatName || m.userData?.baseMaterialName === selMatName));
 
                     if (isMatch) {
                         if (isChildInXray && m.userData?.__xrayBackup) {
@@ -721,9 +779,45 @@ export function useModelMaterialApplier({
                             m.needsUpdate = true;
                         }
 
-                        const shouldTransformTextures = changedProp === 'scale' || changedProp === 'rotation' || changedProp === 'offset' || changedProp === 'appliedTexture' || (isResetOrUndo && (m.userData.__textureScale !== undefined || m.userData.appliedTextureId || materialSettings.lastChangedProp === 'scale'));
+                        const shouldTransformTextures = changedProp === 'scale' ||
+                            changedProp === 'textureScale' ||
+                            changedProp === 'tile' ||
+                            changedProp === 'rotation' ||
+                            changedProp === 'offset' ||
+                            changedProp === 'appliedTexture' ||
+                            (isResetOrUndo && (m.userData.__textureScale !== undefined || m.userData.appliedTextureId || materialSettings.lastChangedProp === 'scale'));
+
                         if (shouldTransformTextures) {
-                            const surfaceTextures = [m.map, m.normalMap, m.roughnessMap, m.metalnessMap, m.displacementMap, m.bumpMap, m.alphaMap, m.emissiveMap];
+                            const surfacePropNames = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'displacementMap', 'bumpMap', 'alphaMap', 'emissiveMap'];
+                            // Ensure textures are not shared with any other mesh in the scene before transforming UV parameters
+                            surfacePropNames.forEach(prop => {
+                                const tex = m[prop];
+                                if (tex && tex.isTexture) {
+                                    let isTexShared = false;
+                                    scene.traverse(other => {
+                                        if (isTexShared) return;
+                                        if (other.isMesh && other !== child && other.material) {
+                                            const oMats = Array.isArray(other.material) ? other.material : [other.material];
+                                            for (const om of oMats) {
+                                                if (om && om[prop] === tex) {
+                                                    isTexShared = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    });
+                                    if (isTexShared) {
+                                        const clonedTex = tex.clone();
+                                        clonedTex.needsUpdate = true;
+                                        m[prop] = clonedTex;
+                                        if (m.userData && m.userData.appliedMap === tex) {
+                                            m.userData.appliedMap = clonedTex;
+                                        }
+                                    }
+                                }
+                            });
+
+                            const surfaceTextures = surfacePropNames.map(p => m[p]).filter(Boolean);
                             surfaceTextures.forEach(tex => {
                                 if (tex) {
                                     if (tex === m.aoMap || tex === m.lightMap) return;
@@ -861,8 +955,8 @@ export function useModelMaterialApplier({
         if (!isResetOrUndo && syncedSelectionSignature && syncedSelectionSignature !== currentSigC) return;
         const targetMatName = selMat ? selMat.name : (modelName || "Scene");
         const isExplicitFullModel = Boolean(selMat?.isAll || selMat?.name === "All Meshes");
-        const isSceneOrNull = !selMat || targetMatName === modelName || targetMatName === "Scene";
-        const isFullModel = isExplicitFullModel || isSceneOrNull;
+        const isModelContainer = Boolean(selMat?.isModel || (!selMat?.isAll && selMat?.name !== "All Meshes" && (selMat?.name === modelName || selMat?.name === "Scene")));
+        const isFullModel = isExplicitFullModel;
 
         const stateMaps = materialSettings.maps;
         const isNone = materialSettings.appliedTexture?.id === 'none';

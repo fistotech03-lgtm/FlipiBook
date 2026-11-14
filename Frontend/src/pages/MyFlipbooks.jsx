@@ -924,7 +924,8 @@ export default function MyFlipbooks() {
             }
         } finally {
             setIsLoading(false);
-            setProcessingProgress(null);
+            // Delay clearing progress so the 'done' state fully animates before the loader unmounts
+            setTimeout(() => setProcessingProgress(null), 1200);
             isUploadCancelledRef.current = false;
         }
     };

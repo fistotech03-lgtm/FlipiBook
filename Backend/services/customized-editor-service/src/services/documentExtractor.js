@@ -183,14 +183,35 @@ async function processExtractionJob(job) {
         const pageInfo = await extractSinglePage(doc, p, pagesDir, mupdf);
         allPages.push(pageInfo);
 
-        // Update progress every 5 pages or on final page
+        // Update progress on EVERY extracted page so SSE stream receives exact counts in real time
+        const progress = Math.round((allPages.length / totalPages) * 100);
+        await queueManager.updateJob(jobId, {
+          availablePages: allPages.length,
+          progress,
+          pages: allPages
+        });
+
+        // Sync batch to MongoDB so Editor poller hydrates newly extracted pages immediately
         if ((p + 1) % 5 === 0 || p === totalPages - 1) {
-          const progress = Math.round((allPages.length / totalPages) * 100);
-          await queueManager.updateJob(jobId, {
-            availablePages: allPages.length,
-            progress,
-            pages: allPages
-          });
+          try {
+            const mongoose = require('mongoose');
+            if (mongoose.connection && mongoose.connection.db) {
+              const currentPagesFormatted = allPages.map(ap => ({
+                id: ap.pageNumber,
+                pageNumber: ap.pageNumber,
+                name: `Page ${ap.pageNumber}`,
+                fileName: `${ap.pageNumber}.webp`,
+                imageUrl: `/storage/${userId}/books/${bookId}/pages/${ap.pageNumber}.webp`,
+                content: `<div style="position:relative;width:100%;height:100%;"><img src="/storage/${userId}/books/${bookId}/pages/${ap.pageNumber}.webp" style="width:100%;height:100%;object-fit:contain;display:block;" alt="Page ${ap.pageNumber}" /></div>`,
+                html: `<div style="position:relative;width:100%;height:100%;"><img src="/storage/${userId}/books/${bookId}/pages/${ap.pageNumber}.webp" style="width:100%;height:100%;object-fit:contain;display:block;" alt="Page ${ap.pageNumber}" /></div>`,
+                isPlaceholder: false
+              }));
+              await mongoose.connection.db.collection('flipbooks').updateOne(
+                { v_id: bookId },
+                { $set: { pages: currentPagesFormatted, pagesCount: totalPages } }
+              );
+            }
+          } catch (_) {}
         }
 
         // Yield CPU to ensure web requests stay 100% responsive

@@ -392,7 +392,6 @@ const Grid1Layout = React.memo((props) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
             const now = Date.now();
-            if (bookRef.current?.pageFlip()?.isAnimating?.()) return;
 
             switch (e.key) {
                 case 'ArrowRight':

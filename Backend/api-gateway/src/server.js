@@ -159,6 +159,31 @@ const storageStaticMiddleware = async (req, res, next) => {
         ...topDirs.map(d => path.join(storageRoot, d, 'books', 'default', bookId, 'pages'))
       ];
 
+      // Fuzzy-match bookId against actual disk directories (handles v_id typos/mismatches between MongoDB and fs)
+      for (const td of topDirs) {
+        const booksDir = path.join(storageRoot, td, 'books');
+        if (fs.existsSync(booksDir)) {
+          try {
+            const bookDirs = fs.readdirSync(booksDir);
+            for (const bd of bookDirs) {
+              // Exact match already covered above; do fuzzy: same length ±1 and ≥85% char overlap
+              if (bd !== bookId && Math.abs(bd.length - bookId.length) <= 2) {
+                const shorter = bd.length < bookId.length ? bd : bookId;
+                const longer  = bd.length < bookId.length ? bookId : bd;
+                let matches = 0;
+                for (let ci = 0; ci < shorter.length; ci++) if (shorter[ci] === longer[ci]) matches++;
+                if (matches / longer.length >= 0.85) {
+                  const fuzzyDir = path.join(booksDir, bd, 'pages');
+                  if (fs.existsSync(fuzzyDir)) candidatePagesDirs.push(fuzzyDir);
+                  const fuzzyDirDef = path.join(booksDir, 'default', bd, 'pages');
+                  if (fs.existsSync(fuzzyDirDef)) candidatePagesDirs.push(fuzzyDirDef);
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
       let targetPagesDir = null;
       for (const pDir of candidatePagesDirs) {
         if (fs.existsSync(pDir)) {

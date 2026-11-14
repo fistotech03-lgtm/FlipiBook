@@ -23,7 +23,13 @@ const connectDB = async () => {
     }
 
     const conn = await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 60000,
+      connectTimeoutMS: 30000,
+      maxPoolSize: 50,
+      minPoolSize: 5,
+      retryWrites: true,
+      retryReads: true,
     });
     const dbTarget = conn.connection.name || conn.connection.host || 'connected';
     console.log(`[MyFlipibook Service] MongoDB Connected: ${dbTarget}`);

@@ -144,7 +144,6 @@ const Grid8Layout = ({
         const handleKeyDown = (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
             const now = Date.now();
-            if (bookRef.current?.pageFlip()?.isAnimating?.()) return;
 
             switch (e.key) {
                 case 'ArrowRight':

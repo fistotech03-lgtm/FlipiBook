@@ -150,7 +150,6 @@ const Grid5Layout = ({
             // Prevent interference with search input or other text fields
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
             const now = Date.now();
-            if (bookRef.current?.pageFlip()?.isAnimating?.()) return;
 
             switch (e.key) {
                 case 'ArrowRight':

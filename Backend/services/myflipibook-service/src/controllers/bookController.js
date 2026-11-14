@@ -2323,11 +2323,9 @@ exports.savePagesBatch = async (req, res) => {
     book.fileSize = resolvedBatchFileSize;
     book.lastUpdated = new Date();
 
-    try {
-      await book.save();
-    } catch (saveErr) {
-      if (saveErr.name === "VersionError" || saveErr.message?.includes("No matching document found")) {
-        console.warn(`[Book Controller] Version conflict in savePagesBatch for book ${book._id}. Performing atomic update fallback...`);
+    // Persist pages and metadata via atomic update with retry to eliminate TLS/SSL socket drops (alert 80)
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
         await Flipbook.updateOne(
           { _id: book._id },
           {
@@ -2338,10 +2336,18 @@ exports.savePagesBatch = async (req, res) => {
             }
           }
         );
-        const freshBook = await Flipbook.findById(book._id);
-        if (freshBook) book = freshBook;
-      } else {
-        throw saveErr;
+        break;
+      } catch (saveErr) {
+        console.warn(`[Book Controller] Retry ${attempt}/3 updating flipbook pages batch due to:`, saveErr.message);
+        if (attempt === 3) {
+          try {
+            await book.save();
+          } catch (finalErr) {
+            throw saveErr;
+          }
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+        }
       }
     }
 

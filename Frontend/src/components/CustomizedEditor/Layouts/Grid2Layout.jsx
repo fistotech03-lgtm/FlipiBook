@@ -246,7 +246,6 @@ const Grid2Layout = ({
         const handleKeyDown = (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
             const now = Date.now();
-            if (bookRef.current?.pageFlip()?.isAnimating?.()) return;
 
             switch (e.key) {
                 case 'ArrowRight':
@@ -315,15 +314,18 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
     }, [zoomIn, zoomOut, bookRef, settings?.navigation?.mouseWheel]);
 
     const localOffset = React.useMemo(() => {
-        if (offset === 0) return 0; // Use offset prop to respect single page mode
+        if (typeof offset === 'number') {
+            if (offset === 0) return 0;
+            return offset < 0 ? -(dimWidth / 2) : (dimWidth / 2);
+        }
         // Shift left to center the front cover, shift right to center the back cover
-        if (currentPage === 0) {
+        if (currentPage <= 0) {
             return -(dimWidth / 2);
-        } else if (currentPage >= pages.length - 1) {
-            return (currentPage % 2 === 0) ? -(dimWidth / 2) : (dimWidth / 2);
+        } else if (currentPage >= (pages?.length || 0) - 1 && (pages?.length || 0) % 2 === 0) {
+            return (dimWidth / 2);
         }
         return 0;
-    }, [currentPage, pages.length, dimWidth, offset]);
+    }, [currentPage, pages?.length, dimWidth, offset]);
 
     const originalBuildPageDoc = children && children.props && children.props.buildPageDoc;
     const localBuildPageDoc = React.useCallback((html, pageNum) => {
@@ -1020,9 +1022,9 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                     <div
                         className="relative flex items-center justify-center magazine-content-area"
                         style={{
-                            transform: `scale(${responsiveScale}) translateX(${localOffset}px)`,
+                            transform: `translateX(${localOffset}px) scale(${responsiveScale})`,
                             transformOrigin: 'center center',
-                            transition: 'transform 0.6s ease-in-out'
+                            transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1)'
                         }}
                     >
                         {modifiedChildren}

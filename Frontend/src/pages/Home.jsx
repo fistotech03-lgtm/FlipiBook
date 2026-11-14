@@ -435,6 +435,9 @@ export default function Home() {
         page6={page6}
       />
 
+      {/* 2. 3D INTERACTIVE DETAILS: Give Customers a Closer Look at Your Products */}
+      <ThreeDInteractiveDetails navigate={navigate} />
+
       {/* 3. FEATURES: IT STARTS WITH A CLICK (3D Model Viewer & Smart Solutions - Explore Every Angle) */}
       <SmartSolutionsSection />
 
@@ -455,7 +458,16 @@ export default function Home() {
       />
 
       {/* 6. INTERACTIVE DEMO: Experience Flipbooks in Action (5 Books shelf) */}
-      <InteractiveDemo />
+      <InteractiveDemo
+        page1={page1}
+        page2={page2}
+        page3={page3}
+        page4={page4}
+        page5={page5}
+        page6={page6}
+        page7={page7}
+        page8={page8}
+      />
 
       {/* 6. ABOUT US: We Transform Digital Ideas (Multi-device display) */}
       <AboutUsSection />
@@ -466,11 +478,6 @@ export default function Home() {
       {/* 8. EXPLORE: Discover. Read. Get Inspired (5 Community Cards Slider) */}
       <ExploreShowcase
         navigate={navigate}
-        onOpenCreateModal={handleOpenCreateModal}
-      />
-
-      {/* 8. FEATURES: Not Just Pages. A 3D Reading Experience (Dark Living Room 3D model) */}
-      <ReadingExperienceDark
         onOpenCreateModal={handleOpenCreateModal}
       />
 

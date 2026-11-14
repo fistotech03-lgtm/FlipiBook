@@ -16,11 +16,13 @@ import {
   Smartphone,
   Settings,
   CloudOff,
+  Bell,
 } from "lucide-react";
 import { Icon } from "@iconify/react";
 import ProfileModal from "../Settings/ProfileModal";
 import ShareModal from "../ShareModal";
 import EditorSettingsModal from "../PageEditor/modals/EditorSettingsModal";
+import NotificationDrawer from "../Notification/NotificationDrawer";
 
 import { useAuth, useActiveBook, useUIModals } from "../../store/hooks";
 import { queryClient } from "../../queryClient";
@@ -97,6 +99,8 @@ const EditorNavbar = ({
     avatarBgColor: "#f97316",
   };
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(2);
   const [isEditorSettingsOpen, setIsEditorSettingsOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState(false);
@@ -671,6 +675,36 @@ const EditorNavbar = ({
             </div>
           )}
 
+          {/* Notification Button */}
+          <div className="relative group/tooltip flex items-center ml-[0.5vw]">
+            <button
+              onClick={() => setIsNotificationOpen((prev) => !prev)}
+              aria-label="Notifications"
+              className={`w-[2.4vw] h-[2.4vw] rounded-full border transition-all duration-200 flex items-center justify-center cursor-pointer flex-shrink-0 relative ${
+                isNotificationOpen
+                  ? "bg-[#EC5137] border-[#EC5137] text-white shadow-sm ring-2 ring-[#EC5137]/20"
+                  : "bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <Bell
+                className={`w-[1.15vw] h-[1.15vw] transition-colors ${
+                  isNotificationOpen ? "text-white" : "text-gray-600"
+                }`}
+              />
+              {unreadNotifCount > 0 && !isNotificationOpen && (
+                <span className="absolute top-1.5 right-1.5 w-[0.45vw] h-[0.45vw] min-w-[7px] min-h-[7px] rounded-full bg-[#EC5137] ring-2 ring-white" />
+              )}
+            </button>
+            {!isNotificationOpen && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-[0.4vw] hidden group-hover/tooltip:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap">
+                <div className="w-0 h-0 border-x-[0.3vw] border-x-transparent border-b-[0.3vw] border-b-gray-900/90" />
+                <div className="bg-gray-900/90 text-white text-[0.65vw] font-medium px-[0.5vw] py-[0.25vw] rounded-[0.3vw] shadow-md backdrop-blur-xs">
+                  Notifications
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Profile (Moved next to Publish) */}
           <div className="relative group/tooltip flex items-center ml-[0.5vw]">
             <button
@@ -735,6 +769,12 @@ const EditorNavbar = ({
         flipbookThumbnail={currentBook?.thumbnail}
         currentBook={currentBook}
         isMobileLayout={activeDevice === "Mobile"}
+      />
+      {/* Render Notification Drawer */}
+      <NotificationDrawer
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        onUnreadCountChange={setUnreadNotifCount}
       />
     </>
   );

@@ -119,61 +119,61 @@ export default function Tickets() {
   };
 
   return (
-    <div className="w-full flex-1 bg-[#F9F9F9] min-h-full px-[2vw] py-[1.8vw] overflow-y-auto select-none font-sans">
+    <div className="w-full flex-1 bg-white min-h-full p-[1.5vw] overflow-y-auto select-none font-sans">
       {/* Top Header: Title, Subtitle & Orange "Raise a Ticket" Button */}
-      <div className="flex items-center justify-between mb-[1.6vw]">
+      <div className="flex items-start justify-between gap-[2vw] mb-[1.6vw]">
         <div>
           <div className="flex items-center gap-[0.55vw]">
-            <h1 className="text-[1.45vw] font-bold text-gray-900 tracking-tight leading-tight">
+            <h1 className="text-[1.35vw] font-bold text-gray-900 tracking-tight leading-none">
               Help & Support
             </h1>
             {isAdminUser && (
-              <span className="px-[0.55vw] py-[0.15vw] rounded-full text-[0.66vw] font-medium bg-purple-100 text-purple-700 border border-purple-200">
+              <span className="px-[0.65vw] py-[0.15vw] rounded-full text-[0.68vw] font-medium bg-purple-100 text-purple-700 border border-purple-200">
                 Staff Admin View
               </span>
             )}
           </div>
-          <p className="text-[0.75vw] text-gray-400 mt-[0.2vw] font-normal">
+          <p className="text-[0.78vw] text-gray-500 mt-[0.35vw] font-normal">
             Facing an issue or have a question ? Raise a support ticket and we'll get back to you.
           </p>
         </div>
 
-        {/* Raise a Ticket Button (Red-orange icon + text) */}
+        {/* Raise a Ticket Button (Matching Billing action button style) */}
         <button
           type="button"
           onClick={() => setIsRaiseModalOpen(true)}
-          className="flex items-center gap-[0.5vw] px-[1.2vw] py-[0.55vw] bg-[#FF5733] hover:bg-[#E04D2D] text-white text-[0.8vw] font-semibold rounded-[0.6vw] shadow-sm transition-all duration-150 active:scale-95 cursor-pointer whitespace-nowrap"
+          className="h-[2.15vw] flex items-center gap-[0.35vw] bg-[#FF5733] hover:bg-[#E04D2D] active:scale-[0.98] text-white text-[0.78vw] font-semibold px-[0.95vw] rounded-[0.55vw] shadow-xs transition-all cursor-pointer whitespace-nowrap"
         >
-          <Icon icon="lucide:headset" className="w-[1vw] h-[1vw]" />
+          <Icon icon="lucide:headset" className="w-[0.85vw] h-[0.85vw]" />
           <span>Raise a Ticket</span>
         </button>
       </div>
 
       {/* 4 Summary Cards Row */}
-      <div className="grid grid-cols-4 gap-[1.2vw] mb-[1.8vw]">
+      <div className="grid grid-cols-4 gap-[1.2vw] mb-[1.5vw]">
         {statCards.map((card) => (
           <div
             key={card.id}
-            className="bg-white rounded-[0.8vw] p-[1.2vw] border border-gray-100/90 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col justify-between relative overflow-hidden"
+            className="bg-white rounded-[0.9vw] p-[1.3vw] border border-gray-100 shadow-xs flex flex-col justify-between relative overflow-hidden"
           >
-            <div className="flex items-start gap-[1vw]">
+            <div className="flex items-start gap-[0.9vw]">
               <div
-                className={`w-[2.8vw] h-[2.8vw] rounded-full ${card.iconBg} flex items-center justify-center flex-shrink-0`}
+                className={`w-[2.6vw] h-[2.6vw] rounded-full ${card.iconBg} flex items-center justify-center flex-shrink-0`}
               >
-                <Icon icon={card.icon} className={`w-[1.3vw] h-[1.3vw] ${card.iconColor}`} />
+                <Icon icon={card.icon} className={`w-[1.2vw] h-[1.2vw] ${card.iconColor}`} />
               </div>
               <div>
-                <span className="text-[1.8vw] font-bold text-gray-900 leading-none block">
+                <span className="text-[1.6vw] font-bold text-gray-900 leading-none block">
                   {card.count}
                 </span>
-                <span className="text-[0.78vw] font-medium text-gray-500 mt-[0.3vw] block whitespace-nowrap">
+                <span className="text-[0.74vw] font-medium text-gray-500 mt-[0.3vw] block whitespace-nowrap">
                   {card.label}
                 </span>
               </div>
             </div>
 
             {/* Bottom colored progress indicator (dynamic based on count vs total) */}
-            <div className="w-full bg-gray-100 h-[0.25vw] rounded-full mt-[1.2vw] overflow-hidden">
+            <div className="w-full bg-gray-100 h-[0.25vw] rounded-full mt-[1.1vw] overflow-hidden">
               <div 
                 className={`h-full ${card.barColor} rounded-full transition-all duration-300`} 
                 style={{
@@ -188,9 +188,9 @@ export default function Tickets() {
       </div>
 
       {/* Ticket List Container */}
-      <div className="bg-white rounded-[0.9vw] border border-gray-100/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div className="bg-white rounded-[0.9vw] border border-gray-100 shadow-xs overflow-hidden">
         {/* Controls Bar: Tabs + Search + Dropdown Filter */}
-        <div className="px-[1.4vw] py-[1.1vw] flex items-center justify-between border-b border-gray-100 flex-wrap gap-[1vw]">
+        <div className="px-[1.3vw] py-[1.1vw] flex items-center justify-between border-b border-gray-100 flex-wrap gap-[1vw]">
           {/* Status Tabs */}
           <div className="flex items-center gap-[1.4vw]">
             {tabs.map((tab) => (
@@ -198,9 +198,9 @@ export default function Tickets() {
                 key={tab.id}
                 type="button"
                 onClick={() => setStatusFilter(tab.id)}
-                className={`text-[0.82vw] font-semibold pb-[0.2vw] transition-all relative cursor-pointer ${
+                className={`text-[0.78vw] font-medium pb-[0.2vw] transition-all relative cursor-pointer ${
                   statusFilter === tab.id
-                    ? 'text-[#FF5733] border-b-2 border-[#FF5733]'
+                    ? 'text-[#FF5733] font-semibold border-b-2 border-[#FF5733]'
                     : 'text-gray-500 hover:text-gray-800'
                 }`}
               >
@@ -215,14 +215,14 @@ export default function Tickets() {
             <div className="relative flex items-center">
               <Icon
                 icon="lucide:search"
-                className="w-[0.9vw] h-[0.9vw] text-gray-400 absolute left-[0.7vw] pointer-events-none"
+                className="w-[0.85vw] h-[0.85vw] text-gray-400 absolute left-[0.7vw] pointer-events-none"
               />
               <input
                 type="text"
                 placeholder="Search tickets..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-[2vw] pr-[0.8vw] py-[0.4vw] bg-white border border-gray-200 rounded-[0.5vw] text-[0.75vw] text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#FF5733] focus:ring-1 focus:ring-orange-200 w-[14vw] transition-all"
+                className="h-[2.15vw] pl-[2vw] pr-[0.8vw] bg-white border border-gray-200 rounded-[0.55vw] text-[0.78vw] font-normal text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#FF5733] shadow-xs w-[14vw] transition-all"
               />
               {searchQuery && (
                 <button
@@ -240,7 +240,7 @@ export default function Tickets() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="appearance-none pl-[2vw] pr-[1.8vw] py-[0.4vw] bg-white border border-gray-200 rounded-[0.5vw] text-[0.75vw] font-medium text-gray-700 focus:outline-none focus:border-[#FF5733] cursor-pointer"
+                className="h-[2.15vw] appearance-none pl-[2vw] pr-[1.8vw] bg-white border border-gray-200 rounded-[0.55vw] text-[0.78vw] font-medium text-gray-700 focus:outline-none focus:border-[#FF5733] shadow-xs cursor-pointer"
               >
                 <option value="all">Recent First</option>
                 {TICKET_MODULES.filter(m => m.id !== 'all').map(mod => (
@@ -268,20 +268,20 @@ export default function Tickets() {
           </div>
         ) : filteredTickets.length > 0 ? (
           <div className="p-[1.2vw]">
-            {/* Inner Bordered Table Card matching Screenshot */}
-            <div className="rounded-[1vw] border border-gray-200/90 overflow-hidden bg-white shadow-2xs">
+            {/* Inner Bordered Table Card matching Billing Invoice table */}
+            <div className="rounded-[0.65vw] border border-gray-200 overflow-hidden bg-white shadow-2xs">
               <table className="w-full text-left border-collapse table-fixed">
                 <thead>
-                  <tr className="bg-gray-50/50 border-b border-gray-200 text-[0.82vw] font-bold text-gray-900 select-none">
-                    <th className="py-[1.1vw] px-[1.4vw] w-[16%]">Ticket No</th>
-                    <th className="py-[1.1vw] px-[1.2vw] w-[16%]">Subject</th>
-                    <th className="py-[1.1vw] px-[1.2vw] w-[20%]">Category</th>
-                    <th className="py-[1.1vw] px-[1.2vw] w-[22%]">Last Updated</th>
-                    <th className="py-[1.1vw] px-[1.2vw] w-[19%]">Status</th>
-                    <th className="py-[1.1vw] pl-[1vw] pr-[2.2vw] text-right w-[7%]">Action</th>
+                  <tr className="bg-[#f8f9fa] border-b border-gray-200 text-[0.74vw] font-semibold text-gray-700 select-none">
+                    <th className="py-[0.7vw] px-[1.2vw] w-[16%]">Ticket No</th>
+                    <th className="py-[0.7vw] px-[1.2vw] w-[20%]">Subject</th>
+                    <th className="py-[0.7vw] px-[1.2vw] w-[18%]">Category</th>
+                    <th className="py-[0.7vw] px-[1.2vw] w-[22%]">Last Updated</th>
+                    <th className="py-[0.7vw] px-[1.2vw] w-[17%]">Status</th>
+                    <th className="py-[0.7vw] pl-[1vw] pr-[1.5vw] text-right w-[7%]">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200/80">
+                <tbody className="divide-y divide-gray-100">
                   {paginatedTickets.map((ticket, index) => {
                     const isResolved = ticket.status === 'closed' || ticket.status === 'resolved';
                     const isWaiting = ticket.status === 'waiting' || (ticket.statusText && ticket.statusText.toLowerCase().includes('waiting'));
@@ -308,58 +308,58 @@ export default function Tickets() {
                       <tr
                         key={ticket.id || index}
                         onClick={() => handleSelectTicket(ticket)}
-                        className="hover:bg-gray-50/70 transition-colors cursor-pointer group"
+                        className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
                       >
                         {/* Ticket No with File Icon */}
-                        <td className="py-[1.1vw] px-[1.4vw]">
+                        <td className="py-[0.85vw] px-[1.2vw]">
                           <div className="flex items-center gap-[0.55vw]">
-                            <div className="w-[1.7vw] h-[1.7vw] rounded-[0.4vw] bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
-                              <Icon icon="lucide:file-text" className="w-[0.9vw] h-[0.9vw]" />
+                            <div className="w-[1.6vw] h-[1.6vw] rounded-[0.4vw] bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
+                              <Icon icon="lucide:file-text" className="w-[0.85vw] h-[0.85vw]" />
                             </div>
-                            <span className="text-[0.8vw] font-medium text-gray-700">
+                            <span className="text-[0.76vw] font-semibold text-gray-800">
                               {ticketIdStr}
                             </span>
                           </div>
                         </td>
 
                         {/* Subject */}
-                        <td className="py-[1.1vw] px-[1.2vw] truncate">
-                          <span className="text-[0.82vw] font-medium text-gray-900 group-hover:text-[#FF5733] transition-colors truncate block">
+                        <td className="py-[0.85vw] px-[1.2vw] truncate">
+                          <span className="text-[0.76vw] font-medium text-gray-800 group-hover:text-[#FF5733] transition-colors truncate block">
                             {ticket.subject}
                           </span>
                         </td>
 
                         {/* Category Pill */}
-                        <td className="py-[1.1vw] px-[1.2vw]">
+                        <td className="py-[0.85vw] px-[1.2vw]">
                           <span
-                            className={`inline-block px-[0.8vw] py-[0.28vw] rounded-full text-[0.74vw] font-medium ${getCategoryBadgeStyle(categoryName)}`}
+                            className={`inline-block px-[0.65vw] py-[0.18vw] rounded-full text-[0.68vw] font-medium ${getCategoryBadgeStyle(categoryName)}`}
                           >
                             {categoryName}
                           </span>
                         </td>
 
                         {/* Last Updated */}
-                        <td className="py-[1.1vw] px-[1.2vw]">
-                          <span className="text-[0.78vw] text-gray-500 whitespace-nowrap">
+                        <td className="py-[0.85vw] px-[1.2vw]">
+                          <span className="text-[0.74vw] text-gray-500 font-normal whitespace-nowrap">
                             {lastUpdated}
                           </span>
                         </td>
 
                         {/* Status Indicator */}
-                        <td className="py-[1.1vw] px-[1.2vw]">
-                          <div className="flex items-center gap-[0.45vw]">
+                        <td className="py-[0.85vw] px-[1.2vw]">
+                          <div className="flex items-center gap-[0.4vw]">
                             <Icon
                               icon={statusIcon}
-                              className={`w-[0.9vw] h-[0.9vw] ${statusColor}`}
+                              className={`w-[0.85vw] h-[0.85vw] ${statusColor}`}
                             />
-                            <span className={`text-[0.78vw] font-medium ${statusColor}`}>
+                            <span className={`text-[0.74vw] font-medium ${statusColor}`}>
                               {statusLabel}
                             </span>
                           </div>
                         </td>
 
                         {/* Action Chevron */}
-                        <td className="py-[1.1vw] pl-[1vw] pr-[2.2vw] text-right">
+                        <td className="py-[0.85vw] pl-[1vw] pr-[1.5vw] text-right">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -368,7 +368,7 @@ export default function Tickets() {
                             }}
                             className="text-gray-400 group-hover:text-gray-700 transition-colors p-[0.2vw] cursor-pointer inline-flex items-center justify-center"
                           >
-                            <Icon icon="lucide:chevron-right" className="w-[1vw] h-[1vw]" />
+                            <Icon icon="lucide:chevron-right" className="w-[0.85vw] h-[0.85vw]" />
                           </button>
                         </td>
                       </tr>
@@ -385,9 +385,9 @@ export default function Tickets() {
                   key={page}
                   type="button"
                   onClick={() => setCurrentPage(page)}
-                  className={`w-[1.8vw] h-[1.8vw] rounded-[0.4vw] text-[0.75vw] font-semibold flex items-center justify-center transition-all cursor-pointer ${
+                  className={`w-[1.9vw] h-[1.9vw] rounded-[0.45vw] text-[0.74vw] font-medium flex items-center justify-center transition-all cursor-pointer ${
                     currentPage === page
-                      ? 'bg-[#FF5733] text-white shadow-xs'
+                      ? 'bg-[#FF5733] text-white shadow-xs font-semibold'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
@@ -398,7 +398,7 @@ export default function Tickets() {
                 <button
                   type="button"
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  className="px-[0.6vw] py-[0.25vw] text-[0.75vw] font-medium text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+                  className="px-[0.6vw] py-[0.25vw] text-[0.74vw] font-medium text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
                 >
                   See More
                 </button>
@@ -421,7 +421,7 @@ export default function Tickets() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="px-[1vw] py-[0.45vw] rounded-[0.5vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-[0.76vw] font-medium transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
+                className="h-[2.15vw] px-[1vw] rounded-[0.55vw] bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-[0.78vw] font-medium transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
               >
                 Clear All Filters
               </button>
@@ -429,9 +429,9 @@ export default function Tickets() {
               <button
                 type="button"
                 onClick={() => setIsRaiseModalOpen(true)}
-                className="px-[1.2vw] py-[0.55vw] bg-[#FF5733] hover:bg-[#E04D2D] text-white text-[0.8vw] font-semibold rounded-[0.6vw] shadow-sm transition-all duration-150 active:scale-95 cursor-pointer flex items-center gap-[0.5vw]"
+                className="h-[2.15vw] px-[1.1vw] bg-[#FF5733] hover:bg-[#E04D2D] text-white text-[0.78vw] font-semibold rounded-[0.55vw] shadow-xs transition-all duration-150 active:scale-95 cursor-pointer flex items-center gap-[0.4vw]"
               >
-                <Icon icon="lucide:headset" className="w-[1vw] h-[1vw]" />
+                <Icon icon="lucide:headset" className="w-[0.85vw] h-[0.85vw]" />
                 <span>Raise Your First Ticket</span>
               </button>
             )}
@@ -442,13 +442,13 @@ export default function Tickets() {
       {/* Delete / Cancel Ticket Confirmation Modal */}
       {ticketToDelete && (
         <div className="fixed inset-0 z-[1100] flex items-center justify-center p-[1vw] bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-150">
-          <div className="bg-white rounded-[1vw] shadow-xl w-full max-w-[28vw] p-[1.5vw] border border-gray-200 flex flex-col">
+          <div className="bg-white rounded-[0.9vw] shadow-xl w-full max-w-[28vw] p-[1.4vw] border border-gray-100 flex flex-col">
             <div className="flex items-center gap-[0.7vw] mb-[0.8vw]">
-              <div className="w-[2.4vw] h-[2.4vw] rounded-[0.6vw] bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+              <div className="w-[2.4vw] h-[2.4vw] rounded-[0.55vw] bg-red-50 text-red-600 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-[1.2vw] h-[1.2vw]" />
               </div>
               <div>
-                <h3 className="text-[1vw] font-semibold text-gray-800">
+                <h3 className="text-[0.95vw] font-semibold text-gray-800">
                   Cancel Ticket #{ticketToDelete.id}?
                 </h3>
                 <p className="text-[0.72vw] text-gray-500 font-normal">
@@ -457,7 +457,7 @@ export default function Tickets() {
               </div>
             </div>
 
-            <p className="text-[0.76vw] text-gray-600 mb-[1.2vw] leading-relaxed font-normal bg-[#f8f9fa] p-[0.75vw] rounded-[0.5vw] border border-gray-200">
+            <p className="text-[0.74vw] text-gray-600 mb-[1.2vw] leading-relaxed font-normal bg-[#f8f9fa] p-[0.75vw] rounded-[0.55vw] border border-gray-200">
               Are you sure you want to cancel & delete <strong className="text-gray-900 font-medium">"{ticketToDelete.subject}"</strong>? This action cannot be undone.
             </p>
 
@@ -465,14 +465,14 @@ export default function Tickets() {
               <button
                 type="button"
                 onClick={() => setTicketToDelete(null)}
-                className="px-[0.9vw] py-[0.45vw] text-[0.76vw] font-medium text-gray-700 hover:text-gray-900 transition-colors cursor-pointer"
+                className="h-[2.15vw] px-[0.95vw] rounded-[0.55vw] border border-gray-200 hover:bg-gray-50 text-[0.78vw] font-medium text-gray-700 transition-colors cursor-pointer shadow-xs"
               >
                 Keep Ticket
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="px-[1vw] py-[0.48vw] text-[0.76vw] font-medium text-white bg-red-600 hover:bg-red-700 rounded-[0.5vw] transition-colors shadow-xs cursor-pointer flex items-center gap-[0.35vw] active:scale-[0.98]"
+                className="h-[2.15vw] px-[1vw] text-[0.78vw] font-medium text-white bg-red-600 hover:bg-red-700 rounded-[0.55vw] transition-colors shadow-xs cursor-pointer flex items-center gap-[0.35vw] active:scale-[0.98]"
               >
                 <Trash2 className="w-[0.8vw] h-[0.8vw]" />
                 <span>Yes, Cancel Ticket</span>

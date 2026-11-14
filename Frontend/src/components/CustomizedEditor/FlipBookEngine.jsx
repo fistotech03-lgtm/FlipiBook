@@ -18,7 +18,7 @@ import React, {
     useMemo,
 } from 'react';
 import HTMLFlipBook from 'react-pageflip';
-import { initGifRunner } from '../PageEditor/utils/AnimationRunner';
+import { initGifRunner } from '../PageEditor/Animation/AnimationRunner';
 import { rewriteHtmlUploads } from '../../utils/assetUtils';
 import { PageWindowManager, saveAllPagesToIDB, getPageFromIDB } from '../../utils/pageWindowStore';
 import { usePageBuilderWorker } from '../../hooks/usePageBuilderWorker';
@@ -64,7 +64,10 @@ const cleanStaticHtml = (html) => {
             .replace(/<video\b[^<]*(?:(?!<\/video>)<[^<]*)*<\/video>/gi, '')
             .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
             .replace(/<foreignObject\b[^<]*(?:(?!<\/foreignObject>)<[^<]*)*<\/foreignObject>/gi, '')
-            .replace(/<g\b[^>]*data-type=["'](?:map|embed-frame)["'][^>]*>[\s\S]*?<\/g>/gi, '');
+            .replace(/<g\b[^>]*data-type=["'](?:map|embed-frame)["'][^>]*>[\s\S]*?<\/g>/gi, '')
+            .replace(/\bvector-effect\s*=\s*["']non-scaling-stroke["']/gi, 'vector-effect="none"')
+            .replace(/\bvectorEffect\s*=\s*["']non-scaling-stroke["']/gi, 'vectorEffect="none"')
+            .replace(/vector-effect\s*:\s*non-scaling-stroke\s*;?/gi, 'vector-effect: none;');
 
         // Ensure root SVG scales to 100% width and height
         cleaned = cleaned.replace(/<svg\b([^>]*)>/i, (match, attrs) => {
@@ -171,6 +174,9 @@ const buildPageDoc = (rawHtml) => `<!DOCTYPE html>
     margin: 0 !important;
     padding: 0 !important;
     shape-rendering: geometricPrecision !important;
+  }
+  svg, svg * {
+    vector-effect: none !important;
   }
   * { box-sizing: border-box; outline: none !important; }
 

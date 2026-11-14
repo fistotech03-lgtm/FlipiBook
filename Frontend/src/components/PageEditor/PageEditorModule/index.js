@@ -4,7 +4,7 @@
  */
 
 export * from './svgFilterUtils';
-export * from './interactionValidation';
+export * from '../Interaction/interactionValidation';
 export * from './useElementAttributeSync';
 export * from './usePageManager';
 export * from './useLayerOperations';

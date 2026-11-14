@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ProfileModal from '../Settings/ProfileModal';
+import NotificationDrawer from '../Notification/NotificationDrawer';
 import { Bell, ArrowRight, ChevronDown, Menu, X, Monitor, Laptop } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { verifyToken, getInitialUser } from '../../utils/authUtils';
@@ -62,6 +63,8 @@ export default function HomeNav() {
   const isMyFlipbooksPage = currentPath.startsWith('/my-flipbooks') || currentPath.startsWith('/templates') || currentPath.startsWith('/settings') || currentPath.startsWith('/overview') || currentPath.startsWith('/guide');
   
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(2);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showDesktopPrompt, setShowDesktopPrompt] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
@@ -287,10 +290,21 @@ export default function HomeNav() {
               {/* Notification Button */}
               <button 
                 type="button"
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                 aria-label="Notifications"
-                className="w-8 h-8 sm:w-9 sm:h-9 lg:w-[2.4vw] lg:h-[2.4vw] cursor-pointer flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all duration-200 group flex-shrink-0"
+                aria-expanded={isNotificationOpen}
+                className={`w-8 h-8 sm:w-9 sm:h-9 lg:w-[2.4vw] lg:h-[2.4vw] cursor-pointer flex items-center justify-center rounded-full border transition-all duration-200 group flex-shrink-0 relative ${
+                  isNotificationOpen
+                    ? 'bg-[#ec5137] border-[#ec5137] text-white shadow-sm ring-2 ring-[#ec5137]/20'
+                    : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-600 hover:text-gray-900'
+                }`}
               >
-                <Bell className="w-4 h-4 lg:w-[1.15vw] lg:h-[1.15vw] text-gray-600 group-hover:text-gray-900 transition-colors" />
+                <Bell className={`w-4 h-4 lg:w-[1.15vw] lg:h-[1.15vw] transition-colors ${
+                  isNotificationOpen ? 'text-white' : 'text-gray-600 group-hover:text-gray-900'
+                }`} />
+                {unreadNotifCount > 0 && !isNotificationOpen && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#ec5137] ring-2 ring-white" />
+                )}
               </button>
 
               {/* Profile Avatar Pill */}
@@ -544,6 +558,11 @@ export default function HomeNav() {
       )}
 
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
+      <NotificationDrawer 
+        isOpen={isNotificationOpen} 
+        onClose={() => setIsNotificationOpen(false)} 
+        onUnreadCountChange={setUnreadNotifCount}
+      />
     </>
   );
 }

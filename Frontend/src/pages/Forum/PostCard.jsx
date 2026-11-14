@@ -35,33 +35,33 @@ export default function PostCard({
   });
 
   return (
-    <article className="bg-white border border-stone-200/90 rounded-2xl p-4 sm:p-5 transition-all hover:shadow-xs">
+    <article className="bg-white border border-stone-200/90 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 transition-all hover:shadow-xs">
       {/* Top Author Header (Only once per user card, matching screenshot 2) */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-start justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
           {/* Avatar circle */}
-          <div className="w-9 h-9 rounded-full bg-[#7a1215] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0 shadow-xs">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#7a1215] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0 shadow-xs">
             {authorInitials}
           </div>
 
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-stone-900 text-xs sm:text-sm">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <span className="font-semibold text-stone-900 text-xs sm:text-sm truncate">
                 {author?.name || 'Anonymous Creator'}
               </span>
 
               {/* Tag (Questions / Suggestions) */}
-              <span className="px-2 py-0.5 rounded-full border border-sky-400 text-sky-600 text-[11px] font-medium">
+              <span className="px-2 py-0.5 rounded-full border border-sky-400 text-sky-600 text-[10px] sm:text-[11px] font-medium shrink-0">
                 {isSuggestion ? 'Suggestions' : 'Questions'}
               </span>
 
               {/* Status indicator icon (Green circle with dot) */}
-              <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-emerald-500">
+              <span className="inline-flex items-center justify-center w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border border-emerald-500 shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               </span>
             </div>
 
-            <div className="text-[11px] text-stone-400 mt-0.5">
+            <div className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5">
               {formatForumDate(primaryPost.createdAt)}
             </div>
           </div>
@@ -74,7 +74,7 @@ export default function PostCard({
             e.stopPropagation();
             setIsBookmarked(!isBookmarked);
           }}
-          className="text-stone-400 hover:text-[#ec5137] transition-colors p-1 rounded-md"
+          className="text-stone-400 hover:text-[#ec5137] transition-colors p-1 rounded-md shrink-0 cursor-pointer"
           title={isBookmarked ? "Remove bookmark" : "Bookmark this post"}
         >
           <Bookmark 
@@ -137,10 +137,10 @@ export default function PostCard({
               {replies.length > 0 && (
                 <div className="mt-3 pt-1">
                   {replies.slice(0, 1).map((reply, idx) => (
-                    <div key={reply.id || idx} className="pl-3.5 sm:pl-5">
-                      <div className="flex items-center gap-2.5">
+                    <div key={reply.id || idx} className="pl-1 sm:pl-4">
+                      <div className="flex items-center gap-2 sm:gap-2.5">
                         {/* L-shaped Arrow */}
-                        <div className="w-7 h-8 -mt-4 flex-shrink-0 relative">
+                        <div className="w-5 h-7 sm:w-7 sm:h-8 -mt-3 sm:-mt-4 flex-shrink-0 relative">
                           <svg
                             className="w-full h-full overflow-visible"
                             viewBox="0 0 32 40"
@@ -165,7 +165,7 @@ export default function PostCard({
                         </div>
 
                         {/* Admin Avatar */}
-                        <div className="w-7 h-7 rounded-full bg-[#0a6674] text-white flex items-center justify-center text-[10px] font-bold uppercase shrink-0 shadow-xs">
+                        <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#0a6674] text-white flex items-center justify-center text-[9px] sm:text-[10px] font-bold uppercase shrink-0 shadow-xs">
                           {reply.initials || 'AD'}
                         </div>
 
@@ -183,7 +183,7 @@ export default function PostCard({
                       </div>
 
                       {/* Reply Text */}
-                      <div className="pl-[38px] mt-1.5">
+                      <div className="pl-7 sm:pl-[38px] mt-1.5">
                         <p className="text-xs text-stone-500 leading-relaxed font-normal">
                           {reply.content}
                         </p>

@@ -203,21 +203,22 @@ export default function Forum() {
       ) : (
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-white">
           {/* Top Header: Forum + Create Post button */}
-          <header className="px-4 sm:px-6 pt-4 pb-3 flex items-center justify-between border-b border-stone-100 flex-shrink-0">
-            <div className="flex items-center gap-3 pl-1 sm:pl-2">
+          <header className="px-3 sm:px-6 pt-3.5 sm:pt-4 pb-3 flex items-center justify-between border-b border-stone-100 flex-shrink-0 bg-white gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               {/* Mobile Menu trigger */}
               <button
                 onClick={() => setIsMobileDrawerOpen(true)}
-                className="sm:hidden p-1.5 text-stone-600 hover:text-[#ec5137] rounded-lg transition-colors cursor-pointer"
+                className="sm:hidden p-1.5 -ml-1 text-stone-600 hover:text-[#ec5137] rounded-lg transition-colors cursor-pointer shrink-0"
+                aria-label="Open categories menu"
               >
                 <Menu size={20} />
               </button>
 
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-stone-900 tracking-tight">
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-bold text-stone-900 tracking-tight truncate">
                   Forum
                 </h1>
-                <p className="text-xs text-stone-400 mt-0.5">
+                <p className="text-[11px] sm:text-xs text-stone-400 mt-0.5 truncate hidden xs:block">
                   Share ideas, solve problems, and improve your workflow.
                 </p>
               </div>
@@ -226,20 +227,21 @@ export default function Forum() {
             {/* + Create Post button */}
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-[#ec5137] hover:bg-[#d9442b] transition-all flex items-center gap-2 cursor-pointer shadow-xs shrink-0"
+              className="px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold text-white bg-[#ec5137] hover:bg-[#d9442b] transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-xs shrink-0"
             >
               <Plus size={16} />
-              <span>Create Post</span>
+              <span className="hidden xs:inline">Create Post</span>
+              <span className="xs:hidden">Post</span>
             </button>
           </header>
 
           {/* Subheader Toolbar & Discussions Scrollable Area */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-3.5 sm:py-4 space-y-3.5 sm:space-y-4">
             {/* Title & Toolbar Row */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pl-1 sm:pl-2">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
               {/* Section Sub-heading */}
-              <div>
-                <h2 className="text-lg font-bold text-stone-900">
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-lg font-bold text-stone-900 truncate">
                   {activeArea === 'all' 
                     ? 'All Discussions' 
                     : activeArea === 'favourites' 
@@ -248,15 +250,15 @@ export default function Forum() {
                         ? 'My Posts' 
                         : activeModule.name}
                 </h2>
-                <p className="text-xs text-stone-400 mt-0.5">
+                <p className="text-xs text-stone-400 mt-0.5 hidden sm:block">
                   Share ideas, solve problems, and improve your workflow.
                 </p>
               </div>
 
-              {/* Filters & Search Toolbar (Exact match to screenshot) */}
-              <div className="flex flex-wrap items-center gap-3">
+              {/* Filters & Search Toolbar */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
                 {/* Search Forum input */}
-                <div className="relative min-w-[200px] sm:w-64">
+                <div className="relative flex-1 sm:flex-initial sm:w-56 md:w-64 min-w-[150px]">
                   <Icon 
                     icon="lineicons:search-2" 
                     className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#ec5137]" 
@@ -269,12 +271,12 @@ export default function Forum() {
                       setCurrentPage(1);
                     }}
                     placeholder="Search Forum..."
-                    className="w-full pl-9 pr-4 py-2 bg-white border border-stone-200 rounded-lg text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#ec5137] transition-all"
+                    className="w-full pl-9 pr-7 py-1.5 sm:py-2 bg-white border border-stone-200 rounded-lg text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#ec5137] transition-all"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 text-xs"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 text-xs p-0.5 cursor-pointer"
                     >
                       ✕
                     </button>
@@ -282,8 +284,8 @@ export default function Forum() {
                 </div>
 
                 {/* Filters Dropdown */}
-                <div className="flex items-center gap-2 border border-stone-200 rounded-lg px-2.5 py-1 bg-white shadow-2xs">
-                  <span className="text-xs text-stone-600 font-medium whitespace-nowrap">Filters :</span>
+                <div className="flex items-center gap-1.5 border border-stone-200 rounded-lg px-2 sm:px-2.5 py-1 bg-white shadow-2xs">
+                  <span className="text-[11px] sm:text-xs text-stone-600 font-medium whitespace-nowrap">Filters :</span>
                   <CustomDropdown
                     options={[
                       { value: 'All', label: 'All' },
@@ -295,15 +297,15 @@ export default function Forum() {
                       setFilterDropdown(val);
                       setCurrentPage(1);
                     }}
-                    width="w-[115px]"
-                    buttonClassName="!py-1 !px-2.5 !bg-[#F4F4F5] !border-transparent text-xs rounded-md text-stone-700 !shadow-none !ring-0"
+                    width="w-[105px] sm:w-[115px]"
+                    buttonClassName="!py-0.5 sm:!py-1 !px-2 !bg-[#F4F4F5] !border-transparent text-xs rounded-md text-stone-700 !shadow-none !ring-0"
                     itemClassName="hover:!bg-stone-100 !text-stone-700 font-normal"
                   />
                 </div>
 
                 {/* Sort by Dropdown */}
-                <div className="flex items-center gap-2 border border-stone-200 rounded-lg px-2.5 py-1 bg-white shadow-2xs">
-                  <span className="text-xs text-stone-600 font-medium whitespace-nowrap">Sort by :</span>
+                <div className="flex items-center gap-1.5 border border-stone-200 rounded-lg px-2 sm:px-2.5 py-1 bg-white shadow-2xs">
+                  <span className="text-[11px] sm:text-xs text-stone-600 font-medium whitespace-nowrap">Sort by :</span>
                   <CustomDropdown
                     options={[
                       { value: 'Most Popular', label: 'Most Popular' },
@@ -315,8 +317,8 @@ export default function Forum() {
                       setSortDropdown(val);
                       setCurrentPage(1);
                     }}
-                    width="w-[135px]"
-                    buttonClassName="!py-1 !px-2.5 !bg-[#F4F4F5] !border-transparent text-xs rounded-md text-stone-700 font-normal !shadow-none !ring-0"
+                    width="w-[125px] sm:w-[135px]"
+                    buttonClassName="!py-0.5 sm:!py-1 !px-2 !bg-[#F4F4F5] !border-transparent text-xs rounded-md text-stone-700 font-normal !shadow-none !ring-0"
                     itemClassName="hover:!bg-stone-100 !text-stone-700 font-normal"
                   />
                 </div>
@@ -324,7 +326,7 @@ export default function Forum() {
             </div>
 
             {/* Filter Tabs Under Header: All | Suggestions | Questions */}
-            <div className="flex items-center gap-6 border-b border-stone-100 text-xs font-medium pl-1 sm:pl-2">
+            <div className="flex items-center gap-4 sm:gap-6 border-b border-stone-100 text-xs font-medium overflow-x-auto no-scrollbar">
               <button
                 type="button"
                 onClick={() => {

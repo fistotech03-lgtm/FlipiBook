@@ -23,9 +23,9 @@ import {
   GroupProperties,
   UploadProperties
 } from '../properties';
-import AnimationPanel from './AnimationPanel';
-import InteractionPanel from './InteractionPanel';
-import PopupTemplateSelection from '../modals/PopupTemplateSelection';
+import AnimationPanel from '../Animation';
+import InteractionPanel from '../Interaction';
+import PopupTemplateSelection from '../Interaction/PopupTemplateSelection';
 import CustomScrollbar from '../../CustomScrollbar';
 import { useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';

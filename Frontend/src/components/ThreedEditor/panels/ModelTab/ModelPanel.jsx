@@ -30,7 +30,12 @@ export function ModelPanel({
   onOpenMaterialDrawer,
   selectedMaterial,
   onMapUpload,
-  onCommitHistory
+  onCommitHistory,
+  // Animation & Rigging settings
+  hasAnimations,
+  hasRigging,
+  isAnimationPlaying,
+  onToggleAnimation
 }) {
   const [isUniformScale, setIsUniformScale] = useState(true);
   const [colorMode, setColorMode] = useState("HEX");
@@ -560,6 +565,18 @@ export function ModelPanel({
           <div className="h-[0.08vw] bg-gray-200 flex-1"></div>
         </div>
 
+        {/* Model Animation Toggle (shown if animations exist for the model) */}
+        {hasAnimations && (
+          <div className="flex items-center justify-between py-[0.1vw]">
+            <span className="text-[0.75vw] font-normal text-gray-800">Model animation</span>
+            <ToggleSwitch
+              checked={!!isAnimationPlaying}
+              onChange={(val) => onToggleAnimation && onToggleAnimation(val)}
+              title="Model animation"
+            />
+          </div>
+        )}
+
         {/* Auto Rotate Toggle */}
         <div className="flex items-center justify-between py-[0.1vw]">
           <span className="text-[0.75vw] font-normal text-gray-800">Auto Rotate</span>
@@ -612,6 +629,41 @@ export function ModelPanel({
             title="Show Axis"
           />
         </div>
+
+        {/* Warning Note for Rigged / Animated Models */}
+        {(hasAnimations || hasRigging) && (
+          <div className="mt-[0.6vw] p-[0.7vw] rounded-[0.55vw] bg-amber-50/90 border border-amber-300/80 text-amber-900 shadow-xs animate-subtle-pulse transition-all">
+            <div className="flex items-start gap-[0.5vw]">
+              <Icon
+                icon="solar:danger-triangle-bold"
+                className="w-[1.15vw] h-[1.15vw] text-amber-600 flex-shrink-0 mt-[0.05vw]"
+              />
+              <div className="flex-1 space-y-[0.2vw]">
+                <p className="text-[0.78vw] font-bold text-amber-900 leading-snug">
+                  Notice: Model has animations / rigging
+                </p>
+                <p className="text-[0.73vw] text-amber-800 leading-relaxed font-normal">
+                  Parts of this model are linked together by internal bones or animations. Moving, rotating, or scaling individual pieces may not respond as expected.
+                </p>
+              </div>
+            </div>
+            <style>{`
+              @keyframes subtlePulse {
+                0%, 100% {
+                  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+                  border-color: rgba(252, 211, 77, 0.8);
+                }
+                50% {
+                  box-shadow: 0 0 0.55vw 0 rgba(245, 158, 11, 0.28);
+                  border-color: rgba(245, 158, 11, 0.75);
+                }
+              }
+              .animate-subtle-pulse {
+                animation: subtlePulse 3s ease-in-out infinite;
+              }
+            `}</style>
+          </div>
+        )}
       </div>
     </div>
   );

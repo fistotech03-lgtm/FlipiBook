@@ -20,6 +20,7 @@ router.get('/get-model/:modelId', threedModelController.getModelById);
 
 // Chunked and Direct Uploads
 router.post('/upload-chunk', upload.single('chunk'), threedModelController.uploadChunk);
+router.post('/cancel-upload', threedModelController.cancelUpload);
 router.post('/convert-model', upload.single('model'), threedModelController.convertModel);
 router.get('/converted/:filename', threedModelController.getConvertedFile);
 

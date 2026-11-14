@@ -130,6 +130,59 @@ const getModelById = async (req, res) => {
   }
 };
 
+// Track aborted/cancelled uploads
+const cancelledUploadIds = new Set();
+
+/**
+ * POST /api/3d-models/cancel-upload
+ * Cancel an in-flight upload, clean up its temporary chunks and any partially written file
+ */
+const cancelUpload = async (req, res) => {
+  try {
+    const { uploadId, fileName, emailId, userID } = req.body;
+    if (!uploadId) {
+      return res.status(400).json({ success: false, message: 'uploadId is required' });
+    }
+
+    cancelledUploadIds.add(uploadId);
+    setTimeout(() => {
+      cancelledUploadIds.delete(uploadId);
+    }, 60000);
+
+    const userIdentifier = userID || req.user?.userId || req.user?.userID || emailId;
+    
+    // 1. Delete temp chunks folder if it exists
+    try {
+      const tempDir = await getTempChunkDir(uploadId, userIdentifier, req);
+      if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    } catch (_) {}
+
+    // 2. If a specific modelId was provided, remove it from DB and user dir
+    if (req.body.modelId && userIdentifier) {
+      try {
+        const userDir = await getUser3DDir(userIdentifier, req);
+        const existingModel = await ThreedModel.findOne({ modelId: req.body.modelId });
+        if (existingModel) {
+          const filePath = path.join(userDir, existingModel.name);
+          if (fs.existsSync(filePath)) {
+            try { fs.unlinkSync(filePath); } catch (_) {}
+          }
+          await ThreedModel.deleteOne({ modelId: req.body.modelId });
+        }
+      } catch (err) {
+        console.warn('[3D Models] Error cleaning up cancelled modelId record:', err);
+      }
+    }
+
+    return res.status(200).json({ success: true, message: 'Upload cancelled successfully' });
+  } catch (error) {
+    console.error('[3D Models] Cancel upload error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Failed to cancel upload' });
+  }
+};
+
 /**
  * POST /api/3d-models/upload-chunk
  * Receive file chunks and assemble
@@ -140,6 +193,10 @@ const uploadChunk = async (req, res) => {
 
     if (!uploadId || !fileName) {
       return res.status(400).json({ message: 'Missing required chunk metadata' });
+    }
+
+    if (cancelledUploadIds.has(uploadId)) {
+      return res.status(499).json({ message: 'Upload was cancelled' });
     }
 
     const curIndex = parseInt(chunkIndex, 10);
@@ -156,8 +213,23 @@ const uploadChunk = async (req, res) => {
       }
     }
 
+    // Check if upload was cancelled explicitly by client
+    if (cancelledUploadIds.has(uploadId)) {
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (_) {}
+      return res.status(499).json({ message: 'Upload was cancelled' });
+    }
+
     // When last chunk arrives, assemble
     if (curIndex === total - 1) {
+      // Final check before merging and DB creation
+      if (cancelledUploadIds.has(uploadId)) {
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch (_) {}
+        return res.status(499).json({ message: 'Upload was cancelled' });
+      }
       const userDir = await getUser3DDir(userIdentifier, req);
       const ext = path.extname(fileName);
       const rawBase = path.basename(fileName, ext);
@@ -630,6 +702,7 @@ module.exports = {
   getModels,
   getModelById,
   uploadChunk,
+  cancelUpload,
   convertModel,
   getConvertedFile,
   saveSettings,

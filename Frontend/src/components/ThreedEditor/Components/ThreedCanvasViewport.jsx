@@ -94,6 +94,7 @@ export default function ThreedCanvasViewport({
   handleModelProgress,
   isAnimationPlaying,
   handleHasAnimationsChange,
+  handleHasRiggingChange,
   showGridLines,
   showAxis,
   lastHotspotClickTimeRef,
@@ -682,6 +683,7 @@ export default function ThreedCanvasViewport({
                     onProgress={(pct, stage) => handleModelProgress(model.id, pct, stage)}
                     isAnimationPlaying={isAnimationPlaying}
                     onHasAnimationsChange={(hasAnim) => handleHasAnimationsChange(model.id, hasAnim)}
+                    onHasRiggingChange={(hasRig) => handleHasRiggingChange && handleHasRiggingChange(model.id, hasRig)}
                   />
                   </ModelErrorBoundary>
                 );

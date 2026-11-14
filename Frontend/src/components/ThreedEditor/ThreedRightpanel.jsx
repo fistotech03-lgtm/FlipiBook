@@ -47,6 +47,7 @@ export default function RightPanel({
   savedHdrs = [],
   onDeleteHdr,
   hasAnimations,
+  hasRigging,
   isAnimationPlaying,
   onToggleAnimation,
   hotspots = [],
@@ -141,6 +142,10 @@ export default function RightPanel({
                 selectedMaterial={selectedMaterial}
                 onMapUpload={onMapUpload}
                 onCommitHistory={onCommitHistory}
+                hasAnimations={hasAnimations}
+                hasRigging={hasRigging}
+                isAnimationPlaying={isAnimationPlaying}
+                onToggleAnimation={onToggleAnimation}
               />
             )}
 
@@ -194,6 +199,7 @@ export default function RightPanel({
             {activeLeftTab === "animation" && (
               <AnimationPanel
                 hasAnimations={hasAnimations}
+                hasRigging={hasRigging}
                 isAnimationPlaying={isAnimationPlaying}
                 onToggleAnimation={onToggleAnimation}
               />

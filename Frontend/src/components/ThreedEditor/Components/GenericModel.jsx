@@ -50,8 +50,9 @@ const GenericModel = React.memo(React.forwardRef(({
     isSelectionDisabled,
     includeTextures,
     onModelReady,
-    isAnimationPlaying = true,
+    isAnimationPlaying = false,
     onHasAnimationsChange,
+    onHasRiggingChange,
     activeHotspotMeshUuid,
     activeHotspotMeshName
 }, ref) => {
@@ -1297,6 +1298,17 @@ const GenericModel = React.memo(React.forwardRef(({
                     onModelReady(boundsPayload);
                 });
             });
+        }
+
+        // Check for skeletal rigging (SkinnedMesh or Bones)
+        let isRigged = false;
+        scene.traverse((child) => {
+            if (child.isSkinnedMesh || child.isBone) {
+                isRigged = true;
+            }
+        });
+        if (typeof onHasRiggingChange === 'function') {
+            onHasRiggingChange(isRigged);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [scene]);

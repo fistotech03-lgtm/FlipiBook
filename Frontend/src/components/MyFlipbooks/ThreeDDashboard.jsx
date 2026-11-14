@@ -298,7 +298,10 @@ export default function ThreeDDashboard({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState('');
+  const [isDraggingModal, setIsDraggingModal] = useState(false);
   const [duplicateConfirm, setDuplicateConfirm] = useState(null); // { file, displayName }
+  const uploadAbortControllerRef = useRef(null);
+  const currentUploadMetaRef = useRef(null);
 
   // Rename modal
   const [renamingModel, setRenamingModel] = useState(null);
@@ -583,6 +586,39 @@ export default function ThreeDDashboard({
     }
   };
 
+  const handleCancelUpload = async () => {
+    // 1. Abort client-side axios request immediately
+    if (uploadAbortControllerRef.current) {
+      uploadAbortControllerRef.current.abort();
+      uploadAbortControllerRef.current = null;
+    }
+
+    // 2. Notify backend to cancel, delete chunks, and purge partial file/DB records
+    const meta = currentUploadMetaRef.current;
+    if (meta && meta.uploadId) {
+      try {
+        axios.post(`${backendUrl}/api/3d-models/cancel-upload`, {
+          uploadId: meta.uploadId,
+          fileName: meta.fileName,
+          emailId: meta.emailId,
+          userID: meta.userID
+        }).catch(() => {});
+      } catch (_) {}
+    }
+    currentUploadMetaRef.current = null;
+
+    setIsUploading(false);
+    setUploadProgress(0);
+    setUploadError('');
+    setUploadFile(null);
+    setModelNameInput('');
+    setIsDraggingModal(false);
+    setIsUploadModalOpen(false);
+
+    // Refresh model list to ensure any ghost record is gone
+    fetchModels();
+  };
+
   const executeUpload = async (fileToUpload, displayName, forceNew = false) => {
     const emailId = user?.emailId || user?.email;
     const userID = user?.userID || user?.userId;
@@ -591,12 +627,25 @@ export default function ThreeDDashboard({
       return;
     }
 
+    if (uploadAbortControllerRef.current) {
+      uploadAbortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    uploadAbortControllerRef.current = abortController;
+
+    const uploadId = 'up_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    currentUploadMetaRef.current = {
+      uploadId,
+      fileName: fileToUpload.name,
+      emailId,
+      userID
+    };
+
     setIsUploading(true);
     setUploadProgress(15);
     setUploadError('');
 
     try {
-      const uploadId = 'up_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
       const formData = new FormData();
       formData.append('uploadId', uploadId);
       formData.append('chunkIndex', '0');
@@ -613,6 +662,7 @@ export default function ThreeDDashboard({
       }
 
       const res = await axios.post(`${backendUrl}/api/3d-models/upload-chunk`, formData, {
+        signal: abortController.signal,
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -620,6 +670,7 @@ export default function ThreeDDashboard({
         }
       });
 
+      currentUploadMetaRef.current = null;
       setIsUploadModalOpen(false);
       setUploadFile(null);
       setModelNameInput('');
@@ -632,9 +683,16 @@ export default function ThreeDDashboard({
         handleLaunchEditor(newModelId);
       }
     } catch (err) {
+      if (axios.isCancel(err) || err.name === 'CanceledError' || err.name === 'AbortError') {
+        console.log('Upload canceled by user');
+        return;
+      }
       console.error('Upload error:', err);
       setUploadError(err.response?.data?.message || 'Failed to upload 3D model.');
     } finally {
+      if (uploadAbortControllerRef.current === abortController) {
+        uploadAbortControllerRef.current = null;
+      }
       setIsUploading(false);
     }
   };
@@ -808,7 +866,7 @@ export default function ThreeDDashboard({
                 </div>
               </div>
               <button
-                onClick={() => setIsUploadModalOpen(false)}
+                onClick={handleCancelUpload}
                 className="text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 <X className="w-[1.1vw] h-[1.1vw]" />
@@ -841,7 +899,44 @@ export default function ThreeDDashboard({
                 </label>
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-300 hover:border-[#ea543a] bg-gray-50 hover:bg-[#fff5f3]/40 rounded-[0.75vw] p-[1.3vw] text-center cursor-pointer transition-colors"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDraggingModal(true);
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDraggingModal(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDraggingModal(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDraggingModal(false);
+                    const files = e.dataTransfer?.files;
+                    if (files && files.length > 0) {
+                      const f = files[0];
+                      const ext = f.name.substring(f.name.lastIndexOf('.')).toLowerCase();
+                      const validExts = ['.glb', '.gltf', '.obj', '.fbx', '.stl'];
+                      if (validExts.includes(ext)) {
+                        setUploadFile(f);
+                        if (!modelNameInput) setModelNameInput(f.name.replace(/\.[^/.]+$/, ''));
+                        setUploadError('');
+                      } else {
+                        setUploadError('Invalid format. Supported: .glb, .gltf, .obj, .fbx, .stl');
+                      }
+                    }
+                  }}
+                  className={`border-2 border-dashed ${
+                    isDraggingModal
+                      ? 'border-[#ea543a] bg-[#fff5f3]'
+                      : 'border-gray-300 hover:border-[#ea543a] bg-gray-50 hover:bg-[#fff5f3]/40'
+                  } rounded-[0.75vw] p-[1.3vw] text-center cursor-pointer transition-colors`}
                 >
                   <input
                     ref={fileInputRef}
@@ -853,6 +948,7 @@ export default function ThreeDDashboard({
                       if (f) {
                         setUploadFile(f);
                         if (!modelNameInput) setModelNameInput(f.name.replace(/\.[^/.]+$/, ''));
+                        setUploadError('');
                       }
                     }}
                   />
@@ -866,7 +962,9 @@ export default function ThreeDDashboard({
                     </div>
                   ) : (
                     <div>
-                      <p className="text-[0.8vw] font-semibold text-gray-700">Click to choose 3D file</p>
+                      <p className="text-[0.8vw] font-semibold text-gray-700">
+                        {isDraggingModal ? 'Drop 3D model file here' : 'Drag & drop or click to choose 3D file'}
+                      </p>
                       <p className="text-[0.65vw] text-gray-400 mt-[0.15vw]">Supported: .glb, .gltf, .obj, .fbx, .stl</p>
                     </div>
                   )}
@@ -891,7 +989,7 @@ export default function ThreeDDashboard({
               <div className="flex items-center justify-end gap-[0.55vw] pt-[0.7vw] border-t border-gray-100">
                 <button
                   type="button"
-                  onClick={() => setIsUploadModalOpen(false)}
+                  onClick={handleCancelUpload}
                   className="px-[0.9vw] py-[0.45vw] text-[0.78vw] font-semibold text-gray-600 hover:bg-gray-100 rounded-[0.45vw] cursor-pointer"
                 >
                   Cancel

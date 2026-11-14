@@ -14,6 +14,7 @@ export function useThreedMaterialTree({
   modelStatsMap,
   setModelStatsMap,
   setModelHasAnimationsMap,
+  setModelHasRiggingMap,
   hiddenMaterials,
   setHiddenMaterials,
   xrayMaterials,
@@ -248,6 +249,16 @@ export function useThreedMaterialTree({
       delete next[targetId];
       return next;
     });
+
+    if (typeof setModelHasRiggingMap === 'function') {
+      setModelHasRiggingMap(prev => {
+        if (!targetId) return {};
+        if (!prev[targetId]) return prev;
+        const next = { ...prev };
+        delete next[targetId];
+        return next;
+      });
+    }
 
     setSelectedMaterial(null);
 
@@ -566,6 +577,7 @@ export function useThreedMaterialTree({
         setModelMaterialLists({});
         setModelStatsMap({});
         setModelHasAnimationsMap({});
+        if (typeof setModelHasRiggingMap === 'function') setModelHasRiggingMap({});
         setSelectedMaterial(null);
         setHotspots([]);
         setActiveHotspotId(null);

@@ -33,6 +33,7 @@ export function useThreedModelLoader({
   setTransformValues,
   setMaterialList,
   setModelHasAnimationsMap,
+  setModelHasRiggingMap,
   setIsAnimationPlaying,
   setSelectedTexture,
   setFormatErrorModal,
@@ -362,7 +363,8 @@ export function useThreedModelLoader({
     setModelMaterialLists({});
     setModelStatsMap({});
     setModelHasAnimationsMap({});
-    setIsAnimationPlaying(true);
+    if (typeof setModelHasRiggingMap === 'function') setModelHasRiggingMap({});
+    setIsAnimationPlaying(false);
     setSelectedMaterial(null);
     setModelName("");
     setSelectedTexture(null);

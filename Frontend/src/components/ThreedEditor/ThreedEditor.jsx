@@ -111,8 +111,9 @@ export default function ThreedEditor() {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingModelInfo, setLoadingModelInfo] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isAnimationPlaying, setIsAnimationPlaying] = useState(true);
+  const [isAnimationPlaying, setIsAnimationPlaying] = useState(false);
   const [modelHasAnimationsMap, setModelHasAnimationsMap] = useState({});
+  const [modelHasRiggingMap, setModelHasRiggingMap] = useState({});
   const isUndoRedoRef = useRef(false);
   const isGizmoDraggingRef = useRef(false);
 
@@ -120,9 +121,21 @@ export default function ThreedEditor() {
     return Object.values(modelHasAnimationsMap).some(Boolean);
   }, [modelHasAnimationsMap]);
 
+  const hasRigging = useMemo(() => {
+    return Object.values(modelHasRiggingMap).some(Boolean);
+  }, [modelHasRiggingMap]);
+
   const handleHasAnimationsChange = useCallback((modelId, hasAnim) => {
     const boolVal = Boolean(hasAnim);
     setModelHasAnimationsMap(prev => {
+      if (Boolean(prev[modelId]) === boolVal) return prev;
+      return { ...prev, [modelId]: boolVal };
+    });
+  }, []);
+
+  const handleHasRiggingChange = useCallback((modelId, hasRig) => {
+    const boolVal = Boolean(hasRig);
+    setModelHasRiggingMap(prev => {
       if (Boolean(prev[modelId]) === boolVal) return prev;
       return { ...prev, [modelId]: boolVal };
     });
@@ -1183,6 +1196,7 @@ export default function ThreedEditor() {
     modelStatsMap,
     setModelStatsMap,
     setModelHasAnimationsMap,
+    setModelHasRiggingMap,
     hiddenMaterials,
     setHiddenMaterials,
     xrayMaterials,
@@ -1275,6 +1289,7 @@ export default function ThreedEditor() {
     setTransformValues,
     setMaterialList,
     setModelHasAnimationsMap,
+    setModelHasRiggingMap,
     setIsAnimationPlaying,
     setSelectedTexture,
     setFormatErrorModal,
@@ -2916,6 +2931,7 @@ export default function ThreedEditor() {
               handleModelProgress={handleModelProgress}
               isAnimationPlaying={isAnimationPlaying}
               handleHasAnimationsChange={handleHasAnimationsChange}
+              handleHasRiggingChange={handleHasRiggingChange}
               showGridLines={showGridLines}
               showAxis={showAxis}
               lastHotspotClickTimeRef={lastHotspotClickTimeRef}
@@ -3107,6 +3123,7 @@ export default function ThreedEditor() {
             savedHdrs={savedHdrs}
             onDeleteHdr={handleDeleteHdr}
             hasAnimations={hasAnimations}
+            hasRigging={hasRigging}
             isAnimationPlaying={isAnimationPlaying}
             onToggleAnimation={setIsAnimationPlaying}
             onAddClick={() => setShowAddModelModal(true)}

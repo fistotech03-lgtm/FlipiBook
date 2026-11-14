@@ -10,6 +10,7 @@ import domtoimage from 'dom-to-image-more';
 import ColorPicker, { default as TemplateColorPicker } from './ColorPicker';
 import { getAssetBaseUrl, getSupabaseBaseUrl } from '../utils/assetUtils';
 import { useAuth } from '../context/AuthContext';
+import { convertSvgTextToOutlines } from './PageEditor/utils/vectorTextConverter';
 
 
 const SCRIBBLE_ICONS = {
@@ -1042,6 +1043,13 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
         { name: 'High', res: '300 DPI' },
         { name: 'Ultra', res: '600 DPI' },
       ]
+    : format === 'SVG'
+    ? [
+        { name: 'Low', res: '720px' },
+        { name: 'Medium', res: '1024px' },
+        { name: 'High', res: '2048px' },
+        { name: 'Ultra', res: 'Vector' },
+      ]
     : [
         { name: 'Low', res: '720px' },
         { name: 'Medium', res: '1024px' },
@@ -1049,7 +1057,7 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
         { name: 'Ultra', res: '4096px' },
       ];
 
-  const formatOptions = ['PNG', 'JPG', 'WEBP', 'PDF'];
+  const formatOptions = ['PNG', 'JPG', 'WEBP', 'PDF', 'SVG'];
 
   // Higher quality square images for templates
   const posterTemplates = [
@@ -1147,6 +1155,7 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
     JPG:  { mime: 'image/jpeg',       ext: 'jpg'  },
     WEBP: { mime: 'image/webp',       ext: 'webp' },
     PDF:  { mime: 'application/pdf',  ext: 'pdf'  },
+    SVG:  { mime: 'image/svg+xml',    ext: 'svg'  },
   };
 
   /**
@@ -1236,6 +1245,14 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
       }
       return `<svg${cleaned} viewBox="0 0 ${nativeW || targetW} ${nativeH || targetH}" width="${targetW}" height="${targetH}">`;
     });
+
+    // Ensure standard SVG XML namespaces exist for standalone SVG viewing
+    if (!svg.includes('xmlns=')) {
+      svg = svg.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    if (!svg.includes('xmlns:xlink=')) {
+      svg = svg.replace(/<svg\b/i, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+    }
 
     // Comprehensive CSS reset injected inside the SVG to:
     //  - Remove all default browser borders, outlines, and backgrounds from foreignObject content
@@ -1527,6 +1544,16 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
         });
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, pdfH);
         pdf.save(`${bookName}_poster.pdf`);
+      } else if (format === 'SVG') {
+        try {
+          const svgDataUrl = await domtoimage.toSvg(element);
+          saveAs(svgDataUrl, `${bookName}_poster.svg`);
+        } catch (e) {
+          const imgData = canvas.toDataURL('image/png');
+          const svgContent = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}"><image href="${imgData}" width="${canvas.width}" height="${canvas.height}"/></svg>`;
+          const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+          saveAs(svgBlob, `${bookName}_poster.svg`);
+        }
       } else {
         const mimeType = format === 'PNG' ? 'image/png' : format === 'WEBP' ? 'image/webp' : 'image/jpeg';
         const dataUrl = canvas.toDataURL(mimeType, 0.95);
@@ -1662,6 +1689,61 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
           pdf.save(pdfName);
         } else {
           throw new Error('Failed to generate PDF document');
+        }
+
+      } else if (format === 'SVG') {
+        // ── TRUE DIRECT VECTOR SVG EXPORT ────────────────────────
+        if (indices.length === 1) {
+          const res = buildExportSvg(indices[0], maxPx, true);
+          if (!res) throw new Error('Page content not available');
+          let { svgString } = res;
+
+          // 1. Inline all referenced images in the SVG to Base64
+          svgString = await inlineSvgImages(svgString);
+
+          // 2. Convert <foreignObject> text into clean vector path outlines
+          try {
+            svgString = await convertSvgTextToOutlines(svgString);
+          } catch (e) {
+            console.warn('Text outlining skipped:', e);
+          }
+
+          if (!svgString.startsWith('<?xml')) {
+            svgString = `<?xml version="1.0" encoding="UTF-8"?>\n${svgString}`;
+          }
+
+          const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+          const pgName = (modalPages[indices[0]]?.name || `Page_${indices[0]+1}`).replace(/\s+/g, '_');
+          saveAs(blob, `${bookName}_${pgName}.svg`);
+
+        } else {
+          // Multiple pages -> ZIP with individual .svg files
+          const zip = new JSZip();
+          const folder = zip.folder(bookName);
+
+          for (const idx of indices) {
+            const res = buildExportSvg(idx, maxPx, true);
+            if (!res) continue;
+            let { svgString } = res;
+
+            svgString = await inlineSvgImages(svgString);
+            try {
+              svgString = await convertSvgTextToOutlines(svgString);
+            } catch (e) {
+              console.warn('Text outlining skipped for page:', idx, e);
+            }
+
+            if (!svgString.startsWith('<?xml')) {
+              svgString = `<?xml version="1.0" encoding="UTF-8"?>\n${svgString}`;
+            }
+
+            const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const pgName = (modalPages[idx]?.name || `Page_${idx+1}`).replace(/\s+/g, '_');
+            folder.file(`${pgName}.svg`, blob);
+          }
+
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          saveAs(zipBlob, `${bookName}_${indices.length}_pages_svg.zip`);
         }
 
       } else if (indices.length === 1) {
@@ -2046,7 +2128,7 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
                         <button key={opt.name} onClick={() => setQuality(opt.name)} className={`flex flex-col items-center justify-center py-[0.5vw] rounded-[0.5vw] border transition-all cursor-pointer ${quality === opt.name ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-400 border-gray-100 hover:border-gray-200 shadow-sm'}`}><span className="text-[0.65vw] font-semibold">{opt.name}</span><span className={`text-[0.5vw] ${quality === opt.name ? 'text-gray-300' : 'text-gray-400'}`}>({opt.res})</span></button>
                       ))}
                     </div>
-                    <div className="grid grid-cols-4 gap-[0.4vw]">
+                    <div className="grid grid-cols-5 gap-[0.4vw]">
                       {formatOptions.map((fmt) => (
                         <button key={fmt} onClick={() => setFormat(fmt)} className={`py-[0.5vw] rounded-[0.5vw] border transition-all cursor-pointer font-semibold text-[0.7vw] ${format === fmt ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-400 border-gray-100 hover:border-gray-200 shadow-sm'}`}>{fmt}</button>
                       ))}

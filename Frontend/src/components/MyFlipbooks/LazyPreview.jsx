@@ -189,6 +189,12 @@ function LazyPreviewComponent({
                     );
                 }
 
+                // Normalize vector-effect so strokes scale down proportionally with the thumbnail viewBox
+                processedContent = processedContent
+                    .replace(/\bvector-effect\s*=\s*["']non-scaling-stroke["']/gi, 'vector-effect="none"')
+                    .replace(/\bvectorEffect\s*=\s*["']non-scaling-stroke["']/gi, 'vectorEffect="none"')
+                    .replace(/vector-effect\s*:\s*non-scaling-stroke\s*;?/gi, 'vector-effect: none;');
+
                 if (processedContent.includes('preserveAspectRatio')) {
                     processedContent = processedContent.replace(/preserveAspectRatio=["'][^"']*["']/i, 'preserveAspectRatio="xMidYMid meet"');
                 } else {
@@ -207,7 +213,7 @@ function LazyPreviewComponent({
                         title={`Preview of ${title}`}
                         className="w-full h-full border-none pointer-events-none select-none"
                         sandbox="allow-same-origin allow-scripts"
-                        srcDoc={`<!DOCTYPE html><html><head>${html.fontImports || ''}<base href="${effectiveBaseHref}"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f3f4f6;}svg{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.12));}[data-name="Free Frame"]{stroke:transparent !important;fill:transparent !important;}</style></head><body>${processedContent}</body></html>`}
+                        srcDoc={`<!DOCTYPE html><html><head>${html.fontImports || ''}<base href="${effectiveBaseHref}"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f3f4f6;}svg{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.12));}svg,svg *{vector-effect:none !important;}[data-name="Free Frame"]{stroke:transparent !important;fill:transparent !important;}</style></head><body>${processedContent}</body></html>`}
                     />
                 );
             })() : loaded && imageUrl ? (

@@ -250,13 +250,6 @@ const SettingsLayout = () => {
       title: "System & Billing",
       items: [
         {
-          path: "virtual-stall",
-          to: "#",
-          id: "virtual-stall",
-          label: "Virtual Stall",
-          icon: "icon-park-outline:booth",
-        },
-        {
           path: "billing",
           id: "billing",
           label: "Billing and Invoice",

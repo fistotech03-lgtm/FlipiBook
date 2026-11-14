@@ -138,7 +138,7 @@ const Account = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white rounded-[1.2vw] p-[1.8vw] overflow-y-auto custom-scrollbar relative font-sans">
+    <div className="w-full h-full flex flex-col bg-white p-[1.5vw] overflow-y-auto custom-scrollbar relative font-sans">
       {/* Toast Notification matching Notifications.jsx */}
       {notification.show && (
         <div className="fixed top-[1.5vw] right-[2vw] z-50 bg-gray-900 text-white text-[0.78vw] px-[1.2vw] py-[0.6vw] rounded-[0.5vw] shadow-lg flex items-center gap-[0.5vw] animate-in fade-in slide-in-from-top-2">

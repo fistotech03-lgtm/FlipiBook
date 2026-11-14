@@ -120,7 +120,7 @@ export default function TicketDetailsPage() {
   });
 
   return (
-    <div className="w-full flex-1 bg-[#F9F9F9] min-h-full px-[2vw] py-[1.8vw] overflow-y-auto select-none font-sans">
+    <div className="w-full flex-1 bg-white min-h-full p-[1.5vw] overflow-y-auto select-none font-sans">
       {/* Top Breadcrumb Navigation */}
       <div className="flex items-center gap-[0.4vw] text-[0.74vw] text-gray-400 mb-[1.2vw]">
         <button 
@@ -137,7 +137,7 @@ export default function TicketDetailsPage() {
       {/* Main 2-Column Content Grid matching Screenshot 2 */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-[1.6vw] items-start">
         {/* Left / Center Section: Messages and Chat Feed */}
-        <div className="xl:col-span-9 bg-white rounded-[1vw] border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-[1.8vw] flex flex-col justify-between min-h-[75vh]">
+        <div className="xl:col-span-9 bg-white rounded-[0.9vw] border border-gray-100 shadow-xs p-[1.4vw] flex flex-col justify-between min-h-[75vh]">
           {/* Top Banner Row inside Card */}
           <div>
             {/* Top Navigation Row: Back to Requests & Status Badge */}
@@ -145,16 +145,16 @@ export default function TicketDetailsPage() {
               <button
                 type="button"
                 onClick={handleBack}
-                className="flex items-center gap-[0.4vw] text-gray-500 hover:text-gray-900 text-[0.8vw] font-medium transition-colors cursor-pointer"
+                className="flex items-center gap-[0.4vw] text-gray-500 hover:text-gray-900 text-[0.78vw] font-medium transition-colors cursor-pointer"
               >
-                <ArrowLeft className="w-[0.9vw] h-[0.9vw]" />
+                <ArrowLeft className="w-[0.85vw] h-[0.85vw]" />
                 <span>Back to Requests</span>
               </button>
 
               <div className="flex items-center gap-[0.8vw]">
-                {/* Status Pill */}
-                <div className="flex items-center gap-[0.4vw] px-[0.9vw] py-[0.3vw] rounded-full text-[0.74vw] font-semibold shadow-xs bg-[#FF5733] text-white">
-                  <span className="w-[0.4vw] h-[0.4vw] rounded-full bg-white animate-pulse" />
+                {/* Status Pill matching Billing badges */}
+                <div className="flex items-center gap-[0.35vw] px-[0.65vw] py-[0.18vw] rounded-full text-[0.68vw] font-medium shadow-xs bg-[#FF5733] text-white">
+                  <span className="w-[0.35vw] h-[0.35vw] rounded-full bg-white animate-pulse" />
                   <span>{statusBadgeLabel}</span>
                 </div>
 
@@ -164,21 +164,21 @@ export default function TicketDetailsPage() {
                   className="p-[0.35vw] text-gray-400 hover:text-gray-600 rounded-[0.4vw] hover:bg-gray-50 transition-colors"
                   title="Ticket options"
                 >
-                  <MoreVertical className="w-[1vw] h-[1vw]" />
+                  <MoreVertical className="w-[0.95vw] h-[0.95vw]" />
                 </button>
               </div>
             </div>
 
             {/* Ticket Title Header with Message Icon (Just below Back to Requests, above the horizontal line) */}
             <div className="flex items-start gap-[0.65vw] pb-[0.8vw] mb-[1.2vw] border-b border-gray-100">
-              <div className="w-[2vw] h-[2vw] rounded-[0.45vw] bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 mt-[0.1vw]">
+              <div className="w-[2.15vw] h-[2.15vw] rounded-[0.55vw] bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 mt-[0.1vw]">
                 <Icon icon="lucide:message-square" className="w-[1vw] h-[1vw]" />
               </div>
               <div>
-                <h1 className="text-[1.1vw] font-bold text-gray-900 leading-snug">
+                <h1 className="text-[1.15vw] font-bold text-gray-900 leading-snug">
                   {ticket.subject}
                 </h1>
-                <p className="text-[0.7vw] text-gray-400 mt-[0.15vw] font-normal">
+                <p className="text-[0.72vw] text-gray-400 mt-[0.15vw] font-normal">
                   {ticketIdStr} Created on {createdDateStr}
                 </p>
               </div>
@@ -349,10 +349,10 @@ export default function TicketDetailsPage() {
                   <button
                     type="button"
                     onClick={handleToggleStatus}
-                    className="flex items-center gap-[0.35vw] px-[0.8vw] py-[0.45vw] rounded-[0.5vw] border border-gray-200 hover:bg-gray-50 text-[0.74vw] font-medium text-gray-700 transition-colors cursor-pointer"
+                    className="h-[2.15vw] flex items-center gap-[0.35vw] px-[0.85vw] rounded-[0.55vw] border border-gray-200 hover:bg-gray-50 text-[0.78vw] font-medium text-gray-700 transition-colors cursor-pointer shadow-xs"
                   >
-                    <div className="w-[0.9vw] h-[0.9vw] rounded-full bg-gray-800 text-white flex items-center justify-center">
-                      <Check className="w-[0.55vw] h-[0.55vw]" />
+                    <div className="w-[0.85vw] h-[0.85vw] rounded-full bg-gray-800 text-white flex items-center justify-center">
+                      <Check className="w-[0.5vw] h-[0.5vw]" />
                     </div>
                     <span>{isResolved ? 'Reopen Ticket' : 'Mark as Resolved'}</span>
                   </button>
@@ -361,7 +361,7 @@ export default function TicketDetailsPage() {
                   <button
                     type="submit"
                     disabled={(!replyText.trim() && replyAttachments.length === 0) || isSubmitting || isCompressingReply}
-                    className="flex items-center gap-[0.4vw] px-[1.2vw] py-[0.45vw] rounded-[0.5vw] bg-[#FF5733] hover:bg-[#E04D2D] text-white text-[0.78vw] font-semibold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                    className="h-[2.15vw] flex items-center gap-[0.35vw] px-[1vw] rounded-[0.55vw] bg-[#FF5733] hover:bg-[#E04D2D] active:scale-[0.98] text-white text-[0.78vw] font-semibold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
                   >
                     <span>{isSubmitting ? 'Sending...' : 'Send Replay'}</span>
                     <Send className="w-[0.8vw] h-[0.8vw]" />
@@ -375,12 +375,12 @@ export default function TicketDetailsPage() {
         {/* Right Section: Participants & Attachments Sidebar matching Screenshot 2 */}
         <div className="xl:col-span-3 space-y-[1.2vw]">
           {/* 1. Participants Card */}
-          <div className="bg-white rounded-[1vw] border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-[1.4vw]">
-            <h3 className="text-[0.88vw] font-bold text-gray-900 pb-[1vw] border-b border-gray-100 mb-[0.8vw]">
+          <div className="bg-white rounded-[0.9vw] border border-gray-100 shadow-xs p-[1.3vw]">
+            <h3 className="text-[0.92vw] font-bold text-gray-900 pb-[0.8vw] border-b border-gray-100 mb-[0.8vw]">
               Participants
             </h3>
 
-            <div className="space-y-[0.9vw]">
+            <div className="space-y-[0.85vw]">
               {/* User Participant */}
               <div className="flex items-center gap-[0.7vw]">
                 <div className="w-[2vw] h-[2vw] rounded-full bg-emerald-100 overflow-hidden flex items-center justify-center flex-shrink-0">
@@ -402,7 +402,7 @@ export default function TicketDetailsPage() {
 
               {/* Support Staff Participant */}
               <div className="flex items-center gap-[0.7vw]">
-                <div className="w-[2vw] h-[2vw] rounded-[0.4vw] bg-[#FF5733] text-white flex items-center justify-center font-bold text-[0.85vw] flex-shrink-0 shadow-2xs">
+                <div className="w-[2vw] h-[2vw] rounded-[0.45vw] bg-[#FF5733] text-white flex items-center justify-center font-bold text-[0.85vw] flex-shrink-0 shadow-2xs">
                   F
                 </div>
                 <div className="min-w-0">
@@ -418,13 +418,13 @@ export default function TicketDetailsPage() {
           </div>
 
           {/* 3. Attachments Summary Sidebar Card */}
-          <div className="bg-white rounded-[1vw] border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-[1.4vw]">
-            <div className="flex items-center justify-between pb-[1vw] border-b border-gray-100 mb-[0.8vw]">
-              <h3 className="text-[0.88vw] font-bold text-gray-900">
+          <div className="bg-white rounded-[0.9vw] border border-gray-100 shadow-xs p-[1.3vw]">
+            <div className="flex items-center justify-between pb-[0.8vw] border-b border-gray-100 mb-[0.8vw]">
+              <h3 className="text-[0.92vw] font-bold text-gray-900">
                 Attachments ({allAttachmentsList.length})
               </h3>
               {allAttachmentsList.length > 0 && (
-                <span className="text-[0.7vw] font-semibold text-[#FF5733] cursor-pointer hover:underline">
+                <span className="text-[0.74vw] font-medium text-[#FF5733] cursor-pointer hover:underline">
                   View All
                 </span>
               )}
@@ -490,13 +490,13 @@ export default function TicketDetailsPage() {
       {/* Close Ticket Confirmation Modal */}
       {showCloseConfirm && (
         <div className="fixed inset-0 z-[1100] flex items-center justify-center p-[1vw] bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-150">
-          <div className="bg-white rounded-[1vw] shadow-xl max-w-[28vw] w-full p-[1.5vw] border border-gray-200 space-y-[0.85vw]">
+          <div className="bg-white rounded-[0.9vw] shadow-xl max-w-[28vw] w-full p-[1.4vw] border border-gray-100 space-y-[0.85vw]">
             <div className="flex items-center gap-[0.7vw] text-gray-800">
-              <div className="w-[2.4vw] h-[2.4vw] rounded-[0.6vw] bg-orange-50 flex items-center justify-center shrink-0 text-[#FF5733]">
+              <div className="w-[2.4vw] h-[2.4vw] rounded-[0.55vw] bg-orange-50 flex items-center justify-center shrink-0 text-[#FF5733]">
                 <AlertTriangle className="w-[1.2vw] h-[1.2vw]" />
               </div>
               <div>
-                <h3 className="text-[1vw] font-semibold text-gray-800">
+                <h3 className="text-[0.95vw] font-semibold text-gray-800">
                   {isResolved ? 'Reopen Ticket?' : 'Close Ticket?'}
                 </h3>
                 <p className="text-[0.72vw] text-gray-500 font-normal">
@@ -505,7 +505,7 @@ export default function TicketDetailsPage() {
               </div>
             </div>
 
-            <p className="text-[0.76vw] text-gray-600 leading-relaxed font-normal bg-[#f8f9fa] p-[0.75vw] rounded-[0.5vw] border border-gray-200">
+            <p className="text-[0.74vw] text-gray-600 leading-relaxed font-normal bg-[#f8f9fa] p-[0.75vw] rounded-[0.55vw] border border-gray-200">
               {isResolved
                 ? `Reopening "${ticket.subject}" will notify support engineers that you still need help.`
                 : `Are you sure you want to mark "${ticket.subject}" as closed? You can still view conversation history.`}
@@ -515,14 +515,16 @@ export default function TicketDetailsPage() {
               <button
                 type="button"
                 onClick={() => setShowCloseConfirm(false)}
-                className="px-[0.9vw] py-[0.45vw] text-[0.76vw] font-medium text-gray-700 hover:text-gray-900 transition-colors cursor-pointer"
+                className="h-[2.15vw] px-[0.95vw] rounded-[0.55vw] text-[0.78vw] font-medium text-gray-700 hover:text-gray-900 border border-gray-200 transition-colors cursor-pointer shadow-xs"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleToggleStatus}
-                className="px-[1vw] py-[0.48vw] text-[0.76vw] font-medium text-white bg-[#FF5733] hover:bg-[#E04D2D] rounded-[0.5vw] transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
+                className={`h-[2.15vw] px-[1.1vw] rounded-[0.55vw] text-[0.78vw] font-semibold text-white transition-all shadow-xs cursor-pointer active:scale-[0.98] ${
+                  isResolved ? 'bg-[#FF5733] hover:bg-[#E04D2D]' : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
               >
                 {isResolved ? 'Yes, Reopen' : 'Yes, Close Ticket'}
               </button>

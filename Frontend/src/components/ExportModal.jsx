@@ -1025,9 +1025,15 @@ const ExportModal = ({ isOpen, onClose, currentBook, pages = [], currentPageInde
     }
 
     processed = processed.replace(svgTagMatch[0], svgTag);
+
+    // Normalize vector-effect so strokes scale down proportionally with the preview viewBox
+    processed = processed
+      .replace(/\bvector-effect\s*=\s*["']non-scaling-stroke["']/gi, 'vector-effect="none"')
+      .replace(/\bvectorEffect\s*=\s*["']non-scaling-stroke["']/gi, 'vectorEffect="none"')
+      .replace(/vector-effect\s*:\s*non-scaling-stroke\s*;?/gi, 'vector-effect: none;');
     
-    // Hide interaction frames in the preview
-    processed = processed.replace(/<\/svg>\s*$/i, '<style>[data-name="Free Frame"] { display: none !important; }</style></svg>');
+    // Hide interaction frames and ensure vector-effect is none in the preview
+    processed = processed.replace(/<\/svg>\s*$/i, '<style>svg, svg * { vector-effect: none !important; } [data-name="Free Frame"] { display: none !important; }</style></svg>');
     
     return processed;
   };

@@ -126,7 +126,7 @@ const SmartSolutionsSection = () => {
 
       {/* 3. BOTTOM FEATURE CARDS (Individual Animated on Scroll with Delays) */}
       <div
-        className="relative z-10 w-full max-w-xl lg:max-w-none lg:w-[88vw] mx-auto flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-3.5 lg:gap-[1.5vw] mt-2 sm:mt-2 lg:-mt-[3.5vw] mb-4 sm:mb-4 lg:mb-[0.5vw] px-2 lg:px-0"
+        className="relative z-10 w-full max-w-xl lg:max-w-none lg:w-[88vw] mx-auto flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-3.5 lg:gap-[1.5vw] -mt-4 sm:-mt-6 lg:-mt-[6vw] xl:-mt-[6.5vw] mb-4 sm:mb-4 lg:mb-[0.5vw] px-2 lg:px-0"
       >
         {/* CARD 1: Immersive 3D */}
         <motion.div

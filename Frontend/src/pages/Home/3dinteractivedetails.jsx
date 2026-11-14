@@ -79,9 +79,9 @@ export default function ThreeDInteractiveDetails({ navigate }) {
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
+        viewport={{ once: false, amount: 0.3 }}
         transition={{ duration: 0.8 }}
-        className="w-full flex items-center gap-3.5 mb-2 sm:mb-4 lg:mb-2 flex-shrink-0"
+        className="w-full flex items-center gap-3.5 mt-3 sm:mt-4 lg:mt-4 mb-2 sm:mb-4 lg:mb-2 flex-shrink-0"
       >
         <span className="text-xs sm:text-[13px] lg:text-[0.85vw] font-bold tracking-[0.24em] text-white uppercase">
           INTERACTIVE 3D CATALOGUES
@@ -93,28 +93,38 @@ export default function ThreeDInteractiveDetails({ navigate }) {
       <div className="w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-4 xl:gap-6 items-start relative">
 
         {/* Left Column (col-span-3) - directly at top */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.85, delay: 0.1 }}
-          className="lg:col-span-3 flex flex-col justify-start text-left items-start z-20 pt-7 sm:pt-9 lg:pt-12"
-        >
-          {/* Headline */}
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[2.75vw] xl:text-[3vw] font-bold text-white leading-[1.12] tracking-tight">
+        <div className="lg:col-span-3 flex flex-col justify-start text-left items-start z-20 pt-7 sm:pt-9 lg:pt-12">
+          {/* Headline with slide-in & fade */}
+          <motion.h2
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: false, amount: 0.3 }}
+            transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-[2.75vw] xl:text-[3vw] font-bold text-white leading-[1.12] tracking-tight"
+          >
             Give Customers <br />
-            a <span className="text-[#EA7233]">Closer Look</span> <br />
+            a <span className="text-[#EC5137]">Closer Look</span> <br />
             at Your <br />
             Products
-          </h2>
+          </motion.h2>
 
           {/* Description */}
-          <p className="text-xs sm:text-sm md:text-[14px] lg:text-[0.84vw] font-normal text-[#9ca3af] leading-[165%] mt-5 sm:mt-6 lg:mt-6 max-w-[340px] sm:max-w-[400px] lg:max-w-none">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.3 }}
+            transition={{ duration: 0.85, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="text-xs sm:text-sm md:text-[14px] lg:text-[0.84vw] font-normal text-[#9ca3af] leading-[165%] mt-5 sm:mt-6 lg:mt-6 max-w-[340px] sm:max-w-[400px] lg:max-w-none"
+          >
             Bring 3D product models into your FlipiBook catalogue. Let customers rotate products, inspect details, and discover features through clickable hotspots, videos, and audio.
-          </p>
+          </motion.p>
 
           {/* Explore Button */}
-          <button
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.3 }}
+            transition={{ duration: 0.85, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
             onClick={() => {
               if (navigate) navigate('/explore');
             }}
@@ -123,14 +133,14 @@ export default function ThreeDInteractiveDetails({ navigate }) {
           >
             <span>Explore a 3D Catalogue</span>
             <Icon icon="lucide:arrow-right" className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-          </button>
-        </motion.div>
+          </motion.button>
+        </div>
 
         {/* Center 3D Floor Plan - anchored to bottom (col-span-6) */}
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
+          viewport={{ once: false, amount: 0.2 }}
           transition={{ duration: 0.9, delay: 0.2 }}
           className="lg:col-span-6 relative flex items-end justify-center w-full z-10 self-end -mb-1 translate-x-2 sm:translate-x-4 lg:translate-x-6"
         >
@@ -208,15 +218,22 @@ export default function ThreeDInteractiveDetails({ navigate }) {
         </motion.div>
 
         {/* Right Column (col-span-3): 5 Features List - directly at top */}
-        <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.85, delay: 0.25 }}
-          className="lg:col-span-3 flex flex-col justify-start gap-7 sm:gap-8 lg:gap-8 xl:gap-9.5 z-20 pt-7 sm:pt-9 lg:pt-12 pb-6 sm:pb-8 lg:pb-10 translate-x-3 sm:translate-x-5 lg:translate-x-6 xl:translate-x-8"
+        <div
+          className="lg:col-span-3 flex flex-col justify-start gap-7 sm:gap-8 lg:gap-8 xl:gap-9.5 z-20 pt-2 sm:pt-4 lg:pt-5 xl:pt-6 pb-6 sm:pb-8 lg:pb-10 translate-x-3 sm:translate-x-5 lg:translate-x-6 xl:translate-x-8"
         >
-          {features.map((item) => (
-            <div key={item.id} className="flex items-start gap-3.5 xl:gap-4">
+          {features.map((item, index) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, x: 40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{
+                duration: 0.7,
+                delay: 0.15 + index * 0.15,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="flex items-start gap-3.5 xl:gap-4"
+            >
               {/* Circular Bordered Icon matching Figma styling */}
               <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-[2.6vw] lg:h-[2.6vw] rounded-full border border-white/90 bg-transparent flex items-center justify-center flex-shrink-0 text-white mt-0.5">
                 <Icon icon={item.icon} className="w-5 h-5 sm:w-5.5 sm:h-5.5 lg:w-[1.3vw] lg:h-[1.3vw]" />
@@ -231,9 +248,9 @@ export default function ThreeDInteractiveDetails({ navigate }) {
                   {item.desc}
                 </p>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </motion.div>
+        </div>
 
       </div>
 

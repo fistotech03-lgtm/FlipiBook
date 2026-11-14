@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TypographyPanel from './TypographyPanel';
 import { createPortal } from 'react-dom';
-import { X, ChevronDown, Info, Check, Plus, Upload, Edit2, Sliders, MoreVertical, Trash2 } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Info, Check, Plus, Upload, Edit2, Sliders, MoreVertical, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './CustomToast';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,7 @@ import { Icon } from '@iconify/react';
 import PremiumDropdown from './CustomizedEditor/components/PremiumDropdown';
 import { ImageCropOverlay } from './CustomizedEditor/AppearanceShared';
 import ColorPicker from './ThreedEditor/ColorPicker';
+import Switch from './CustomizedEditor/components/Switch';
 
 const scrollbarStyles = `
   .custom-popup-scrollbar::-webkit-scrollbar {
@@ -68,10 +69,54 @@ export const extractPageBgColor = (page) => {
   return null;
 };
 
+export const normalizePageHtml = (htmlStr) => {
+  if (!htmlStr) return '';
+  try {
+    return htmlStr.replace(/<svg\b([^>]*)>/i, (match, attrs) => {
+      let newAttrs = attrs;
+      const widthMatch = attrs.match(/\bwidth=["']([^"']*)["']/i);
+      const heightMatch = attrs.match(/\bheight=["']([^"']*)["']/i);
+      const viewBoxMatch = attrs.match(/\bviewBox=["']([^"']*)["']/i);
+
+      const wVal = widthMatch ? widthMatch[1] : null;
+      const hVal = heightMatch ? heightMatch[1] : null;
+
+      if (!viewBoxMatch && wVal && hVal && !wVal.includes('%') && !hVal.includes('%')) {
+        const numW = parseFloat(wVal);
+        const numH = parseFloat(hVal);
+        if (!isNaN(numW) && !isNaN(numH)) {
+          newAttrs += ` viewBox="0 0 ${numW} ${numH}"`;
+        }
+      }
+
+      if (/\bwidth=["'][^"']*["']/i.test(newAttrs)) {
+        newAttrs = newAttrs.replace(/\bwidth=["'][^"']*["']/i, 'width="100%"');
+      } else {
+        newAttrs += ' width="100%"';
+      }
+      if (/\bheight=["'][^"']*["']/i.test(newAttrs)) {
+        newAttrs = newAttrs.replace(/\bheight=["'][^"']*["']/i, 'height="100%"');
+      } else {
+        newAttrs += ' height="100%"';
+      }
+      if (!/\bpreserveAspectRatio=["'][^"']*["']/i.test(newAttrs)) {
+        newAttrs += ' preserveAspectRatio="xMidYMid meet"';
+      }
+      return `<svg${newAttrs}>`;
+    });
+  } catch (e) {
+    return htmlStr;
+  }
+};
+
 export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], scaleClass = "scale-[1.05]", customTitle = null, customSubtitle = null) => {
   const page1 = selectedPages[0] && pages[selectedPages[0] - 1] ? pages[selectedPages[0] - 1] : null;
   const page2 = selectedPages[1] && pages[selectedPages[1] - 1] ? pages[selectedPages[1] - 1] : page1;
   const page3 = selectedPages[2] && pages[selectedPages[2] - 1] ? pages[selectedPages[2] - 1] : page2;
+
+  const page1Html = page1?.html ? normalizePageHtml(page1.html) : '';
+  const page2Html = page2?.html ? normalizePageHtml(page2.html) : '';
+  const page3Html = page3?.html ? normalizePageHtml(page3.html) : '';
 
   const page1Color = page1 ? (extractPageBgColor(page1) || '#334155') : null;
 
@@ -84,8 +129,8 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
           <div className={`absolute w-[10vw] h-[13.5vw] ${page1 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-orange-500 to-amber-600 border-orange-400 p-[0.7vw]'} rounded-[0.6vw] transform -rotate-6 border flex flex-col justify-between text-white overflow-hidden`}>
             <div className="absolute top-0 right-0 w-[4vw] h-[14vw] bg-white opacity-10 transform rotate-12 -translate-y-[1vw] translate-x-[1vw] z-10 pointer-events-none"></div>
             {page1 ? (
-              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+              <div className="absolute inset-0 pointer-events-none bg-white flex items-center justify-center overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain">
+                <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: page1Html }} />
               </div>
             ) : (
               <>
@@ -103,8 +148,8 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
             <div className="absolute top-0 left-0 w-[3vw] h-[14vw] bg-black opacity-10 filter blur-[0.2vw] -translate-x-[0.5vw] z-10 pointer-events-none"></div>
             <div className="absolute top-0 right-0 w-[5vw] h-[14vw] bg-white opacity-20 transform rotate-12 -translate-y-[1vw] translate-x-[2vw] z-10 pointer-events-none"></div>
             {page2 ? (
-              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                <div dangerouslySetInnerHTML={{ __html: page2.html }} />
+              <div className="absolute inset-0 pointer-events-none bg-white flex items-center justify-center overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain">
+                <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: page2Html }} />
               </div>
             ) : (
               <>
@@ -139,8 +184,8 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
               <div className="absolute top-0 right-0 w-[6vw] h-full bg-gradient-to-l from-white/10 to-transparent pointer-events-none z-10" />
               <div className="absolute inset-y-0 left-0 w-[0.3vw] bg-black/30 z-10 pointer-events-none" />
               {page1 ? (
-                <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                  <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+                <div className="absolute inset-0 pointer-events-none bg-white flex items-center justify-center overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain">
+                  <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: page1Html }} />
                 </div>
               ) : (
                 <>
@@ -159,7 +204,7 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
         </div>
       );
 
-        case 3:
+    case 3:
       // Landscape Catalog / Wide Brochure Mockup
       return (
         <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transform ${scaleClass}`}>
@@ -178,8 +223,8 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
               {/* Glossy sheen */}
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 pointer-events-none z-10" />
               {page1 ? (
-                <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                  <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+                <div className="absolute inset-0 pointer-events-none bg-white flex items-center justify-center overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain">
+                  <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: page1Html }} />
                 </div>
               ) : (
                 <>
@@ -209,8 +254,8 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
             {/* Glossy sheen */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/25 to-white/40 z-20 pointer-events-none" />
             {page1 ? (
-              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+              <div className="absolute inset-0 pointer-events-none bg-white flex items-center justify-center overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain">
+                <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: page1Html }} />
               </div>
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-emerald-600 to-teal-800 text-white p-[1vw] flex flex-col justify-between">
@@ -234,8 +279,8 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
           {/* Bottom Book */}
           <div className={`absolute w-[9.8vw] h-[13.2vw] ${page3 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-violet-600 to-indigo-700 border-violet-500'} rounded-[0.5vw] transform -rotate-12 -translate-x-[1.5vw] border flex overflow-hidden`}>
             {page3 ? (
-              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                <div dangerouslySetInnerHTML={{ __html: page3.html }} />
+              <div className="absolute inset-0 pointer-events-none bg-white flex items-center justify-center overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain">
+                <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: page3Html }} />
               </div>
             ) : (
               <div className="p-[0.6vw] text-white/80 font-bold text-[0.6vw]">VOL. 3</div>
@@ -245,8 +290,8 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
           {/* Middle Book */}
           <div className={`absolute w-[9.8vw] h-[13.2vw] ${page2 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-sky-500 to-blue-600 border-sky-400'} rounded-[0.5vw] shadow-sm transform rotate-2 border flex overflow-hidden`}>
             {page2 ? (
-              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                <div dangerouslySetInnerHTML={{ __html: page2.html }} />
+              <div className="absolute inset-0 pointer-events-none bg-white flex items-center justify-center overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain">
+                <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: page2Html }} />
               </div>
             ) : (
               <div className="p-[0.6vw] text-white/80 font-bold text-[0.6vw]">VOL. 2</div>
@@ -257,8 +302,8 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
           <div className={`absolute w-[9.8vw] h-[13.2vw] ${page1 ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-rose-500 to-red-600 border-rose-400'} rounded-[0.5vw] shadow-sm transform rotate-12 translate-x-[1.4vw] border flex flex-col justify-between text-white p-[0.6vw] overflow-hidden`}>
             <div className="absolute top-0 right-0 w-[4vw] h-[14vw] bg-white opacity-20 transform rotate-12 -translate-y-[1vw] translate-x-[2vw] z-10 pointer-events-none" />
             {page1 ? (
-              <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+              <div className="absolute inset-0 pointer-events-none bg-white flex items-center justify-center overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain">
+                <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: page1Html }} />
               </div>
             ) : (
               <>
@@ -273,7 +318,7 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
         </div>
       );
 
-        case 6:
+    case 6:
       // Isometric Floating Hardcover Mockup
       return (
         <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transform ${scaleClass}`}>
@@ -293,8 +338,8 @@ export const renderTemplateBooks = (templateId, selectedPages = [], pages = [], 
               {/* Glossy angled highlight */}
               <div className="absolute top-0 right-0 w-[5vw] h-full bg-gradient-to-l from-white/15 to-transparent pointer-events-none z-10" />
               {page1 ? (
-                <div className="absolute inset-0 pointer-events-none bg-white" style={{ transformOrigin: 'top left', transform: 'scale(0.35)', width: '285.7%', height: '285.7%' }}>
-                  <div dangerouslySetInnerHTML={{ __html: page1.html }} />
+                <div className="absolute inset-0 pointer-events-none bg-white flex items-center justify-center overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain">
+                  <div className="w-full h-full flex items-center justify-center" dangerouslySetInnerHTML={{ __html: page1Html }} />
                 </div>
               ) : (
                 <>
@@ -469,6 +514,27 @@ export const CoverPicturePopup = ({ onClose, onSave, onPreview, settings, pages 
   const [showShadowColorPicker, setShowShadowColorPicker] = useState(false);
 
   const [selectedPages, setSelectedPages] = useState(settings.coverPicture?.selectedPages || []);
+  const [firstPageSelected, setFirstPageSelected] = useState(true);
+  const [lastPageSelected, setLastPageSelected] = useState(true);
+  const [middlePageNum, setMiddlePageNum] = useState(() => {
+    if (pages.length <= 2) return null;
+    const existingMiddle = (settings.coverPicture?.selectedPages || []).find(p => p > 1 && p < pages.length);
+    return existingMiddle || Math.ceil(pages.length / 2);
+  });
+  const [previewHoverPage, setPreviewHoverPage] = useState(null);
+
+  // Sync selectedPages array when toggles or middle page change
+  useEffect(() => {
+    const list = [];
+    if (firstPageSelected && pages.length >= 1) list.push(1);
+    if (middlePageNum && middlePageNum > 1 && middlePageNum < pages.length) {
+      list.push(middlePageNum);
+    }
+    if (lastPageSelected && pages.length > 1) {
+      list.push(pages.length);
+    }
+    setSelectedPages(list);
+  }, [firstPageSelected, lastPageSelected, middlePageNum, pages.length]);
 
   // Notify parent of changes for real-time preview
   React.useEffect(() => {
@@ -1033,47 +1099,93 @@ export const CoverPicturePopup = ({ onClose, onSave, onPreview, settings, pages 
                           </div>
                     </div>
 
-                    {/* Select Pages Component */}
-                    <div className="flex items-start gap-[0.5vw] pt-[1vw]">
-                       <span className="text-[0.75vw] font-semibold text-gray-900 w-[6.5vw] shrink-0 pt-[0.5vw]">Select pages:</span>
-                       <div className="bg-[#F2F2F2] rounded-[0.5vw] flex-1 border border-white shadow-sm overflow-hidden flex flex-col">
-                          {/* Header */}
-                          <div className="px-[0.8vw] py-[0.6vw] border-b border-gray-200">
-                             <h3 className="text-[0.75vw] font-semibold text-gray-900">Select any - {selectedPages.length || 3} Pages</h3>
-                          </div>
-                          
-                          <div className="flex w-full">
-                             {/* Pages List */}
-                             <div className="flex-1 py-[0.8vw] px-[1vw] space-y-[0.5vw] relative">
-                                {pages.length > 0 ? pages.map((page, index) => {
-                                   const pageNum = index + 1;
-                                   const isChecked = selectedPages.includes(pageNum);
-                                   return (
-                                      <label key={pageNum} className="flex items-center gap-[0.8vw] cursor-pointer group" onClick={(e) => { e.preventDefault(); togglePageSelection(pageNum); }}>
-                                         <div className={`w-[0.9vw] h-[0.9vw] rounded-[0.2vw] flex items-center justify-center transition-colors ${isChecked ? 'bg-black text-white' : 'border-[0.15vw] border-gray-400 bg-white group-hover:border-gray-500'}`}>
-                                            {isChecked && <span className="text-[0.6vw] font-semibold ">{selectedPages.indexOf(pageNum) !== -1 ? selectedPages.indexOf(pageNum) + 1 : pageNum}</span>}
+                             {/* First & Last Page Checkboxes */}
+                             <div className="border border-gray-200 rounded-[0.45vw] p-[0.5vw] bg-white space-y-[0.3vw]">
+                                <div className="text-[0.62vw] font-semibold text-gray-500 uppercase tracking-wider mb-[0.1vw]">
+                                   Cover & Back
+                                </div>
+                                
+                                {/* First Page Checkbox */}
+                                <label 
+                                   className="flex items-center justify-between px-[0.3vw] py-[0.25vw] rounded-[0.3vw] hover:bg-gray-50 cursor-pointer group"
+                                   onMouseEnter={() => setPreviewHoverPage(1)}
+                                   onMouseLeave={() => setPreviewHoverPage(null)}
+                                >
+                                   <div className="flex items-center gap-[0.5vw]">
+                                      <div 
+                                         onClick={(e) => { e.preventDefault(); setFirstPageSelected(!firstPageSelected); }}
+                                         className={`w-[0.9vw] h-[0.9vw] rounded-[0.2vw] border flex items-center justify-center transition-all \${firstPageSelected ? 'bg-[#5551FF] border-[#5551FF]' : 'border-gray-400 bg-white group-hover:border-gray-600'}`}>
+                                         {firstPageSelected && <Check size="0.65vw" strokeWidth={3} className="text-white" />}
+                                      </div>
+                                      <span className={`text-[0.68vw] \${firstPageSelected ? 'text-gray-900 font-semibold' : 'text-gray-600 font-normal'}`}>
+                                         First Page (Page 1)
+                                      </span>
+                                   </div>
+                                   <span className="text-[0.58vw] text-gray-400 font-normal">Front Cover</span>
+                                </label>
+
+                                {/* Last Page Checkbox */}
+                                {pages.length > 1 && (
+                                   <label 
+                                      className="flex items-center justify-between px-[0.3vw] py-[0.25vw] rounded-[0.3vw] hover:bg-gray-50 cursor-pointer group border-t border-gray-100 pt-[0.3vw]"
+                                      onMouseEnter={() => setPreviewHoverPage(pages.length)}
+                                      onMouseLeave={() => setPreviewHoverPage(null)}
+                                   >
+                                      <div className="flex items-center gap-[0.5vw]">
+                                         <div 
+                                            onClick={(e) => { e.preventDefault(); setLastPageSelected(!lastPageSelected); }}
+                                            className={`w-[0.9vw] h-[0.9vw] rounded-[0.2vw] border flex items-center justify-center transition-all \${lastPageSelected ? 'bg-[#5551FF] border-[#5551FF]' : 'border-gray-400 bg-white group-hover:border-gray-600'}`}>
+                                            {lastPageSelected && <Check size="0.65vw" strokeWidth={3} className="text-white" />}
                                          </div>
-                                         <span className={`text-[0.7vw] font-medium transition-colors ${isChecked ? 'text-gray-900' : 'text-gray-400'}`}>Page {pageNum}</span>
-                                      </label>
-                                   )
-                                }) : (
-                                   <span className="text-gray-400 text-[0.7vw] font-medium">No pages available</span>
+                                         <span className={`text-[0.68vw] \${lastPageSelected ? 'text-gray-900 font-semibold' : 'text-gray-600 font-normal'}`}>
+                                            Last Page (Page {pages.length})
+                                         </span>
+                                      </div>
+                                      <span className="text-[0.58vw] text-gray-400 font-normal">Back Cover</span>
+                                   </label>
                                 )}
                              </div>
 
-                             {/* Preview Image */}
-                             <div className="w-[4vw] m-[0.8vw] ml-0 aspect-[3.5/5] bg-white border border-gray-200 rounded-[0.2vw] overflow-hidden shadow-md flex-shrink-0 relative">
-                                {pages.length > 0 ? (
-                                   <div className="absolute inset-0 pointer-events-none" style={{ transformOrigin: 'top left', transform: 'scale(0.2)', width: '500%', height: '500%' }}>
-                                      <div dangerouslySetInnerHTML={{ __html: pages[selectedPages[selectedPages.length - 1] - 1]?.html || pages[0].html }} />
+                             {/* Middle Page Selector Dropdown */}
+                             {pages.length > 2 && (
+                                <div className="border border-gray-200 rounded-[0.45vw] p-[0.5vw] bg-white">
+                                   <div className="flex items-center justify-between mb-[0.3vw]">
+                                      <span className="text-[0.62vw] font-semibold text-gray-500 uppercase tracking-wider">
+                                         Middle Page
+                                      </span>
+                                      {middlePageNum && (
+                                         <span className="text-[0.62vw] text-[#5551FF] font-semibold">
+                                            Page {middlePageNum} selected
+                                         </span>
+                                      )}
                                    </div>
-                                ) : (
-                                   <div className="w-full h-full bg-gray-50 flex items-center justify-center text-[0.5vw] text-gray-400 text-center">Preview</div>
-                                )}
-                             </div>
-                          </div>
-                        </div>
-                     </div>
+
+                                   <div className="relative">
+                                      <select
+                                         value={middlePageNum || ''}
+                                         onChange={(e) => {
+                                            const val = e.target.value ? Number(e.target.value) : null;
+                                            setMiddlePageNum(val);
+                                            if (val) setPreviewHoverPage(val);
+                                         }}
+                                         onMouseEnter={() => middlePageNum && setPreviewHoverPage(middlePageNum)}
+                                         onMouseLeave={() => setPreviewHoverPage(null)}
+                                         className="w-full bg-white border border-gray-300 rounded-[0.4vw] px-[0.6vw] py-[0.4vw] text-[0.68vw] text-gray-800 font-semibold outline-none cursor-pointer appearance-none hover:border-gray-400 focus:border-[#5551FF] transition-colors"
+                                      >
+                                         <option value="">-- None (No middle page) --</option>
+                                         {pages.slice(1, -1).map((_, idx) => {
+                                            const pageNumber = idx + 2;
+                                            return (
+                                               <option key={pageNumber} value={pageNumber}>
+                                                  Page {pageNumber}
+                                               </option>
+                                            );
+                                         })}
+                                      </select>
+                                      <ChevronDown size="0.75vw" className="text-gray-500 absolute right-[0.6vw] top-1/2 -translate-y-1/2 pointer-events-none" />
+                                   </div>
+                                </div>
+                             )}
                   </div>
                )}
             </div>

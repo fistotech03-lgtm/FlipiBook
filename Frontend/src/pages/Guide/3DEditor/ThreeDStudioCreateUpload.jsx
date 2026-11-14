@@ -26,11 +26,11 @@ export default function ThreeDStudioCreateUpload({ id }) {
             <span className="p-[0.45vw] rounded-[0.45vw] bg-[#ec5137]/10 text-[#ec5137]">
               <FolderPlus className="w-[1.1vw] h-[1.1vw]" />
             </span>
-            <h1 className="text-[1.3vw] font-semibold font-bold text-[#17202C] tracking-tight leading-snug">
+            <h1 className="text-[1.05vw] font-bold text-gray-900 tracking-tight leading-tight">
               Create & Upload 3D Models
             </h1>
           </div>
-          <p className="text-[0.85vw] font-semibold text-gray-700 mt-[0.5vh] ml-[4vw] mr-[1vw] leading-relaxed">
+          <p className="text-[0.74vw] font-normal text-gray-500 mt-[0.4vh] ml-[3.6vw] mr-[1vw] leading-relaxed">
             Import 3D models in GLB, GLTF, OBJ, or FBX formats and inspect sub-mesh hierarchies inside the scene tree. Normalize scale units and auto-center model origins with one click to prepare your 3D workspace.
           </p>
         </div>

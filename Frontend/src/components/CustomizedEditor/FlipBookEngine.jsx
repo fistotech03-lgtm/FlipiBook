@@ -18,7 +18,7 @@ import React, {
     useMemo,
 } from 'react';
 import HTMLFlipBook from 'react-pageflip';
-import { initGifRunner } from '../PageEditor/utils/AnimationRunner';
+import { initGifRunner } from '../PageEditor/Animation/AnimationRunner';
 import { rewriteHtmlUploads } from '../../utils/assetUtils';
 import { PageWindowManager, saveAllPagesToIDB, getPageFromIDB } from '../../utils/pageWindowStore';
 import { usePageBuilderWorker } from '../../hooks/usePageBuilderWorker';

@@ -3,7 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 // Text-effects engine added in the new AnimationRunner (adjust path if the file lives elsewhere)
-import { initTextEffectsRunner } from '../utils/AnimationRunner';
+import { initTextEffectsRunner } from './AnimationRunner';
 import {
   ChevronDown,
   ArrowRightLeft,

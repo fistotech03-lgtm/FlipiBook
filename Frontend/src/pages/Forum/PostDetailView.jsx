@@ -124,7 +124,7 @@ export default function PostDetailView({
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 px-4 sm:px-6 py-4 space-y-4 w-full">
+      <div className="flex-1 px-3 sm:px-6 py-3.5 sm:py-4 space-y-3.5 sm:space-y-4 w-full">
         {userGroups.map((group, gIdx) => {
           const author = group.author;
           const authorInitials = author?.initials || (author?.name ? author.name.slice(0, 2).toUpperCase() : 'U');
@@ -132,19 +132,19 @@ export default function PostDetailView({
           return (
             <div 
               key={group.authorKey || gIdx}
-              className="bg-white border border-stone-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4"
+              className="bg-white border border-stone-200/90 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-xs space-y-3.5 sm:space-y-4"
             >
               {/* Author Header Row - Rendered only ONCE per user box */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-[#7a1215] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0 shadow-xs">
+              <div className="flex items-start justify-between gap-3 sm:gap-4">
+                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#7a1215] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0 shadow-xs">
                     {authorInitials}
                   </div>
-                  <div>
-                    <div className="font-semibold text-stone-900 text-xs sm:text-sm">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-stone-900 text-xs sm:text-sm truncate">
                       {author?.name || 'Creator'}
                     </div>
-                    <div className="text-[11px] text-stone-400 mt-0.5">
+                    <div className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5">
                       {formatForumDate(group.createdAt)}
                     </div>
                   </div>
@@ -155,7 +155,7 @@ export default function PostDetailView({
                   <button
                     type="button"
                     onClick={() => setIsSaved(!isSaved)}
-                    className="px-3 py-1 rounded-lg border border-[#ec5137] text-[#ec5137] hover:bg-orange-50/50 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-2.5 sm:px-3 py-1 rounded-lg border border-[#ec5137] text-[#ec5137] hover:bg-orange-50/50 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
                   >
                     <Bookmark size={13} className={isSaved ? "fill-[#ec5137]" : ""} />
                     <span>{isSaved ? 'Saved' : 'Save'}</span>
@@ -186,10 +186,10 @@ export default function PostDetailView({
 
                       {/* Admin reply with L-shaped arrow */}
                       {hasAdminReply && (
-                        <div className="mt-3 pl-3.5 sm:pl-5">
-                          <div className="flex items-center gap-2.5">
+                        <div className="mt-3 pl-1 sm:pl-4">
+                          <div className="flex items-center gap-2 sm:gap-2.5">
                             {/* L-shaped Arrow SVG */}
-                            <div className="w-7 h-8 -mt-4 flex-shrink-0 relative">
+                            <div className="w-5 h-7 sm:w-7 sm:h-8 -mt-3 sm:-mt-4 flex-shrink-0 relative">
                               <svg
                                 className="w-full h-full overflow-visible"
                                 viewBox="0 0 32 40"
@@ -213,7 +213,7 @@ export default function PostDetailView({
                               </svg>
                             </div>
 
-                            <div className="w-7 h-7 rounded-full bg-[#0a6674] text-white flex items-center justify-center text-[10px] font-bold uppercase shrink-0 shadow-xs">
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#0a6674] text-white flex items-center justify-center text-[9px] sm:text-[10px] font-bold uppercase shrink-0 shadow-xs">
                               {postItem.adminReply.author?.initials || 'AD'}
                             </div>
 
@@ -227,7 +227,7 @@ export default function PostDetailView({
                             </div>
                           </div>
 
-                          <div className="pl-[38px] mt-1.5">
+                          <div className="pl-7 sm:pl-[38px] mt-1.5">
                             <p className="text-xs text-stone-500 leading-relaxed font-normal">
                               {postItem.adminReply.content}
                             </p>
@@ -243,7 +243,7 @@ export default function PostDetailView({
         })}
 
         {/* 3. Reply Input Box */}
-        <div className="bg-white border border-stone-200/90 rounded-2xl p-5 shadow-xs">
+        <div className="bg-white border border-stone-200/90 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-xs">
           <form onSubmit={handleCommentSubmit} className="space-y-3">
             <label className="block text-xs font-semibold text-stone-800">
               Add a Comment or Follow-up Question

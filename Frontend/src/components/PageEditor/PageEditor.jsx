@@ -17,13 +17,13 @@ import { getPageEditorState, savePageEditorState, ensureCleanBook } from "../../
 import Layer from "./panels/Layer";
 import MainEditor from "./MainEditor.jsx";
 import RightSidebar from "./panels/RightSidebar";
-import TooltipCustomization from "./modals/TooltipCustomization";
+import TooltipCustomization from "./Interaction/TooltipCustomization";
 import TemplateModal from "./modals/TemplateModal";
 const FlipbookPreview = React.lazy(() => import("./modals/FlipbookPreview"));
 import AlertModal from "../AlertModal";
 import PdfProcessingLoader from "../PdfProcessingLoader";
-import PopupTemplateSelection from "./modals/PopupTemplateSelection";
-import Model3DPreviewModal from "./modals/Interaction3DPreview";
+import PopupTemplateSelection from "./Interaction/PopupTemplateSelection";
+import Model3DPreviewModal from "./Interaction/Interaction3DPreview";
 import PasswordProtectModal from "./modals/PasswordProtectModal";
 import pageCacheManager from "./utils/PageCacheManager";
 import { useToast } from "../CustomToast";

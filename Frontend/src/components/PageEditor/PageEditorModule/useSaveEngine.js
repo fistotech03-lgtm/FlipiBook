@@ -10,7 +10,7 @@ import {
   getSupabaseBaseUrl,
   resolveUploadsPath,
 } from "../../../utils/assetUtils";
-import { validateInteractions } from "./interactionValidation";
+import { validateInteractions } from "../Interaction/interactionValidation";
 import { useAuth } from "../../../context/AuthContext";
 import { normalizeForeignObjectNamespaces } from "../LeftActionMenu/Elements/utils/tableElementUtils";
 import { sanitizeSvgXml, safeSerializeSvg } from "../utils/editorUtils";

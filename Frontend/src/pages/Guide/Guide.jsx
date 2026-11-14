@@ -284,7 +284,7 @@ export default function Guide() {
                   }`}
                   strokeWidth={1.75}
                 />
-                <span className="text-[0.63vw] font-semibold text-center leading-tight">
+                <span className="text-[0.68vw] font-medium text-center leading-tight">
                   {item.label}
                 </span>
               </button>
@@ -324,11 +324,11 @@ export default function Guide() {
                         : 'text-gray-600 hover:text-black hover:bg-gray-50'
                     }`}
                   >
-                    <div className="flex items-center gap-[0.5vw] font-semibold text-[0.8vw]">
+                    <div className="flex items-center gap-[0.5vw] font-semibold text-[0.82vw]">
                       <span className={isSectionActive ? 'text-[#EC5137]' : 'text-gray-500'}>
                         {section.icon}
                       </span>
-                      <span className={`text-left font-semibold ${isSectionActive ? 'text-[#EC5137]' : 'text-gray-500'}`}>
+                      <span className={`text-left font-semibold ${isSectionActive ? 'text-[#EC5137]' : 'text-gray-700'}`}>
                         {section.title}
                       </span>
                     </div>
@@ -362,9 +362,9 @@ export default function Guide() {
                         return (
                           <React.Fragment key={subItem.id}>
                             {showGroupHeader && (
-                              <div className="flex items-center gap-[0.35vw] text-[0.68vw] font-bold uppercase tracking-wider text-gray-700 pt-[0.8vh] pb-[0.25vh] px-[0.5vw]">
+                              <div className="flex items-center gap-[0.35vw] text-[0.68vw] font-semibold uppercase tracking-wider text-gray-400 pt-[0.8vh] pb-[0.25vh] px-[0.5vw]">
                                 {subItem.groupIcon && (
-                                  <span className="text-gray-600 shrink-0">
+                                  <span className="text-gray-500 shrink-0">
                                     {subItem.groupIcon}
                                   </span>
                                 )}
@@ -374,10 +374,10 @@ export default function Guide() {
                             <button
                               type="button"
                               onClick={() => setSelectedSubItem(subItem.id)}
-                              className={`w-full text-left px-[0.5vw] py-[0.5vh] text-[0.77vw] rounded-[0.3vw] transition-colors block leading-tight font-medium ${
+                              className={`w-full text-left px-[0.5vw] py-[0.5vh] text-[0.76vw] rounded-[0.3vw] transition-colors block leading-tight ${
                                 isSelected
                                   ? 'text-[#EC5137] bg-[#EC5137]/10 font-semibold'
-                                  : 'text-gray-500 hover:text-black hover:bg-gray-100/60'
+                                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/60 font-normal'
                               }`}
                             >
                               {subItem.label}
@@ -400,18 +400,18 @@ export default function Guide() {
         <div className="flex items-start justify-between pb-[1.4vh] px-[1.5vw]">
           {/* Title on the left */}
           <div className="flex flex-col flex-1 pr-[1.5vw]">
-            <h1 className="text-[1.5vw] font-semibold text-[#3F00FF] tracking-tight leading-snug">
+            <h1 className="text-[1.35vw] font-bold text-gray-900 tracking-tight leading-tight">
               {activeNav === 'Get Started' ? 'Get Started Guide' : activeNav === 'Profile & Account' ? 'Profile & Account Guide' : `${activeNav} Guide`}
             </h1>
             {currentNavItem?.about && (
-              <p className="text-[0.85vw] font-semibold text-gray-700 mt-[0.6vh]">
+              <p className="text-[0.74vw] font-normal text-gray-500 mt-[0.4vh] leading-relaxed">
                 {currentNavItem.about}
               </p>
             )}
           </div>
 
           {/* Right inline controls: Search, Quick Navigation, FAQs */}
-          <div className="flex items-center gap-[0.8vw]  shrink-0 mt-[0.3vh]">
+          <div className="flex items-center gap-[0.8vw] shrink-0 mt-[0.3vh]">
             {/* Search Input Container */}
             <div ref={searchContainerRef} className="relative w-[22vw] min-w-[13rem]">
               <Search
@@ -427,7 +427,7 @@ export default function Guide() {
                   setSearchQuery(e.target.value);
                   setIsSearchOpen(true);
                 }}
-                className="w-full pl-[2.2vw] pr-[2vw] py-[0.45vw] rounded-[0.45vw] border border-gray-200 text-[0.82vw] focus:outline-none focus:border-[#ec5137] focus:ring-1 focus:ring-[#ec5137] bg-white text-gray-700 placeholder-gray-400 shadow-2xs transition-all"
+                className="w-full pl-[2.2vw] pr-[2vw] py-[0.45vw] rounded-[0.45vw] border border-gray-200 text-[0.78vw] font-normal focus:outline-none focus:border-[#ec5137] focus:ring-1 focus:ring-[#ec5137] bg-white text-gray-700 placeholder-gray-400 shadow-2xs transition-all"
               />
               {searchQuery && (
                 <button
@@ -461,7 +461,7 @@ export default function Guide() {
                         >
                           <div className="flex flex-col gap-[0.2vh] pr-[0.5vw]">
                             <div className="flex items-center gap-[0.4vw]">
-                              <span className="text-[0.8vw] font-semibold text-gray-800 group-hover:text-[#ec5137] transition-colors">
+                              <span className="text-[0.82vw] font-semibold text-gray-800 group-hover:text-[#ec5137] transition-colors">
                                 {result.title}
                               </span>
                               <span
@@ -474,7 +474,7 @@ export default function Guide() {
                                 {result.type === 'heading' ? 'Heading' : 'Subheading'}
                               </span>
                             </div>
-                            <div className="text-[0.68vw] text-gray-500 flex items-center gap-[0.3vw] flex-wrap">
+                            <div className="text-[0.68vw] text-gray-400 font-normal flex items-center gap-[0.3vw] flex-wrap">
                               <span>{result.navLabel}</span>
                               {result.headingTitle && (
                                 <>

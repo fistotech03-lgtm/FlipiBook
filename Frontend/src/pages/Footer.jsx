@@ -1,9 +1,23 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import FlipibookLogo from '../assets/logo/Flipibook_logo.svg';
 import { Icon } from '@iconify/react';
 
 export default function Footer() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLetsTalkClick = (e) => {
+    e.preventDefault();
+    if (location.pathname === '/help') {
+      const el = document.getElementById('contact');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else {
+      navigate('/help#contact');
+    }
+  };
   return (
     <footer className="w-full bg-[#212224] text-white font-poppins relative overflow-hidden flex flex-col justify-between">
 
@@ -43,10 +57,15 @@ export default function Footer() {
 
                 {/* Facebook */}
                 <div className="flex items-center justify-between relative py-1">
-                  <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group">
+                  <a
+                    href="https://www.facebook.com/profile.php?id=61595286834761"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EC5137] transition-colors group"
+                  >
                     <Icon icon="fa6-brands:facebook-f" className="text-sm sm:text-base lg:text-[1vw] shrink-0" />
                     <span className="font-medium whitespace-nowrap">Facebook</span>
-                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
+                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EC5137] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
                   </a>
                   {/* Vertical Divider 1 */}
                   <div className="w-[1px] h-4 sm:h-5 lg:h-[1.8vw] bg-white/20 lg:bg-white/40 shrink-0 hidden sm:block absolute -right-3 sm:-right-4 lg:-right-4 xl:-right-6 top-1/2 -translate-y-1/2" />
@@ -54,10 +73,15 @@ export default function Footer() {
 
                 {/* Instagram */}
                 <div className="flex items-center justify-between relative py-1">
-                  <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group">
+                  <a
+                    href="https://www.instagram.com/flipibookofficial/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EC5137] transition-colors group"
+                  >
                     <Icon icon="mdi:instagram" className="text-base sm:text-lg lg:text-[1.15vw] shrink-0" />
                     <span className="font-medium whitespace-nowrap">Instagram</span>
-                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
+                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EC5137] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
                   </a>
                   {/* Vertical Divider 2 */}
                   <div className="w-[1px] h-4 sm:h-5 lg:h-[1.8vw] bg-white/20 lg:bg-white/40 shrink-0 hidden sm:block absolute -right-3 sm:-right-4 lg:-right-4 xl:-right-6 top-1/2 -translate-y-1/2" />
@@ -65,10 +89,15 @@ export default function Footer() {
 
                 {/* LinkedIn */}
                 <div className="flex items-center justify-between relative py-1">
-                  <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group">
+                  <a
+                    href="https://www.linkedin.com/company/143968295"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EC5137] transition-colors group"
+                  >
                     <Icon icon="fa6-brands:linkedin-in" className="text-sm sm:text-base lg:text-[1vw] shrink-0" />
-                    <span className="font-medium whitespace-nowrap">Linked in</span>
-                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
+                    <span className="font-medium whitespace-nowrap">LinkedIn</span>
+                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EC5137] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
                   </a>
                   {/* Vertical Divider 3 */}
                   <div className="w-[1px] h-4 sm:h-5 lg:h-[1.8vw] bg-white/20 lg:bg-white/40 shrink-0 hidden sm:block absolute -right-3 sm:-right-4 lg:-right-4 xl:-right-6 top-1/2 -translate-y-1/2" />
@@ -76,10 +105,15 @@ export default function Footer() {
 
                 {/* YouTube */}
                 <div className="flex items-center justify-between relative py-1">
-                  <a href="#" className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EA7233] transition-colors group">
+                  <a
+                    href="https://www.youtube.com/@Flipibookofficial"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 sm:gap-2 lg:gap-[0.45vw] hover:text-[#EC5137] transition-colors group"
+                  >
                     <Icon icon="fa6-brands:youtube" className="text-sm sm:text-base lg:text-[1.1vw] shrink-0" />
                     <span className="font-medium whitespace-nowrap">YouTube</span>
-                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EA7233] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
+                    <Icon icon="akar-icons:arrow-up-right" className="text-xs lg:text-[0.82vw] text-[#989898] group-hover:text-[#EC5137] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
                   </a>
                 </div>
 
@@ -128,10 +162,11 @@ export default function Footer() {
 
           </div>
 
-          {/* Orange "LET'S TALK" Box - Follows mobile layout: full-width horizontal bar on mobile & tab; converts to vertical right strip only on desktop (lg:) */}
-          <a
-            href="mailto:info@flipibook-o.com"
-            className="mt-6 sm:mt-8 lg:mt-0 w-full lg:w-[8vw] lg:self-auto lg:h-auto bg-[#EA7233] hover:bg-[#d96528] text-white flex flex-row lg:flex-col items-center justify-between py-4 px-6 sm:py-4.5 sm:px-8 lg:py-[1.2vw] lg:px-[1vw] rounded-xl lg:rounded-none transition-all duration-300 group shadow-lg z-20 cursor-pointer shrink-0"
+          {/* Orange "LET'S TALK" Box - Navigates to Help page & scrolls directly to contact form */}
+          <Link
+            to="/help#contact"
+            onClick={handleLetsTalkClick}
+            className="mt-6 sm:mt-8 lg:mt-0 w-full lg:w-[8vw] lg:self-auto lg:h-auto bg-[#EC5137] hover:bg-[#d9442b] text-white flex flex-row lg:flex-col items-center justify-between py-4 px-6 sm:py-4.5 sm:px-8 lg:py-[1.2vw] lg:px-[1vw] rounded-xl lg:rounded-none transition-all duration-300 group shadow-lg z-20 cursor-pointer shrink-0"
           >
             {/* Text on mobile/tab (left), text on desktop (bottom) */}
             <div className="text-base sm:text-lg lg:text-[1.5vw] font-semibold text-left lg:text-center uppercase tracking-wider leading-tight order-1 lg:order-2 lg:pb-[0.4vw]">
@@ -146,7 +181,7 @@ export default function Footer() {
                 className="w-6 h-6 sm:w-7 sm:h-7 lg:w-[4.8vw] lg:h-[4.8vw] text-white group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform stroke-[0.3]"
               />
             </div>
-          </a>
+          </Link>
 
         </div>
 
@@ -186,16 +221,16 @@ export default function Footer() {
 
           {/* Copyright Left */}
           <div className="font-normal text-white/80 leading-relaxed">
-            Copyright © 2026 <a href="https://fist-o.com/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 text-white/90 font-normal hover:text-[#EA7233] transition-colors cursor-pointer">Fisto Tech Private Limited</a>. All Rights Reserved.
+            Copyright © 2026 <a href="https://fist-o.com/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 text-white/90 font-normal hover:text-[#EC5137] transition-colors cursor-pointer">Fisto Tech Private Limited</a>. All Rights Reserved.
           </div>
 
           {/* Legal Links Right */}
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-4 lg:gap-[1vw] text-white/80 font-normal">
-            <Link to="/privacy-policy" className="hover:text-[#EA7233] transition-colors">Privacy Policy</Link>
+            <Link to="/privacy-policy" className="hover:text-[#EC5137] transition-colors">Privacy Policy</Link>
             <span className="text-white/20">|</span>
-            <Link to="/terms-and-conditions" className="hover:text-[#EA7233] transition-colors">Terms & Conditions</Link>
+            <Link to="/terms-and-conditions" className="hover:text-[#EC5137] transition-colors">Terms & Conditions</Link>
             <span className="text-white/20">|</span>
-            <Link to="/cookie-policy" className="hover:text-[#EA7233] transition-colors">Cookie Policy</Link>
+            <Link to="/cookie-policy" className="hover:text-[#EC5137] transition-colors">Cookie Policy</Link>
           </div>
 
         </div>

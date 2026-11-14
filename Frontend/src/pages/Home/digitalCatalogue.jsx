@@ -145,76 +145,44 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
     playFlipSound();
   }, [playFlipSound, updateStepFromPage]);
 
-  // Desktop scroll-driven page turn (Step 1 <-> Step 2 <-> Step 3)
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+  const [isPlaying, setIsPlaying] = useState(false);
+  const isPlayingRef = useRef(false);
+  const playIntervalRef = useRef(null);
 
-    let hasCentered = false;
-
-    const handleWheel = (e) => {
-      if (window.innerWidth < 1024) return;
-      if (!heroBookRef.current) return;
-
-      const rect = el.getBoundingClientRect();
-      const currentStep = activeStepRef.current;
-
-      // When section comes into view and user scrolls down, lock and flip pages first
-      if (e.deltaY > 0) {
-        // If section is reaching the viewport top
-        if (rect.top <= 100 && rect.bottom >= window.innerHeight * 0.5) {
-          if (currentStep < 5) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Smooth snap to center section once when flipping starts
-            if (!hasCentered && Math.abs(rect.top) > 20) {
-              hasCentered = true;
-              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-
-            if (!isWheelingRef.current) {
-              isWheelingRef.current = true;
-              const nextStep = currentStep + 1;
-              flipToStep(nextStep);
-              setTimeout(() => {
-                isWheelingRef.current = false;
-              }, 700);
-            }
-            return false;
-          } else {
-            // Once Step 5 (home 8) is reached, allow natural scroll to the next section
-            hasCentered = false;
-          }
-        }
-      }
-      // Scrolling UP
-      else if (e.deltaY < 0) {
-        // Only flip backwards if section is fully aligned in view
-        if (rect.top >= -50 && rect.top <= 100) {
-          if (currentStep > 1) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            if (!isWheelingRef.current) {
-              isWheelingRef.current = true;
-              const prevStep = currentStep - 1;
-              flipToStep(prevStep);
-              setTimeout(() => {
-                isWheelingRef.current = false;
-              }, 700);
-            }
-            return false;
-          }
-        }
-      }
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: false, capture: true });
-    return () => {
-      window.removeEventListener('wheel', handleWheel, { capture: true });
-    };
+  const flipPrev = useCallback(() => {
+    if (activeStepRef.current > 1) {
+      flipToStep(activeStepRef.current - 1);
+    }
   }, [flipToStep]);
+
+  const flipNext = useCallback(() => {
+    if (activeStepRef.current < 5) {
+      flipToStep(activeStepRef.current + 1);
+    }
+  }, [flipToStep]);
+
+  // Autoplay handler: auto flip through pages, stop and return to page 1 on completion
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+    if (isPlaying) {
+      playIntervalRef.current = setInterval(() => {
+        const current = activeStepRef.current;
+        if (current >= 5) {
+          setIsPlaying(false);
+          isPlayingRef.current = false;
+          clearInterval(playIntervalRef.current);
+          flipToStep(1);
+        } else {
+          flipToStep(current + 1);
+        }
+      }, 3000);
+    } else {
+      if (playIntervalRef.current) clearInterval(playIntervalRef.current);
+    }
+    return () => {
+      if (playIntervalRef.current) clearInterval(playIntervalRef.current);
+    };
+  }, [isPlaying, flipToStep]);
 
   return (
     <section ref={containerRef} className="relative w-full min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-7vh)] bg-[#fdfdfd] flex flex-col justify-center pt-4 sm:pt-6 lg:pt-5 pb-6 sm:pb-8 lg:pb-6 px-4 sm:px-8 lg:px-[6vw] font-poppins overflow-hidden">
@@ -280,9 +248,9 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
           initial={{ opacity: 0, scale: 0.94, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
-          className="lg:col-span-6 flex flex-col items-center justify-center self-center relative my-2 sm:my-3 lg:-mt-6 xl:-mt-8 px-1 sm:px-2 w-full"
+          className="lg:col-span-6 flex flex-col items-center justify-center self-center relative my-2 sm:my-3 mt-4 sm:mt-6 lg:mt-8 xl:mt-10 px-1 sm:px-2 w-full"
         >
-          <div className="relative mx-auto w-full max-w-[400px] xs:max-w-[500px] sm:max-w-[720px] lg:max-w-[52vw] xl:max-w-[55vw] aspect-[420/297] flex items-center justify-center group drop-shadow-[0_24px_45px_rgba(0,0,0,0.22)]">
+          <div className="relative mx-auto w-full max-w-[480px] xs:max-w-[600px] sm:max-w-[850px] lg:max-w-[62vw] xl:max-w-[65vw] aspect-[420/297] flex items-center justify-center group drop-shadow-[0_24px_45px_rgba(0,0,0,0.22)]">
             <div
               className={`w-full h-full flex items-center justify-center transition-transform duration-700 ease-in-out ${
                 coverState === 'front'
@@ -325,30 +293,66 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
             </div>
           </div>
 
-          {/* Mobile and Tab Stepper 1 - 2 - 3 directly below the book with increased size and spacing */}
-          <div className="w-full flex lg:hidden items-center justify-center mt-7 sm:mt-9 mb-4 sm:mb-6">
-            <div className="relative flex items-center gap-10 sm:gap-12">
-              {/* Connecting Red Line */}
-              <div className="absolute left-4 sm:left-5 right-4 sm:right-5 top-1/2 -translate-y-1/2 h-[2.5px] bg-[#EC5137] z-0"></div>
+          {/* Clean Pill Bottom Controls (< [ ▶ | 01 / 08 ] >) */}
+          <div className="w-full flex items-center justify-center mt-8 sm:mt-10 lg:mt-14 mb-4 sm:mb-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              {/* Prev Button (outside pill) */}
+              <button
+                type="button"
+                onClick={flipPrev}
+                disabled={activeStep <= 1}
+                className={`transition-colors flex items-center justify-center p-1.5 ${
+                  activeStep <= 1 ? 'text-gray-300 cursor-not-allowed' : 'text-[#555555] hover:text-[#EC5137] cursor-pointer'
+                }`}
+                aria-label="Previous Page"
+              >
+                <Icon icon="lucide:chevron-left" className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
+              </button>
 
-              {/* 1, 2, 3 - dynamic active highlight on each page turn */}
-              {[1, 2, 3].map((step) => {
-                const isActive = activeStep === step;
-                return (
-                  <button
-                    key={step}
-                    type="button"
-                    onClick={() => flipToStep(step)}
-                    className={`relative z-10 w-8 h-8 sm:w-9 sm:h-9 rounded-full font-semibold text-sm sm:text-base flex items-center justify-center cursor-pointer transition-all duration-300 ${
-                      isActive
-                        ? 'bg-[#EC5137] text-white shadow-md scale-110'
-                        : 'bg-white border-2 border-[#EC5137] text-[#EC5137] hover:bg-orange-50'
-                    }`}
-                  >
-                    {step}
-                  </button>
-                );
-              })}
+              {/* Pill Container: [Play | 01 / 08] */}
+              <div className="flex items-center gap-2.5 sm:gap-3 px-5 sm:px-6 py-2 sm:py-2.5 bg-white rounded-full shadow-[0_4px_18px_rgba(0,0,0,0.08)] border border-gray-100">
+                {/* Play / Pause Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsPlaying((prev) => !prev)}
+                  className="transition-colors flex items-center justify-center cursor-pointer text-[#555555] hover:opacity-80"
+                  aria-label={isPlaying ? "Pause autoplay" : "Play flipbook"}
+                >
+                  {isPlaying ? (
+                    <Icon icon="lucide:pause" className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-[#555555] text-[#555555]" />
+                  ) : (
+                    <svg
+                      className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                      viewBox="0 0 24 24"
+                      fill="#555555"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M7 4.5v15l12-7.5-12-7.5z" />
+                    </svg>
+                  )}
+                </button>
+
+                {/* Orange/Red Vertical Separator */}
+                <div className="w-[1.5px] h-3.5 bg-[#EC5137] rounded-full mx-0.5" />
+
+                {/* Page Number (01 / 08 format) */}
+                <span className="text-xs sm:text-sm font-semibold tracking-wider text-[#555555] select-none text-center">
+                  {String(currentPage).padStart(2, '0')} / {String(heroPages.length).padStart(2, '0')}
+                </span>
+              </div>
+
+              {/* Next Button (outside pill) */}
+              <button
+                type="button"
+                onClick={flipNext}
+                disabled={activeStep >= 5}
+                className={`transition-colors flex items-center justify-center p-1.5 ${
+                  activeStep >= 5 ? 'text-gray-300 cursor-not-allowed' : 'text-[#555555] hover:text-[#EC5137] cursor-pointer'
+                }`}
+                aria-label="Next Page"
+              >
+                <Icon icon="lucide:chevron-right" className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
+              </button>
             </div>
           </div>
         </motion.div>
@@ -404,37 +408,7 @@ export default function HeroSection({ navigate, page1, page2, page3, page4, page
             ></motion.div>
           </div>
 
-          {/* Center Block: Connected Horizontal Stepper 1 - 2 - 3 (Desktop only) */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.85, delay: 0.68, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full hidden lg:flex items-center justify-end my-auto"
-          >
-            <div className="relative flex items-center gap-[2.5vw]">
-              {/* Connecting Red Line */}
-              <div className="absolute left-[0.92vw] right-[0.92vw] top-1/2 -translate-y-1/2 h-[2px] bg-[#EC5137] z-0"></div>
-
-              {/* 1, 2, 3 - dynamic active highlight on each page turn */}
-              {[1, 2, 3].map((step) => {
-                const isActive = activeStep === step;
-                return (
-                  <button
-                    key={step}
-                    type="button"
-                    onClick={() => flipToStep(step)}
-                    className={`relative z-10 w-6 h-6 sm:w-7 sm:h-7 lg:w-[1.85vw] lg:h-[1.85vw] rounded-full font-medium text-xs sm:text-sm lg:text-[0.85vw] flex items-center justify-center cursor-pointer transition-all duration-300 ${
-                      isActive
-                        ? 'bg-[#EC5137] text-white shadow-md scale-110'
-                        : 'bg-white border-2 border-[#EC5137] text-[#EC5137] hover:bg-orange-50'
-                    }`}
-                  >
-                    {step}
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
+          {/* Center Block: Connected Horizontal Stepper 1 - 2 - 3 (Removed as requested) */}
 
           {/* Bottom Block: Customer Reviews with Orange Rings */}
           <motion.div

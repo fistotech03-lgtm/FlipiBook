@@ -9,11 +9,11 @@ const SmartSolutionsSection = () => {
   const sectionRef = useRef(null);
 
   return (
-    <section ref={sectionRef} className="relative w-full min-h-screen sm:min-h-0 sm:h-auto lg:h-[100vh] bg-white font-sans py-8 sm:py-6 lg:py-[1.2vw] px-4 sm:px-8 lg:px-[6vw] flex flex-col justify-between items-center overflow-hidden">
+    <section ref={sectionRef} className="relative w-full min-h-screen sm:min-h-0 sm:h-auto lg:h-[100vh] bg-[#FAFAFA] font-sans py-8 sm:py-6 lg:py-[1.2vw] px-4 sm:px-8 lg:px-[6vw] flex flex-col justify-between items-center overflow-hidden">
 
       {/* Top FEATURES Tag */}
       <div className="w-full flex items-center justify-between pointer-events-none select-none z-10 pt-1 lg:pt-[0.4vw]">
-        <div className="flex items-center gap-2 sm:gap-3 lg:gap-[0.6vw]">
+        <div className="flex items-center gap-2 sm:gap-3 lg:gap-[0.6vw] mt-5 sm:mt-7 lg:mt-[1.6vw]">
           <span className="text-[10px] sm:text-xs lg:text-[0.68vw] font-bold tracking-[0.16em] sm:tracking-[0.25em] text-[#35363A] uppercase">
             INTERACTIVE 3D PRODUCT VIEWER
           </span>
@@ -73,22 +73,19 @@ const SmartSolutionsSection = () => {
             whileInView={{ scale: 1, opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 1.0, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="relative z-20 w-[56vw] sm:w-[33vw] md:w-[31vw] lg:w-[26vw] flex flex-col items-center justify-center pt-2 sm:pt-4 md:pt-6 lg:pt-[0.5vw] lg:-mt-[5.2vw]"
+            className="relative z-20 w-[56vw] sm:w-[33vw] md:w-[31vw] lg:w-[26vw] flex flex-col items-center justify-center -mt-6 sm:-mt-8 md:-mt-10 lg:-mt-[9.5vw] xl:-mt-[10vw]"
           >
             <img
               src={CotImage}
               alt="Medical Hospital Bed Cot 3D Model"
-              className="w-full h-auto lg:w-[26vw] object-contain drop-shadow-[0_1.5vw_2vw_rgba(0,0,0,0.14)] hover:scale-105 transition-transform duration-700"
+              className="w-full h-auto lg:w-[26vw] object-contain hover:scale-105 transition-transform duration-700"
             />
-
-            {/* Soft Ground Shadow */}
-            <div className="w-[85%] h-2.5 sm:h-3 lg:h-[0.9vw] bg-black/15 rounded-full filter blur-md -mt-1 lg:-mt-[0.2vw] pointer-events-none" />
           </motion.div>
         </div>
 
         {/* RIGHT SIDE TEXT CONTENT */}
         <div
-          className="w-full lg:w-[33vw] flex flex-col justify-center space-y-2.5 sm:space-y-2.5 lg:space-y-[0.8vw] text-center lg:text-left items-center lg:items-start z-10 px-4 lg:px-0 mt-6 sm:mt-6 lg:mt-0"
+          className="w-full lg:w-[33vw] flex flex-col justify-center space-y-2.5 sm:space-y-2.5 lg:space-y-[0.8vw] text-center lg:text-left items-center lg:items-start z-10 px-4 lg:px-0 mt-4 sm:mt-4 lg:-mt-[4vw] xl:-mt-[4.5vw]"
         >
           {/* Main Heading */}
           <motion.h2
@@ -96,10 +93,11 @@ const SmartSolutionsSection = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="text-2xl sm:text-[45px] lg:text-[2.7vw] font-bold text-gray-900 leading-[1.2] sm:leading-[1.15] tracking-tight font-sans text-center lg:text-left"
+            className="text-2xl sm:text-[45px] lg:text-[2.7vw] font-bold text-[#1f2937] leading-[1.12] tracking-tight font-sans text-center lg:text-left"
           >
-            Let Customers Explore <br className="block" />
-            <span className="text-[#EC5137]">Every Angle</span>
+            Let Customers <br className="block" />
+            <span className="text-[#E75B3E]">Explore Every</span> <br className="block" />
+            <span className="text-[#E75B3E]">Angle</span>
           </motion.h2>
 
           {/* Thin Black Accent Line under heading */}
@@ -108,7 +106,7 @@ const SmartSolutionsSection = () => {
             whileInView={{ scaleX: 1 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="w-10 lg:w-[2.2vw] h-[2.5px] lg:h-[0.2vw] bg-gray-900 rounded-full my-1 lg:my-[0.2vw] origin-left"
+            className="w-12 lg:w-[2.8vw] h-[2px] lg:h-[0.16vw] bg-[#374151] rounded-full my-1.5 lg:my-[0.4vw] origin-left"
           />
 
           {/* Description */}
@@ -117,7 +115,7 @@ const SmartSolutionsSection = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.9, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="text-xs sm:text-[15px] lg:text-[0.96vw] text-gray-700 font-normal leading-relaxed w-full max-w-md lg:w-[28vw] text-justify lg:text-left"
+            className="text-[11.5px] sm:text-[14px] lg:text-[0.84vw] text-[#6b7280] font-normal leading-[1.6] w-full max-w-md lg:w-[26vw] text-left"
           >
             Bring your products into focus with FlipiBook’s interactive 3D digital catalogues. Let customers rotate models, zoom in on details, and click hotspots to understand product features before making an inquiry.
           </motion.p>

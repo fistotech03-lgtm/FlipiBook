@@ -18,7 +18,18 @@ import demoBook3 from '../../assets/Home/demo3.png';
 import demoBook4 from '../../assets/Home/demo4.png';
 import demoBook5 from '../../assets/Home/demo5.png';
 
-export default function InteractiveDemo() {
+// Food demo book assets & background
+import foodbg from '../../assets/Home/foodbg.png';
+import food1 from '../../assets/Home/food1.png';
+import food2 from '../../assets/Home/food2.png';
+import food3 from '../../assets/Home/food3.png';
+import food4 from '../../assets/Home/food4.png';
+import food5 from '../../assets/Home/food5.png';
+import food6 from '../../assets/Home/food6.png';
+import food7 from '../../assets/Home/food7.png';
+import food8 from '../../assets/Home/food8.png';
+
+export default function InteractiveDemo({ page1: h1, page2: h2, page3: h3, page4: h4, page5: h5, page6: h6, page7: h7, page8: h8 }) {
   const [selectedBook, setSelectedBook] = useState(null);
   const [activeModalBook, setActiveModalBook] = useState(null);
 
@@ -32,9 +43,17 @@ export default function InteractiveDemo() {
   const modalAudioRef = useRef(null);
   const bgAudioRef = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [modalCoverState, setModalCoverState] = useState('front');
   const isWheelingRef = useRef(false);
 
-  const heroPages = [page1, page2, page3, page4, page5, page6];
+  const foodPages = [food1, food2, food3, food4, food5, food6, food7, food8];
+  const defaultPages = (h1 && h2 && h3 && h4 && h5 && h6 && h7 && h8)
+    ? [h1, h2, h3, h4, h5, h6, h7, h8]
+    : [page1, page2, page3, page4, page5, page6];
+
+  // Dynamic pages for active book: foodPages for Beyond the Plate (book 0), defaultPages for others
+  const activePages = activeModalBook?.isFood ? foodPages : defaultPages;
+  const totalSteps = activePages.length === 8 ? 5 : 3;
 
   useEffect(() => {
     modalAudioRef.current = new Audio(softCoverAudio);
@@ -87,27 +106,90 @@ export default function InteractiveDemo() {
     }
   }, [isMuted]);
 
+  const updateStepFromPage = useCallback((pageIndex) => {
+    let step = 1;
+    if (activePages.length === 8) {
+      if (pageIndex >= 7) {
+        step = 5;
+      } else if (pageIndex >= 5) {
+        step = 4;
+      } else if (pageIndex >= 3) {
+        step = 3;
+      } else if (pageIndex >= 1) {
+        step = 2;
+      } else {
+        step = 1;
+      }
+      setModalActiveStep(step);
+      modalActiveStepRef.current = step;
+
+      if (pageIndex === 0) {
+        setModalCoverState('front');
+      } else if (pageIndex >= 7) {
+        setModalCoverState('back');
+      } else {
+        setModalCoverState('open');
+      }
+    } else {
+      if (pageIndex >= 4) step = 3;
+      else if (pageIndex >= 2) step = 2;
+      else step = 1;
+      setModalActiveStep(step);
+      modalActiveStepRef.current = step;
+    }
+  }, [activePages.length]);
+
   const flipToStep = useCallback((stepNumber) => {
     if (!modalBookRef.current) return;
     const pageFlipObj = modalBookRef.current.pageFlip();
     if (!pageFlipObj) return;
 
     let targetPageIndex = 0;
-    if (stepNumber === 1) targetPageIndex = 0;
-    else if (stepNumber === 2) targetPageIndex = 2;
-    else if (stepNumber === 3) targetPageIndex = 4;
+    if (activePages.length === 8) {
+      if (stepNumber === 1) targetPageIndex = 0;
+      else if (stepNumber === 2) targetPageIndex = 1;
+      else if (stepNumber === 3) targetPageIndex = 3;
+      else if (stepNumber === 4) targetPageIndex = 5;
+      else if (stepNumber === 5) targetPageIndex = 7;
+    } else {
+      if (stepNumber === 1) targetPageIndex = 0;
+      else if (stepNumber === 2) targetPageIndex = 2;
+      else if (stepNumber === 3) targetPageIndex = 4;
+    }
 
-    pageFlipObj.flip(targetPageIndex);
+    const currentStep = modalActiveStepRef.current;
+    if (currentStep === stepNumber) return;
+
     setModalActiveStep(stepNumber);
     modalActiveStepRef.current = stepNumber;
+
+    if (activePages.length === 8) {
+      if (stepNumber === 1) setModalCoverState('front');
+      else if (stepNumber === totalSteps) setModalCoverState('back');
+      else setModalCoverState('open');
+    }
+
+    const stepDiff = stepNumber - currentStep;
+    if (stepDiff === 1) {
+      pageFlipObj.flipNext();
+    } else if (stepDiff === -1) {
+      pageFlipObj.flipPrev();
+    } else {
+      if (typeof pageFlipObj.turnToPage === 'function') {
+        pageFlipObj.turnToPage(targetPageIndex);
+      } else {
+        pageFlipObj.flip(targetPageIndex);
+      }
+    }
+
     playFlipSound();
-  }, [playFlipSound]);
+  }, [playFlipSound, activePages.length, totalSteps]);
 
   const flipNext = useCallback(() => {
-    if (modalActiveStepRef.current < 3) {
+    if (modalActiveStepRef.current < totalSteps) {
       flipToStep(modalActiveStepRef.current + 1);
     }
-  }, [flipToStep]);
+  }, [flipToStep, totalSteps]);
 
   const flipPrev = useCallback(() => {
     if (modalActiveStepRef.current > 1) {
@@ -121,7 +203,7 @@ export default function InteractiveDemo() {
     if (isPlaying && activeModalBook) {
       playIntervalRef.current = setInterval(() => {
         const current = modalActiveStepRef.current;
-        if (current >= 3) {
+        if (current >= totalSteps) {
           // Reached the last page: stop autoplay and return to 1st page
           setIsPlaying(false);
           isPlayingRef.current = false;
@@ -137,7 +219,7 @@ export default function InteractiveDemo() {
     return () => {
       if (playIntervalRef.current) clearInterval(playIntervalRef.current);
     };
-  }, [isPlaying, activeModalBook, flipToStep]);
+  }, [isPlaying, activeModalBook, flipToStep, totalSteps]);
 
   // Reset autoplay and step on modal close
   useEffect(() => {
@@ -146,20 +228,16 @@ export default function InteractiveDemo() {
       isPlayingRef.current = false;
       setModalActiveStep(1);
       modalActiveStepRef.current = 1;
+      setModalCoverState('front');
       if (playIntervalRef.current) clearInterval(playIntervalRef.current);
     }
   }, [activeModalBook]);
 
   const onBookFlip = useCallback((e) => {
     const pageIndex = e.data;
-    let step = 1;
-    if (pageIndex >= 4) step = 3;
-    else if (pageIndex >= 2) step = 2;
-    else step = 1;
-    setModalActiveStep(step);
-    modalActiveStepRef.current = step;
+    updateStepFromPage(pageIndex);
     playFlipSound();
-  }, [playFlipSound]);
+  }, [playFlipSound, updateStepFromPage]);
 
   // Handle wheel scrolling inside modal to flip pages
   const handleModalWheel = useCallback((e) => {
@@ -174,7 +252,7 @@ export default function InteractiveDemo() {
 
     if (e.deltaY > 0) {
       // scroll down -> flip next
-      if (modalActiveStepRef.current < 3) {
+      if (modalActiveStepRef.current < totalSteps) {
         isWheelingRef.current = true;
         flipToStep(modalActiveStepRef.current + 1);
         setTimeout(() => {
@@ -191,14 +269,15 @@ export default function InteractiveDemo() {
         }, 600);
       }
     }
-  }, [flipToStep]);
+  }, [flipToStep, totalSteps]);
 
   const books = [
     {
       id: 0,
-      title: "The Wise",
-      subtitle: "Man's Fear",
+      title: "Beyond The",
+      subtitle: "Plate",
       cover: demoBook1,
+      isFood: true,
     },
     {
       id: 1,
@@ -423,7 +502,16 @@ export default function InteractiveDemo() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.3 }}
-              className="relative w-full max-w-6xl xl:max-w-7xl bg-white rounded-2xl shadow-2xl p-4 sm:p-5 lg:p-6 flex flex-col items-center max-h-[86vh] overflow-hidden mt-4 sm:mt-6"
+              style={
+                activeModalBook?.isFood
+                  ? {
+                      backgroundImage: `url(${foodbg})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }
+                  : {}
+              }
+              className="relative w-full max-w-5xl xl:max-w-6xl bg-white rounded-2xl shadow-2xl p-4 sm:p-5 lg:p-6 flex flex-col items-center justify-between max-h-[82vh] overflow-hidden mt-2"
               onClick={(e) => e.stopPropagation()}
               onWheel={handleModalWheel}
             >
@@ -437,17 +525,23 @@ export default function InteractiveDemo() {
               </button>
 
               {/* Modal Top Title */}
-              <div className="w-full flex items-center justify-between border-b border-gray-100 pb-2 mb-2 pr-10">
+              <div className={`w-full flex items-center justify-between border-b pb-2 mb-2 pr-10 ${
+                activeModalBook?.isFood ? 'border-white/20' : 'border-gray-100'
+              }`}>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] sm:text-xs font-semibold tracking-wider text-[#EC5137] uppercase">
                     Interactive Catalogue Demo
                   </span>
-                  <span className="text-gray-300">•</span>
-                  <span className="text-xs sm:text-sm font-medium text-gray-700">
+                  <span className={activeModalBook?.isFood ? "text-white/40" : "text-gray-300"}>•</span>
+                  <span className={`text-xs sm:text-sm font-medium ${
+                    activeModalBook?.isFood ? "text-white drop-shadow" : "text-gray-700"
+                  }`}>
                     {activeModalBook.title} {activeModalBook.subtitle}
                   </span>
                 </div>
-                <span className="text-[11px] sm:text-xs text-gray-400 hidden sm:inline-block">
+                <span className={`text-[11px] sm:text-xs hidden sm:inline-block ${
+                  activeModalBook?.isFood ? "text-white/70" : "text-gray-400"
+                }`}>
                   Scroll or click page to flip
                 </span>
               </div>
@@ -470,46 +564,60 @@ export default function InteractiveDemo() {
                 </button>
 
                 {/* Flipbook Canvas */}
-                <div className="w-full max-w-[1000px] xl:max-w-[1100px] h-[58vh] max-h-[540px] flex items-center justify-center overflow-visible">
-                  <HTMLFlipBook
-                    width={595}
-                    height={842}
-                    size="stretch"
-                    minWidth={320}
-                    maxWidth={1200}
-                    minHeight={250}
-                    maxHeight={950}
-                    maxShadowOpacity={0.5}
-                    showCover={false}
-                    mobileScrollSupport={true}
-                    clickEventForward={false}
-                    useMouseEvents={true}
-                    onFlip={onBookFlip}
-                    flippingTime={800}
-                    swipeDistance={30}
-                    ref={modalBookRef}
-                    startPage={0}
-                    className="w-full h-full mx-auto"
+                <div className="relative mx-auto w-full max-w-[560px] sm:max-w-[590px] xl:max-w-[620px] aspect-[420/297] flex items-center justify-center">
+                  <div
+                    key={activeModalBook?.id || 'modal-book'}
+                    className={`w-full h-full flex items-center justify-center transition-transform duration-700 ease-in-out ${
+                      activePages.length === 8
+                        ? modalCoverState === 'front'
+                          ? '-translate-x-[25%]'
+                          : modalCoverState === 'back'
+                          ? 'translate-x-[25%]'
+                          : 'translate-x-0'
+                        : 'translate-x-0'
+                    }`}
                   >
-                    {heroPages.map((pageSrc, index) => (
-                      <div key={index} className="bg-white overflow-hidden shadow-inner flex items-center justify-center w-full h-full">
-                        <img
-                          src={pageSrc}
-                          alt={`Page ${index + 1}`}
-                          className="w-full h-full object-contain select-none pointer-events-none"
-                        />
-                      </div>
-                    ))}
-                  </HTMLFlipBook>
+                    <HTMLFlipBook
+                      width={595}
+                      height={842}
+                      size="stretch"
+                      minWidth={210}
+                      maxWidth={1200}
+                      minHeight={297}
+                      maxHeight={1700}
+                      maxShadowOpacity={0.5}
+                      showCover={activePages.length === 8}
+                      mobileScrollSupport={true}
+                      clickEventForward={false}
+                      useMouseEvents={true}
+                      onFlip={onBookFlip}
+                      flippingTime={900}
+                      swipeDistance={30}
+                      ref={modalBookRef}
+                      startPage={0}
+                      className="w-full h-full mx-auto"
+                    >
+                      {activePages.map((pageSrc, index) => (
+                        <div key={index} className="bg-white overflow-hidden shadow-inner flex items-center justify-center w-full h-full">
+                          <img
+                            src={pageSrc}
+                            alt={`Page ${index + 1}`}
+                            className="w-full h-full block object-cover select-none pointer-events-none"
+                            style={{ margin: 0, padding: 0 }}
+                          />
+                        </div>
+                      ))}
+                    </HTMLFlipBook>
+                  </div>
                 </div>
 
                 {/* Right Navigation Arrow */}
                 <button
                   type="button"
                   onClick={flipNext}
-                  disabled={modalActiveStep >= 3}
+                  disabled={modalActiveStep >= totalSteps}
                   className={`absolute right-1 sm:right-3 z-20 w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all shadow-md cursor-pointer ${
-                    modalActiveStep >= 3
+                    modalActiveStep >= totalSteps
                       ? 'bg-gray-100 text-gray-300 cursor-not-allowed opacity-40'
                       : 'bg-white hover:bg-gray-50 text-gray-800 hover:text-[#EC5137] hover:scale-105 active:scale-95'
                   }`}
@@ -538,22 +646,21 @@ export default function InteractiveDemo() {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const clickX = e.clientX - rect.left;
                     const pct = clickX / rect.width;
-                    if (pct < 0.35) flipToStep(1);
-                    else if (pct < 0.7) flipToStep(2);
-                    else flipToStep(3);
+                    const targetStep = Math.min(totalSteps, Math.max(1, Math.ceil(pct * totalSteps)));
+                    flipToStep(targetStep);
                   }}
                   title="Click to jump to section"
                 >
                   <motion.div
                     className="h-full bg-[#EC5137] rounded-full"
-                    animate={{ width: `${(modalActiveStep / 3) * 100}%` }}
+                    animate={{ width: `${(modalActiveStep / totalSteps) * 100}%` }}
                     transition={{ duration: 0.35, ease: "easeOut" }}
                   />
                 </div>
 
                 {/* Page / Step Number */}
                 <span className="text-xs sm:text-[13px] font-semibold text-gray-700 tracking-wider shrink-0 min-w-[3rem] text-right">
-                  {modalActiveStep} / 3
+                  {modalActiveStep} / {totalSteps}
                 </span>
 
                 {/* Right Bottom Corner Sound/Mute Toggle Button */}

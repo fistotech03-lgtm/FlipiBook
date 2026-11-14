@@ -458,7 +458,16 @@ export default function Home() {
       />
 
       {/* 6. INTERACTIVE DEMO: Experience Flipbooks in Action (5 Books shelf) */}
-      <InteractiveDemo />
+      <InteractiveDemo
+        page1={page1}
+        page2={page2}
+        page3={page3}
+        page4={page4}
+        page5={page5}
+        page6={page6}
+        page7={page7}
+        page8={page8}
+      />
 
       {/* 6. ABOUT US: We Transform Digital Ideas (Multi-device display) */}
       <AboutUsSection />

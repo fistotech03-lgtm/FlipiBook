@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AuthModal } from "./components/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./Layouts/MainLayout";
+import ScrollToTop from "./components/ScrollToTop";
 
 function AuthRouteRedirect({ mode = "signin" }) {
   const { openAuthModal } = useAuth();
@@ -31,17 +32,30 @@ const Home = lazy(() => import("./pages/Home"));
 const MyFlipbooks = lazy(() => import("./pages/MyFlipbooks"));
 const Templates = lazy(() => import("./pages/Templates"));
 const Explore = lazy(() => import("./pages/Explore"));
-const Features = lazy(() => import("./pages/Features"));
+const Features = lazy(() => import("./pages/Features/index.jsx"));
+const CreationFeatures = lazy(() => import("./pages/Features/CreationFeatures"));
+const ARFeatures = lazy(() => import("./pages/Features/ARFeatures"));
+const ThreeDStudioEditorFeatures = lazy(() => import("./pages/Features/3DStudioEditorFeatures"));
+const ExploreFeatures = lazy(() => import("./pages/Features/ExploreFeatures"));
+const MyShelfFeatures = lazy(() => import("./pages/Features/MyShelfFeatures"));
+const PageEditorFeatures = lazy(() => import("./pages/Features/PageEditorFreatures"));
+const LayoutFeatures = lazy(() => import("./pages/Features/LayoutFeatures"));
+const AnalyticsFeatures = lazy(() => import("./pages/Features/AnalyticsFeatures"));
+const ConverterFeatures = lazy(() => import("./pages/Features/ConverterFeatures"));
 const Help = lazy(() => import("./pages/Help"));
 const Converter = lazy(() => import("./pages/Converter"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Forum = lazy(() => import("./pages/Forum"));
 const Overview = lazy(() => import("./pages/Overview"));
 const Guide = lazy(() => import("./pages/Guide/Guide"));
+const TermsAndConditions = lazy(() => import("./pages/LegalTerms"));
+const PrivacyPolicy = lazy(() => import("./pages/LegalPrivacy"));
+const CookiePolicy = lazy(() => import("./pages/LegalCookies"));
 
 // Preview & Share Pages
 const PreviewPage = lazy(() => import("./pages/PreviewPage"));
 const ShareViewBook = lazy(() => import("./pages/shareviewbook"));
+const PublicShelfView = lazy(() => import("./pages/PublicShelfView"));
 const ARView = lazy(() => import("./pages/ARView"));
 const ComingSoonBanner = lazy(() => import("./pages/ComingSoonBanner"));
 
@@ -83,6 +97,7 @@ export default function App() {
         <ModernToastProvider>
           <ConfirmationProvider>
             <Router>
+            <ScrollToTop />
             <AuthModal />
             <Routes>
               {/* Direct visits to auth URLs automatically open the Auth Modal over home */}
@@ -144,6 +159,14 @@ export default function App() {
                   </Suspense>
                 }
               />
+              <Route
+                path="/shelf/:shelfId"
+                element={
+                  <Suspense fallback={null}>
+                    <PublicShelfView />
+                  </Suspense>
+                }
+              />
 
               {/* Protected Owner Preview Route */}
               <Route
@@ -196,6 +219,16 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="/my-flipbooks/:section"
+                  element={
+                    <ProtectedRoute>
+                      <Suspense fallback={null}>
+                        <MyFlipbooks />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/templates"
                   element={
                     <Suspense fallback={null}>
@@ -235,6 +268,78 @@ export default function App() {
                     </Suspense>
                   }
                 />
+                <Route
+                  path="/features/creation"
+                  element={
+                    <Suspense fallback={null}>
+                      <CreationFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/ar"
+                  element={
+                    <Suspense fallback={null}>
+                      <ARFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/3d-editor-studio"
+                  element={
+                    <Suspense fallback={null}>
+                      <ThreeDStudioEditorFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/explore"
+                  element={
+                    <Suspense fallback={null}>
+                      <ExploreFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/my-shelf"
+                  element={
+                    <Suspense fallback={null}>
+                      <MyShelfFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/page-editor"
+                  element={
+                    <Suspense fallback={null}>
+                      <PageEditorFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/interactive-layout"
+                  element={
+                    <Suspense fallback={null}>
+                      <LayoutFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/analytics"
+                  element={
+                    <Suspense fallback={null}>
+                      <AnalyticsFeatures />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/features/converter"
+                  element={
+                    <Suspense fallback={null}>
+                      <ConverterFeatures />
+                    </Suspense>
+                  }
+                />
 
                 <Route
                   path="/help"
@@ -265,6 +370,72 @@ export default function App() {
                   element={
                     <Suspense fallback={null}>
                       <Forum />
+                    </Suspense>
+                  }
+                />
+
+                {/* Legal & Policy Routes */}
+                <Route
+                  path="/terms-and-conditions"
+                  element={
+                    <Suspense fallback={null}>
+                      <TermsAndConditions />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/terms"
+                  element={
+                    <Suspense fallback={null}>
+                      <TermsAndConditions />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/terms-of-use"
+                  element={
+                    <Suspense fallback={null}>
+                      <TermsAndConditions />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/terms-of-service"
+                  element={
+                    <Suspense fallback={null}>
+                      <TermsAndConditions />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/privacy-policy"
+                  element={
+                    <Suspense fallback={null}>
+                      <PrivacyPolicy />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/privacy"
+                  element={
+                    <Suspense fallback={null}>
+                      <PrivacyPolicy />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/cookie-policy"
+                  element={
+                    <Suspense fallback={null}>
+                      <CookiePolicy />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/cookies"
+                  element={
+                    <Suspense fallback={null}>
+                      <CookiePolicy />
                     </Suspense>
                   }
                 />

@@ -2350,7 +2350,7 @@ const getPublicBook = async (req, res) => {
     }
     const resolvedBaseUrl = `/storage/${effectiveUserFolder}/books/${primaryFolder}/${safeBookName}/`;
 
-    const populatedPages = (book.pages || []).map((p) => {
+    let populatedPages = (book.pages || []).map((p) => {
       const pageObj = p.toObject ? p.toObject() : { ...p };
       let pageContent = "";
 
@@ -2396,6 +2396,64 @@ const getPublicBook = async (req, res) => {
         html: pageContent,
       };
     });
+
+    // Seamlessly hydrate extracted WebP pages from manifest.json if present on disk
+    try {
+      let manifestData = null;
+      for (const candDir of candidateDirs) {
+        const mPath = path.join(candDir, 'manifest.json');
+        if (fs.existsSync(mPath)) {
+          manifestData = JSON.parse(fs.readFileSync(mPath, 'utf8'));
+          break;
+        }
+      }
+      if (!manifestData) {
+        for (const uf of userFolders) {
+          const mPath = path.join(storageRoot, uf, 'books', book.v_id, 'manifest.json');
+          if (fs.existsSync(mPath)) {
+            manifestData = JSON.parse(fs.readFileSync(mPath, 'utf8'));
+            break;
+          }
+        }
+      }
+
+      if (manifestData && Array.isArray(manifestData.pages) && manifestData.pages.length > 0) {
+        const mBaseUrl = manifestData.baseUrl || `/storage/${effectiveUserFolder}/books/${book.v_id}/pages/`;
+        const totalManifestPages = manifestData.pages.length;
+
+        const existingMap = new Map();
+        populatedPages.forEach(p => {
+          const pNum = Number(p.pageNumber || p.id);
+          if (pNum) existingMap.set(pNum, p);
+        });
+
+        const merged = [];
+        for (let i = 1; i <= totalManifestPages; i++) {
+          const ep = existingMap.get(i);
+          const hasRealContent = ep && ep.content && !ep.content.includes('generateSkeletonPageSvg') && !ep.content.includes('createDefaultPageData') && !ep.isPlaceholder;
+          if (hasRealContent) {
+            merged.push(ep);
+          } else {
+            const pageImgUrl = `${mBaseUrl}${i}.webp`;
+            const pageHtml = `<div style="position:relative;width:100%;height:100%;"><img src="${pageImgUrl}" style="width:100%;height:100%;object-fit:contain;display:block;" alt="Page ${i}" /></div>`;
+            merged.push({
+              id: i,
+              pageNumber: i,
+              name: `Page ${i}`,
+              fileName: `${i}.webp`,
+              imageUrl: pageImgUrl,
+              content: pageHtml,
+              html: pageHtml,
+              isPlaceholder: false,
+              ...(ep || {})
+            });
+          }
+        }
+        populatedPages = merged;
+      }
+    } catch (mErr) {
+      console.warn('[customizedEditorController] Manifest merge warning:', mErr.message);
+    }
 
     const docFlipbookInfo = book.Customized_Settings?.FlipbookInfo || {};
     const docSettings = { ...(book.Customized_Settings || {}) };

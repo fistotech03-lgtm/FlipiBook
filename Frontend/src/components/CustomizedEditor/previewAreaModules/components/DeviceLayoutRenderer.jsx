@@ -147,7 +147,7 @@ const DeviceLayoutRenderer = ({
 
                             <style>{`
                                 #preview-area-root .flipbook-magazine-wrapper {
-                                    transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1) !important;
+                                    transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1) !important;
                                 }
                             `}</style>
 
@@ -200,7 +200,7 @@ const DeviceLayoutRenderer = ({
 
                             <style>{`
                                 #preview-area-root .flipbook-magazine-wrapper {
-                                    transition: transform 0.8 s cubic-bezier(0.22, 1, 0.36, 1) !important;
+                                    transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1) !important;
                                 }
                             `}</style>
 

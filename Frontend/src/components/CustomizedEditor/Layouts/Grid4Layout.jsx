@@ -254,13 +254,21 @@ const Grid4Layout = ({
 
     // Keyboard and Mouse Wheel Actions
     React.useEffect(() => {
+        let lastKeyTime = 0;
         const handleKeyDown = (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+            const now = Date.now();
+            if (bookRef.current?.pageFlip()?.isAnimating?.()) return;
+
             switch (e.key) {
                 case 'ArrowRight':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     bookRef.current?.pageFlip()?.flipNext();
                     break;
                 case 'ArrowLeft':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     bookRef.current?.pageFlip()?.flipPrev();
                     break;
                 case 'ArrowUp':
@@ -291,7 +299,7 @@ const Grid4Layout = ({
                     return;
                 }
                 const now = Date.now();
-                if (now - lastWheelTime < 600) return;
+                if (now - lastWheelTime < 400 || bookRef.current?.pageFlip()?.isAnimating?.()) return;
                 
                 if (e.deltaY > 0) {
                     bookRef.current?.pageFlip()?.flipNext();
@@ -1061,32 +1069,58 @@ const Grid4Layout = ({
                     onMouseLeave={() => isFullscreen && setIsCanvasHovered(false)}
                 >
                     {/* Navigation Arrows */}
-                    {(settings?.navigation?.nextPrevButtons ?? true) && (
-                        <button
-                            className={`absolute top-1/2 -translate-y-1/2 hover:scale-110 transition-all z-20 flex items-center justify-center ${'w-[2.4vw] h-[2.4vw]'} rounded-full`}
-                            style={{
-                                color: getLayoutColor('toolbar-icon', '#FFFFFF'),
-                                backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', '0.15'),
-                                left: `max(2vw, calc(50% + ${localOffset}px ${currentPage === 0 ? '' : `- ${dimWidth}px`} - 3vw))`
-                            }}
-                            onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
-                        >
-                            <Icon icon="lucide:chevron-left" className={`${'w-[1.5vw] h-[1.5vw]'}`} />
-                        </button>
-                    )}
-                    {(settings?.navigation?.nextPrevButtons ?? true) && (
-                        <button
-                            className={`absolute top-1/2 -translate-y-1/2 hover:scale-110 transition-all z-20 flex items-center justify-center ${'w-[2.4vw] h-[2.4vw]'} rounded-full`}
-                            style={{
-                                color: getLayoutColor('toolbar-icon', '#FFFFFF'),
-                                backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', '0.15'),
-                                right: `max(2vw, calc(50% - ${localOffset}px - ${(currentPage >= pages.length - 1 && pages.length % 2 === 0) ? 0 : dimWidth}px - 3vw))`
-                            }}
-                            onClick={() => bookRef.current?.pageFlip()?.flipNext()}
-                        >
-                            <Icon icon="lucide:chevron-right" className={`${'w-[1.5vw] h-[1.5vw]'}`} />
-                        </button>
-                    )}
+                    {(() => {
+                        const hasPrev = currentPage > 0;
+                        const hasNext = currentPage < pages.length - 1;
+                        const isCover = typeof offset === 'number' ? offset < 0 : currentPage === 0;
+                        const isBackCover = typeof offset === 'number' ? offset > 0 : (currentPage >= pages.length - 1 && pages.length % 2 === 0);
+                        const isPortraitLayout = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
+                        const isSinglePage = isPortraitLayout || isCover || isBackCover;
+                        const bookHalfWidth = isSinglePage ? dimWidth / 2 : dimWidth;
+                        const gap = 3.5;
+                        return (
+                            <>
+                                {(settings?.navigation?.nextPrevButtons ?? true) && (
+                                    <button
+                                        className={`absolute top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-[2.4vw] h-[2.4vw] rounded-full ${!hasPrev ? 'pointer-events-none' : 'hover:scale-110 cursor-pointer'}`}
+                                        style={{
+                                            color: getLayoutColor('toolbar-icon', '#FFFFFF'),
+                                            backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', '0.15'),
+                                            left: `calc(50% - ${bookHalfWidth}px - ${gap}vw)`,
+                                            opacity: hasPrev ? 1 : 0,
+                                            pointerEvents: hasPrev ? 'auto' : 'none',
+                                            transition: 'left 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease, transform 0.2s ease'
+                                        }}
+                                        onClick={() => {
+                                            if (!hasPrev) return;
+                                            bookRef.current?.pageFlip()?.flipPrev();
+                                        }}
+                                    >
+                                        <Icon icon="lucide:chevron-left" className="w-[1.5vw] h-[1.5vw]" />
+                                    </button>
+                                )}
+                                {(settings?.navigation?.nextPrevButtons ?? true) && (
+                                    <button
+                                        className={`absolute top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-[2.4vw] h-[2.4vw] rounded-full ${!hasNext ? 'pointer-events-none' : 'hover:scale-110 cursor-pointer'}`}
+                                        style={{
+                                            color: getLayoutColor('toolbar-icon', '#FFFFFF'),
+                                            backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', '0.15'),
+                                            right: `calc(50% - ${bookHalfWidth}px - ${gap}vw)`,
+                                            opacity: hasNext ? 1 : 0,
+                                            pointerEvents: hasNext ? 'auto' : 'none',
+                                            transition: 'right 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease, transform 0.2s ease'
+                                        }}
+                                        onClick={() => {
+                                            if (!hasNext) return;
+                                            bookRef.current?.pageFlip()?.flipNext();
+                                        }}
+                                    >
+                                        <Icon icon="lucide:chevron-right" className="w-[1.5vw] h-[1.5vw]" />
+                                    </button>
+                                )}
+                            </>
+                        );
+                    })()}
 
                     {/* Page Indicator Badge */}
                     {(settings?.navigation?.pageQuickAccess ?? true) && (

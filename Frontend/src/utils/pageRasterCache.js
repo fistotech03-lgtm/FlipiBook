@@ -13,6 +13,15 @@ const rasterCache = new Map();
 const inFlightPromises = new Map();
 const rasterListeners = new Set();
 
+const normalizeKey = (pageKey, bookId = '') => {
+    if (!pageKey) return '';
+    const pStr = String(pageKey);
+    if (bookId && !pStr.startsWith(`${bookId}_`)) {
+        return `${bookId}_${pStr}`;
+    }
+    return pStr;
+};
+
 export const subscribeRasterCache = (callback) => {
     rasterListeners.add(callback);
     return () => rasterListeners.delete(callback);
@@ -88,9 +97,16 @@ export const rasterizeSvgToWebP = (rawSvg, width = 800, height = 1131, scale = 2
         if (!rawSvg) return resolve(null);
 
         // Instant Fast path: if SVG has an embedded high-res background image, use it directly in 0.0001ms!
-        const directImageMatch = rawSvg.match(/<image\b[^>]*(?:href|xlink:href)=["']((?:data:image\/[a-zA-Z0-9.+_-]+;base64,[^"']+|blob:[^"']+|https?:\/\/[^"']+))["']/i);
-        if (directImageMatch && directImageMatch[1] && (directImageMatch[1].length > 5000 || directImageMatch[1].startsWith('blob:') || directImageMatch[1].startsWith('http'))) {
-            return resolve(directImageMatch[1]);
+        const hasOtherGraphics = /<text\b|<foreignObject\b|<path\b/i.test(rawSvg);
+        const pdfBgMatch = rawSvg.match(/<g\b[^>]*data-type=["']pdf-vector-layer["'][^>]*>[\s\S]*?<image\b[^>]*(?:href|xlink:href)=["']((?:data:image\/[a-zA-Z0-9.+_-]+;base64,[^"']+|blob:[^"']+|https?:\/\/[^"']+))["']/i);
+        if (pdfBgMatch && pdfBgMatch[1]) {
+            return resolve(pdfBgMatch[1]);
+        }
+        if (!hasOtherGraphics) {
+            const directImageMatch = rawSvg.match(/<image\b[^>]*(?:href|xlink:href)=["']((?:data:image\/[a-zA-Z0-9.+_-]+;base64,[^"']+|blob:[^"']+|https?:\/\/[^"']+))["']/i);
+            if (directImageMatch && directImageMatch[1] && (directImageMatch[1].length > 5000 || directImageMatch[1].startsWith('blob:') || directImageMatch[1].startsWith('http'))) {
+                return resolve(directImageMatch[1]);
+            }
         }
 
         try {
@@ -174,17 +190,18 @@ export const rasterizeSvgToWebP = (rawSvg, width = 800, height = 1131, scale = 2
 /**
  * Get cached WebP URL or generate and cache it
  */
-export const getOrRasterizePage = async (pageKey, rawSvg, width = 800, height = 1131) => {
+export const getOrRasterizePage = async (pageKey, rawSvg, width = 800, height = 1131, bookId = '') => {
     if (!rawSvg) return null;
-    if (rasterCache.has(pageKey)) {
-        return rasterCache.get(pageKey);
+    const finalKey = normalizeKey(pageKey, bookId);
+    if (rasterCache.has(finalKey)) {
+        return rasterCache.get(finalKey);
     }
-    if (inFlightPromises.has(pageKey)) {
-        return inFlightPromises.get(pageKey);
+    if (inFlightPromises.has(finalKey)) {
+        return inFlightPromises.get(finalKey);
     }
 
     const promise = rasterizeSvgToWebP(rawSvg, width, height).then((resultUrl) => {
-        inFlightPromises.delete(pageKey);
+        inFlightPromises.delete(finalKey);
         if (resultUrl) {
             // Keep at most 80 pages in memory cache to respect low RAM
             if (rasterCache.size > 80) {
@@ -195,27 +212,46 @@ export const getOrRasterizePage = async (pageKey, rawSvg, width = 800, height = 
                 }
                 rasterCache.delete(firstKey);
             }
-            rasterCache.set(pageKey, resultUrl);
+            rasterCache.set(finalKey, resultUrl);
+            notifyRasterReady(finalKey, resultUrl);
             notifyRasterReady(pageKey, resultUrl);
         }
         return resultUrl;
     });
 
-    inFlightPromises.set(pageKey, promise);
+    inFlightPromises.set(finalKey, promise);
     return promise;
 };
 
 /**
  * Synchronous cache lookup
  */
-export const getCachedRaster = (pageKey) => {
-    return rasterCache.get(pageKey) || null;
+export const getCachedRaster = (pageKey, bookId = '') => {
+    const finalKey = normalizeKey(pageKey, bookId);
+    return rasterCache.get(finalKey) || rasterCache.get(String(pageKey)) || null;
 };
 
 /**
  * Clear all cached raster textures
  */
-export const clearRasterCache = () => {
+export const clearRasterCache = (bookId = '') => {
+    if (bookId) {
+        const prefix = `${bookId}_`;
+        for (const [key, url] of rasterCache.entries()) {
+            if (key.startsWith(prefix)) {
+                if (url && url.startsWith('blob:')) {
+                    try { URL.revokeObjectURL(url); } catch (_) {}
+                }
+                rasterCache.delete(key);
+            }
+        }
+        for (const key of inFlightPromises.keys()) {
+            if (key.startsWith(prefix)) {
+                inFlightPromises.delete(key);
+            }
+        }
+        return;
+    }
     rasterCache.forEach((url) => {
         if (url && url.startsWith('blob:')) {
             try { URL.revokeObjectURL(url); } catch (_) {}

@@ -217,14 +217,26 @@ async function processExtractionJob(job) {
       JSON.stringify(manifest, null, 2)
     );
 
-    // Sync total pages count with MongoDB collection 'flipbooks' so MyFlipbooks UI shows exact count
+    // Sync total pages count and page structures with MongoDB collection 'flipbooks' so MyFlipbooks UI and Editor load all pages
     try {
       const mongoose = require('mongoose');
       if (mongoose.connection && mongoose.connection.db) {
+        const formattedDbPages = allPages.map(p => ({
+          id: p.pageNumber,
+          pageNumber: p.pageNumber,
+          name: `Page ${p.pageNumber}`,
+          fileName: `${p.pageNumber}.webp`,
+          imageUrl: `${manifest.baseUrl}${p.pageNumber}.webp`,
+          content: `<div style="position:relative;width:100%;height:100%;"><img src="${manifest.baseUrl}${p.pageNumber}.webp" style="width:100%;height:100%;object-fit:contain;display:block;" alt="Page ${p.pageNumber}" /></div>`,
+          html: `<div style="position:relative;width:100%;height:100%;"><img src="${manifest.baseUrl}${p.pageNumber}.webp" style="width:100%;height:100%;object-fit:contain;display:block;" alt="Page ${p.pageNumber}" /></div>`,
+          isPlaceholder: false
+        }));
+
         await mongoose.connection.db.collection('flipbooks').updateOne(
           { v_id: bookId },
           { 
             $set: { 
+              pages: formattedDbPages,
               pagesCount: totalPages,
               'meta.pages': totalPages,
               'meta.pageCount': totalPages,

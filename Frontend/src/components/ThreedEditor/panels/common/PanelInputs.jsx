@@ -7,8 +7,8 @@ export function SliderRow({ label, value = 50, onChange }) {
   return (
     <div className="flex items-center justify-between gap-[0.6vw]">
       <div className="flex items-center gap-[0.2vw] w-[5.5vw] shrink-0">
-        <span className="text-[0.75vw] font-semibold text-gray-700">{label}</span>
-        <Icon icon="heroicons:chevron-down-20-solid" className="w-[0.7vw] h-[0.7vw] text-gray-400" />
+        <span className="text-[0.75vw] font-normal text-gray-800">{label}</span>
+        
       </div>
 
       <div className="flex-1 relative flex items-center">
@@ -22,7 +22,7 @@ export function SliderRow({ label, value = 50, onChange }) {
         />
       </div>
 
-      <span className="text-[0.72vw] font-bold text-gray-700 w-[2vw] text-right shrink-0">
+      <span className="text-[0.72vw] font-normal text-gray-700 w-[2vw] text-right shrink-0">
         {numVal}%
       </span>
     </div>
@@ -143,7 +143,7 @@ export function AxisInput({ axis, value = 0, onChange, step = 0.1, min, max, cla
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        className="w-full text-right text-[0.74vw] font-medium text-gray-900 bg-transparent outline-none pl-[0.1vw] pr-[0.1vw] min-w-0"
+        className="w-full text-right text-[0.74vw] font-normal text-gray-900 bg-transparent outline-none pl-[0.1vw] pr-[0.1vw] min-w-0"
       />
     </div>
   );
@@ -155,6 +155,7 @@ export function DualAxisInput({
   yVal = 210,
   onChangeX,
   onChangeY,
+  onChangeLinked,
   isLinked = true,
   onToggleLink,
   step = 1,
@@ -163,7 +164,7 @@ export function DualAxisInput({
 }) {
   return (
     <div className="flex items-center justify-between gap-[0.4vw]">
-      <span className="text-[0.75vw] font-medium text-gray-800 w-[3.5vw] shrink-0">
+      <span className="text-[0.75vw] font-normal text-gray-800 w-[3.5vw] shrink-0">
         {label}
       </span>
       <div className="flex-1 flex items-center gap-[0.4vw]">
@@ -172,8 +173,16 @@ export function DualAxisInput({
             axis="X"
             value={xVal}
             onChange={(v) => {
-              onChangeX && onChangeX(v);
-              if (isLinked && onChangeY) onChangeY(v);
+              if (isLinked) {
+                if (onChangeLinked) {
+                  onChangeLinked(v);
+                } else {
+                  onChangeX && onChangeX(v);
+                  if (onChangeY) onChangeY(v);
+                }
+              } else {
+                onChangeX && onChangeX(v);
+              }
             }}
             step={step}
             min={min}
@@ -195,8 +204,16 @@ export function DualAxisInput({
             axis="Y"
             value={yVal}
             onChange={(v) => {
-              onChangeY && onChangeY(v);
-              if (isLinked && onChangeX) onChangeX(v);
+              if (isLinked) {
+                if (onChangeLinked) {
+                  onChangeLinked(v);
+                } else {
+                  onChangeY && onChangeY(v);
+                  if (onChangeX) onChangeX(v);
+                }
+              } else {
+                onChangeY && onChangeY(v);
+              }
             }}
             step={step}
             min={min}

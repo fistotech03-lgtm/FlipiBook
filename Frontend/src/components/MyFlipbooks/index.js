@@ -9,6 +9,7 @@ export { default as MoveToFolderModal } from './MoveToFolderModal';
 export { default as ConflictModal } from './ConflictModal';
 export { default as ThreeDDashboard } from './ThreeDDashboard';
 export { default as ThreeDBanner } from './ThreeDBanner';
+export { default as AddToFlipbookModal } from './AddToFlipbookModal';
 export { default as FavoritesScreen } from './FavoritesScreen';
 export { default as TrashScreen } from './TrashScreen';
 export { default as MyShelf } from './MyShelf/MyShelf';

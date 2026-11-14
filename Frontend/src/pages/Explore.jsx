@@ -12,7 +12,7 @@ import CreatorProfileModal from './CreatorProfileModal';
 import { useToast } from '../components/CustomToast';
 import { useAuth } from '../context/AuthContext';
 import { LazyPreview } from '../components/MyFlipbooks/LazyPreview';
-import { resolveUploadsPath } from '../utils/assetUtils';
+import { resolveUploadsPath, getAssetBaseUrl } from '../utils/assetUtils';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
 
@@ -145,6 +145,13 @@ const FlipbookCard = ({ v_id, shareId, access, rawBook, authorPicture, authorBgC
     const canShare = isShareEnabled(rawBook);
     const canDownload = isDownloadEnabled(rawBook);
 
+    const userFolder = rawBook?.userID || rawBook?.userId || rawBook?.userEmail?.replace(/[@.]/g, '_');
+    const folderName = rawBook?.folderName || 'default';
+    const bookTitle = rawBook?.flipbookName || rawBook?.realName || bookName;
+    const resolvedIframeBaseUrl = getAssetBaseUrl(userFolder, folderName, bookTitle);
+    const firstPageContent = rawBook?.pages?.[0]?.html || rawBook?.pages?.[0]?.content || null;
+    const firstPageFileName = rawBook?.pages?.[0]?.pageName || 'Page 1.svg';
+
     const menuItems = [
         {
             name: 'View Book',
@@ -184,8 +191,11 @@ const FlipbookCard = ({ v_id, shareId, access, rawBook, authorPicture, authorBgC
                     v_id={v_id}
                     emailId={rawBook?.userEmail}
                     backendUrl={BACKEND_URL}
+                    iframeBaseUrl={resolvedIframeBaseUrl}
                     title={bookName || "Flipbook"}
                     imageUrl={rawBook?.image || null}
+                    firstPageFileName={firstPageFileName}
+                    firstPageContent={firstPageContent}
                 />
             </div>
 
@@ -1054,7 +1064,7 @@ const Explore = () => {
     };
 
     return (
-        <div className="w-full bg-white text-slate-900 font-sans min-h-screen pb-12">
+        <div className="w-full bg-white text-slate-900 font-sans min-h-screen flex flex-col justify-between">
             <style>{`
                 input[type="range"].custom-range-slider { 
                     -webkit-appearance: none; 
@@ -1442,7 +1452,7 @@ const Explore = () => {
             {/* ------------------------------------------------------------- */}
             {/* MAIN SEPARATE TWO-COLUMN LAYOUT: SIDEBAR & RIGHT CONTENT */}
             {/* ------------------------------------------------------------- */}
-            <div className="w-full px-[2vw] md:px-[2vw] py-[2vh] space-y-[3vh]">
+            <div className="w-full flex-1 px-[2vw] md:px-[2vw] py-[2vh] space-y-[3vh]">
 
                 {/* Top Control Bar (Styled exactly like FlipbooksToolbar.jsx) */}
                 <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md py-[1.2vh] px-[2vw] -mx-[2vw] flex flex-col md:flex-row justify-between items-center gap-[1.5vw] border-b border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all">
@@ -2124,7 +2134,7 @@ const Explore = () => {
             </div>
 
             {/* Footer */}
-            <div className="mt-16">
+            <div className="mt-16 w-full">
                 <Footer />
             </div>
 

@@ -86,15 +86,8 @@ export function ModelPanel({
     if (materialSettings?.appliedTexture?.thumb) {
       return resolveUploadsPath(materialSettings.appliedTexture.thumb);
     }
-    const texName = materialSettings?.materialName;
-    if (texName && textureData) {
-      const found = textureData.find(t => t.name?.toLowerCase() === texName.toLowerCase() || t.id?.toLowerCase() === texName.toLowerCase());
-      if (found?.preview) {
-        return resolveUploadsPath(found.preview);
-      }
-    }
-    if (selectedTextureId && textureData) {
-      const found = textureData.find(t => t.id === selectedTextureId);
+    if (materialSettings?.appliedTexture?.id && textureData) {
+      const found = textureData.find(t => t.id === materialSettings.appliedTexture.id || t.name?.toLowerCase() === materialSettings.appliedTexture.id?.toLowerCase());
       if (found?.preview) {
         return resolveUploadsPath(found.preview);
       }
@@ -103,10 +96,11 @@ export function ModelPanel({
   })();
 
   const materialDisplayName =
+    materialSettings?.appliedTexture?.name ||
     materialSettings?.materialName ||
     (typeof selectedMaterial === "string"
       ? selectedMaterial
-      : selectedMaterial?.name || selectedMaterial?.material || "Sliver Material");
+      : selectedMaterial?.material || selectedMaterial?.name || "Solid Material");
 
   // Check if current material contains an image/texture
   const hasImageTexture = Boolean(
@@ -140,7 +134,7 @@ export function ModelPanel({
       <div className="flex flex-col gap-[0.75vw]">
         <div className="flex items-center justify-between gap-[0.6vw]">
           <div className="flex items-center gap-[0.6vw] flex-1 min-w-0">
-            <span className="text-[0.82vw] font-bold text-gray-900">Position</span>
+            <span className="text-[0.85vw] font-semibold text-gray-900">Position</span>
             <div className="h-[0.08vw] bg-gray-200 flex-1"></div>
           </div>
           <button
@@ -157,7 +151,7 @@ export function ModelPanel({
         {/* Move */}
         <div className="flex items-center justify-between gap-[0.4vw]">
           <div className="flex items-center gap-[0.2vw] w-[3.8vw] shrink-0">
-            <span className="text-[0.75vw] font-medium text-gray-800">Move</span>
+            <span className="text-[0.75vw] font-normal text-gray-900">Move</span>
           </div>
           <div className="grid grid-cols-3 gap-[0.3vw] flex-1 min-w-0">
             <AxisInput
@@ -184,7 +178,7 @@ export function ModelPanel({
         {/* Rotate */}
         <div className="flex items-center justify-between gap-[0.4vw]">
           <div className="flex items-center gap-[0.2vw] w-[3.8vw] shrink-0">
-            <span className="text-[0.75vw] font-medium text-gray-800">Rotate</span>
+            <span className="text-[0.75vw] font-normal text-gray-900">Rotate</span>
           </div>
           <div className="grid grid-cols-3 gap-[0.3vw] flex-1 min-w-0">
             <AxisInput
@@ -211,7 +205,7 @@ export function ModelPanel({
         {/* Scale */}
         <div className="flex items-center justify-between gap-[0.4vw]">
           <div className="flex items-center gap-[0.2vw] w-[3.8vw] shrink-0">
-            <span className="text-[0.75vw] font-medium text-gray-800">Scale</span>
+            <span className="text-[0.75vw] font-normal text-gray-900">Scale</span>
             <button
               type="button"
               onClick={() => setIsUniformScale(!isUniformScale)}
@@ -255,74 +249,76 @@ export function ModelPanel({
           {/* ── 2. MATERIAL SECTION ── */}
           <div className="flex flex-col gap-[0.75vw]">
         <div className="flex items-center gap-[0.6vw]">
-          <span className="text-[0.82vw] font-bold text-gray-900">Material</span>
+          <span className="text-[0.85vw] font-semibold text-gray-900">Material</span>
           <div className="h-[0.08vw] bg-gray-200 flex-1"></div>
         </div>
 
-        {/* Material Sphere / Thumbnail + Title + Change Material Button */}
-        <div className="flex items-center gap-[0.75vw]">
+        {/* Clean Material Selector Bar (matches Environment style) */}
+        <div className="flex flex-col gap-[0.4vw] w-full">
           <button
             type="button"
             onClick={() => onOpenMaterialDrawer && onOpenMaterialDrawer()}
-            className="w-[3.6vw] h-[3.6vw] rounded-[0.6vw] p-[0.2vw] bg-[#f3f4f6] border border-gray-200 flex items-center justify-center shadow-2xs hover:border-[#ea543a] hover:ring-2 hover:ring-[#ea543a]/20 hover:scale-105 transition-all duration-200 shrink-0 cursor-pointer overflow-hidden"
-            title="Click to Change Material"
+            className="w-full min-h-[2.8vw] py-[0.4vw] px-[0.6vw] bg-white rounded-[0.45vw] border border-gray-200 hover:border-gray-300 flex items-center justify-between gap-[0.6vw] transition-all cursor-pointer shadow-2xs group min-w-0"
           >
-            {activeMaterialPreview ? (
-              <img
-                src={activeMaterialPreview}
-                alt="Material"
-                className="w-full h-full object-cover rounded-full shadow-inner"
-              />
-            ) : (
-              <div
-                className="w-full h-full rounded-full shadow-inner"
-                style={{
-                  background: `radial-gradient(circle at 32% 28%, #ffffff 0%, ${materialSettings?.color || "#c0c0c0"} 45%, #1a1a1a 100%)`,
-                  boxShadow: "inset -2px -4px 6px rgba(0,0,0,0.45), 0 3px 6px rgba(0,0,0,0.15)"
-                }}
-              />
-            )}
-          </button>
+            <div className="flex items-center gap-[0.6vw] min-w-0 flex-1">
+              {/* Sphere Thumbnail */}
+              <div className="w-[1.9vw] h-[1.9vw] rounded-full overflow-hidden border border-gray-200/90 shrink-0 bg-gray-100 shadow-2xs">
+                {activeMaterialPreview ? (
+                  <img
+                    src={activeMaterialPreview}
+                    alt="Material"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full"
+                    style={{
+                      background: `radial-gradient(circle at 32% 28%, #ffffff 0%, ${materialSettings?.color || "#c0c0c0"} 45%, #1a1a1a 100%)`,
+                      boxShadow: "inset -1px -2px 4px rgba(0,0,0,0.4)"
+                    }}
+                  />
+                )}
+              </div>
 
-          <div className="flex flex-col gap-[0.35vw] flex-1 min-w-0">
-            <span className="text-[0.85vw] font-bold text-gray-800 truncate">
-              {materialDisplayName}
-            </span>
-            <div className="flex items-center gap-[0.4vw] flex-wrap">
-              <button
-                type="button"
-                onClick={() => onOpenMaterialDrawer && onOpenMaterialDrawer()}
-                className="w-fit px-[0.6vw] py-[0.25vw] bg-white hover:bg-gray-50 border border-gray-200 rounded-[0.4vw] text-[0.7vw] font-semibold text-gray-600 hover:text-gray-900 transition-colors shadow-2xs cursor-pointer"
-              >
-                Change Material
-              </button>
-
-              {hasImageTexture && (
-                <button
-                  type="button"
-                  onClick={() => imageInputRef.current?.click()}
-                  className="w-fit px-[0.6vw] py-[0.25vw] bg-white hover:bg-orange-50/50 border border-gray-200 hover:border-[#ea543a] rounded-[0.4vw] text-[0.7vw] font-semibold text-[#ea543a] transition-colors shadow-2xs cursor-pointer flex items-center gap-[0.25vw]"
-                  title="Replace Image Texture"
-                >
-                  <Icon icon="solar:gallery-edit-linear" className="w-[0.85vw] h-[0.85vw] shrink-0" />
-                  <span>Replace Image</span>
-                </button>
-              )}
+              {/* Material Name */}
+              <div className="flex flex-col min-w-0 flex-1 text-left">
+                <span className="text-[0.8vw] font-normal text-gray-800 break-words leading-tight">
+                  {materialDisplayName}
+                </span>
+              </div>
             </div>
 
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageFileChange}
-            />
-          </div>
+            {/* Clean Right Action: "Change" with chevron */}
+            <div className="flex items-center gap-[0.25vw] text-[#ea543a] text-[0.74vw] font-bold group-hover:text-[#d43d24] transition-colors shrink-0">
+              <span>Change</span>
+              <Icon icon="heroicons:chevron-right-20-solid" className="w-[0.9vw] h-[0.9vw]" />
+            </div>
+          </button>
+
+          {hasImageTexture && (
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              className="w-full h-[2.2vw] px-[0.65vw] bg-white hover:bg-orange-50/60 border border-dashed border-gray-300 hover:border-[#ea543a] rounded-[0.45vw] text-[#ea543a] transition-all shadow-2xs cursor-pointer flex items-center justify-center gap-[0.35vw] text-[0.74vw] font-medium"
+              title="Replace Image Texture"
+            >
+              <Icon icon="solar:gallery-edit-linear" className="w-[1vw] h-[1vw] shrink-0" />
+              <span>Replace Texture Image</span>
+            </button>
+          )}
+
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageFileChange}
+          />
         </div>
 
         {/* Alpha Factor */}
         <div className="flex items-center justify-between gap-[0.6vw] pt-[0.2vw]">
-          <span className="text-[0.75vw] font-medium text-gray-700 w-[6vw] shrink-0">
+          <span className="text-[0.75vw] font-normal text-gray-800 w-[6vw] shrink-0">
             Alpha Factor :
           </span>
           <div className="flex-1 relative flex items-center">
@@ -335,14 +331,14 @@ export function ModelPanel({
               className="w-full h-[0.22vw] bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#ea543a]"
             />
           </div>
-          <span className="text-[0.72vw] font-semibold text-gray-700 bg-gray-100 px-[0.45vw] py-[0.12vw] rounded min-w-[2.3vw] text-center">
+          <span className="text-[0.72vw] font-normal text-gray-700 bg-gray-100 px-[0.45vw] py-[0.12vw] rounded min-w-[2.3vw] text-center">
             {Math.round(Number(materialSettings?.alpha ?? 100))}%
           </span>
         </div>
 
         {/* Base Color swatch + HEX input + Custom ColorPicker */}
         <div className="flex flex-col gap-[0.35vw] pt-[0.1vw] relative" ref={colorPickerContainerRef}>
-          <span className="text-[0.75vw] font-medium text-gray-700">Base</span>
+          <span className="text-[0.75vw] font-normal text-gray-800">Base</span>
           <div className="flex items-center gap-[0.4vw]">
             <button
               type="button"
@@ -357,7 +353,7 @@ export function ModelPanel({
                 type="text"
                 value={(materialSettings?.color || "#EC5137").toUpperCase()}
                 onChange={(e) => onUpdateMaterialSetting && onUpdateMaterialSetting("color", e.target.value)}
-                className="w-[4.5vw] text-[0.72vw] font-medium text-gray-800 bg-transparent outline-none uppercase"
+                className="w-[4.5vw] text-[0.72vw] font-normal text-gray-800 bg-transparent outline-none uppercase"
               />
               <div className="flex items-center">
                 <input
@@ -371,7 +367,7 @@ export function ModelPanel({
                   }}
                   className="w-[2vw] text-right text-[0.68vw] text-gray-700 font-semibold bg-transparent outline-none p-0"
                 />
-                <span className="text-[0.68vw] text-gray-400 font-medium ml-[0.1vw]">%</span>
+                <span className="text-[0.68vw] text-gray-400 font-normal ml-[0.1vw]">%</span>
               </div>
             </div>
 
@@ -460,7 +456,7 @@ export function ModelPanel({
       {/* ── 3. TEXTURE PLACEMENT SECTION ── */}
       <div className="flex flex-col gap-[0.75vw]">
         <div className="flex items-center gap-[0.6vw]">
-          <span className="text-[0.82vw] font-bold text-gray-900">Texture Placement</span>
+          <span className="text-[0.85vw] font-medium text-gray-900">Texture Placement</span>
           <div className="h-[0.08vw] bg-gray-200 flex-1"></div>
         </div>
 
@@ -472,13 +468,19 @@ export function ModelPanel({
             yVal={materialSettings?.tile?.y ?? 210}
             isLinked={isTileLinked}
             onToggleLink={() => setIsTileLinked(!isTileLinked)}
+            onChangeLinked={(v) => {
+              onUpdateMaterialSetting && onUpdateMaterialSetting({
+                tile: { x: v, y: v },
+                textureScale: { x: v !== 0 ? Math.round(10000 / v) : 100, y: v !== 0 ? Math.round(10000 / v) : 100 }
+              });
+            }}
             onChangeX={(v) => {
-              const next = { ...(materialSettings?.tile || { x: 210, y: 210 }), x: v };
-              onUpdateMaterialSetting && onUpdateMaterialSetting("tile", next);
+              const currentY = materialSettings?.tile?.y ?? 210;
+              onUpdateMaterialSetting && onUpdateMaterialSetting("tile", { x: v, y: currentY });
             }}
             onChangeY={(v) => {
-              const next = { ...(materialSettings?.tile || { x: 210, y: 210 }), y: v };
-              onUpdateMaterialSetting && onUpdateMaterialSetting("tile", next);
+              const currentX = materialSettings?.tile?.x ?? 210;
+              onUpdateMaterialSetting && onUpdateMaterialSetting("tile", { x: currentX, y: v });
             }}
           />
 
@@ -489,13 +491,16 @@ export function ModelPanel({
             yVal={materialSettings?.offset?.y ?? 210}
             isLinked={isOffsetLinked}
             onToggleLink={() => setIsOffsetLinked(!isOffsetLinked)}
+            onChangeLinked={(v) => {
+              onUpdateMaterialSetting && onUpdateMaterialSetting("offset", { x: v, y: v });
+            }}
             onChangeX={(v) => {
-              const next = { ...(materialSettings?.offset || { x: 210, y: 210 }), x: v };
-              onUpdateMaterialSetting && onUpdateMaterialSetting("offset", next);
+              const currentY = materialSettings?.offset?.y ?? 210;
+              onUpdateMaterialSetting && onUpdateMaterialSetting("offset", { x: v, y: currentY });
             }}
             onChangeY={(v) => {
-              const next = { ...(materialSettings?.offset || { x: 210, y: 210 }), y: v };
-              onUpdateMaterialSetting && onUpdateMaterialSetting("offset", next);
+              const currentX = materialSettings?.offset?.x ?? 210;
+              onUpdateMaterialSetting && onUpdateMaterialSetting("offset", { x: currentX, y: v });
             }}
           />
 
@@ -506,14 +511,34 @@ export function ModelPanel({
             yVal={materialSettings?.textureScale?.y ?? (typeof materialSettings?.scale === 'number' ? materialSettings.scale : 210)}
             isLinked={isScaleLinked}
             onToggleLink={() => setIsScaleLinked(!isScaleLinked)}
+            onChangeLinked={(v) => {
+              onUpdateMaterialSetting && onUpdateMaterialSetting({
+                textureScale: { x: v, y: v },
+                scale: v,
+                tile: { x: v !== 0 ? Math.round(10000 / v) : 100, y: v !== 0 ? Math.round(10000 / v) : 100 }
+              });
+            }}
             onChangeX={(v) => {
-              const next = { ...(materialSettings?.textureScale || { x: 210, y: 210 }), x: v };
-              onUpdateMaterialSetting && onUpdateMaterialSetting("textureScale", next);
-              onUpdateMaterialSetting && onUpdateMaterialSetting("scale", v);
+              const currentY = materialSettings?.textureScale?.y ?? (typeof materialSettings?.scale === 'number' ? materialSettings.scale : 210);
+              onUpdateMaterialSetting && onUpdateMaterialSetting({
+                textureScale: { x: v, y: currentY },
+                scale: v,
+                tile: {
+                  x: v !== 0 ? Math.round(10000 / v) : 100,
+                  y: currentY !== 0 ? Math.round(10000 / currentY) : 100
+                }
+              });
             }}
             onChangeY={(v) => {
-              const next = { ...(materialSettings?.textureScale || { x: 210, y: 210 }), y: v };
-              onUpdateMaterialSetting && onUpdateMaterialSetting("textureScale", next);
+              const currentX = materialSettings?.textureScale?.x ?? (typeof materialSettings?.scale === 'number' ? materialSettings.scale : 210);
+              onUpdateMaterialSetting && onUpdateMaterialSetting({
+                textureScale: { x: currentX, y: v },
+                scale: v,
+                tile: {
+                  x: currentX !== 0 ? Math.round(10000 / currentX) : 100,
+                  y: v !== 0 ? Math.round(10000 / v) : 100
+                }
+              });
             }}
           />
 
@@ -531,13 +556,13 @@ export function ModelPanel({
   {/* ── 4. VIEW SECTION ── */}
       <div className="flex flex-col gap-[0.75vw]">
         <div className="flex items-center gap-[0.6vw]">
-          <span className="text-[0.82vw] font-bold text-gray-900">View</span>
+          <span className="text-[0.85vw] font-semibold text-gray-900">View</span>
           <div className="h-[0.08vw] bg-gray-200 flex-1"></div>
         </div>
 
         {/* Auto Rotate Toggle */}
         <div className="flex items-center justify-between py-[0.1vw]">
-          <span className="text-[0.78vw] font-medium text-gray-800">Auto Rotate</span>
+          <span className="text-[0.75vw] font-normal text-gray-800">Auto Rotate</span>
           <ToggleSwitch
             checked={!!autoRotate}
             onChange={(val) => setAutoRotate && setAutoRotate(val)}
@@ -548,7 +573,7 @@ export function ModelPanel({
         {/* Rotate Speed */}
         <div className="flex flex-col gap-[0.2vw]">
           <div className="flex items-center justify-between">
-            <span className="text-[0.72vw] font-medium text-gray-500">Rotate Speed</span>
+            <span className="text-[0.72vw] font-normal text-gray-700">Rotate Speed</span>
             <span className="text-[0.68vw] font-semibold text-gray-700 bg-gray-100 px-[0.4vw] py-[0.1vw] rounded">
               {(autoRotateSpeed || 1.0).toFixed(1)}X
             </span>
@@ -569,8 +594,8 @@ export function ModelPanel({
         <FloorPresetSelector materialSettings={materialSettings} onUpdateMaterialSetting={onUpdateMaterialSetting} />
 
         {/* Show Grid Lines */}
-        <div className="flex items-center justify-between py-[0.1vw]">
-          <span className="text-[0.78vw] font-medium text-gray-800">Show Grid Lines</span>
+        <div className="flex items-center justify-between py-[0.1vw] mt-[0.5vw]">
+          <span className="text-[0.75vw] font-normal text-gray-800">Show Grid Lines</span>
           <ToggleSwitch
             checked={!!showGridLines}
             onChange={(val) => setShowGridLines && setShowGridLines(val)}
@@ -580,7 +605,7 @@ export function ModelPanel({
 
         {/* Show Axis */}
         <div className="flex items-center justify-between py-[0.1vw]">
-          <span className="text-[0.78vw] font-medium text-gray-800">Show Axis Lines</span>
+          <span className="text-[0.75vw] font-normal text-gray-800">Show Axis Lines</span>
           <ToggleSwitch
             checked={!!showAxis}
             onChange={(val) => setShowAxis && setShowAxis(val)}

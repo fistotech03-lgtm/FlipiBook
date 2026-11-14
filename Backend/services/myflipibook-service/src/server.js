@@ -61,7 +61,7 @@ app.get('/health', (req, res) => {
 });
 
 // Static storage serving with fallback across user folder aliases (e.g. FLIPI0001 vs sanitizedEmail)
-const storageStaticMiddleware = (req, res, next) => {
+const storageStaticMiddleware = async (req, res, next) => {
   const storageRoot = getStorageRoot();
   const relPath = decodeURIComponent(req.path.replace(/^\/+/, ''));
   const directPath = path.join(storageRoot, relPath);
@@ -109,19 +109,17 @@ const storageStaticMiddleware = (req, res, next) => {
       if (targetPagesDir) {
         const targetFilePath = path.join(targetPagesDir, fileName);
         const startTime = Date.now();
-        while (Date.now() - startTime < 8000) {
+        while (Date.now() - startTime < 1500) {
           if (fs.existsSync(targetFilePath)) {
             return res.sendFile(targetFilePath);
           }
-          const waitSync = (ms) => {
-            const end = Date.now() + ms;
-            while (Date.now() < end) {}
-          };
-          waitSync(200);
+          await new Promise(r => setTimeout(r, 150));
         }
         if (fs.existsSync(targetFilePath)) {
           return res.sendFile(targetFilePath);
         }
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return res.status(404).json({ error: 'Page asset still generating', pageNum, inProgress: true });
       }
     } catch (e) {}
   }

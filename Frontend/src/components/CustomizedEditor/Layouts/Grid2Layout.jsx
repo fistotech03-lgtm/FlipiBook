@@ -242,13 +242,21 @@ const Grid2Layout = ({
 
     // Keyboard and Mouse Wheel Actions
     React.useEffect(() => {
+        let lastKeyTime = 0;
         const handleKeyDown = (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+            const now = Date.now();
+            if (bookRef.current?.pageFlip()?.isAnimating?.()) return;
+
             switch (e.key) {
                 case 'ArrowRight':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     bookRef.current?.pageFlip()?.flipNext();
                     break;
                 case 'ArrowLeft':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     bookRef.current?.pageFlip()?.flipPrev();
                     break;
                 case 'ArrowUp':
@@ -276,7 +284,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                     return;
                 }
                 const now = Date.now();
-                if (now - lastWheelTime < 600) return;
+                if (now - lastWheelTime < 400 || bookRef.current?.pageFlip()?.isAnimating?.()) return;
                 
                 if (e.deltaY > 0) {
                     bookRef.current?.pageFlip()?.flipNext();
@@ -882,41 +890,60 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                     onMouseLeave={() => isFullscreen && setIsCanvasHovered(false)}
                 >
                     {/* Vertical Centered Navigation Arrows */}
-                    <>
-                        {(settings?.navigation?.nextPrevButtons ?? true) && (
-                            <button
-                                className={`absolute top-1/2 -translate-y-1/2 ${isTablet ? 'w-[2vw] h-[2vw] ' : 'w-[3vw] h-[3vw]'} flex items-center justify-center transition-all group z-20`}
-                                style={{
-                                    color: getLayoutColor('toolbar-bg', '#555555'),
-                                    left: `calc(50% - ${(currentPage === 0 || currentPage >= (pages?.length || 0) - 1 || (pages?.length || 0) <= 1 ? 0.5 : 1) * dimWidth * responsiveScale}px - ${isMobileLandscape ? 2.5 : isTablet ? 3 : 4}vw)`
-                                }}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    closeAllPopups();
-                                    bookRef.current?.pageFlip()?.flipPrev();
-                                }}
-                            >
-                                <Icon icon="ph:caret-left" className={`${isMobileLandscape ? 'w-[1.2vw] h-[1.2vw]' : 'w-[2.5vw] h-[2.5vw]'} group-active:scale-90 transition-transform`} />
-                            </button>
-                        )}
+                    {(() => {
+                        const hasPrev = currentPage > 0;
+                        const hasNext = currentPage < (pages?.length || 0) - 1;
+                        const isCover = typeof offset === 'number' ? offset < 0 : currentPage === 0;
+                        const isBackCover = typeof offset === 'number' ? offset > 0 : (currentPage >= (pages?.length || 0) - 1 && (pages?.length || 0) % 2 === 0);
+                        const isSinglePage = isCover || isBackCover || (pages?.length || 0) <= 1;
+                        const bookHalfWidth = (isSinglePage ? 0.5 : 1) * dimWidth * responsiveScale;
+                        const gap = isMobileLandscape ? 2.5 : isTablet ? 3 : 4;
+                        return (
+                            <>
+                                {(settings?.navigation?.nextPrevButtons ?? true) && (
+                                    <button
+                                        className={`absolute top-1/2 -translate-y-1/2 ${isTablet ? 'w-[2vw] h-[2vw] ' : 'w-[3vw] h-[3vw]'} flex items-center justify-center group z-20 ${!hasPrev ? 'pointer-events-none' : 'cursor-pointer'}`}
+                                        style={{
+                                            color: getLayoutColor('toolbar-bg', '#555555'),
+                                            left: `calc(50% - ${bookHalfWidth}px - ${gap}vw)`,
+                                            opacity: hasPrev ? 1 : 0,
+                                            pointerEvents: hasPrev ? 'auto' : 'none',
+                                            transition: 'left 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease, transform 0.2s ease'
+                                        }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (!hasPrev) return;
+                                            closeAllPopups();
+                                            bookRef.current?.pageFlip()?.flipPrev();
+                                        }}
+                                    >
+                                        <Icon icon="ph:caret-left" className={`${isMobileLandscape ? 'w-[1.2vw] h-[1.2vw]' : 'w-[2.5vw] h-[2.5vw]'} ${!hasPrev ? '' : 'group-active:scale-90'} transition-transform`} />
+                                    </button>
+                                )}
 
-                        {(settings?.navigation?.nextPrevButtons ?? true) && (
-                            <button
-                                className={`absolute top-1/2 -translate-y-1/2 ${isTablet ? 'w-[2vw] h-[2vw] ' : 'w-[3vw] h-[3vw]'} flex items-center justify-center transition-all group z-20`}
-                                style={{
-                                    color: getLayoutColor('toolbar-bg', '#555555'),
-                                    right: `calc(50% - ${(currentPage === 0 || currentPage >= (pages?.length || 0) - 1 || (pages?.length || 0) <= 1 ? 0.5 : 1) * dimWidth * responsiveScale}px - ${isMobileLandscape ? 2.5 : isTablet ? 3 : 4}vw)`
-                                }}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    closeAllPopups();
-                                    bookRef.current?.pageFlip()?.flipNext();
-                                }}
-                            >
-                                <Icon icon="ph:caret-right" className={`${isMobileLandscape ? 'w-[1.2vw] h-[1.2vw]' : 'w-[2.5vw] h-[2.5vw]'} group-active:scale-90 transition-transform`} />
-                            </button>
-                        )}
-                    </>
+                                {(settings?.navigation?.nextPrevButtons ?? true) && (
+                                    <button
+                                        className={`absolute top-1/2 -translate-y-1/2 ${isTablet ? 'w-[2vw] h-[2vw] ' : 'w-[3vw] h-[3vw]'} flex items-center justify-center group z-20 ${!hasNext ? 'pointer-events-none' : 'cursor-pointer'}`}
+                                        style={{
+                                            color: getLayoutColor('toolbar-bg', '#555555'),
+                                            right: `calc(50% - ${bookHalfWidth}px - ${gap}vw)`,
+                                            opacity: hasNext ? 1 : 0,
+                                            pointerEvents: hasNext ? 'auto' : 'none',
+                                            transition: 'right 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease, transform 0.2s ease'
+                                        }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (!hasNext) return;
+                                            closeAllPopups();
+                                            bookRef.current?.pageFlip()?.flipNext();
+                                        }}
+                                    >
+                                        <Icon icon="ph:caret-right" className={`${isMobileLandscape ? 'w-[1.2vw] h-[1.2vw]' : 'w-[2.5vw] h-[2.5vw]'} ${!hasNext ? '' : 'group-active:scale-90'} transition-transform`} />
+                                    </button>
+                                )}
+                            </>
+                        );
+                    })()}
 
 
                     {/* Page Counter Badge */}

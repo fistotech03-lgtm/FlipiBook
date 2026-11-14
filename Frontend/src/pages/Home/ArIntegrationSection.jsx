@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import arViewImg from '../../assets/Home/final-images/ar-integration/ar-integration.webp';
+import arViewImg from '../../assets/Home/AR-img.png';
 
 export default function ArIntegrationSection() {
   return (
@@ -12,6 +12,19 @@ export default function ArIntegrationSection() {
       transition={{ duration: 0.8 }}
       className="relative w-full bg-white font-poppins overflow-hidden"
     >
+      {/* Background Watermark Text on Top Right */}
+      <div className="hidden lg:block absolute top-6 sm:top-7 right-[3vw] xl:right-[4vw] pointer-events-none select-none z-0 text-right">
+        <h2 className="text-[3.2vw] xl:text-[3.6vw] font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-b from-[#cbd5e1] via-[#e2e8f0]/90 to-white/10 leading-none block">
+          AUGMENTED REALITY
+        </h2>
+        <span
+          className="italic text-2xl sm:text-3xl lg:text-[2.2vw] text-[#EC5137] tracking-wide block -mt-2 xl:-mt-3 mr-6"
+          style={{ fontFamily: "'Rage Italic', 'Rage', cursive" }}
+        >
+          View in your space
+        </span>
+      </div>
+
       {/* 2-Column Layout */}
       <div className="w-full flex flex-col lg:flex-row items-stretch justify-between">
         
@@ -40,20 +53,14 @@ export default function ArIntegrationSection() {
             transition={{ duration: 0.95, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="mb-2 sm:mb-3 lg:mb-[1.6vw] text-left w-full"
           >
-            <h2 className="text-[34px] xs:text-[36px] sm:text-[45px] lg:text-[3.8vw] font-semibold text-[#2B3037] leading-[1.12] sm:leading-[1.08] tracking-tight">
-              <span className="block">See Your Products</span>
-              <span className="text-[#EC5137] block mt-0.5 sm:mt-1 lg:mt-[0.3vw]">in Your Space</span>
+            <h2 className="text-[34px] xs:text-[36px] sm:text-[45px] lg:text-[3.2vw] xl:text-[3.4vw] font-bold text-[#2B3037] leading-[1.12] sm:leading-[1.1] tracking-tight uppercase">
+              <span className="block">VISUALIZE PRODUCTS</span>
+              <span className="block mt-0.5 sm:mt-1">
+                IN YOUR <span className="text-[#EC5137]">REAL SPACE,</span>
+              </span>
+              <span className="text-[#EC5137] block mt-0.5 sm:mt-1">IN REAL TIME.</span>
             </h2>
           </motion.div>
-
-          {/* 3. Divider line under headline */}
-          <motion.div
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
-            transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="w-20 sm:w-36 lg:w-[12vw] h-[1px] bg-[#d2d5d8] mb-2 sm:mb-3.5 lg:mb-[1.8vw] origin-left"
-          ></motion.div>
 
           {/* 4. Description Paragraph */}
           <motion.p
@@ -61,7 +68,7 @@ export default function ArIntegrationSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
             transition={{ duration: 0.85, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
-            className="text-[11.5px] sm:text-[15px] md:text-[16px] lg:text-[0.92vw] text-[#69707D] font-normal leading-[1.55] sm:leading-[1.6] max-w-[340px] sm:max-w-[540px] lg:max-w-[24vw] mb-4 sm:mb-5 lg:mb-[2vw] text-left"
+            className="text-[11.5px] sm:text-[14px] md:text-[15px] lg:text-[0.88vw] text-[#69707D] font-normal leading-[1.65] max-w-[340px] sm:max-w-[500px] lg:max-w-[26vw] mb-4 sm:mb-5 lg:mb-[2vw] text-left"
           >
             Help customers visualize your products in their own surroundings. Scan the QR code in your FlipiBook catalogue to place and explore a 3D product model using augmented reality.
           </motion.p>
@@ -76,14 +83,15 @@ export default function ArIntegrationSection() {
           >
             <button
               type="button"
-              className="inline-flex items-center gap-2 px-5 py-2.5 sm:px-6 sm:py-3 bg-[#EC5137] hover:bg-[#d8442c] text-white rounded-lg text-xs sm:text-sm lg:text-[0.88vw] font-medium shadow-md transition-all duration-300 active:scale-95 cursor-pointer"
+              style={{ borderRadius: '12px' }}
+              className="inline-flex items-center gap-2.5 px-6 py-3 sm:px-7 sm:py-3.5 bg-[#EC5137] hover:bg-[#d8442c] text-white text-xs sm:text-sm lg:text-[0.88vw] font-medium shadow-[0_6px_20px_rgba(236,81,55,0.35)] transition-all duration-300 active:scale-95 cursor-pointer"
             >
               <span>Try the AR Experience</span>
               <Icon icon="lucide:arrow-right" className="w-4 h-4 lg:w-[1vw] lg:h-[1vw]" />
             </button>
           </motion.div>
 
-          {/* 5. Three Circular Badges Row: For Tablet (sm to lg), icon is placed to the RIGHT of text (flex-row-reverse). Mobile & Desktop keep standard vertical stack */}
+          {/* 5. Three Circular Badges Row */}
           <div className="flex items-start justify-start gap-4 sm:gap-6 md:gap-8 lg:gap-[2.6vw] w-full">
             
             {/* Badge 1: Realistic 3D Models */}
@@ -92,19 +100,19 @@ export default function ArIntegrationSection() {
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
               viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.85, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
+              className="flex flex-col items-center sm:items-start text-center sm:text-left gap-1.5"
             >
               <div
-                className="w-10 h-10 sm:w-13 sm:h-13 lg:w-[3.6vw] lg:h-[3.6vw] rounded-full flex items-center justify-center text-[#EC5137] sm:mb-0 lg:mb-2 shrink-0"
+                className="w-10 h-10 sm:w-12 sm:h-12 lg:w-[3.2vw] lg:h-[3.2vw] rounded-full flex items-center justify-center text-[#EC5137] shrink-0"
                 style={{ backgroundColor: 'rgba(236, 81, 55, 0.10)' }}
               >
-                <Icon icon="energy-icons:cube-20" className="w-4 h-4 sm:w-6 sm:h-6 lg:w-[1.6vw] lg:h-[1.6vw]" />
+                <Icon icon="lucide:box" className="w-5 h-5 sm:w-5.5 sm:h-5.5 lg:w-[1.4vw] lg:h-[1.4vw]" />
               </div>
-              <div className="flex flex-col items-center sm:items-start lg:items-start text-center sm:text-left lg:text-left">
-                <span className="text-[11.5px] sm:text-[14px] md:text-[15px] lg:text-[0.88vw] font-semibold text-[#1C1D21] leading-tight">
+              <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+                <span className="text-[11.5px] sm:text-[13px] md:text-[14px] lg:text-[0.84vw] font-bold text-[#1C1D21] leading-tight">
                   Realistic
                 </span>
-                <span className="text-[10px] sm:text-[12px] md:text-[13px] lg:text-[0.72vw] text-[#858585] leading-tight mt-0.5 sm:mt-1 font-normal">
+                <span className="text-[10px] sm:text-[11.5px] md:text-[12px] lg:text-[0.72vw] text-[#858585] leading-tight mt-0.5 font-normal">
                   3D Models
                 </span>
               </div>
@@ -116,19 +124,19 @@ export default function ArIntegrationSection() {
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
               viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.85, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
+              className="flex flex-col items-center sm:items-start text-center sm:text-left gap-1.5"
             >
               <div
-                className="w-10 h-10 sm:w-13 sm:h-13 lg:w-[3.6vw] lg:h-[3.6vw] rounded-full flex items-center justify-center text-[#EC5137] sm:mb-0 lg:mb-2 shrink-0"
+                className="w-10 h-10 sm:w-12 sm:h-12 lg:w-[3.2vw] lg:h-[3.2vw] rounded-full flex items-center justify-center text-[#EC5137] shrink-0"
                 style={{ backgroundColor: 'rgba(236, 81, 55, 0.10)' }}
               >
-                <Icon icon="carbon:carbon-for-mobile" className="w-4 h-4 sm:w-6 sm:h-6 lg:w-[1.6vw] lg:h-[1.6vw]" />
+                <Icon icon="lucide:smartphone" className="w-5 h-5 sm:w-5.5 sm:h-5.5 lg:w-[1.4vw] lg:h-[1.4vw]" />
               </div>
-              <div className="flex flex-col items-center sm:items-start lg:items-start text-center sm:text-left lg:text-left">
-                <span className="text-[11.5px] sm:text-[14px] md:text-[15px] lg:text-[0.88vw] font-semibold text-[#1C1D21] leading-tight">
+              <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+                <span className="text-[11.5px] sm:text-[13px] md:text-[14px] lg:text-[0.84vw] font-bold text-[#1C1D21] leading-tight">
                   View at
                 </span>
-                <span className="text-[10px] sm:text-[12px] md:text-[13px] lg:text-[0.72vw] text-[#858585] leading-tight mt-0.5 sm:mt-1 font-normal">
+                <span className="text-[10px] sm:text-[11.5px] md:text-[12px] lg:text-[0.72vw] text-[#858585] leading-tight mt-0.5 font-normal">
                   Actual Size
                 </span>
               </div>
@@ -140,19 +148,19 @@ export default function ArIntegrationSection() {
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
               viewport={{ once: false, margin: "-50px 0px -50px 0px" }}
               transition={{ duration: 0.85, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
-              className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-center lg:items-start text-center sm:text-left lg:text-left gap-2 sm:gap-3 lg:gap-0"
+              className="flex flex-col items-center sm:items-start text-center sm:text-left gap-1.5"
             >
               <div
-                className="w-10 h-10 sm:w-13 sm:h-13 lg:w-[3.6vw] lg:h-[3.6vw] rounded-full flex items-center justify-center text-[#EC5137] sm:mb-0 lg:mb-2 shrink-0"
+                className="w-10 h-10 sm:w-12 sm:h-12 lg:w-[3.2vw] lg:h-[3.2vw] rounded-full flex items-center justify-center text-[#EC5137] shrink-0"
                 style={{ backgroundColor: 'rgba(236, 81, 55, 0.10)' }}
               >
-                <Icon icon="andrsrxn:rotate-3d" className="w-4 h-4 sm:w-6 sm:h-6 lg:w-[1.6vw] lg:h-[1.6vw]" />
+                <Icon icon="teenyicons:360-outline" className="w-5 h-5 sm:w-5.5 sm:h-5.5 lg:w-[1.4vw] lg:h-[1.4vw]" />
               </div>
-              <div className="flex flex-col items-center sm:items-start lg:items-start text-center sm:text-left lg:text-left">
-                <span className="text-[11.5px] sm:text-[14px] md:text-[15px] lg:text-[0.88vw] font-semibold text-[#1C1D21] leading-tight">
+              <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+                <span className="text-[11.5px] sm:text-[13px] md:text-[14px] lg:text-[0.84vw] font-bold text-[#1C1D21] leading-tight">
                   360°
                 </span>
-                <span className="text-[10px] sm:text-[12px] md:text-[13px] lg:text-[0.72vw] text-[#858585] leading-tight mt-0.5 sm:mt-1 font-normal">
+                <span className="text-[10px] sm:text-[11.5px] md:text-[12px] lg:text-[0.72vw] text-[#858585] leading-tight mt-0.5 font-normal">
                   Interaction
                 </span>
               </div>

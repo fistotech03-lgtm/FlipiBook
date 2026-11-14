@@ -9,6 +9,7 @@ import ForumModerationPage from './pages/ForumModerationPage';
 import TicketsModerationPage from './pages/TicketsModerationPage';
 import SystemTelemetryPage from './pages/SystemTelemetryPage';
 import AuditLogsPage from './pages/AuditLogsPage';
+import ThreeDAssetsPage from './pages/ThreeDAssetsPage';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
         <main className="w-[82vw] h-[93vh] overflow-y-auto bg-[#f8fafc] p-[1.5vw] font-sans">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/3d-assets" element={<ThreeDAssetsPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/flipbooks" element={<FlipbooksPage />} />
             <Route path="/forum" element={<ForumModerationPage />} />

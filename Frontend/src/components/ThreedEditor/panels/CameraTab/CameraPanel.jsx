@@ -35,7 +35,7 @@ function CameraSlider({ label, value, onChange, min = 0, max = 100, step = 1, un
 
   return (
     <div className="flex items-center justify-between gap-[0.5vw] py-[0.15vw]">
-      <span className="text-[0.74vw] font-medium text-gray-700 w-[7.2vw] shrink-0 truncate">
+      <span className="text-[0.74vw] font-normal text-gray-800 w-[7.2vw] shrink-0 truncate">
         {label} :
       </span>
 
@@ -153,7 +153,7 @@ export function CameraPanel({
         </div>
 
         <div className="flex items-center justify-between gap-[0.5vw]">
-          <span className="text-[0.78vw] font-medium text-gray-700 min-w-[3.6vw]">
+          <span className="text-[0.78vw] font-normal text-gray-800 min-w-[3.6vw]">
             Position
           </span>
 
@@ -403,10 +403,10 @@ export function CameraPanel({
 
                 {/* Aspect ratio label & Name */}
                 <div className="flex flex-col items-center mt-[0.25vw]">
-                  <span className={`text-[0.72vw] font-bold ${isSelected ? "text-[#EC5137]" : "text-gray-800"}`}>
+                  <span className={`text-[0.72vw] font-semibold ${isSelected ? "text-[#EC5137]" : "text-gray-800"}`}>
                     {frame.name}
                   </span>
-                  <span className={`text-[0.6vw] font-semibold ${isSelected ? "text-[#EC5137]/80" : "text-gray-400"}`}>
+                  <span className={`text-[0.6vw] font-medium ${isSelected ? "text-[#EC5137]/80" : "text-gray-400"}`}>
                     {frame.ratio}
                   </span>
                 </div>

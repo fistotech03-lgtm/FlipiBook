@@ -406,9 +406,9 @@ export default function Signup({ onSwitchToSignin }) {
             />
             <span className="text-[0.72vw] font-inter text-gray-500 leading-tight">
               I agree to the{' '}
-              <span className="text-[#EC5137] font-medium hover:underline">Terms of Service</span>
+              <a href="/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="text-[#EC5137] font-medium hover:underline">Terms of Service</a>
               {' '}and{' '}
-              <span className="text-[#EC5137] font-medium hover:underline">Privacy Policy</span>
+              <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-[#EC5137] font-medium hover:underline">Privacy Policy</a>
             </span>
           </label>
 

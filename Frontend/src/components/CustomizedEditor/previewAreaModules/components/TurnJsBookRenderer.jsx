@@ -73,6 +73,13 @@ const TurnJsBookRenderer = React.memo(({
 
     const isZoomedIn = interactionZoom && interactionZoom.scale > 1;
 
+    const computedShadow = useMemo(() => {
+        if (!shadowActive) return 'none';
+        const ambientShadow = 'drop-shadow(0px 8px 24px rgba(0,0,0,0.18)) drop-shadow(-4px 4px 12px rgba(0,0,0,0.12))';
+        if (!shadowFilter || shadowFilter === 'none') return ambientShadow;
+        return `${shadowFilter} ${ambientShadow}`;
+    }, [shadowActive, shadowFilter]);
+
     return (
         <div
             className="relative"
@@ -82,7 +89,7 @@ const TurnJsBookRenderer = React.memo(({
                 opacity: pageOpacity ?? 1,
                 ...zoomStyle,
                 zIndex: isZoomedIn ? 50 : 1,
-                filter: shadowActive && shadowFilter ? shadowFilter : 'none',
+                filter: computedShadow,
                 transition: 'filter 0.5s ease, transform 0.3s ease'
             }}
         >

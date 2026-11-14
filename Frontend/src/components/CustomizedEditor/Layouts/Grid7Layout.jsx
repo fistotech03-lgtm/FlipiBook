@@ -176,13 +176,21 @@ const Grid7Layout = ({
 
     // Keyboard and Mouse Wheel Actions
     React.useEffect(() => {
+        let lastKeyTime = 0;
         const handleKeyDown = (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+            const now = Date.now();
+            if (bookRef.current?.pageFlip()?.isAnimating?.()) return;
+
             switch (e.key) {
                 case 'ArrowRight':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     bookRef.current?.pageFlip()?.flipNext();
                     break;
                 case 'ArrowLeft':
+                    if (now - lastKeyTime < 350) return;
+                    lastKeyTime = now;
                     bookRef.current?.pageFlip()?.flipPrev();
                     break;
                 case 'ArrowUp':
@@ -213,7 +221,7 @@ const Grid7Layout = ({
                     return;
                 }
                 const now = Date.now();
-                if (now - lastWheelTime < 600) return;
+                if (now - lastWheelTime < 400 || bookRef.current?.pageFlip()?.isAnimating?.()) return;
                 
                 if (e.deltaY > 0) {
                     bookRef.current?.pageFlip()?.flipNext();
@@ -704,23 +712,37 @@ const Grid7Layout = ({
                 >
                     {modifiedChildren}
 
-                    {/* Left Navigate Button â€” hugs the visible page's left edge */}
+                    {/* Left Navigate Button — hugs the visible page's left edge */}
                     {(settings?.navigation?.nextPrevButtons ?? true) && (
                         <button
-                            className="absolute top-1/2 -translate-y-1/2 -translate-x-full transition-all z-20 pointer-events-auto opacity-60 hover:opacity-100"
-                            style={{ left: localOffset < 0 ? `calc(${dimWidth}px - 0.8vw)` : '-0.8vw', color: getLayoutColor('toolbar-bg', '#555555') }}
-                            onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
+                            className={`absolute top-1/2 -translate-y-1/2 -translate-x-full transition-all z-20 ${currentPage > 0 ? 'pointer-events-auto opacity-60 hover:opacity-100' : 'pointer-events-none opacity-0'}`}
+                            style={{
+                                left: localOffset < 0 ? `calc(${dimWidth}px - 0.8vw)` : '-0.8vw',
+                                color: getLayoutColor('toolbar-bg', '#555555'),
+                                transition: 'left 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease'
+                            }}
+                            onClick={() => {
+                                if (currentPage <= 0) return;
+                                bookRef.current?.pageFlip()?.flipPrev();
+                            }}
                         >
                             <Icon icon="lucide:chevron-left" strokeWidth={1} className={`${isTablet ? 'w-[1.8vw] h-[1.8vw]' : 'w-[2.5vw] h-[2.5vw]'} hover:-translate-x-1 transition-transform`} />
                         </button>
                     )}
 
-                    {/* Right Navigate Button â€” hugs the visible page's right edge */}
+                    {/* Right Navigate Button — hugs the visible page's right edge */}
                     {(settings?.navigation?.nextPrevButtons ?? true) && (
                         <button
-                            className="absolute top-1/2 -translate-y-1/2 translate-x-full transition-all z-20 pointer-events-auto opacity-60 hover:opacity-100"
-                            style={{ right: localOffset > 0 ? `calc(${dimWidth}px - 0.8vw)` : '-0.8vw', color: getLayoutColor('toolbar-bg', '#555555') }}
-                            onClick={() => bookRef.current?.pageFlip()?.flipNext()}
+                            className={`absolute top-1/2 -translate-y-1/2 translate-x-full transition-all z-20 ${currentPage < (pages?.length || 0) - 1 ? 'pointer-events-auto opacity-60 hover:opacity-100' : 'pointer-events-none opacity-0'}`}
+                            style={{
+                                right: localOffset > 0 ? `calc(${dimWidth}px - 0.8vw)` : '-0.8vw',
+                                color: getLayoutColor('toolbar-bg', '#555555'),
+                                transition: 'right 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease'
+                            }}
+                            onClick={() => {
+                                if (currentPage >= (pages?.length || 0) - 1) return;
+                                bookRef.current?.pageFlip()?.flipNext();
+                            }}
                         >
                             <Icon icon="lucide:chevron-right" strokeWidth={1} className={`${isTablet ? 'w-[1.8vw] h-[1.8vw]' : 'w-[2.5vw] h-[2.5vw]'} hover:translate-x-1 transition-transform`} />
                         </button>

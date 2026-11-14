@@ -135,4 +135,77 @@ export const updateTicketStatus = async (id, status) => {
   return res.data;
 };
 
+// ── 3D Assets & Presets Management (Models, HDRIs, Materials) ──────────────
+export const get3DModels = async (params = {}) => {
+  const res = await api.get('/api/admin/3d-editor/models', { params });
+  return res.data;
+};
+
+export const upload3DModel = async (formData) => {
+  const res = await api.post('/api/admin/3d-editor/models', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+};
+
+export const update3DModel = async (id, formData) => {
+  const res = await api.put(`/api/admin/3d-editor/models/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+};
+
+export const delete3DModel = async (id) => {
+  const res = await api.delete(`/api/admin/3d-editor/models/${id}`);
+  return res.data;
+};
+
+export const get3DHdris = async (params = {}) => {
+  const res = await api.get('/api/admin/3d-editor/hdris', { params });
+  return res.data;
+};
+
+export const upload3DHdri = async (formData) => {
+  const res = await api.post('/api/admin/3d-editor/hdris', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+};
+
+export const update3DHdri = async (id, formData) => {
+  const res = await api.put(`/api/admin/3d-editor/hdris/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+};
+
+export const delete3DHdri = async (id) => {
+  const res = await api.delete(`/api/admin/3d-editor/hdris/${id}`);
+  return res.data;
+};
+
+export const get3DMaterials = async (params = {}) => {
+  const res = await api.get('/api/admin/3d-editor/materials', { params });
+  return res.data;
+};
+
+export const upload3DMaterial = async (formData) => {
+  const res = await api.post('/api/admin/3d-editor/materials', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+};
+
+export const update3DMaterial = async (id, formData) => {
+  const res = await api.put(`/api/admin/3d-editor/materials/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+};
+
+export const delete3DMaterial = async (id) => {
+  const res = await api.delete(`/api/admin/3d-editor/materials/${id}`);
+  return res.data;
+};
+
 export default api;

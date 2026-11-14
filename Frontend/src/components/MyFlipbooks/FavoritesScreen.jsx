@@ -53,21 +53,42 @@ export default function FavoritesScreen({
     setMenuPosition
 }) {
     const [localMenuPosition, setLocalMenuPosition] = useState({ top: 0, left: 0, isDropup: false });
-    // If favoriteBooks wasn't directly passed, derive it from books
+    // Derive favorite books: strictly show only other creators' books that THIS user has favorited
     const resolvedFavoriteBooks = useMemo(() => {
-        if (favoriteBooks && favoriteBooks.length > 0) return favoriteBooks;
-        if (books && books.length > 0) {
-            return books.filter(
-                (b) =>
-                    !b.trash &&
-                    b.folder !== 'Trash' &&
-                    b.folder !== 'Recent Book' &&
-                    b.folder !== 'Recent' &&
-                    Boolean(b.isFavorite || b.favorite || b.isFav)
+        const sourceList = (favoriteBooks && favoriteBooks.length > 0) ? favoriteBooks : books;
+        if (!sourceList || sourceList.length === 0) return [];
+
+        const currentEmail = (emailId || user?.emailId || user?.email || '').trim().toLowerCase();
+        const currentUid = (user?.userID || user?.userId || user?._id || user?.id || '').toString().trim().toLowerCase();
+
+        return sourceList.filter((b) => {
+            if (!b || b.trash || b.folder === 'Trash' || b.folder === 'Recent Book' || b.folder === 'Recent') {
+                return false;
+            }
+
+            // Exclude user's own books (Favorites are exclusively for saving books by other creators)
+            const bookEmail = (b.userEmail || b.emailId || '').trim().toLowerCase();
+            const bookUid = (b.userID || b.userId || b.userObjectID || '').toString().trim().toLowerCase();
+            const isOwnBook = Boolean(
+                (currentEmail && bookEmail && bookEmail === currentEmail) ||
+                (currentUid && bookUid && bookUid === currentUid)
             );
-        }
-        return [];
-    }, [favoriteBooks, books]);
+            if (isOwnBook && !b.isOtherUserBook) {
+                return false;
+            }
+
+            // If isFavorite is an array of user tokens, ensure THIS user is in it
+            if (Array.isArray(b.isFavorite)) {
+                return b.isFavorite.some((u) => {
+                    const s = String(u).trim().toLowerCase();
+                    return (currentEmail && s === currentEmail) || (currentUid && s === currentUid);
+                });
+            }
+
+            // Must be marked as favorite
+            return Boolean(b.isFavorite || b.favorite || b.isFav);
+        });
+    }, [favoriteBooks, books, emailId, user]);
 
     const [selectedIds, setSelectedIds] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');

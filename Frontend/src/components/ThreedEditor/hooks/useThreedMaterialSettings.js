@@ -31,7 +31,8 @@ export function useThreedMaterialSettings({
       'color', 'metallic', 'roughness', 'alpha', 'emissiveIntensity',
       'emissiveColor', 'normal', 'bump', 'scale', 'rotation', 'offset',
       'colorIntensity', 'ao', 'reflection', 'specular', 'worldOpacity', 'worldBlur',
-      'shadow', 'softness', 'envRotation', 'lightPosition'
+      'shadow', 'softness', 'envRotation', 'lightPosition',
+      'tile', 'textureScale'
     ];
 
     for (const [key, rawVal] of Object.entries(updates)) {
@@ -135,6 +136,20 @@ export function useThreedMaterialSettings({
             saveToDB('active_hdr_id', matched.id);
             return;
           }
+        } else if (val === 'studio' || val === 'softbox' || val === 'warehouse') {
+          // Reset custom environment map when returning to standard presets
+          setMaterialSettings(prev => {
+            const nextMaps = { ...(prev.maps || {}) };
+            delete nextMaps.envMap;
+            return {
+              ...prev,
+              environment: val,
+              customEnvMap: null,
+              maps: nextMaps
+            };
+          });
+          saveToDB('active_hdr_id', null);
+          return;
         }
         updateMaterialSetting(key, val, false);
       });

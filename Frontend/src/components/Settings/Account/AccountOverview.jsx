@@ -38,6 +38,9 @@ const AccountOverview = ({
         'x-client-browser': deviceInfo.browser,
         'x-client-os': deviceInfo.operatingSystem,
       };
+      if (userEmail) {
+        headers['x-client-email'] = userEmail;
+      }
       if (netInfo?.ip) {
         headers['x-client-ip'] = netInfo.ip;
       }
@@ -45,11 +48,30 @@ const AccountOverview = ({
         headers['x-client-location'] = netInfo.location;
       }
 
-      const res = await axios.get(`${backendUrl}/api/auth/sessions`, {
-        headers,
-        withCredentials: true,
-      });
-      if (res.data?.success && Array.isArray(res.data.sessions)) {
+      let res;
+      try {
+        res = await axios.get(`${backendUrl}/api/auth/sessions`, {
+          headers,
+          withCredentials: true,
+        });
+      } catch (reqErr) {
+        // If 401, attempt silent cookie session refresh via /api/auth/verify and retry once
+        if (reqErr.response?.status === 401) {
+          try {
+            await axios.get(`${backendUrl}/api/auth/verify`, { withCredentials: true });
+            res = await axios.get(`${backendUrl}/api/auth/sessions`, {
+              headers,
+              withCredentials: true,
+            });
+          } catch (_) {
+            throw reqErr;
+          }
+        } else {
+          throw reqErr;
+        }
+      }
+
+      if (res?.data?.success && Array.isArray(res.data.sessions)) {
         const enriched = res.data.sessions.map((s) => {
           const needsIpv4 = !isIPv4(s.ipAddress) || s.ipAddress === '127.0.0.1' || s.ipAddress === '::1' || s.ipAddress === 'localhost';
           if (s.isCurrent && netInfo?.ip && isIPv4(netInfo.ip) && needsIpv4) {
@@ -64,11 +86,11 @@ const AccountOverview = ({
         setSessions(enriched);
       }
     } catch (err) {
-      console.warn('Failed to load active sessions:', err.message);
+      console.warn('Failed to load active sessions:', err.response?.data?.message || err.response?.data || err.message);
     } finally {
       setLoadingSessions(false);
     }
-  }, [backendUrl]);
+  }, [backendUrl, userEmail]);
 
   // Fetch recent login activities
   const fetchRecentActivities = useCallback(async () => {
@@ -81,6 +103,9 @@ const AccountOverview = ({
         'x-client-browser': deviceInfo.browser,
         'x-client-os': deviceInfo.operatingSystem,
       };
+      if (userEmail) {
+        headers['x-client-email'] = userEmail;
+      }
       if (netInfo?.ip) {
         headers['x-client-ip'] = netInfo.ip;
       }
@@ -88,11 +113,29 @@ const AccountOverview = ({
         headers['x-client-location'] = netInfo.location;
       }
 
-      const res = await axios.get(`${backendUrl}/api/auth/recent-activity`, {
-        headers,
-        withCredentials: true,
-      });
-      if (res.data?.success && Array.isArray(res.data.activities)) {
+      let res;
+      try {
+        res = await axios.get(`${backendUrl}/api/auth/recent-activity`, {
+          headers,
+          withCredentials: true,
+        });
+      } catch (reqErr) {
+        if (reqErr.response?.status === 401) {
+          try {
+            await axios.get(`${backendUrl}/api/auth/verify`, { withCredentials: true });
+            res = await axios.get(`${backendUrl}/api/auth/recent-activity`, {
+              headers,
+              withCredentials: true,
+            });
+          } catch (_) {
+            throw reqErr;
+          }
+        } else {
+          throw reqErr;
+        }
+      }
+
+      if (res?.data?.success && Array.isArray(res.data.activities)) {
         const enriched = res.data.activities.map((a) => {
           const needsIpv4 = !isIPv4(a.ipAddress) || a.ipAddress === '127.0.0.1' || a.ipAddress === '::1' || a.ipAddress === 'localhost';
           if (a.isCurrent && netInfo?.ip && isIPv4(netInfo.ip) && needsIpv4) {
@@ -107,11 +150,11 @@ const AccountOverview = ({
         setRecentActivities(enriched);
       }
     } catch (err) {
-      console.warn('Failed to load recent activity:', err.message);
+      console.warn('Failed to load recent activity:', err.response?.data?.message || err.response?.data || err.message);
     } finally {
       setLoadingActivities(false);
     }
-  }, [backendUrl]);
+  }, [backendUrl, userEmail]);
 
   useEffect(() => {
     fetchActiveSessions();
@@ -122,10 +165,12 @@ const AccountOverview = ({
   const handleRevokeSession = async (sessionId) => {
     try {
       setRevokingSessionId(sessionId);
+      const headers = {};
+      if (userEmail) headers['x-client-email'] = userEmail;
       const res = await axios.post(
         `${backendUrl}/api/auth/sessions/revoke`,
         { sessionId },
-        { withCredentials: true }
+        { headers, withCredentials: true }
       );
       if (res.data?.success) {
         showToast?.('Device logged out successfully', 'success');
@@ -171,6 +216,7 @@ const AccountOverview = ({
         {
           headers: {
             'x-device-id': deviceInfo.deviceId,
+            ...(userEmail ? { 'x-client-email': userEmail } : {}),
           },
           withCredentials: true,
         }

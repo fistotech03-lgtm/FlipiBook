@@ -52,23 +52,25 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
     const docBadgeColor = isPpt ? 'bg-[#EA580C]' : isWord ? 'bg-[#2563EB]' : 'bg-[#EF4444]';
 
     const isDone = stage === 'done';
+    const isExtracting = stage === 'converting' || stage === 'extracting' || stage === 'extracting_initial' || (typeof stage === 'string' && stage.includes('extract'));
+    const isSaving = stage === 'saving' || stage === 'processing';
 
     // Total pages count from progress or file
     const totalPagesCount = useMemo(() => {
         const directPageCount = Number(pageCount || progress?.pageCount || 0);
         if (directPageCount > 0) return directPageCount;
         const directTotal = Number(total || 0);
-        if (directTotal > 0 && (stage === 'converting' || stage === 'saving' || stage === 'done')) {
+        if (directTotal > 0 && (isExtracting || isSaving || isDone)) {
             return directTotal;
         }
         return 0;
-    }, [pageCount, total, stage, progress?.pageCount]);
+    }, [pageCount, total, isExtracting, isSaving, isDone, progress?.pageCount]);
 
     // Extracted pages count (e.g. 8 of 12)
     const extractedPagesCount = useMemo(() => {
         if (!totalPagesCount || totalPagesCount <= 0) return 0;
 
-        if (stage === 'saving' || stage === 'done') {
+        if (isSaving || isDone) {
             return totalPagesCount;
         }
 
@@ -85,7 +87,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
         }
 
         return 1;
-    }, [totalPagesCount, stage, current, explicitPercent]);
+    }, [totalPagesCount, isSaving, isDone, stage, current, explicitPercent]);
 
     // Compute accurate target percentage mapped across the 4 stages
     const computedTargetPercent = useMemo(() => {
@@ -101,7 +103,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
         }
 
         // Step 2: Extracting Pages -> 15% to 90% (Gradually maps to full progress within batch extraction time)
-        if (stage === 'converting') {
+        if (isExtracting) {
             if (explicitPercent !== undefined && explicitPercent !== null && explicitPercent > 0) {
                 return Math.min(90, Math.max(15, Math.round(explicitPercent)));
             }
@@ -113,7 +115,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
         }
 
         // Step 3: Processing & Saving -> 90% to 98% (Smooth, never freezes at 98%, 100% when stage === 'done')
-        if (stage === 'saving') {
+        if (isSaving) {
             if (explicitPercent !== undefined && explicitPercent !== null && explicitPercent > 0) {
                 return Math.min(98, Math.max(90, Math.round(explicitPercent)));
             }
@@ -125,7 +127,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
             return Math.min(99, Math.max(0, Math.round(explicitPercent)));
         }
         return 68;
-    }, [isDone, explicitPercent, stage, totalPagesCount, extractedPagesCount]);
+    }, [isDone, explicitPercent, stage, isExtracting, isSaving, totalPagesCount, extractedPagesCount]);
 
     // Monotonicity reference: highest percentage reached so it strictly NEVER drops down
     const highestPercentRef = useRef(0);
@@ -172,10 +174,10 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
         const interval = setInterval(() => {
             setFluidPercent(prev => {
                 if (prev >= 99) return prev;
-                const ceiling = stage === 'uploading' ? 20 : stage === 'converting' ? 90 : 98;
+                const ceiling = stage === 'uploading' ? 20 : isExtracting ? 90 : 98;
                 if (prev >= ceiling) return prev;
 
-                const increment = stage === 'uploading' ? 0.4 : stage === 'converting' ? 0.3 : 0.2;
+                const increment = stage === 'uploading' ? 0.4 : isExtracting ? 0.3 : 0.2;
                 const next = Math.min(ceiling, Math.round((prev + increment) * 10) / 10);
                 highestPercentRef.current = Math.max(highestPercentRef.current, next);
                 return highestPercentRef.current;
@@ -192,7 +194,7 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
 
     // Smooth physics-based spring interpolation for percentage & circle stroke (responsive & silky smooth)
     const progressMotion = useMotionValue(displayPercent);
-    const smoothProgress = useSpring(progressMotion, { stiffness: 95, damping: 18, mass: 0.3 });
+    const smoothProgress = useSpring(progressMotion, { stiffness: 65, damping: 16, mass: 0.5 });
     const strokeDashoffset = useTransform(smoothProgress, [0, 100], [276.46, 0]);
 
     const [animatedDisplayPercent, setAnimatedDisplayPercent] = useState(displayPercent);
@@ -208,29 +210,29 @@ const PdfProcessingLoader = ({ progress, onCancel }) => {
         return () => unsubscribe();
     }, [smoothProgress, isDone]);
 
-    // Extracted pages count displayed in badge (strictly in lockstep with the visible circle percentage)
+    // Extracted pages count displayed in badge (strictly in lockstep with the visible circle percentage like before)
     const displayedPagesCount = useMemo(() => {
         if (!totalPagesCount || totalPagesCount <= 0) return 0;
-        if (isDone || stage === 'done' || stage === 'saving') {
+        if (isDone || stage === 'done' || isSaving) {
             return totalPagesCount;
         }
         if (stage === 'uploading') {
             return 0;
         }
-        // In converting stage: strictly synchronized with the circular animated percentage
-        // When circle is 15%, count is 1. When circle is 84%, count is 84. When circle hits 90%, count is 100.
+        // In extracting stage: strictly synchronized with the circular animated percentage
+        // Smoothly counts up 1, 2, 3... in lockstep with the circle, never jumping instantly
         const conversionRatio = Math.min(1, Math.max(0, (animatedDisplayPercent - 15) / 75));
         const computedCount = Math.round(conversionRatio * totalPagesCount);
         return Math.min(totalPagesCount, Math.max(1, computedCount));
-    }, [totalPagesCount, isDone, stage, animatedDisplayPercent]);
+    }, [totalPagesCount, isDone, stage, isSaving, animatedDisplayPercent]);
 
     // Derive active step (1: Uploading, 2: Extracting, 3: Processing, 4: Complete, 5: All Finished)
     const activeStep = useMemo(() => {
         if (isDone || stage === 'done') return 5; // All 4 steps completed with checkmarks!
-        if (stage === 'saving') return 3; // Processing & saving
-        if (stage === 'converting') return 2; // Extracting pages/slides
+        if (isSaving) return 3; // Processing & saving
+        if (isExtracting) return 2; // Extracting pages/slides
         return 1; // Uploading
-    }, [stage, isDone]);
+    }, [stage, isDone, isExtracting, isSaving]);
 
     const displaySubtitle = "We're analysing your document and extracting the pages, text and images.";
     const displayTip = "Large files may take a little longer. Feel free to stay on this page.";

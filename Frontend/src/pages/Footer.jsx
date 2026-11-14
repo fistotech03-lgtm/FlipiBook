@@ -191,11 +191,11 @@ export default function Footer() {
 
           {/* Legal Links Right */}
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-4 lg:gap-[1vw] text-white/80 font-normal">
-            <a href="#" className="hover:text-[#EA7233] transition-colors">Privacy Policy</a>
+            <Link to="/privacy-policy" className="hover:text-[#EA7233] transition-colors">Privacy Policy</Link>
             <span className="text-white/20">|</span>
-            <a href="#" className="hover:text-[#EA7233] transition-colors">Terms of Use</a>
+            <Link to="/terms-and-conditions" className="hover:text-[#EA7233] transition-colors">Terms & Conditions</Link>
             <span className="text-white/20">|</span>
-            <a href="#" className="hover:text-[#EA7233] transition-colors">Cookie Policy</a>
+            <Link to="/cookie-policy" className="hover:text-[#EA7233] transition-colors">Cookie Policy</Link>
           </div>
 
         </div>

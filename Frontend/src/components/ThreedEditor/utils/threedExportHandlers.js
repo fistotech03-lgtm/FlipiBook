@@ -387,6 +387,7 @@ export async function captureCameraSnapshot({
   bgOpacity = 100,
   customImage = null,
   aspectRatio = null,
+  cropRect = null,
   quality = "High",
   setIsCapturing
 }) {
@@ -403,8 +404,6 @@ export async function captureCameraSnapshot({
     const dpr = gl.getPixelRatio() || window.devicePixelRatio || 1;
     const origW = domCanvas.width / dpr;
     const origH = domCanvas.height / dpr;
-    const targetRatio = (typeof aspectRatio === "number" && aspectRatio > 0) ? aspectRatio : (origW / origH);
-    const ratio = targetRatio;
 
     // Quality mapping for razor-sharp renders
     // Low: 1920 (FHD), Medium: 2560 (2K), High: 3840 (4K UHD), Ultra: 4096 (DCI 4K)
@@ -416,97 +415,202 @@ export async function captureCameraSnapshot({
     };
     const targetBasePx = qualityMap[quality] || 3840;
 
-    // Final output dimensions
-    const capW = targetRatio >= 1 ? targetBasePx : Math.round(targetBasePx * targetRatio);
-    const capH = targetRatio >= 1 ? Math.round(targetBasePx / targetRatio) : targetBasePx;
-
-    // Clamp WebGL render size against device maximum texture size
-    const maxGlSize = gl.capabilities?.maxTextureSize || 4096;
-    const renderW = Math.min(capW, maxGlSize);
-    const renderH = Math.min(capH, maxGlSize);
-
     const prevClearAlpha = gl.getClearAlpha ? gl.getClearAlpha() : 1;
     const prevClearColor = new THREE.Color();
     if (gl.getClearColor) gl.getClearColor(prevClearColor);
 
     const prevAspect = camera?.aspect;
-    if (camera?.isPerspectiveCamera && typeof targetRatio === "number") {
-      camera.aspect = targetRatio;
-      camera.updateProjectionMatrix();
-    }
-
-    // Force full 1.0 pixel ratio at target high resolution for crisp sampling
-    gl.setClearAlpha(0);
-    gl.setPixelRatio(1);
-    gl.setSize(renderW, renderH, false);
-
     const targetScene = scene || gl.scene;
     const prevSceneBg = targetScene ? targetScene.background : null;
     if (targetScene && bgType === "transparent") {
       targetScene.background = null;
     }
 
-    if (targetScene) {
-      gl.render(targetScene, camera);
+    let dataUrl;
+
+    if (cropRect && cropRect.width > 0 && cropRect.height > 0) {
+      // -------------------------------------------------------------
+      // EXACT FRAME CROPPING MODE
+      // Render the current canvas view at high resolution, then crop
+      // the exact region inside the frame overlay rectangle.
+      // -------------------------------------------------------------
+      const cropWFrac = cropRect.width / cropRect.canvasWidth;
+      const cropHFrac = cropRect.height / cropRect.canvasHeight;
+      const cropXFrac = cropRect.x / cropRect.canvasWidth;
+      const cropYFrac = cropRect.y / cropRect.canvasHeight;
+
+      // When an aspectRatio is specified (e.g. 16/9 for Full HD 1920x1080), enforce exact target dimensions
+      let croppedW, croppedH;
+      if (typeof aspectRatio === "number" && aspectRatio > 0) {
+        croppedW = targetBasePx;
+        croppedH = Math.round(targetBasePx / aspectRatio);
+      } else {
+        const measuredAspect = cropRect.width / cropRect.height;
+        croppedW = targetBasePx;
+        croppedH = Math.round(targetBasePx / measuredAspect);
+      }
+
+      // Render the full WebGL canvas proportionally high-res so cropped region is razor-sharp
+      const renderW = Math.round(croppedW / cropWFrac);
+      const renderH = Math.round(croppedH / cropHFrac);
+
+      // Clamp against max texture size while maintaining proportion
+      const maxGlSize = gl.capabilities?.maxTextureSize || 4096;
+      const clampFactor = Math.min(1, maxGlSize / Math.max(renderW, renderH));
+      const finalRenderW = Math.round(renderW * clampFactor);
+      const finalRenderH = Math.round(renderH * clampFactor);
+      const finalCroppedW = Math.round(croppedW * clampFactor);
+      const finalCroppedH = Math.round(croppedH * clampFactor);
+
+      gl.setClearAlpha(0);
+      gl.setPixelRatio(1);
+      gl.setSize(finalRenderW, finalRenderH, false);
+
+      if (camera?.isPerspectiveCamera) {
+        camera.aspect = finalRenderW / finalRenderH;
+        camera.updateProjectionMatrix();
+      }
+
+      if (targetScene) {
+        gl.render(targetScene, camera);
+      }
+
+      const srcX = Math.round(finalRenderW * cropXFrac);
+      const srcY = Math.round(finalRenderH * cropYFrac);
+
+      const compositeCanvas = document.createElement("canvas");
+      compositeCanvas.width = finalCroppedW;
+      compositeCanvas.height = finalCroppedH;
+      const ctx = compositeCanvas.getContext("2d", { alpha: true });
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      const alphaVal = typeof bgOpacity === "number" ? Math.max(0, Math.min(1, bgOpacity / 100)) : 1.0;
+
+      if (bgType === "solid") {
+        ctx.globalAlpha = alphaVal;
+        ctx.fillStyle = solidColor || "#FFFFFF";
+        ctx.fillRect(0, 0, finalCroppedW, finalCroppedH);
+        ctx.globalAlpha = 1.0;
+      } else if (bgType === "customImage" && customImage) {
+        await new Promise((resolve) => {
+          const bgImg = new Image();
+          bgImg.crossOrigin = "anonymous";
+          bgImg.onload = () => {
+            const imgRatio = bgImg.width / bgImg.height;
+            const targetRatio = finalCroppedW / finalCroppedH;
+            let drawW = finalCroppedW;
+            let drawH = finalCroppedH;
+            let offX = 0;
+            let offY = 0;
+
+            if (imgRatio > targetRatio) {
+              drawW = finalCroppedH * imgRatio;
+              offX = (finalCroppedW - drawW) / 2;
+            } else {
+              drawH = finalCroppedW / imgRatio;
+              offY = (finalCroppedH - drawH) / 2;
+            }
+
+            ctx.globalAlpha = alphaVal;
+            ctx.drawImage(bgImg, offX, offY, drawW, drawH);
+            ctx.globalAlpha = 1.0;
+            resolve();
+          };
+          bgImg.onerror = () => {
+            ctx.globalAlpha = alphaVal;
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, finalCroppedW, finalCroppedH);
+            ctx.globalAlpha = 1.0;
+            resolve();
+          };
+          bgImg.src = customImage;
+        });
+      }
+
+      // Draw only the cropped region from WebGL canvas
+      ctx.drawImage(domCanvas, srcX, srcY, finalCroppedW, finalCroppedH, 0, 0, finalCroppedW, finalCroppedH);
+
+      dataUrl = compositeCanvas.toDataURL("image/png");
+    } else {
+      // -------------------------------------------------------------
+      // FULL SCREEN / RATIO MODE
+      // -------------------------------------------------------------
+      const targetRatio = (typeof aspectRatio === "number" && aspectRatio > 0) ? aspectRatio : (origW / origH);
+      const capW = targetRatio >= 1 ? targetBasePx : Math.round(targetBasePx * targetRatio);
+      const capH = targetRatio >= 1 ? Math.round(targetBasePx / targetRatio) : targetBasePx;
+
+      const maxGlSize = gl.capabilities?.maxTextureSize || 4096;
+      const renderW = Math.min(capW, maxGlSize);
+      const renderH = Math.min(capH, maxGlSize);
+
+      if (camera?.isPerspectiveCamera && typeof targetRatio === "number") {
+        camera.aspect = targetRatio;
+        camera.updateProjectionMatrix();
+      }
+
+      gl.setClearAlpha(0);
+      gl.setPixelRatio(1);
+      gl.setSize(renderW, renderH, false);
+
+      if (targetScene) {
+        gl.render(targetScene, camera);
+      }
+
+      const compositeCanvas = document.createElement("canvas");
+      compositeCanvas.width = renderW;
+      compositeCanvas.height = renderH;
+      const ctx = compositeCanvas.getContext("2d", { alpha: true });
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      const alphaVal = typeof bgOpacity === "number" ? Math.max(0, Math.min(1, bgOpacity / 100)) : 1.0;
+
+      if (bgType === "solid") {
+        ctx.globalAlpha = alphaVal;
+        ctx.fillStyle = solidColor || "#FFFFFF";
+        ctx.fillRect(0, 0, renderW, renderH);
+        ctx.globalAlpha = 1.0;
+      } else if (bgType === "customImage" && customImage) {
+        await new Promise((resolve) => {
+          const bgImg = new Image();
+          bgImg.crossOrigin = "anonymous";
+          bgImg.onload = () => {
+            const imgRatio = bgImg.width / bgImg.height;
+            let drawW = renderW;
+            let drawH = renderH;
+            let offX = 0;
+            let offY = 0;
+
+            if (imgRatio > targetRatio) {
+              drawW = renderH * imgRatio;
+              offX = (renderW - drawW) / 2;
+            } else {
+              drawH = renderW / imgRatio;
+              offY = (renderH - drawH) / 2;
+            }
+
+            ctx.globalAlpha = alphaVal;
+            ctx.drawImage(bgImg, offX, offY, drawW, drawH);
+            ctx.globalAlpha = 1.0;
+            resolve();
+          };
+          bgImg.onerror = () => {
+            ctx.globalAlpha = alphaVal;
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, renderW, renderH);
+            ctx.globalAlpha = 1.0;
+            resolve();
+          };
+          bgImg.src = customImage;
+        });
+      }
+
+      ctx.drawImage(domCanvas, 0, 0, renderW, renderH);
+      dataUrl = compositeCanvas.toDataURL("image/png");
     }
-
-    // Create high-resolution composite canvas
-    const compositeCanvas = document.createElement("canvas");
-    compositeCanvas.width = renderW;
-    compositeCanvas.height = renderH;
-    const ctx = compositeCanvas.getContext("2d", { alpha: true });
-
-    // Enable high-quality image smoothing
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-
-    const alphaVal = typeof bgOpacity === "number" ? Math.max(0, Math.min(1, bgOpacity / 100)) : 1.0;
-
-    if (bgType === "solid") {
-      ctx.globalAlpha = alphaVal;
-      ctx.fillStyle = solidColor || "#FFFFFF";
-      ctx.fillRect(0, 0, renderW, renderH);
-      ctx.globalAlpha = 1.0;
-    } else if (bgType === "customImage" && customImage) {
-      await new Promise((resolve) => {
-        const bgImg = new Image();
-        bgImg.crossOrigin = "anonymous";
-        bgImg.onload = () => {
-          const imgRatio = bgImg.width / bgImg.height;
-          let drawW = renderW;
-          let drawH = renderH;
-          let offX = 0;
-          let offY = 0;
-
-          if (imgRatio > ratio) {
-            drawW = renderH * imgRatio;
-            offX = (renderW - drawW) / 2;
-          } else {
-            drawH = renderW / imgRatio;
-            offY = (renderH - drawH) / 2;
-          }
-
-          ctx.globalAlpha = alphaVal;
-          ctx.drawImage(bgImg, offX, offY, drawW, drawH);
-          ctx.globalAlpha = 1.0;
-          resolve();
-        };
-        bgImg.onerror = () => {
-          ctx.globalAlpha = alphaVal;
-          ctx.fillStyle = "#FFFFFF";
-          ctx.fillRect(0, 0, renderW, renderH);
-          ctx.globalAlpha = 1.0;
-          resolve();
-        };
-        bgImg.src = customImage;
-      });
-    }
-
-    // Draw WebGL buffer onto canvas with high quality
-    ctx.drawImage(domCanvas, 0, 0, renderW, renderH);
-
-    // High quality PNG data URL
-    const dataUrl = compositeCanvas.toDataURL("image/png");
 
     // Restore original viewport states
     gl.setPixelRatio(dpr);

@@ -239,30 +239,18 @@ export const generateSkeletonPageSvg = (pageNum, baseWidth = 210, baseHeight = 2
   const rootId = `g-skel-${pageNum}-${Math.random().toString(36).substr(2, 7)}`;
   const overlayId = `rect-skel-${pageNum}-${Math.random().toString(36).substr(2, 7)}`;
   const shieldId = `shield-skel-${pageNum}-${Math.random().toString(36).substr(2, 7)}`;
-
-  const titleFontSize = Math.max(8, Math.min(16, baseWidth * 0.04));
-  const subFontSize = Math.max(6, Math.min(12, baseWidth * 0.026));
-  const numFontSize = Math.max(7, Math.min(13, baseWidth * 0.03));
+  const cx = baseWidth * 0.5;
+  const cy = baseHeight * 0.5;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${baseWidth} ${baseHeight}" width="100%" height="100%" style="overflow: visible">
-  <defs>
-    <linearGradient id="skel_shimmer_${pageNum}" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#f8fafc" />
-      <stop offset="50%" stop-color="#f1f5f9" />
-      <stop offset="100%" stop-color="#f8fafc" />
-    </linearGradient>
-  </defs>
+  <!-- generateSkeletonPageSvg -->
   <g id="${rootId}" data-name="Page ${pageNum}" data-type="frame" data-skeleton="true">
     <rect id="${overlayId}" x="0" y="0" width="${baseWidth}" height="${baseHeight}" fill="#ffffff" data-name="Overlay" data-type="background" data-locked="true" shape-rendering="crispEdges" />
     <g data-name="PDF Background" data-type="pdf-vector-layer" data-locked="true">
-      <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.10}" width="${baseWidth * 0.38}" height="${baseHeight * 0.035}" rx="3" fill="url(#skel_shimmer_${pageNum})" />
-      <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.17}" width="${baseWidth * 0.84}" height="${baseHeight * 0.015}" rx="2" fill="#f1f5f9" />
-      <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.20}" width="${baseWidth * 0.76}" height="${baseHeight * 0.015}" rx="2" fill="#f1f5f9" />
-      <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.23}" width="${baseWidth * 0.80}" height="${baseHeight * 0.015}" rx="2" fill="#f1f5f9" />
-      <rect x="${baseWidth * 0.08}" y="${baseHeight * 0.29}" width="${baseWidth * 0.84}" height="${baseHeight * 0.48}" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.2" />
-      <circle cx="${baseWidth * 0.5}" cy="${baseHeight * 0.52}" r="14" fill="none" stroke="#ea7233" stroke-width="2" stroke-dasharray="20 10" />
-      <rect x="${baseWidth * 0.35}" y="${baseHeight * 0.60}" width="${baseWidth * 0.30}" height="${baseHeight * 0.015}" rx="2" fill="#e2e8f0" />
-      <text x="${baseWidth * 0.5}" y="${baseHeight * 0.94}" font-family="system-ui, -apple-system, sans-serif" font-size="${numFontSize}" fill="#cbd5e1" text-anchor="middle" font-weight="500">${pageNum}</text>
+      <circle cx="${cx}" cy="${cy}" r="13" fill="none" stroke="rgba(234,114,51,0.2)" stroke-width="2.5" />
+      <circle cx="${cx}" cy="${cy}" r="13" fill="none" stroke="#ea7233" stroke-width="2.5" stroke-dasharray="24 60" stroke-linecap="round">
+        <animateTransform attributeName="transform" type="rotate" from="0 ${cx} ${cy}" to="360 ${cx} ${cy}" dur="0.75s" repeatCount="indefinite" />
+      </circle>
     </g>
     <rect id="${shieldId}" data-name="Document Shield" data-type="shield" x="0" y="0" width="${baseWidth}" height="${baseHeight}" fill="none" opacity="0" pointer-events="all" style="pointer-events: all;" />
   </g>

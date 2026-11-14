@@ -57,8 +57,9 @@ export default function VirtualThumbnailStrip({
   for (let i = startIndex; i <= endIndex; i++) {
     const pageNum = i + 1;
     const pageInfo = pages[i] || {};
-    const thumbUrl = pageInfo.thumb
-      ? (pageInfo.thumb.startsWith('http') || pageInfo.thumb.startsWith('/') ? pageInfo.thumb : `${baseUrl}${pageInfo.thumb}`)
+    const rawThumb = pageInfo.thumb || pageInfo.imageUrl || pageInfo.image;
+    const thumbUrl = rawThumb
+      ? (rawThumb.startsWith('http') || rawThumb.startsWith('/') || rawThumb.startsWith('data:') ? rawThumb : `${baseUrl}${rawThumb}`)
       : null;
 
     visibleThumbnails.push({

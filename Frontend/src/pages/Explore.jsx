@@ -757,14 +757,14 @@ const Explore = () => {
                             location: book.city || book.location || "Coimbatore",
                             authorPicture: book.authorPicture || null,
                             authorBgColor: book.authorBgColor || '#E8D4C8',
-                            pages: book.pages?.length || 12,
-                            views: "12.5k",
-                            rating: 4.5,
+                            pages: typeof book.pages === 'number' ? book.pages : (book.pages?.length || book.pageCount || 12),
+                            views: book.views || book.analytics?.views || "12.5k",
+                            rating: book.rating || 4.5,
                             description: book.Customized_Settings?.FlipbookInfo?.quotes,
                             type: typeName,
                             has3D: has3D,
                             is3D: has3D,
-                            category: book.Customized_Settings?.FlipbookInfo?.category || "Catalog"
+                            category: book.Customized_Settings?.FlipbookInfo?.category || book.category || "Catalog"
                         };
                     }).filter(book => book.access === 'public');
 
@@ -801,7 +801,12 @@ const Explore = () => {
 
     // Filter booksData based on active selections
     const filteredBooks = booksData.filter(book => {
-        if (searchQuery && !book.bookName.toLowerCase().includes(searchQuery.toLowerCase()) && !book.authorName?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase().trim();
+            const bName = (book.bookName || '').toLowerCase();
+            const aName = (book.authorName || '').toLowerCase();
+            if (!bName.includes(q) && !aName.includes(q)) return false;
+        }
 
         if (isFavoritesOnly && !favoriteBookIds.includes(book.v_id)) {
             return false;
@@ -809,24 +814,32 @@ const Explore = () => {
 
         if (selectedTypes.length > 0) {
             const isTypeMatched = selectedTypes.some(typeOpt => {
+                if (!typeOpt) return false;
                 if (typeOpt === "3D Added Flipbook") {
-                    return book.has3D || book.is3D;
+                    return Boolean(book.has3D || book.is3D);
                 }
-                return book.type?.toLowerCase() === typeOpt.toLowerCase();
+                return (book.type || '').toLowerCase().trim() === typeOpt.toLowerCase().trim();
             });
             if (!isTypeMatched) return false;
         }
 
         if (selectedCategories.length > 0) {
-            const isCatMatched = selectedCategories.some(catOpt =>
-                book.category?.toLowerCase() === catOpt.toLowerCase()
-            );
+            const isCatMatched = selectedCategories.some(catOpt => {
+                if (!catOpt) return false;
+                const normCat = catOpt.toLowerCase().trim();
+                const bookCat = (book.category || '').toLowerCase().trim();
+                if (normCat.includes('photograph') && bookCat.includes('photo')) return true;
+                if (normCat === 'catalog' && (bookCat === 'catalog' || bookCat === 'product catalog' || bookCat === 'catalogue')) return true;
+                if (normCat === 'product catalog' && (bookCat === 'catalog' || bookCat === 'product catalog' || bookCat === 'catalogue')) return true;
+                return bookCat === normCat;
+            });
             if (!isCatMatched) return false;
         }
 
-        if (selectedPages.length > 0 && !selectedPages.includes('All')) {
+        const effectivePages = selectedPages.filter(p => p !== 'All');
+        if (effectivePages.length > 0) {
             const bookPages = Number(book.pages || 1);
-            const isPageMatched = selectedPages.some(pageOpt => {
+            const isPageMatched = effectivePages.some(pageOpt => {
                 if (pageOpt === '1 - 8 Pages') return bookPages >= 1 && bookPages <= 8;
                 if (pageOpt === '8 - 16 Pages') return bookPages > 8 && bookPages <= 16;
                 if (pageOpt === '16 - 24 Pages') return bookPages > 16 && bookPages <= 24;
@@ -836,13 +849,14 @@ const Explore = () => {
             if (!isPageMatched) return false;
         }
 
-        if (selectedPublishDates.length > 0 && !selectedPublishDates.includes('All Time')) {
+        const effectiveDates = selectedPublishDates.filter(d => d !== 'All Time');
+        if (effectiveDates.length > 0) {
             const rawDate = book.rawBook?.createdAt || book.rawBook?.updatedAt;
             if (rawDate) {
                 const created = new Date(rawDate);
                 const now = new Date();
                 const diffDays = (now - created) / (1000 * 60 * 60 * 24);
-                const isDateMatched = selectedPublishDates.some(dateOpt => {
+                const isDateMatched = effectiveDates.some(dateOpt => {
                     if (dateOpt === 'Today') return diffDays <= 1;
                     if (dateOpt === 'Before 3 days') return diffDays <= 3;
                     if (dateOpt === 'This Week') return diffDays <= 7;
@@ -870,22 +884,34 @@ const Explore = () => {
     // Sort booksData
     const sortedBooks = [...filteredBooks].sort((a, b) => {
         if (sortBy === 'Newest') {
-            const dateA = new Date(a.rawBook?.createdAt || a.rawBook?.updatedAt || 0);
-            const dateB = new Date(b.rawBook?.createdAt || b.rawBook?.updatedAt || 0);
+            const dateA = new Date(a.rawBook?.createdAt || a.rawBook?.updatedAt || 0).getTime();
+            const dateB = new Date(b.rawBook?.createdAt || b.rawBook?.updatedAt || 0).getTime();
             return dateB - dateA;
         }
         if (sortBy === 'Top Rated') {
             return (b.rating || 0) - (a.rating || 0);
         }
-        return (b.views || 0) - (a.views || 0);
+        const parseViews = (v) => {
+            if (typeof v === 'number') return v;
+            if (typeof v === 'string') {
+                const lower = v.toLowerCase().trim();
+                if (lower.endsWith('k')) return parseFloat(lower) * 1000;
+                if (lower.endsWith('m')) return parseFloat(lower) * 1000000;
+                return parseFloat(lower) || 0;
+            }
+            return 0;
+        };
+        return parseViews(b.views) - parseViews(a.views);
     });
 
     // Dynamic Filter Count Helpers for Books
     const getCategoryCount = (item) => {
-        const norm = item.toLowerCase();
+        const norm = item.toLowerCase().trim();
         return booksData.filter(b => {
-            const cat = (b.category || '').toLowerCase();
-            if (norm.includes('photograph')) return cat.includes('photo');
+            const cat = (b.category || '').toLowerCase().trim();
+            if (norm.includes('photograph') && cat.includes('photo')) return true;
+            if (norm === 'catalog' && (cat === 'catalog' || cat === 'product catalog' || cat === 'catalogue')) return true;
+            if (norm === 'product catalog' && (cat === 'catalog' || cat === 'product catalog' || cat === 'catalogue')) return true;
             return cat === norm;
         }).length;
     };
@@ -894,8 +920,8 @@ const Explore = () => {
         if (item === "3D Added Flipbook") {
             return booksData.filter(b => b.has3D || b.is3D).length;
         }
-        const norm = item.toLowerCase();
-        return booksData.filter(b => (b.type || '').toLowerCase() === norm).length;
+        const norm = item.toLowerCase().trim();
+        return booksData.filter(b => (b.type || '').toLowerCase().trim() === norm).length;
     };
 
     const getPageCount = (item) => {
@@ -1059,6 +1085,8 @@ const Explore = () => {
         if (type === 'page') setSelectedPages(prev => prev.filter(p => p !== val));
         if (type === 'date') setSelectedPublishDates(prev => prev.filter(d => d !== val));
         if (type === 'creatorCat') setSelectedCreatorCategories(prev => prev.filter(c => c !== val));
+        if (type === 'creatorType') setSelectedCreatorTypes(prev => prev.filter(t => t !== val));
+        if (type === 'specialization') setSelectedSpecializations(prev => prev.filter(s => s !== val));
         if (type === 'creatorBook') setSelectedCreatorBooks(prev => prev.filter(b => b !== val));
         if (type === 'creatorFollower') setSelectedCreatorFollowers(prev => prev.filter(f => f !== val));
     };
@@ -1373,8 +1401,12 @@ const Explore = () => {
                                                             type="checkbox"
                                                             checked={selectedPages.includes(item)}
                                                             onChange={(e) => {
-                                                                if (e.target.checked) setSelectedPages([...selectedPages, item]);
-                                                                else setSelectedPages(selectedPages.filter(p => p !== item));
+                                                                if (e.target.checked) {
+                                                                    if (item === 'All') setSelectedPages(['All']);
+                                                                    else setSelectedPages(prev => [...prev.filter(p => p !== 'All'), item]);
+                                                                } else {
+                                                                    setSelectedPages(selectedPages.filter(p => p !== item));
+                                                                }
                                                             }}
                                                             className="peer appearance-none w-[1.1vw] h-[1.1vw] min-w-[16px] min-h-[16px] border-[1.5px] border-black rounded-[3px] checked:bg-[#5551ff] checked:border-[#5551ff] cursor-pointer transition-colors"
                                                         />
@@ -1409,8 +1441,12 @@ const Explore = () => {
                                                             type="checkbox"
                                                             checked={selectedPublishDates.includes(item)}
                                                             onChange={(e) => {
-                                                                if (e.target.checked) setSelectedPublishDates([...selectedPublishDates, item]);
-                                                                else setSelectedPublishDates(selectedPublishDates.filter(d => d !== item));
+                                                                if (e.target.checked) {
+                                                                    if (item === 'All Time') setSelectedPublishDates(['All Time']);
+                                                                    else setSelectedPublishDates(prev => [...prev.filter(d => d !== 'All Time'), item]);
+                                                                } else {
+                                                                    setSelectedPublishDates(selectedPublishDates.filter(d => d !== item));
+                                                                }
                                                             }}
                                                             className="peer appearance-none w-[1.1vw] h-[1.1vw] min-w-[16px] min-h-[16px] border-[1.5px] border-black rounded-[3px] checked:bg-[#5551ff] checked:border-[#5551ff] cursor-pointer transition-colors"
                                                         />
@@ -1659,7 +1695,7 @@ const Explore = () => {
                                                         type="checkbox"
                                                         checked={selectedTypes.includes(item)}
                                                         onChange={(e) => {
-                                                            if (e.target.checked) setSelectedTypes([...selectedTypes, type]);
+                                                            if (e.target.checked) setSelectedTypes([...selectedTypes, item]);
                                                             else setSelectedTypes(selectedTypes.filter(t => t !== item));
                                                         }}
                                                         className="w-[1.05vw] h-[1.05vw] min-w-[16px] min-h-[16px] rounded-[3px] border-slate-300 text-[#ea7233] accent-[#ea7233] cursor-pointer"
@@ -1702,8 +1738,12 @@ const Explore = () => {
                                                         type="checkbox"
                                                         checked={selectedPages.includes(item)}
                                                         onChange={(e) => {
-                                                            if (e.target.checked) setSelectedPages([...selectedPages, item]);
-                                                            else setSelectedPages(selectedPages.filter(p => p !== item));
+                                                            if (e.target.checked) {
+                                                                if (item === 'All') setSelectedPages(['All']);
+                                                                else setSelectedPages(prev => [...prev.filter(p => p !== 'All'), item]);
+                                                            } else {
+                                                                setSelectedPages(selectedPages.filter(p => p !== item));
+                                                            }
                                                         }}
                                                         className="w-[1.05vw] h-[1.05vw] min-w-[16px] min-h-[16px] rounded-[3px] border-slate-300 text-[#ea7233] accent-[#ea7233] cursor-pointer"
                                                     />
@@ -1738,8 +1778,12 @@ const Explore = () => {
                                                         type="checkbox"
                                                         checked={selectedPublishDates.includes(item)}
                                                         onChange={(e) => {
-                                                            if (e.target.checked) setSelectedPublishDates([...selectedPublishDates, item]);
-                                                            else setSelectedPublishDates(selectedPublishDates.filter(d => d !== item));
+                                                            if (e.target.checked) {
+                                                                if (item === 'All Time') setSelectedPublishDates(['All Time']);
+                                                                else setSelectedPublishDates(prev => [...prev.filter(d => d !== 'All Time'), item]);
+                                                            } else {
+                                                                setSelectedPublishDates(selectedPublishDates.filter(d => d !== item));
+                                                            }
                                                         }}
                                                         className="w-[1.05vw] h-[1.05vw] min-w-[16px] min-h-[16px] rounded-[3px] border-slate-300 text-[#ea7233] accent-[#ea7233] cursor-pointer"
                                                     />
@@ -2028,6 +2072,24 @@ const Explore = () => {
                                     </span>
                                 ))}
 
+                                {selectedCreatorTypes.map(type => (
+                                    <span key={`creatorType-${type}`} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-[#ea7233] border border-[#ea7233]/30 bg-[#fff5f3] shadow-2xs">
+                                        <span>{type}</span>
+                                        <button type="button" onClick={() => removeChip('creatorType', type)} className="hover:text-red-600 cursor-pointer">
+                                            <Icon icon="lucide:x" className="w-3 h-3" />
+                                        </button>
+                                    </span>
+                                ))}
+
+                                {selectedSpecializations.map(spec => (
+                                    <span key={`spec-${spec}`} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-[#ea7233] border border-[#ea7233]/30 bg-[#fff5f3] shadow-2xs">
+                                        <span>{spec}</span>
+                                        <button type="button" onClick={() => removeChip('specialization', spec)} className="hover:text-red-600 cursor-pointer">
+                                            <Icon icon="lucide:x" className="w-3 h-3" />
+                                        </button>
+                                    </span>
+                                ))}
+
                                 {selectedCreatorBooks.filter(b => b !== 'All').map(b => (
                                     <span key={`creatorBook-${b}`} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-[#ea7233] border border-[#ea7233]/30 bg-[#fff5f3] shadow-2xs">
                                         <span>{b}</span>
@@ -2124,7 +2186,14 @@ const Explore = () => {
                             ))}
                             {sortedBooks.length === 0 && (
                                 <div className="col-span-full py-16 text-center font-semibold text-slate-600 text-sm bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                                    No flipbooks found matching your filters.
+                                    <p>No flipbooks found matching your filters.</p>
+                                    <button
+                                        type="button"
+                                        onClick={handleResetAll}
+                                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#ea7233] hover:bg-[#d65a1c] text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors"
+                                    >
+                                        <span>Clear All Filters</span>
+                                    </button>
                                 </div>
                             )}
                         </div>

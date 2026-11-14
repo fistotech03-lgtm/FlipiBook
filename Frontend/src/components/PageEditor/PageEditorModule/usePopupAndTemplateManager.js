@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { TEMPLATES as popupTemplates } from '../modals/PopupTemplateSelection';
+import { TEMPLATES as popupTemplates } from '../Interaction/PopupTemplateSelection';
 import { formatTemplateSvgToPageSvg, safeSerializeSvg } from '../utils/editorUtils';
 import { parseLayersFromSVG } from './svgFilterUtils';
 import { consolidateTransforms } from '../mainEditor/utils/geometryUtils';

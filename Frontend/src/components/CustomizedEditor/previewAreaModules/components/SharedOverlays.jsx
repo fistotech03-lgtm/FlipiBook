@@ -7,7 +7,7 @@ import CreatorProfileModal from '../../../../pages/CreatorProfileModal';
 import Sound from '../../popups/Sound';
 import ExportModal from '../../../ExportModal';
 import TableOfContentsPopup from '../../popups/TableOfContentsPopup';
-import Interaction3DPreview from '../../../PageEditor/modals/Interaction3DPreview';
+import Interaction3DPreview from '../../../PageEditor/Interaction/Interaction3DPreview';
 import ShareModal from '../../../ShareModal';
 
 // Fallback stubs for legacy unimported popups

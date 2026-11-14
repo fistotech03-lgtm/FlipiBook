@@ -197,9 +197,40 @@ const savePage = async (req, res) => {
     }
 
     doc.fileSize = doc.pages.reduce((sum, p) => sum + (p.size || 0), 0);
-    doc.lastUpdated = new Date();
-    doc.markModified('pages');
-    await doc.save();
+    // Persist pages and metadata via atomic update with retry to eliminate TLS/SSL socket drops (alert 80)
+    let updateSuccess = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await Flipbook.updateOne(
+          { _id: doc._id },
+          {
+            $set: {
+              pages: doc.pages,
+              fileSize: doc.fileSize,
+              lastUpdated: new Date()
+            }
+          }
+        );
+        updateSuccess = true;
+        break;
+      } catch (dbErr) {
+        console.warn(`[Page Controller] Retry ${attempt}/3 updating flipbook pages batch due to:`, dbErr.message);
+        if (attempt === 3) {
+          // Fallback: if updateOne fails, attempt minimal doc.save() before failing
+          try {
+            doc.lastUpdated = new Date();
+            doc.markModified('pages');
+            await doc.save();
+            updateSuccess = true;
+          } catch (fallbackErr) {
+            console.error('[Page Controller] Final fallback save failed:', fallbackErr.message);
+            throw dbErr;
+          }
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+        }
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -500,9 +531,40 @@ const savePagesBatch = async (req, res) => {
       console.warn('[Page Controller] Warning cleaning up unused assets:', assetCleanErr.message);
     }
 
-    doc.lastUpdated = new Date();
-    doc.markModified('pages');
-    await doc.save();
+    // Persist pages and metadata via atomic update with retry to eliminate TLS/SSL socket drops (alert 80)
+    let updateSuccess = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await Flipbook.updateOne(
+          { _id: doc._id },
+          {
+            $set: {
+              pages: doc.pages,
+              fileSize: doc.fileSize,
+              lastUpdated: new Date()
+            }
+          }
+        );
+        updateSuccess = true;
+        break;
+      } catch (dbErr) {
+        console.warn(`[Page Controller] Retry ${attempt}/3 updating flipbook pages batch due to:`, dbErr.message);
+        if (attempt === 3) {
+          // Fallback: if updateOne fails, attempt minimal doc.save() before failing
+          try {
+            doc.lastUpdated = new Date();
+            doc.markModified('pages');
+            await doc.save();
+            updateSuccess = true;
+          } catch (fallbackErr) {
+            console.error('[Page Controller] Final fallback save failed:', fallbackErr.message);
+            throw dbErr;
+          }
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+        }
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -754,9 +816,40 @@ const renamePage = async (req, res) => {
     // Update MongoDB document
     doc.pages[pageIndex].name = trimmedNewName;
     doc.pages[pageIndex].fileName = newFileName;
-    doc.lastUpdated = new Date();
-    doc.markModified('pages');
-    await doc.save();
+    // Persist pages and metadata via atomic update with retry to eliminate TLS/SSL socket drops (alert 80)
+    let updateSuccess = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await Flipbook.updateOne(
+          { _id: doc._id },
+          {
+            $set: {
+              pages: doc.pages,
+              fileSize: doc.fileSize,
+              lastUpdated: new Date()
+            }
+          }
+        );
+        updateSuccess = true;
+        break;
+      } catch (dbErr) {
+        console.warn(`[Page Controller] Retry ${attempt}/3 updating flipbook pages batch due to:`, dbErr.message);
+        if (attempt === 3) {
+          // Fallback: if updateOne fails, attempt minimal doc.save() before failing
+          try {
+            doc.lastUpdated = new Date();
+            doc.markModified('pages');
+            await doc.save();
+            updateSuccess = true;
+          } catch (fallbackErr) {
+            console.error('[Page Controller] Final fallback save failed:', fallbackErr.message);
+            throw dbErr;
+          }
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+        }
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -879,9 +972,40 @@ const deletePage = async (req, res) => {
     });
 
     doc.fileSize = doc.pages.reduce((sum, p) => sum + (p.size || 0), 0);
-    doc.lastUpdated = new Date();
-    doc.markModified('pages');
-    await doc.save();
+    // Persist pages and metadata via atomic update with retry to eliminate TLS/SSL socket drops (alert 80)
+    let updateSuccess = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await Flipbook.updateOne(
+          { _id: doc._id },
+          {
+            $set: {
+              pages: doc.pages,
+              fileSize: doc.fileSize,
+              lastUpdated: new Date()
+            }
+          }
+        );
+        updateSuccess = true;
+        break;
+      } catch (dbErr) {
+        console.warn(`[Page Controller] Retry ${attempt}/3 updating flipbook pages batch due to:`, dbErr.message);
+        if (attempt === 3) {
+          // Fallback: if updateOne fails, attempt minimal doc.save() before failing
+          try {
+            doc.lastUpdated = new Date();
+            doc.markModified('pages');
+            await doc.save();
+            updateSuccess = true;
+          } catch (fallbackErr) {
+            console.error('[Page Controller] Final fallback save failed:', fallbackErr.message);
+            throw dbErr;
+          }
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+        }
+      }
+    }
 
     return res.status(200).json({
       success: true,

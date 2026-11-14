@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import HotspotPresetPopup from '../../modals/HotspotPresetPopup';
+import HotspotPresetPopup from '../../Interaction/HotspotPresetPopup';
 import {
   TemplateIcon,
   ClearIcon,

@@ -76,35 +76,36 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit, targetModul
         role="dialog"
       >
         {/* Header */}
-        <div className="px-6 pt-6 pb-2 flex items-start justify-between">
-          <div>
+        <div className="px-4 sm:px-6 pt-5 sm:pt-6 pb-2 flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold text-stone-900 tracking-tight">
+              <h2 className="text-lg sm:text-xl font-bold text-stone-900 tracking-tight shrink-0">
                 Create Post
               </h2>
-              <div className="h-[1px] w-48 sm:w-64 bg-stone-200 self-center mt-1" />
+              <div className="h-[1px] hidden sm:block flex-1 bg-stone-200 mt-1" />
             </div>
-            <p className="text-xs text-stone-400 mt-1">
+            <p className="text-[11px] sm:text-xs text-stone-400 mt-1">
               Start a discussion and get help from the community
             </p>
           </div>
 
           <button 
             onClick={onClose}
-            className="text-stone-400 hover:text-stone-700 p-1 rounded-lg transition-colors cursor-pointer -mr-1"
+            className="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
+            aria-label="Close modal"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4 space-y-3.5 sm:space-y-4">
           {/* Post Type Selector (What do you want to do ?) */}
           <div>
             <label className="block text-xs font-semibold text-stone-900 mb-2">
               What do you want to do ?
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
               {/* Suggestion Card */}
               <button
                 type="button"

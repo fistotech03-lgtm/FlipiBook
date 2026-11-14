@@ -488,6 +488,7 @@ const CustomizedEditor = () => {
     bookName,
     setBookName,
     setPages,
+    pages,
     setProjectBaseUrl,
     setLogoSettings,
     setWatermarkSettings,

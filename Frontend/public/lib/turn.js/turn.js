@@ -21,6 +21,10 @@
 
 'use strict';
 
+if (typeof window !== 'undefined') {
+	window._turnJsVersion = 22;
+}
+
 var has3d,
 
 	vendor ='',
@@ -368,7 +372,14 @@ turnMethods = {
 					var pageWidth = (data.display=='double') ? this.width()/2 : this.width(),
 						pageHeight = this.height();
 
-					element.css({width:pageWidth, height:pageHeight});
+					element.css({
+						width: pageWidth,
+						height: pageHeight,
+						'transform': '',
+						'-webkit-transform': '',
+						'transform-origin': '',
+						'-webkit-transform-origin': ''
+					});
 
 					// Place
 					data.pagePlace[page] = page;
@@ -541,8 +552,16 @@ turnMethods = {
 			delete data.pages[page];
 		}
 
-		if (data.pageObjs[page])
+		if (data.pageObjs[page]) {
+			data.pageObjs[page].transform('', '0% 0%');
+			data.pageObjs[page].css({
+				'transform': '',
+				'-webkit-transform': '',
+				'transform-origin': '',
+				'-webkit-transform-origin': ''
+			});
 			data.pageObjs[page].remove();
+		}
 
 		if (data.pageWrap[page]) {
 			data.pageWrap[page].remove();
@@ -815,19 +834,29 @@ turnMethods = {
 		// Stop and hide all active folds across all pages
 		for (var p in data.pages) {
 			if (has(p, data.pages)) {
-				var pData = data.pages[p].data() ? data.pages[p].data().f : null;
+				var pEl = data.pages[p];
+				if (pEl.data() && pEl.data().effect) {
+					clearInterval(pEl.data().effect.handle);
+					delete pEl.data()['effect'];
+				}
+				var pData = pEl.data() ? pEl.data().f : null;
 				if (pData && (pData.point || pData.corner || (pData.fwrapper && pData.fwrapper.is(':visible')))) {
-					flipMethods._moveFoldingPage.call(data.pages[p], null);
-					data.pages[p].flip('hide');
+					flipMethods._moveFoldingPage.call(pEl, null);
+					pEl.flip('hide');
 				}
 			}
 		}
 
 		for (i in pages) {
 			if (!has(i, pages)) continue;
-			opts = data.pages[pages[i]].data().f.opts;
-			flipMethods._moveFoldingPage.call(data.pages[pages[i]], null);
-			data.pages[pages[i]].flip('hide');
+			var mvEl = data.pages[pages[i]];
+			if (mvEl.data() && mvEl.data().effect) {
+				clearInterval(mvEl.data().effect.handle);
+				delete mvEl.data()['effect'];
+			}
+			opts = mvEl.data().f.opts;
+			flipMethods._moveFoldingPage.call(mvEl, null);
+			mvEl.flip('hide');
 			data.pagePlace[opts.next] = opts.next;
 			
 			if (opts.force) {
@@ -1077,14 +1106,12 @@ turnMethods = {
 		e.stopPropagation();
 
 		if (turned || dd.tpage) {
-
-			if (dd.tpage==opts.next || dd.tpage==opts.page) {
-				delete dd['tpage'];
-				turnMethods._fitPage.call(turn, dd.tpage || opts.next, true);
-			}
-
+			var targetPage = dd.tpage || opts.next;
+			delete dd['tpage'];
+			turnMethods._fitPage.call(turn, targetPage, true);
 		} else {
 			turnMethods._removeMv.call(turn, opts.pageMv);
+			turn.turn('stop');
 			turn.turn('update');
 		}
 		
@@ -1686,7 +1713,6 @@ flipMethods = {
 				transform(point2D(-tr.x, -tr.y), [0,1,1,0], [0, 100], a);
 				data.fpage.transform(rotate(90-a*2), '0% 0%');
 				folding.transform(rotate(90) + translate(0, -height, ac), '0% 0%');
-
 			break;
 		}
 
@@ -1696,27 +1722,60 @@ flipMethods = {
 
 	_moveFoldingPage: function(bool) {
 
-		var data = this.data().f,
-			folding = flipMethods._foldingPage.call(this);
+		var d = this.data();
+		var data = d ? d.f : null;
+		if (!data) return;
+		var folding = flipMethods._foldingPage.call(this);
 
-		if (folding) {
-			if (bool) {
-				if (!data.fpage.children()[data.ashadow? '1' : '0']) {
-					flipMethods.setData.call(this, {backParent: folding.parent()});
-					data.fpage.prepend(folding);
+		if (bool) {
+			if (folding && !data.fpage.children()[data.ashadow? '1' : '0']) {
+				flipMethods.setData.call(this, {backParent: folding.parent(), foldingEl: folding});
+				data.fpage.prepend(folding);
+			}
+		} else {
+			if (d && d.effect) {
+				clearInterval(d.effect.handle);
+				delete d['effect'];
+			}
+			var toRestore = data.foldingEl || folding;
+			if (toRestore) {
+				if (data.backParent && toRestore.parent()[0] !== data.backParent[0]) {
+					data.backParent.prepend(toRestore);
 				}
-			} else {
-				if (data.backParent) {
-					data.backParent.prepend(folding);
-				}
-				folding.transform('', '0% 0%');
-				folding.css({
+				toRestore.transform('', '0% 0%');
+				toRestore.css({
 					'transform': '',
 					'-webkit-transform': '',
 					'transform-origin': '',
 					'-webkit-transform-origin': ''
 				});
 			}
+			if (data.fpage) {
+				data.fpage.children().each(function() {
+					if (!data.ashadow || this !== data.ashadow[0]) {
+						var $child = $(this);
+						$child.transform('', '0% 0%');
+						$child.css({
+							'transform': '',
+							'-webkit-transform': '',
+							'transform-origin': '',
+							'-webkit-transform-origin': ''
+						});
+						if (data.backParent && this.parentNode !== data.backParent[0]) {
+							data.backParent.prepend($child);
+						}
+					}
+				});
+				data.fpage.transform('', '0% 0%');
+				data.fpage.css({
+					'transform': '',
+					'-webkit-transform': '',
+					'transform-origin': '',
+					'-webkit-transform-origin': ''
+				});
+			}
+			data.foldingEl = null;
+			data.backParent = null;
 		}
 
 	},
@@ -1744,7 +1803,7 @@ flipMethods = {
 
 				var that = this, point = (data.point && data.point.corner==c.corner) ? data.point : flipMethods._c.call(this, c.corner, 1);
 			
-				this.animatef({from: [point.x, point.y], to:[c.x, c.y], duration: 500, frame: function(v) {
+				this.animatef({from: [point.x, point.y], to:[c.x, c.y], duration: 250, frame: function(v) {
 					c.x = Math.round(v[0]);
 					c.y = Math.round(v[1]);
 					flipMethods._fold.call(that, c);
@@ -1775,6 +1834,12 @@ flipMethods = {
 
 	hide: function() {
 
+		var d = this.data();
+		if (d && d.effect) {
+			clearInterval(d.effect.handle);
+			delete d['effect'];
+		}
+
 		var data = this.data().f,
 			folding = flipMethods._foldingPage.call(this);
 
@@ -1784,22 +1849,41 @@ flipMethods = {
 		}
 
 		this.css({left: 0, top: 0, right: 'auto', bottom: 'auto'}).transform('', '0% 100%');
-		this.css({'transform': '', '-webkit-transform': ''});
+		this.css({'transform': '', '-webkit-transform': '', 'transform-origin': '', '-webkit-transform-origin': ''});
 
 		data.wrapper.transform('', '0% 100%');
-		data.wrapper.css({'transform': '', '-webkit-transform': ''});
+		data.wrapper.css({'transform': '', '-webkit-transform': '', 'transform-origin': '', '-webkit-transform-origin': ''});
 
 		data.fwrapper.hide();
 
 		if (data.bshadow)
 			data.bshadow.hide();
 
-		if (folding) {
-			folding.transform('', '0% 0%');
-			folding.css({'transform': '', '-webkit-transform': '', 'transform-origin': '', '-webkit-transform-origin': ''});
-			if (data.backParent) {
-				data.backParent.prepend(folding);
+		var toClean = [folding, data.foldingEl];
+		for (var ci = 0; ci < toClean.length; ci++) {
+			var fel = toClean[ci];
+			if (fel) {
+				fel.transform('', '0% 0%');
+				fel.css({'transform': '', '-webkit-transform': '', 'transform-origin': '', '-webkit-transform-origin': ''});
+				if (data.backParent && fel.parent()[0] !== data.backParent[0]) {
+					data.backParent.prepend(fel);
+				}
 			}
+		}
+
+		if (data.fpage) {
+			data.fpage.children().each(function() {
+				if (!data.ashadow || this !== data.ashadow[0]) {
+					var $child = $(this);
+					$child.transform('', '0% 0%');
+					$child.css({'transform': '', '-webkit-transform': '', 'transform-origin': '', '-webkit-transform-origin': ''});
+					if (data.backParent && this.parentNode !== data.backParent[0]) {
+						data.backParent.prepend($child);
+					}
+				}
+			});
+			data.fpage.transform('', '0% 0%');
+			data.fpage.css({'transform': '', '-webkit-transform': '', 'transform-origin': '', '-webkit-transform-origin': ''});
 		}
 
 		return this;
@@ -1836,7 +1920,7 @@ flipMethods = {
 					flipMethods._fold.call(that, p1);
 				},
 				complete: hide,
-				duration: 800,
+				duration: 300,
 				hiding: true
 				});
 
@@ -1920,25 +2004,45 @@ flipMethods = {
 		var data = this.data() ? this.data().f : null;
 		if (!data || !data.opts || !data.parent) return;
 
-		if (!data.disabled) {
-			e = (isTouch) ? e.originalEvent.touches : [e];
-		
-			if (data.corner) {
+		// Only process events for pages currently visible in the active spread view!
+		// Prevents off-screen buffer pages from accidentally folding or flashing at the bottom
+		if (data.opts.turn) {
+			var view = data.opts.turn.turn('view');
+			if ($.inArray(data.opts.page, view) == -1) {
+				return;
+			}
+		}
 
+		if (!data.disabled) {
+			var orig = e.originalEvent || e;
+			var isMouseDown = isTouch || (orig.buttons !== undefined ? orig.buttons !== 0 : e.which !== 0);
+			var ev = (isTouch) ? (e.originalEvent ? (e.originalEvent.touches && e.originalEvent.touches.length > 0 ? e.originalEvent.touches : e.originalEvent.changedTouches) : e) : [e];
+
+			if (data.corner && isMouseDown) {
 				var parentDom = data.parent[0];
 				if (!parentDom) return;
 
 				var rect = parentDom.getBoundingClientRect(),
 					scaleX = rect.width > 0 ? (parentDom.offsetWidth / rect.width) : 1,
 					scaleY = rect.height > 0 ? (parentDom.offsetHeight / rect.height) : 1,
-					clientX = e[0].clientX !== undefined ? e[0].clientX : (e[0].pageX - (window.pageXOffset || window.scrollX || 0)),
-					clientY = e[0].clientY !== undefined ? e[0].clientY : (e[0].pageY - (window.pageYOffset || window.scrollY || 0));
+					clientX = ev[0].clientX !== undefined ? ev[0].clientX : (ev[0].pageX - (window.pageXOffset || window.scrollX || 0)),
+					clientY = ev[0].clientY !== undefined ? ev[0].clientY : (ev[0].pageY - (window.pageYOffset || window.scrollY || 0));
 
 				data.corner.x = Math.round((clientX - rect.left) * scaleX);
 				data.corner.y = Math.round((clientY - rect.top) * scaleY);
 
 				flipMethods._showFoldedPage.call(this, data.corner);
-			
+			} else if (!isMouseDown && !this.data().effect && this.is(':visible')) {
+				// Hovering: display default corner transparent curl ready to peel
+				var corner = flipMethods._cornerActivated.call(this, e);
+				if (corner) {
+					var point = flipMethods._c.call(this, corner.corner, data.opts.cornerSize / 2);
+					corner.x = point.x;
+					corner.y = point.y;
+					flipMethods._showFoldedPage.call(this, corner, true);
+				} else {
+					flipMethods.hideFoldedPage.call(this, true);
+				}
 			}
 		}
 	},
@@ -1953,10 +2057,10 @@ flipMethods = {
 			if (data.point) {
 				var event = $.Event('released');
 				this.trigger(event, [data.point]);
-				if (!event.isDefaultPrevented())
+				if (!event.isDefaultPrevented()) {
 					flipMethods.hideFoldedPage.call(this, true);
+				}
 			} else if (data.corner) {
-				// Mouse down / hover without drag: restore folded page immediately
 				flipMethods.hide.call(this);
 			}
 		}

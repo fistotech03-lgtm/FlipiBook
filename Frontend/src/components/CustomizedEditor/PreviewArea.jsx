@@ -1400,7 +1400,9 @@ const PreviewArea = React.memo(({
         // The overall timer for the flip
         const timer = setTimeout(() => {
             if (currentPage < pages.length - 1) {
-                bookRef.current?.pageFlip()?.flipNext();
+                if (!bookRef.current?.pageFlip()?.isAnimating?.()) {
+                    bookRef.current?.pageFlip()?.flipNext();
+                }
             } else {
                 setIsPlaying(false);
             }
@@ -1433,7 +1435,7 @@ const PreviewArea = React.memo(({
             if (countdownInterval) clearInterval(countdownInterval);
             setCountdown(null);
         };
-    }, [isAutoFlipping, currentPage, pages.length, settings.toolbar?.autoFlipDuration, settings.toolbar?.nextFlipCountdown, setIsPlaying]);
+    }, [isAutoFlipping, currentPage, pages.length, settings.toolbar?.autoFlipDuration, settings.toolbar?.nextFlipCountdown, settings.media?.autoFlipSettings?.duration, settings.media?.autoFlipSettings?.countdown, setIsPlaying]);
 
     // Book Appearance Logic - Using helper functions with memoization to prevent re-render loops
     const processedAppearance = React.useMemo(() =>
@@ -2262,7 +2264,7 @@ const PreviewArea = React.memo(({
 
     // Consistently handle centering offset across all layouts and engines
     useEffect(() => {
-        if (!pages || pages.length === 0) {
+        if (!pages || pages.length === 0 || isSinglePage) {
             setOffset(0);
             return;
         }
@@ -2270,15 +2272,15 @@ const PreviewArea = React.memo(({
         const totalPages = augmentedPages.length || pages.length;
         // Soft cover (turn.js): Shift left to center the front cover, shift right to center the back cover
         let targetOffset = 0;
-        if (currentPage === 0) {
+        if (currentPage <= 0) {
             targetOffset = -(WIDTH / 2);
-        } else if (currentPage >= totalPages - 2) {
-            targetOffset = (currentPage % 2 === 0) ? -(WIDTH / 2) : (WIDTH / 2);
+        } else if (currentPage >= totalPages - 1 && totalPages % 2 === 0) {
+            targetOffset = (WIDTH / 2);
         } else {
             targetOffset = 0;
         }
         setOffset(prev => prev === targetOffset ? prev : targetOffset);
-    }, [currentPage, pages.length, augmentedPages.length, WIDTH, useHardCover]);
+    }, [currentPage, pages.length, augmentedPages.length, WIDTH, isSinglePage, useHardCover]);
 
     const layoutBackgroundSettings = React.useMemo(() => ({
         ...backgroundSettings,

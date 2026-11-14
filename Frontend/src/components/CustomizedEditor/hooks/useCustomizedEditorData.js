@@ -21,6 +21,7 @@ export const useCustomizedEditorData = ({
   bookName,
   setBookName,
   setPages,
+  pages: externalPages,
   setProjectBaseUrl,
   setLogoSettings,
   setWatermarkSettings,
@@ -51,6 +52,10 @@ export const useCustomizedEditorData = ({
   const [isLoading, setIsLoading] = useState(() => !hasInMemoryPages);
   const [isDataLoadingComplete, setIsDataLoadingComplete] = useState(() => hasInMemoryPages);
   const [loadingProgress, setLoadingProgress] = useState(() => hasInMemoryPages ? 100 : 0);
+
+  // Keep a ref to the latest pages array so the poller can read it synchronously without batching issues
+  const pagesRef = useRef(externalPages || []);
+  useEffect(() => { pagesRef.current = externalPages || []; }, [externalPages]);
 
   useEffect(() => {
     let interval;
@@ -628,7 +633,7 @@ export const useCustomizedEditorData = ({
   useEffect(() => {
     if (!v_id) return;
     let pollCount = 0;
-    const maxPolls = 35; // 35 * 2.5s = ~88 seconds
+    const maxPolls = 150; // 150 * 1.2s = ~180s (3 minutes) to guarantee 100+ page documents complete extraction
     const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
 
     const interval = setInterval(async () => {
@@ -639,17 +644,20 @@ export const useCustomizedEditorData = ({
       }
 
       let hasPlaceholders = false;
-      setPages(currentPages => {
-        if (!currentPages || currentPages.length === 0) return currentPages;
-        hasPlaceholders = currentPages.some(p => 
-          p.isPlaceholder || 
-          !p.content || 
-          p.content.includes('generateSkeletonPageSvg') || 
-          p.content.includes('fbe-skeleton') || 
-          p.content.includes('createDefaultPageData')
+      // Read current pages directly from ref (avoids React batching issues with setPages functional read)
+      const currentPages = pagesRef.current;
+      if (currentPages && currentPages.length > 0) {
+        hasPlaceholders = currentPages.some(p =>
+          p.isPlaceholder ||
+          !p.content ||
+          p.content.includes('generateSkeletonPageSvg') ||
+          p.content.includes('data-skeleton') ||
+          p.content.includes('fbe-skeleton') ||
+          p.content.includes('fbe-spinner') ||
+          p.content.includes('createDefaultPageData') ||
+          p.content.trim().length < 50
         );
-        return currentPages;
-      });
+      }
 
       if (!hasPlaceholders && pollCount > 1) {
         clearInterval(interval);
@@ -676,9 +684,20 @@ export const useCustomizedEditorData = ({
               if (idx >= 0 && idx < updated.length) {
                 const current = updated[idx];
                 const fpContent = fp.content || fp.html || '';
-                const isFpReal = fpContent && !fpContent.includes('generateSkeletonPageSvg') && !fpContent.includes('createDefaultPageData');
+                const isFpReal = fpContent && 
+                  !fpContent.includes('generateSkeletonPageSvg') && 
+                  !fpContent.includes('data-skeleton') && 
+                  !fpContent.includes('createDefaultPageData') &&
+                  fpContent.trim().length > 20;
 
-                if (isFpReal && (current.isPlaceholder || !current.content || current.content.includes('generateSkeletonPageSvg') || current.content.includes('createDefaultPageData'))) {
+                const isCurrentPlaceholder = current.isPlaceholder || 
+                  !current.content || 
+                  current.content.includes('generateSkeletonPageSvg') || 
+                  current.content.includes('data-skeleton') || 
+                  current.content.includes('fbe-spinner') || 
+                  current.content.includes('createDefaultPageData');
+
+                if (isFpReal && isCurrentPlaceholder) {
                   updated[idx] = {
                     ...current,
                     ...fp,
@@ -700,7 +719,7 @@ export const useCustomizedEditorData = ({
           });
         }
       } catch (_) {}
-    }, 2500);
+    }, 1200);
 
     return () => clearInterval(interval);
   }, [v_id, setPages]);

@@ -103,6 +103,12 @@ const TabletTableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage,
                     return `rgba(${r},${g},${b},${a})`;
                 }
             }
+            if (layoutColors?.popupColor?.primary && ['toc-bg', 'dropdown-bg'].includes(id)) {
+                return layoutColors.popupColor.primary;
+            }
+            if (layoutColors?.popupColor?.secondary && ['toc-text', 'dropdown-text'].includes(id)) {
+                return layoutColors.popupColor.secondary;
+            }
             return `var(--${id}, ${defaultColor})`;
         };
 
@@ -111,63 +117,108 @@ const TabletTableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage,
 
         return (
             <>
-                <div className="fixed inset-0 z-[149] cursor-default pointer-events-auto" onClick={(e) => { e.stopPropagation(); onClose(); }} />
+                <div className="fixed inset-0 z-[149] cursor-default pointer-events-auto bg-transparent" onClick={(e) => { e.stopPropagation(); onClose(); }} />
                 <motion.div
+                    id="layout8-tablet-toc-panel"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute w-[16cqw] h-[36cqw] max-h-[60cqh] z-[150] pointer-events-auto origin-top"
+                    className="absolute w-[20cqw] h-[32cqw] max-h-[60cqh] z-[150] pointer-events-auto origin-top-right"
                     style={{
-                        top: '1cqw',
-                        left: '13%',
-                        transform: 'translateX(-78%)'
+                        top: '1cqh',
+                        left: '11.2%',
+                        transform: 'translateX(-85%)'
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="relative w-full h-full flex flex-col group">
+                        {/* Top Shape Background */}
                         <div className="absolute inset-0 z-0 pointer-events-none drop-shadow-2xl">
-                            <svg width="100%" height="100%" viewBox="0 0 213 500" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-                                {/* Safe bridge to cover SVG anti-aliasing gap */}
+                            <svg width="100%" height="100%" viewBox="0 0 213 350" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
                                 <rect x="122" y="66" width="91" height="2" fill={bgColor} />
-                                <path d="M0 87C0 75.9543 8.95431 67 20 67H213V480C213 491.046 204.046 500 193 500H20C8.9543 500 0 491.046 0 480V87Z" fill={bgColor} />
+                                <path d="M0 87C0 75.9543 8.95431 67 20 67H213V330C213 341.046 204.046 350 193 350H20C8.9543 350 0 341.046 0 330V87Z" fill={bgColor} />
                                 <path d="M146.818 33.0909C146.818 14.8153 161.633 0 179.909 0C198.185 0 213 14.8153 213 33.0909V67H122C140.752 67 146.818 52.7213 146.818 41.7377V33.0909Z" fill={bgColor} />
                             </svg>
                         </div>
-                        <div className="relative z-10 flex flex-col h-full w-full pt-[5cqw] pb-[0.8cqw] px-[1.2cqw] min-w-0">    {addSearch && (
-                            <div className="relative mb-[1.2cqw] w-full flex-none min-w-0">
-                                <Icon icon="lucide:search" className="absolute left-[1cqw] top-1/2 -translate-y-1/2 w-[1cqw] h-[1cqw]" style={{ color: textColor, opacity: 0.6 }} />
-                                <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full min-w-0 rounded-full pl-[2.8cqw] pr-[0.8cqw] py-[0.6cqw] text-[1.1cqw] outline-none transition-colors border" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.2)', color: textColor }} />
-                            </div>
-                        )}
-                            <div className="flex-1 overflow-y-auto w-full" style={{ scrollbarWidth: 'none' }}>
+
+                        {/* Content Layer */}
+                        <div
+                            className="relative z-10 flex flex-col flex-1 min-h-0 pt-[6.8cqw] px-[1.2cqw] pb-[1.5cqw]"
+                        >
+                            {/* Search Bar - Matching Desktop Layout8 Style */}
+                            {addSearch && (
+                                <div className="relative mb-[1cqw] w-full flex-none min-w-0 pr-[0.2cqw]">
+                                    <input
+                                        type="text"
+                                        placeholder="Search..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full min-w-0 rounded-full border border-white/20 pl-[1.2cqw] pr-[2.5cqw] py-[0.5cqw] text-[1.1cqw] placeholder:text-current placeholder:opacity-50 outline-none italic font-medium transition-colors"
+                                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', color: textColor }}
+                                    />
+                                    <Icon
+                                        icon="lucide:search"
+                                        className="absolute right-[1.2cqw] top-1/2 -translate-y-1/2 w-[1.1cqw] h-[1.1cqw]"
+                                        style={{ color: textColor, opacity: 0.6 }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* TOC List with White Rounded Pills like Desktop Layout8 */}
+                            <div className="flex-1 min-h-0 flex flex-col gap-[0.5cqw] overflow-y-auto custom-scrollbar pr-[0.2cqw]" style={{ scrollbarWidth: 'none' }}>
                                 {filteredContent.length > 0 ? (
-                                    filteredContent.map((heading, hIdx) => (
-                                        <React.Fragment key={heading.id || hIdx}>
-                                            <div className="flex items-center justify-between px-[1cqw] py-[0.8cqw] hover:bg-white/10 rounded-[0.8cqw] transition-colors cursor-pointer group" onClick={() => { speakText(heading.title || heading.label); onNavigate(heading.page - 1); onClose(); }}>
-                                                <div className="flex items-center gap-[1cqw] truncate flex-1 min-w-0">
-                                                    <span className="text-[1.3cqw] font-bold truncate" style={{ color: textColor }}>
-                                                        {addSerialNumberHeading && <span className="mr-[0.5cqw]">{hIdx + 1}.</span>}
-                                                        {heading.title || heading.label}
-                                                    </span>
-                                                </div>
-                                                {addPageNumber && <span className="text-[1.2cqw] font-bold flex-shrink-0 ml-[1cqw] tabular-nums opacity-80" style={{ color: textColor }}>{heading.page < 10 ? `0${heading.page}` : heading.page}</span>}
-                                            </div>
-                                            {heading.subheadings?.map((sub, sIdx) => (
-                                                <div key={sub.id || sIdx} className="flex items-center justify-between px-[1cqw] py-[0.6cqw] ml-[1.5cqw] hover:bg-white/10 rounded-[0.5cqw] transition-colors cursor-pointer group" onClick={(e) => { e.stopPropagation(); speakText(sub.title || sub.label); onNavigate(sub.page - 1); onClose(); }}>
-                                                    <div className="flex items-center gap-[1cqw] truncate flex-1 min-w-0">
-                                                        <span className="text-[1.1cqw] font-normal truncate opacity-90" style={{ color: textColor }}>
-                                                            {addSerialNumberSubheading && <span className="mr-[0.5cqw]">{hIdx + 1}.{sIdx + 1}</span>}
-                                                            {sub.title || sub.label}
+                                    filteredContent.map((heading, hIdx) => {
+                                        const hasSubItems = heading.subheadings && heading.subheadings.length > 0;
+                                        return (
+                                            <div key={heading.id || hIdx} className="flex flex-col gap-[0.3cqw]">
+                                                {/* Main Heading Pill */}
+                                                <div
+                                                    className="flex items-center justify-between px-[1.2cqw] py-[0.45cqw] bg-white rounded-full cursor-pointer group shadow-sm transition-transform active:scale-95"
+                                                    onClick={() => { speakText(heading.title || heading.label); onNavigate(heading.page - 1); onClose(); }}
+                                                >
+                                                    <div className="flex items-center gap-[0.5cqw] truncate flex-1 min-w-0">
+                                                        <span className="text-[1.1cqw] font-medium tracking-tight truncate" style={{ color: bgColor }}>
+                                                            {addSerialNumberHeading && <span className="mr-[0.4cqw]">{hIdx + 1}.</span>}
+                                                            {heading.title || heading.label}
                                                         </span>
                                                     </div>
-                                                    {addPageNumber && <span className="text-[1cqw] font-medium flex-shrink-0 ml-[1cqw] tabular-nums opacity-70" style={{ color: textColor }}>{sub.page < 10 ? `0${sub.page}` : sub.page}</span>}
+                                                    {addPageNumber && (
+                                                        <span className="text-[1.1cqw] font-medium tabular-nums whitespace-nowrap shrink-0 ml-[0.8cqw]" style={{ color: bgColor }}>
+                                                            {heading.page < 10 ? `0${heading.page}` : heading.page}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            ))}
-                                        </React.Fragment>
-                                    ))
+
+                                                {/* Subheadings */}
+                                                {hasSubItems && (
+                                                    <div className="flex flex-col gap-[0.3cqw]">
+                                                        {heading.subheadings.map((sub, sIdx) => (
+                                                            <div
+                                                                key={sub.id || sIdx}
+                                                                className="flex items-center justify-between px-[1cqw] py-[0.35cqw] ml-auto w-[85%] bg-white rounded-full cursor-pointer group shadow-sm transition-transform active:scale-95"
+                                                                onClick={(e) => { e.stopPropagation(); speakText(sub.title || sub.label); onNavigate(sub.page - 1); onClose(); }}
+                                                            >
+                                                                <div className="flex items-center gap-[0.5cqw] truncate flex-1 min-w-0">
+                                                                    <span className="text-[1cqw] font-medium tracking-tight truncate" style={{ color: bgColor }}>
+                                                                        {addSerialNumberSubheading && <span className="mr-[0.4cqw]">{hIdx + 1}.{sIdx + 1}</span>}
+                                                                        {sub.title || sub.label}
+                                                                    </span>
+                                                                </div>
+                                                                {addPageNumber && (
+                                                                    <span className="text-[0.95cqw] font-medium tabular-nums whitespace-nowrap shrink-0 ml-[0.8cqw]" style={{ color: bgColor }}>
+                                                                        {sub.page < 10 ? `0${sub.page}` : sub.page}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center py-[4cqw] opacity-70 select-none font-bold">
-                                        <span className="text-[1.2cqw]" style={{ color: textColor }}>No Table Of Content Found</span>
+                                    <div className="flex flex-col items-center justify-center py-[2cqw] opacity-70 select-none font-medium">
+                                        <span className="text-[1.1cqw]" style={{ color: textColor }}>No Table Of Content Found</span>
                                     </div>
                                 )}
                             </div>
@@ -344,10 +395,10 @@ const TabletTableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage,
                             style={isLayout6
                                 ? { color: getLayoutColor('toolbar-text-main', '#FFFFFF'), borderColor: 'rgba(255, 255, 255, 0.15)' }
                                 : (isLayout3 || isLayout4 || isLayout5 || isLayout6 || isLayout6)
-                                ? { color: getLayoutColor('toc-text', '#555555'), backgroundColor: (isLayout5 || isLayout6 || isLayout6) ? getLayoutColorAlpha('toc-text', '85,85,85', 0.05) : undefined, borderColor: (isLayout4 || isLayout5 || isLayout6 || isLayout6) ? getLayoutColorAlpha('toc-text', '85,85,85', 0.2) : undefined }
-                                : isLayout2
-                                    ? { backgroundColor: 'rgba(255, 255, 255, 0.15)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.1)' }
-                                    : { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.2)' }
+                                    ? { color: getLayoutColor('toc-text', '#555555'), backgroundColor: (isLayout5 || isLayout6 || isLayout6) ? getLayoutColorAlpha('toc-text', '85,85,85', 0.05) : undefined, borderColor: (isLayout4 || isLayout5 || isLayout6 || isLayout6) ? getLayoutColorAlpha('toc-text', '85,85,85', 0.2) : undefined }
+                                    : isLayout2
+                                        ? { backgroundColor: 'rgba(255, 255, 255, 0.15)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.1)' }
+                                        : { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.2)' }
                             }
                         />
                     </div>

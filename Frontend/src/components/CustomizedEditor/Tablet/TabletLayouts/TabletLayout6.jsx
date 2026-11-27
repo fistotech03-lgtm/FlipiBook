@@ -486,8 +486,20 @@ const TabletLayout6 = ({
                         color: getLayoutColor('toolbar-text-main', '#FFFFFF')
                     }}
                 >
-                    <button onClick={() => { setShowTOCMemo?.(!showTOC); setShowThumbnailBarMemo?.(false); setShowSoundPopupMemo?.(false); }} className={`hover:opacity-80 active:scale-95 transition-transform ${showTOC ? 'opacity-70' : ''}`} style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}><Icon icon="fluent:text-bullet-list-24-filled" className="w-[2.4cqw] h-[2.4cqw]" /></button>
-                    <button onClick={() => { setShowThumbnailBarMemo?.(!showThumbnailBar); setShowTOCMemo?.(false); setShowSoundPopupMemo?.(false); }} className={`hover:opacity-80 active:scale-95 transition-transform ${showThumbnailBar ? 'opacity-70' : ''}`} style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}><Icon icon="ph:squares-four-fill" className="w-[2.4cqw] h-[2.4cqw]" /></button>
+                    <button onClick={() => { setShowTOCMemo?.(!showTOC); setShowThumbnailBarMemo?.(false); setShowSoundPopupMemo?.(false); }} className={`hover:opacity-80 active:scale-95 transition-transform relative group ${showTOC ? 'opacity-70' : ''}`} style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+                        <Icon icon="fluent:text-bullet-list-24-filled" className="w-[2.4cqw] h-[2.4cqw]" />
+                        <div className="absolute left-[calc(100%+0.8cqw)] top-1/2 -translate-y-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            TOC
+                            <div className="absolute right-[100%] top-1/2 -translate-y-1/2 w-0 h-0 border-solid border-t-transparent border-b-transparent border-r-[0.4cqw] border-t-[0.4cqw] border-b-[0.4cqw]" style={{ borderRightColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
+                    </button>
+                    <button onClick={() => { setShowThumbnailBarMemo?.(!showThumbnailBar); setShowTOCMemo?.(false); setShowSoundPopupMemo?.(false); }} className={`hover:opacity-80 active:scale-95 transition-transform relative group ${showThumbnailBar ? 'opacity-70' : ''}`} style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+                        <Icon icon="ph:squares-four-fill" className="w-[2.4cqw] h-[2.4cqw]" />
+                        <div className="absolute left-[calc(100%+0.8cqw)] top-1/2 -translate-y-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            Thumbnails
+                            <div className="absolute right-[100%] top-1/2 -translate-y-1/2 w-0 h-0 border-solid border-t-transparent border-b-transparent border-r-[0.4cqw] border-t-[0.4cqw] border-b-[0.4cqw]" style={{ borderRightColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
+                    </button>
                     <button 
                         onClick={() => {
                             setShowGalleryPopupMemo?.(!showGalleryPopup);
@@ -495,18 +507,46 @@ const TabletLayout6 = ({
                             setShowThumbnailBarMemo?.(false);
                             setShowSoundPopupMemo?.(false);
                         }} 
-                        className={`hover:opacity-80 active:scale-95 transition-transform ${showGalleryPopup ? 'opacity-70' : ''}`}
+                        className={`hover:opacity-80 active:scale-95 transition-transform relative group ${showGalleryPopup ? 'opacity-70' : ''}`}
                         style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
                     >
                         <Icon icon="clarity:image-gallery-solid" className="w-[2.4cqw] h-[2.4cqw]" />
+                        <div className="absolute left-[calc(100%+0.8cqw)] top-1/2 -translate-y-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            Gallery
+                            <div className="absolute right-[100%] top-1/2 -translate-y-1/2 w-0 h-0 border-solid border-t-transparent border-b-transparent border-r-[0.4cqw] border-t-[0.4cqw] border-b-[0.4cqw]" style={{ borderRightColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
                     </button>
                     {(settings?.media?.backgroundAudio ?? true) && (
-                        <button onClick={() => { setShowSoundPopupMemo?.(!showSoundPopup); setShowTOCMemo?.(false); setShowThumbnailBarMemo?.(false); }} className={`hover:opacity-80 active:scale-95 transition-transform ${showSoundPopup ? 'opacity-70' : ''}`} style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}><Icon icon="solar:music-notes-bold" className="w-[2.4cqw] h-[2.4cqw]" /></button>
+                        <button onClick={() => { setShowSoundPopupMemo?.(!showSoundPopup); setShowTOCMemo?.(false); setShowThumbnailBarMemo?.(false); }} className={`hover:opacity-80 active:scale-95 transition-transform relative group ${showSoundPopup ? 'opacity-70' : ''}`} style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+                            <Icon icon="solar:music-notes-bold" className="w-[2.4cqw] h-[2.4cqw]" />
+                            <div className="absolute left-[calc(100%+0.8cqw)] top-1/2 -translate-y-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                                Sound
+                                <div className="absolute right-[100%] top-1/2 -translate-y-1/2 w-0 h-0 border-solid border-t-transparent border-b-transparent border-r-[0.4cqw] border-t-[0.4cqw] border-b-[0.4cqw]" style={{ borderRightColor: 'rgba(10, 10, 12, 0.65)' }} />
+                            </div>
+                        </button>
                     )}
 
-                    <button className="hover:opacity-80 active:scale-95 transition-transform" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }} onClick={() => setIsShareOpen(true)}><Icon icon="mage:share-fill" className="w-[2.4cqw] h-[2.4cqw]" /></button>
-                    <button className="hover:opacity-80 active:scale-95 transition-transform" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}><Icon icon="meteor-icons:download" className="w-[2.4cqw] h-[2.4cqw]" /></button>
-                    <button className="hover:opacity-80 active:scale-95 transition-transform" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}><Icon icon="lucide:fullscreen" className="w-[2.4cqw] h-[2.4cqw]" /></button>
+                    <button className="hover:opacity-80 active:scale-95 transition-transform relative group" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }} onClick={() => setIsShareOpen(true)}>
+                        <Icon icon="mage:share-fill" className="w-[2.4cqw] h-[2.4cqw]" />
+                        <div className="absolute left-[calc(100%+0.8cqw)] top-1/2 -translate-y-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            Share
+                            <div className="absolute right-[100%] top-1/2 -translate-y-1/2 w-0 h-0 border-solid border-t-transparent border-b-transparent border-r-[0.4cqw] border-t-[0.4cqw] border-b-[0.4cqw]" style={{ borderRightColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
+                    </button>
+                    <button className="hover:opacity-80 active:scale-95 transition-transform relative group" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+                        <Icon icon="meteor-icons:download" className="w-[2.4cqw] h-[2.4cqw]" />
+                        <div className="absolute left-[calc(100%+0.8cqw)] top-1/2 -translate-y-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            Download
+                            <div className="absolute right-[100%] top-1/2 -translate-y-1/2 w-0 h-0 border-solid border-t-transparent border-b-transparent border-r-[0.4cqw] border-t-[0.4cqw] border-b-[0.4cqw]" style={{ borderRightColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
+                    </button>
+                    <button className="hover:opacity-80 active:scale-95 transition-transform relative group" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+                        <Icon icon="lucide:fullscreen" className="w-[2.4cqw] h-[2.4cqw]" />
+                        <div className="absolute left-[calc(100%+0.8cqw)] top-1/2 -translate-y-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            Fullscreen
+                            <div className="absolute right-[100%] top-1/2 -translate-y-1/2 w-0 h-0 border-solid border-t-transparent border-b-transparent border-r-[0.4cqw] border-t-[0.4cqw] border-b-[0.4cqw]" style={{ borderRightColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
+                    </button>
                 </div>
 
                 {/* Page Counter Badge - Matching Layout 6 exactly */}
@@ -593,15 +633,31 @@ const TabletLayout6 = ({
             >
                 {/* Playback Controls */}
                 <div className="flex items-center gap-[1.5cqw]">
-                    <button onClick={() => onPageClick && onPageClick(0)} className="hover:opacity-100 opacity-80 active:scale-95 transition-all" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}><Icon icon="ph:skip-back" className="w-[1.4cqw] h-[1.4cqw]" /></button>
+                    <button onClick={() => onPageClick && onPageClick(0)} className="hover:opacity-100 opacity-80 active:scale-95 transition-all relative group" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+                        <Icon icon="ph:skip-back" className="w-[1.4cqw] h-[1.4cqw]" />
+                        <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            First
+                            <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
+                    </button>
                     <button 
-                        className="hover:opacity-90 active:scale-95 transition-all" 
+                        className="hover:opacity-90 active:scale-95 transition-all relative group" 
                         style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
                         onClick={() => setIsPlaying?.(!isAutoFlipping)}
                     >
                         <Icon icon={isAutoFlipping ? "ph:pause-fill" : "ph:play-fill"} className="w-[1.6cqw] h-[1.6cqw]" />
+                        <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            {isAutoFlipping ? 'Pause' : 'Play'}
+                            <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
                     </button>
-                    <button onClick={() => onPageClick && onPageClick(pagesCount - 1)} className="hover:opacity-100 opacity-80 active:scale-95 transition-all" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}><Icon icon="ph:skip-forward" className="w-[1.4cqw] h-[1.4cqw]" /></button>
+                    <button onClick={() => onPageClick && onPageClick(pagesCount - 1)} className="hover:opacity-100 opacity-80 active:scale-95 transition-all relative group" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+                        <Icon icon="ph:skip-forward" className="w-[1.4cqw] h-[1.4cqw]" />
+                        <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            Last
+                            <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
+                    </button>
                 </div>
 
                 {/* Progress Bar */}
@@ -622,17 +678,33 @@ const TabletLayout6 = ({
                         borderColor: getLayoutColorAlpha('toolbar-text-main', '255, 255, 255', 0.3)
                     }}
                 >
-                    <button className="hover:opacity-100 opacity-80" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}><Icon icon="ph:magnifying-glass-minus" className="w-[1.2cqw] h-[1.2cqw]" /></button>
+                    <button className="hover:opacity-100 opacity-80 relative group" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+                        <Icon icon="ph:magnifying-glass-minus" className="w-[1.2cqw] h-[1.2cqw]" />
+                        <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            Zoom Out
+                            <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
+                    </button>
                     <span className="font-bold text-[1cqw]" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>100%</span>
-                    <button className="hover:opacity-100 opacity-80" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}><Icon icon="ph:magnifying-glass-plus" className="w-[1.2cqw] h-[1.2cqw]" /></button>
+                    <button className="hover:opacity-100 opacity-80 relative group" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+                        <Icon icon="ph:magnifying-glass-plus" className="w-[1.2cqw] h-[1.2cqw]" />
+                        <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            Zoom In
+                            <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
+                    </button>
                     <button 
-                        className="font-bold text-[0.9cqw] px-[0.8cqw] py-[0.3cqw] rounded-[0.2cqw] ml-[0.3cqw] hover:opacity-90 transition-opacity"
+                        className="font-bold text-[0.9cqw] px-[0.8cqw] py-[0.3cqw] rounded-[0.2cqw] ml-[0.3cqw] hover:opacity-90 transition-opacity relative group"
                         style={{ 
                             backgroundColor: getLayoutColor('toolbar-text-main', '#FFFFFF'),
                             color: getLayoutColor('bottom-toolbar-bg', '#555555')
                         }}
                     >
                         Reset
+                        <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                            Reset
+                            <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                        </div>
                     </button>
                 </div>
             </div>

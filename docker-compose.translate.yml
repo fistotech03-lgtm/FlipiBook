@@ -1,0 +1,43 @@
+# Standalone Docker Compose configuration for FlipiBook Translation Microservice
+# Deploy as an independent stack on the VPS so Frontend/Backend rebuilds never restart or clear it.
+# Pre-create on VPS host before first run:
+#   mkdir -p /home/flipibook/models/huggingface
+#   docker network create dokploy-network   (if not already created by Dokploy)
+
+services:
+  translate:
+    build:
+      context: ./language_convert
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "8010"
+    volumes:
+      # Persistent host cache so HuggingFace model weights survive container rebuilds
+      - /home/flipibook/models/huggingface:/root/.cache/huggingface
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8010
+      - HF_HOME=/root/.cache/huggingface
+      - HF_TOKEN=${HF_TOKEN:-}
+      # Set USE_DISTILLED=false on 8GB+ VPS to load the 1B model, keep true on 4GB VPS
+      - USE_DISTILLED=${USE_DISTILLED:-true}
+      - BEAM_SIZE=${BEAM_SIZE:-2}
+      - HEADING_BEAM_SIZE=${HEADING_BEAM_SIZE:-4}
+      - DEFAULT_BATCH_SIZE=${DEFAULT_BATCH_SIZE:-16}
+      - MAX_LENGTH=${MAX_LENGTH:-256}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8010/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      dokploy-network:
+        aliases:
+          - flipibook-translate
+
+networks:
+  dokploy-network:
+    name: dokploy-network
+    external: true

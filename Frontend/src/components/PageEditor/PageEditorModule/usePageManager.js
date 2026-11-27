@@ -4,12 +4,11 @@
  * and undo/redo history snapshot stack.
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { parseLayersFromSVG } from './svgFilterUtils';
 import pageCacheManager from '../utils/PageCacheManager';
 import { sanitizeSvgXml, safeSerializeSvg } from '../utils/editorUtils';
-
-const MAX_HISTORY = 30;
+import { useHistoryManager } from './useHistoryManager';
 
 export const usePageManager = ({
   pages,
@@ -29,162 +28,30 @@ export const usePageManager = ({
   currentBook,
   v_id
 }) => {
-  const [history, setHistory] = useState([]);
-  const [redoStack, setRedoStack] = useState([]);
-
-  const saveToHistory = (
-    customPages = pages,
-    customLayerId = selectedLayerId,
-    customPageIndex = activePageIndex,
-    customMultiIds = multiSelectedIds
-  ) => {
-    // Fast shallow clone of page objects without re-serializing giant 10MB+ strings
-    const snapPages = customPages.map(p => ({ ...p }));
-    const snap = {
-      pages: snapPages,
-      selectedLayerId: customLayerId,
-      activePageIndex: customPageIndex,
-      multiSelectedIds: Array.from(customMultiIds || [])
-    };
-
-    setHistory(prev => {
-      if (prev.length > 0) {
-        const last = prev[prev.length - 1];
-        const lastPages = Array.isArray(last) ? last : last.pages;
-        const lastLayerId = Array.isArray(last) ? null : last.selectedLayerId;
-        const lastPageIndex = Array.isArray(last) ? null : last.activePageIndex;
-        const lastMultiIds = Array.isArray(last) ? [] : (last.multiSelectedIds || []);
-
-        // Fast reference & string comparison avoiding slow JSON.stringify on 10MB+ templates
-        const isSamePages = lastPages && lastPages.length === snap.pages.length &&
-          lastPages.every((lp, idx) => lp.html === snap.pages[idx]?.html && lp.id === snap.pages[idx]?.id);
-        const isSameLayerId = lastLayerId === snap.selectedLayerId;
-        const isSamePageIndex = lastPageIndex === snap.activePageIndex;
-        const isSameMultiIds = lastMultiIds.length === snap.multiSelectedIds.length &&
-          lastMultiIds.every((id, idx) => id === snap.multiSelectedIds[idx]);
-
-        if (isSamePages && isSameLayerId && isSamePageIndex && isSameMultiIds) {
-          return prev;
-        }
-      }
-      return [...prev.slice(-(MAX_HISTORY - 1)), snap];
-    });
-    setRedoStack([]); // Clear redo stack on new action
-  };
-
-  const undo = () => {
-    // While drawing with the Pen, Undo removes the last point only
-    if (window.__penPointHistory?.undo?.()) return;
-    if (history.length === 0) return;
-
-    isUndoRedoActiveRef.current = true;
-    // Undo/redo must ALWAYS repaint the canvas. A leftover "skip next canvas update" flag (set by
-    // panels that already edited the live DOM, e.g. Image Framing's syncDomChanges) would otherwise
-    // swallow this repaint: the state is restored but a deleted element never reappears.
-    window.__skipCanvasUpdateForPage = -1;
-
-    const currentSnap = {
-      pages: pages.map(p => ({ ...p })),
-      selectedLayerId,
-      activePageIndex,
-      multiSelectedIds: Array.from(multiSelectedIds || [])
-    };
-
-    const prevSnap = history[history.length - 1];
-    setHistory(prev => prev.slice(0, -1));
-    setRedoStack(prev => [currentSnap, ...prev]);
-
-    const targetPages = Array.isArray(prevSnap) ? prevSnap : prevSnap.pages;
-    const targetLayerId = Array.isArray(prevSnap) ? null : prevSnap.selectedLayerId;
-    const targetPageIndex = Array.isArray(prevSnap) ? activePageIndex : prevSnap.activePageIndex;
-    const targetMultiIds = Array.isArray(prevSnap) ? new Set() : new Set(prevSnap.multiSelectedIds || []);
-
-    prevSelectedLayerIdRef.current = targetLayerId;
-    prevMultiSelectedIdsRef.current = targetMultiIds;
-
-    setPages(targetPages);
-    if (targetPageIndex !== undefined && targetPageIndex !== null && targetPageIndex >= 0) {
-      setActivePageIndex(targetPageIndex);
-    }
-
-    // Restore selection state exactly as captured in the snapshot (Figma style)
-    if (targetLayerId) {
-      setSelectedLayerId(targetLayerId);
-      setMultiSelectedIds(new Set([targetLayerId]));
-    } else {
-      setSelectedLayerId(null);
-      setMultiSelectedIds(targetMultiIds);
-    }
-
-    // Trigger immediate & multi-frame rebind of selection handles if an element was selected in the snapshot
-    const rebind = () => {
-      if (targetLayerId) {
-        window.dispatchEvent(new CustomEvent('rebind-selection-overlay', { detail: { layerId: targetLayerId } }));
-      }
-    };
-    requestAnimationFrame(() => {
-      rebind();
-      setTimeout(rebind, 30);
-      setTimeout(rebind, 100);
-    });
-  };
-
-  const redo = () => {
-    // While drawing with the Pen, Redo brings back the last removed point
-    if (window.__penPointHistory?.redo?.()) return;
-    if (redoStack.length === 0) return;
-
-    isUndoRedoActiveRef.current = true;
-    // Undo/redo must ALWAYS repaint the canvas. A leftover "skip next canvas update" flag (set by
-    // panels that already edited the live DOM, e.g. Image Framing's syncDomChanges) would otherwise
-    // swallow this repaint: the state is restored but a deleted element never reappears.
-    window.__skipCanvasUpdateForPage = -1;
-
-    const currentSnap = {
-      pages: pages.map(p => ({ ...p })),
-      selectedLayerId,
-      activePageIndex,
-      multiSelectedIds: Array.from(multiSelectedIds || [])
-    };
-
-    const nextSnap = redoStack[0];
-    setRedoStack(prev => prev.slice(1));
-    setHistory(prev => [...prev, currentSnap]);
-
-    const targetPages = Array.isArray(nextSnap) ? nextSnap : nextSnap.pages;
-    const targetLayerId = Array.isArray(nextSnap) ? null : nextSnap.selectedLayerId;
-    const targetPageIndex = Array.isArray(nextSnap) ? activePageIndex : nextSnap.activePageIndex;
-    const targetMultiIds = Array.isArray(nextSnap) ? new Set() : new Set(nextSnap.multiSelectedIds || []);
-
-    prevSelectedLayerIdRef.current = targetLayerId;
-    prevMultiSelectedIdsRef.current = targetMultiIds;
-
-    setPages(targetPages);
-    if (targetPageIndex !== undefined && targetPageIndex !== null && targetPageIndex >= 0) {
-      setActivePageIndex(targetPageIndex);
-    }
-
-    // Restore selection state exactly as captured in the snapshot (Figma style)
-    if (targetLayerId) {
-      setSelectedLayerId(targetLayerId);
-      setMultiSelectedIds(new Set([targetLayerId]));
-    } else {
-      setSelectedLayerId(null);
-      setMultiSelectedIds(targetMultiIds);
-    }
-
-    // Trigger immediate & multi-frame rebind of selection handles if an element was selected in the snapshot
-    const rebind = () => {
-      if (targetLayerId) {
-        window.dispatchEvent(new CustomEvent('rebind-selection-overlay', { detail: { layerId: targetLayerId } }));
-      }
-    };
-    requestAnimationFrame(() => {
-      rebind();
-      setTimeout(rebind, 30);
-      setTimeout(rebind, 100);
-    });
-  };
+  const {
+    history,
+    redoStack,
+    setHistory,
+    setRedoStack,
+    saveToHistory,
+    undo,
+    redo,
+    pagesRef,
+    selectedLayerIdRef,
+    multiSelectedIdsRef,
+  } = useHistoryManager({
+    pages,
+    setPages,
+    activePageIndex,
+    setActivePageIndex,
+    selectedLayerId,
+    setSelectedLayerId,
+    multiSelectedIds,
+    setMultiSelectedIds,
+    isUndoRedoActiveRef,
+    prevSelectedLayerIdRef,
+    prevMultiSelectedIdsRef,
+  });
 
   const updatePageHtml = (pageIndex, html, explicitLayers = null) => {
     let sanitizedHtml = sanitizeSvgXml(html);
@@ -196,7 +63,7 @@ export const usePageManager = ({
       if (svg) sanitizedHtml = safeSerializeSvg(svg) || svg.outerHTML;
     }
 
-    saveToHistory(pages, selectedLayerId, pageIndex);
+    saveToHistory(pagesRef.current, selectedLayerIdRef.current, pageIndex, multiSelectedIdsRef.current);
 
     setPages(prev => {
       const updated = [...prev];
@@ -250,6 +117,7 @@ export const usePageManager = ({
         html: sanitizedHtml,
         layers: newLayers
       };
+      pagesRef.current = updated;
       return updated;
     });
   };

@@ -20,6 +20,25 @@ import { updateShapeMaskTransform } from '../../LeftActionMenu/Elements/utils/sh
 import { drawShapeImageAdjustOverlay } from '../../penTool/penOverlayEngine';
 import { hasCustomImageInShape } from '../../LeftActionMenu/Elements/utils/imageFramingUtils';
 
+// Page container for a pointer event. `currentTarget` is the page div for canvas listeners but
+// `window` for the global mousemove/up listeners (no .closest) — fall back to the event target,
+// then to the given / active page.
+const getEventPageContainer = (e, pageIndex) => {
+  const ct = e?.currentTarget;
+  if (ct && typeof ct.closest === 'function') {
+    const c = ct.classList?.contains('page-svg-container') ? ct : ct.closest('.page-svg-container');
+    if (c) return c;
+  }
+  const t = e?.target;
+  const fromTarget = t && typeof t.closest === 'function' ? t.closest('.page-svg-container') : null;
+  if (fromTarget) return fromTarget;
+  if (pageIndex !== undefined && pageIndex !== null) {
+    return document.querySelector(`.page-svg-container[data-page-index="${pageIndex}"]`);
+  }
+  return document.querySelector('.page-svg-container');
+};
+
+
 /**
  * Hook managing canvas pointer interactions:
  * - Mouse down, move, leave, click, double click
@@ -1189,7 +1208,7 @@ export const useCanvasPointerEvents = ({
             shape.setAttribute('data-fill-color', '#d0ccff');
             shape.setAttribute('data-stroke-color', 'none');
             shape.setAttribute('data-stroke-width', '0');
-            shape.setAttribute('data-stroke-position', 'Outside');
+            shape.setAttribute('data-stroke-position', 'Inside');
             shape.setAttribute('paint-order', 'stroke fill');
             shape.style.paintOrder = 'stroke fill';
             shape.setAttribute('vector-effect', 'non-scaling-stroke');
@@ -1271,7 +1290,7 @@ export const useCanvasPointerEvents = ({
 
     let hitMultiSelectionGap = false;
     if (currentMultiIds.size > 1 && !hitAnySelected) {
-      const pageContainer = e.currentTarget.closest('.page-svg-container');
+      const pageContainer = getEventPageContainer(e, pageIndex);
       const multiPoly = pageContainer?.querySelector('.selection-overlay-layer #overlay-poly-selected-multi-selection-bounds') || pageContainer?.querySelector('.selection-overlay-layer #overlay-poly-selected-multi');
       if (multiPoly) {
         const polyRect = multiPoly.getBoundingClientRect();
@@ -1558,7 +1577,7 @@ export const useCanvasPointerEvents = ({
 
     // ── Freehand Pencil Update (During Drag) ──────────
     if (isFreehandDrawingRef.current && drawingPathRef.current) {
-      const svg = drawingSvgRef.current || (e.currentTarget.closest('.page-svg-container')?.querySelector('svg'));
+      const svg = drawingSvgRef.current || (getEventPageContainer(e, pageIndex)?.querySelector('svg'));
       if (!svg) return;
       const pt = getLocalPoint(svg, drawingPathRef.current.parentElement, e.clientX, e.clientY);
 
@@ -1575,8 +1594,8 @@ export const useCanvasPointerEvents = ({
     // ── Vectra Pen Tool Update & Hover Preview ──────────
     const currentPenTool = selectedPenToolRef?.current || selectedPenTool || 'pen';
     if (activeMainTool === 'pen' && currentPenTool === 'pen') {
-      const pageContainer = e.currentTarget.closest('.page-svg-container');
-      const svg = drawingSvgRef.current || (pageContainer?.querySelector('svg')) || e.currentTarget.querySelector('svg');
+      const pageContainer = getEventPageContainer(e, pageIndex);
+      const svg = drawingSvgRef.current || (pageContainer?.querySelector('svg')) || e.currentTarget?.querySelector?.('svg');
       if (svg) {
         const parentEl = drawingPathRef.current?.parentElement || resolveTargetParentForCreation(svg, e.clientX, e.clientY);
         if (parentEl) {
@@ -1616,40 +1635,56 @@ export const useCanvasPointerEvents = ({
     // ── Shapes Drawing Update ────────────────────────────────────────────────
     if (drawingShapeRef.current) {
       const svg = drawingSvgRef.current;
-      const pt = getSvgPoint(svg, e.clientX, e.clientY);
+      const shape = drawingShapeRef.current;
+      const pt = getLocalPoint(svg, shape.parentElement || svg, e.clientX, e.clientY);
       const start = shapeStartPointRef.current;
 
       if (pt && start) {
-        const shape = drawingShapeRef.current;
         const dx = pt.x - start.x;
         const dy = pt.y - start.y;
+
+        // Shared bounding box starting from mouse-down point (start) to current cursor (pt)
+        let boxW = Math.abs(dx);
+        let boxH = Math.abs(dy);
+        if (e.shiftKey) {
+          const maxDim = Math.max(boxW, boxH);
+          boxW = maxDim;
+          boxH = maxDim;
+        }
+        const boxX = dx < 0 ? start.x - boxW : start.x;
+        const boxY = dy < 0 ? start.y - boxH : start.y;
+
+        const mapUnitVerticesToBox = (unitPts) => {
+          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+          for (const p of unitPts) {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+          }
+          const spanX = maxX - minX || 1;
+          const spanY = maxY - minY || 1;
+          return unitPts.map((p) => {
+            const x = boxX + ((p.x - minX) / spanX) * boxW;
+            const y = boxY + ((p.y - minY) / spanY) * boxH;
+            return `${x},${y}`;
+          });
+        };
 
         switch (selectedShapeTool) {
           case 'rectangle':
           case 'free-frame': {
-            let width = Math.abs(dx);
-            let height = Math.abs(dy);
-            if (e.shiftKey) {
-              const maxDim = Math.max(width, height);
-              width = maxDim;
-              height = maxDim;
-            }
-            shape.setAttribute('x', dx < 0 ? start.x - width : start.x);
-            shape.setAttribute('y', dy < 0 ? start.y - height : start.y);
-            shape.setAttribute('width', width);
-            shape.setAttribute('height', height);
+            shape.setAttribute('x', boxX);
+            shape.setAttribute('y', boxY);
+            shape.setAttribute('width', boxW);
+            shape.setAttribute('height', boxH);
             break;
           }
           case 'circle': {
-            let rx = Math.abs(dx);
-            let ry = Math.abs(dy);
-            if (e.shiftKey) {
-              const maxR = Math.max(rx, ry);
-              rx = maxR;
-              ry = maxR;
-            }
-            shape.setAttribute('rx', rx);
-            shape.setAttribute('ry', ry);
+            shape.setAttribute('cx', boxX + boxW / 2);
+            shape.setAttribute('cy', boxY + boxH / 2);
+            shape.setAttribute('rx', boxW / 2);
+            shape.setAttribute('ry', boxH / 2);
             break;
           }
           case 'line': {
@@ -1674,39 +1709,41 @@ export const useCanvasPointerEvents = ({
             break;
           }
           case 'polygon': {
-            const radius = Math.sqrt(dx * dx + dy * dy);
             const sides = parseInt(shape.getAttribute('data-count') || 3);
-            const points = [];
+            const unitPts = [];
             for (let i = 0; i < sides; i++) {
               const angle = (i * 2 * Math.PI) / sides - Math.PI / 2;
-              points.push(`${start.x + radius * Math.cos(angle)},${start.y + radius * Math.sin(angle)}`);
+              unitPts.push({ x: Math.cos(angle), y: Math.sin(angle) });
             }
+            const points = mapUnitVerticesToBox(unitPts);
             shape.setAttribute('d', `M ${points.join(' L ')} Z`);
-            shape.setAttribute('data-rx', radius);
-            shape.setAttribute('data-ry', radius);
-            shape.setAttribute('data-cx', start.x);
-            shape.setAttribute('data-cy', start.y);
+            shape.setAttribute('data-rx', boxW / 2);
+            shape.setAttribute('data-ry', boxH / 2);
+            shape.setAttribute('data-cx', boxX + boxW / 2);
+            shape.setAttribute('data-cy', boxY + boxH / 2);
             break;
           }
           case 'star': {
-            const rOuter = Math.sqrt(dx * dx + dy * dy);
             const ratio = parseFloat(shape.getAttribute('data-ratio') || 40) / 100;
-            const rInner = rOuter * ratio;
             const count = parseInt(shape.getAttribute('data-count') || 5);
             const sides = count * 2;
-            const points = [];
+            const unitPts = [];
             for (let i = 0; i < sides; i++) {
-              const r = (i % 2 === 0) ? rOuter : rInner;
+              const r = (i % 2 === 0) ? 1 : ratio;
               const angle = (Math.PI / count) * i - Math.PI / 2;
-              points.push(`${start.x + r * Math.cos(angle)},${start.y + r * Math.sin(angle)}`);
+              unitPts.push({ x: r * Math.cos(angle), y: r * Math.sin(angle) });
             }
+            const points = mapUnitVerticesToBox(unitPts);
             shape.setAttribute('d', `M ${points.join(' L ')} Z`);
-            shape.setAttribute('data-rx', rOuter);
-            shape.setAttribute('data-ry', rOuter);
-            shape.setAttribute('data-cx', start.x);
-            shape.setAttribute('data-cy', start.y);
+            shape.setAttribute('data-rx', boxW / 2);
+            shape.setAttribute('data-ry', boxH / 2);
+            shape.setAttribute('data-cx', boxX + boxW / 2);
+            shape.setAttribute('data-cy', boxY + boxH / 2);
             break;
           }
+        }
+        if (typeof drawOverlayHighlight === 'function') {
+          drawOverlayHighlight(shape, 'selected');
         }
         suppressClickRef.current = true;
       }
@@ -2093,7 +2130,7 @@ export const useCanvasPointerEvents = ({
 
         const start = shapeStartPointRef.current;
         if (start && svgEl && e) {
-          const pt = getSvgPoint(svgEl, e.clientX, e.clientY);
+          const pt = getLocalPoint(svgEl, shape.parentElement || svgEl, e.clientX, e.clientY);
           if (pt && Math.hypot(pt.x - start.x, pt.y - start.y) < 2) {
             const type = shape.getAttribute('data-shape-type') || shape.tagName.toLowerCase();
 

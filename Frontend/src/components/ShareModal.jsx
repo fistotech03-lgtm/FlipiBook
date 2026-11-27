@@ -9,7 +9,7 @@ import { getAssetBaseUrl, getSupabaseBaseUrl, rewriteHtmlUploadsToSupabase } fro
 import { useAuth } from '../context/AuthContext';
 import { analyticsApi } from '../api/analyticsApi';
 import { TemplatePreview, COVER_TEMPLATES } from './FlipbookInfoModal';
-import { CUSTOM_FONT_FAMILIES } from '../utils/customFonts';
+import { FONT_FAMILIES, buildGoogleFontLinks, buildCustomFontFaceCss } from '../config/fonts';
 
 
 // Lazy-load preview iframe: only fetches HTML when card is visible in viewport
@@ -51,9 +51,11 @@ const LazyPreview = ({ v_id, emailId, backendUrl, iframeBaseUrl, title, imageUrl
 
                         let fontImports = '';
                         if (fontsToLoad.size > 0) {
-                            const fontList = Array.from(fontsToLoad).map(f => f.replace(/\s+/g, '+')).join('|');
-                            fontImports = `<link href="https://fonts.googleapis.com/css?family=${fontList}:300,400,500,600,700,800,900&display=swap" rel="stylesheet">`;
+                            // Google links only for valid weights (bad weights make Google reject the whole request)
+                            fontImports = buildGoogleFontLinks(Array.from(fontsToLoad));
                         }
+                        // Local registry fonts (/lib/Fonts) — always available in the preview iframe
+                        fontImports += `<style>${buildCustomFontFaceCss(window.location.origin)}</style>`;
 
                         setHtml({ content: res.data.html, fontImports });
                     }
@@ -3016,7 +3018,7 @@ const ShareModal = ({ isOpen, onClose, flipbookUrl, flipbookThumbnail, currentBo
                     const opacity = isT1 ? text1ColorOpacity : text2ColorOpacity;
                     const setOpacity = isT1 ? setText1ColorOpacity : setText2ColorOpacity;
 
-                    const fontFamilies = ['Poppins', 'Inter', 'Roboto', 'Outfit', 'Montserrat', 'Playfair Display', ...CUSTOM_FONT_FAMILIES];
+                    const fontFamilies = FONT_FAMILIES;
                     const fontSizes = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 64];
                     const fontWeights = ['Regular', 'Medium', 'Semi Bold', 'Bold', 'Black'];
 

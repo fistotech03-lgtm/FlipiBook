@@ -28,13 +28,13 @@ export const applyPenDefaults = (path) => {
   const d = getPenDefaults();
   path.setAttribute('fill', d.fill || 'none');
   path.setAttribute('stroke', d.stroke || '#000000');
-  // Same stroke model as shapes: the panel value is the weight, drawn at 2× with "Outside"
-  // alignment (paint-order stroke first) — so a 1.5 pen line looks like a 1.5 shape stroke.
+  // Real width: pen / pencil paths are open, so "Outside"/"Inside" alignment (drawn at 2× and half
+  // masked away) can't work — the doubled stroke showed while drawing. Centre stroke = exact value.
   const sw = parseFloat(d.strokeWidth) > 0 ? parseFloat(d.strokeWidth) : 1.5;
   path.setAttribute('data-stroke-width', String(sw));
-  path.setAttribute('stroke-width', String(sw * 2));
-  path.setAttribute('data-stroke-position', 'Outside');
-  path.setAttribute('paint-order', 'stroke fill');
+  path.setAttribute('stroke-width', String(sw));
+  path.setAttribute('data-stroke-position', 'Center');
+  path.setAttribute('paint-order', 'normal');
   if (d.stroke && d.stroke !== 'none') path.setAttribute('data-stroke-color', d.stroke);
   if (d.opacity && d.opacity !== '1') path.setAttribute('opacity', d.opacity);
 };

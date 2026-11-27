@@ -4,6 +4,7 @@ import { ArrowLeftRight, Minus, X } from "lucide-react";
 import PremiumDropdown from "../CustomizedEditor/components/PremiumDropdown";
 
 import { createScreenEyeDropper, canPickScreenColor } from '../../utils/screenColorPicker';
+import { ScrubPercentInput } from '../PageEditor/properties/controls/propertiesShared';
 // Helper functions for color conversion
 export const rgbToHex = (r, g, b) => {
   return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
@@ -208,59 +209,6 @@ export const hsvToHex = ({ h, s, v }) => {
 
   const toHex = (n) => Math.round((n + m) * 255).toString(16).padStart(2, "0");
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-};
-
-const handleLocalScrub = (e, initialVal, updateFn, sensitivity = 5) => {
-  const sValue = parseFloat(initialVal) || 0;
-  let accumulatedDelta = 0;
-  let virtualX = e.clientX;
-  let virtualY = e.clientY;
-
-  document.body.classList.add('is-scrubbing');
-
-  if (e.pointerId !== undefined) {
-    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { }
-  }
-
-  const vCursor = document.createElement('div');
-  vCursor.className = 'virtual-scrub-cursor';
-  vCursor.style.left = `${virtualX}px`;
-  vCursor.style.top = `${virtualY}px`;
-  vCursor.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18 15L21 12L18 9" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M6 9L3 12L6 15" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M4 12H20" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M18 15L21 12L18 9" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M6 9L3 12L6 15" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M4 12H20" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-  document.body.appendChild(vCursor);
-
-  const onMouseMove = (moveEvent) => {
-    const dx = moveEvent.movementX || 0;
-    accumulatedDelta += dx;
-
-    virtualX += dx;
-    if (virtualX < 0) virtualX = window.innerWidth;
-    if (virtualX > window.innerWidth) virtualX = 0;
-    vCursor.style.left = `${virtualX}px`;
-
-    const newVal = sValue + Math.round(accumulatedDelta / sensitivity);
-    updateFn(newVal.toString());
-  };
-
-  const onMouseUp = (moveEvent) => {
-    if (moveEvent.pointerId !== undefined) {
-      try { moveEvent.target.releasePointerCapture(moveEvent.pointerId); } catch (e) { }
-    }
-    if (vCursor.parentNode) vCursor.parentNode.removeChild(vCursor);
-    document.body.classList.remove('is-scrubbing');
-    window.removeEventListener('pointermove', onMouseMove);
-    window.removeEventListener('pointerup', onMouseUp);
-  };
-
-  window.addEventListener('pointermove', onMouseMove);
-  window.addEventListener('pointerup', onMouseUp);
 };
 
 export default function ColorPicker({
@@ -779,13 +727,13 @@ export default function ColorPicker({
 
       {/* Controls */}
       <div className="space-y-[0.6vw]">
-        {/* Color Code Row */}
+        {/* Code Row */}
         <div className="flex items-center gap-[0.6vw] w-full">
-          <span className="w-[5vw] text-[0.8vw] font-medium text-gray-800 whitespace-nowrap flex-shrink-0">Color Code :</span>
+          <span className="w-[3.2vw] text-[0.8vw] font-medium text-gray-800 whitespace-nowrap flex-shrink-0">Code :</span>
           <div className="flex-1 flex items-center gap-[0.4vw] min-w-0">
             <div className="h-[2.1vw] border border-gray-300 rounded-[0.45vw] flex items-center px-[0.6vw] justify-between bg-white hover:border-gray-400 focus-within:border-[#4D47FF] shadow-2xs transition-colors flex-1 min-w-0">
               <div className="flex items-center gap-[0.2vw] min-w-0 flex-1">
-                <span className="text-gray-400 text-[0.8vw] font-mono font-medium select-none">#</span>
+                <span className="text-gray-400 text-[0.8vw] font-medium select-none">#</span>
                 <input
                   type="text"
                   ref={hexInputRef}
@@ -814,10 +762,22 @@ export default function ColorPicker({
                       onChange(val);
                     }
                   }}
-                  className="w-full text-[0.8vw] font-medium text-gray-800 outline-none uppercase font-mono bg-transparent tracking-wide"
+                  className="w-full text-[0.8vw] font-medium text-gray-800 outline-none uppercase bg-transparent tracking-wide"
                   maxLength={7}
                 />
               </div>
+              <ScrubPercentInput
+                value={Math.round(editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity)}
+                onChange={(op) => {
+                  if (editingStopIndex !== null) {
+                    updateGradientStop(editingStopIndex, { opacity: op });
+                  } else if (onOpacityChange) {
+                    onOpacityChange(op);
+                  }
+                }}
+                className="flex items-center select-none pl-[0.3vw] flex-shrink-0"
+                textClassName="text-[0.75vw] font-semibold text-gray-600"
+              />
             </div>
             <button
               type="button"
@@ -859,73 +819,6 @@ export default function ColorPicker({
           </div>
         </div>
 
-        {/* Opacity Row */}
-        <div className="flex items-center gap-[0.6vw] w-full">
-          <span className="w-[5vw] text-[0.8vw] font-medium text-gray-800 whitespace-nowrap flex-shrink-0">Opacity :</span>
-          <div className="flex-1 flex items-center gap-[0.5vw] min-w-0">
-            <div className="flex-1 flex items-center h-[1.6vw] px-[0.1vw]">
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity}
-                onChange={(e) => {
-                  const op = parseInt(e.target.value, 10);
-                  if (editingStopIndex !== null) {
-                    updateGradientStop(editingStopIndex, { opacity: op });
-                  } else if (onOpacityChange) {
-                    onOpacityChange(op);
-                  }
-                }}
-                className="w-full cursor-pointer custom-range-slider-color"
-                style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity}%, #E2E8F0 ${editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity}%, #E2E8F0 100%)` }}
-              />
-            </div>
-            <div className="h-[2.1vw] w-[3.5vw] border border-gray-300 rounded-[0.45vw] bg-white shadow-2xs flex items-center justify-center px-[0.2vw] flex-shrink-0 hover:border-gray-400 focus-within:border-[#4D47FF] transition-colors">
-              <input
-                type="text"
-                inputMode="numeric"
-                value={localOpacityInput !== null ? localOpacityInput : `${editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity}%`}
-                onFocus={(e) => {
-                  const currentOp = editingStopIndex !== null ? (gradientStops[editingStopIndex].opacity ?? 100) : displayOpacity;
-                  setLocalOpacityInput(currentOp.toString());
-                  e.target.select();
-                }}
-                onBlur={() => {
-                  if (localOpacityInput !== null) {
-                    let op = parseInt(localOpacityInput, 10);
-                    if (isNaN(op)) op = 0;
-                    op = Math.min(Math.max(op, 0), 100);
-                    if (editingStopIndex !== null) {
-                      updateGradientStop(editingStopIndex, { opacity: op });
-                    } else if (onOpacityChange) {
-                      onOpacityChange(op);
-                    }
-                    setLocalOpacityInput(null);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
-                    e.target.blur();
-                  }
-                }}
-                onChange={(e) => {
-                  const clean = e.target.value.replace(/[^0-9]/g, '');
-                  setLocalOpacityInput(clean);
-                  if (clean !== '') {
-                    let op = Math.min(Math.max(parseInt(clean, 10), 0), 100);
-                    if (editingStopIndex !== null) {
-                      updateGradientStop(editingStopIndex, { opacity: op });
-                    } else if (onOpacityChange) {
-                      onOpacityChange(op);
-                    }
-                  }
-                }}
-                className="w-full text-center text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent"
-              />
-            </div>
-          </div>
-        </div>
       </div>
     </>
   );
@@ -1031,20 +924,14 @@ export default function ColorPicker({
                         type="text"
                         value={(!color || color === 'none' || color === 'transparent' || color === '#') ? 'NONE' : color.toUpperCase()}
                         onChange={(e) => onChange(e.target.value)}
-                        className="flex-1 min-w-0 text-[0.78vw] font-medium text-gray-800 font-mono bg-transparent outline-none tracking-wide"
+                        className="flex-1 min-w-0 text-[0.78vw] font-medium text-gray-800 bg-transparent outline-none tracking-wide"
                       />
-                      <div
-                        className="flex items-center gap-[0.1vw] cursor-ew-resize select-none px-[0.15vw] hover:bg-gray-50 rounded flex-shrink-0"
-                        onPointerDown={(e) => {
-                          handleLocalScrub(e, displayOpacity, (val) => {
-                            const num = parseInt(val);
-                            const clamped = Math.min(Math.max(num, 0), 100);
-                            if (onOpacityChange) onOpacityChange(clamped);
-                          });
-                        }}
-                      >
-                        <span className="text-[0.75vw] font-semibold text-gray-600">{displayOpacity}%</span>
-                      </div>
+                      <ScrubPercentInput
+                        value={displayOpacity}
+                        onChange={(clamped) => { if (onOpacityChange) onOpacityChange(clamped); }}
+                        className="flex items-center gap-[0.1vw] select-none px-[0.15vw] flex-shrink-0"
+                        textClassName="text-[0.75vw] font-semibold text-gray-600"
+                      />
                     </div>
                     <button
                       type="button"
@@ -1201,15 +1088,22 @@ export default function ColorPicker({
                           updateGradientStop(idx, { color: val });
                         }
                       }}
-                      className="flex-1 min-w-0 text-[0.72vw] font-mono font-medium text-gray-800 bg-transparent outline-none uppercase"
+                      className="flex-1 min-w-0 text-[0.72vw] font-medium text-gray-800 bg-transparent outline-none uppercase"
                       maxLength={7}
                     />
-                    <span className="text-[0.7vw] font-medium text-gray-500 w-[2.4vw] text-right flex-shrink-0">
-                      {stop.offset}%
-                    </span>
-                    <span className="text-[0.7vw] font-medium text-gray-500 w-[2.5vw] text-right flex-shrink-0">
-                      {stop.opacity ?? 100}%
-                    </span>
+                    <ScrubPercentInput
+                      value={Math.round(stop.offset ?? 0)}
+                      onChange={(clamped) => updateGradientStop(idx, { offset: clamped })}
+                      title="Drag horizontally on % to adjust stop offset"
+                      className="flex items-center justify-end w-[2.8vw] select-none flex-shrink-0"
+                      textClassName="text-[0.7vw] font-medium text-gray-500"
+                    />
+                    <ScrubPercentInput
+                      value={Math.round(stop.opacity ?? 100)}
+                      onChange={(clamped) => updateGradientStop(idx, { opacity: clamped })}
+                      className="flex items-center justify-end w-[2.8vw] select-none flex-shrink-0"
+                      textClassName="text-[0.7vw] font-medium text-gray-500"
+                    />
                     {gradientStops.length > 2 && (
                       <button
                         type="button"

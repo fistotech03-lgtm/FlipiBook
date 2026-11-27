@@ -5,6 +5,7 @@ import {
   getRotatingCursor,
   createOrUpdateEdgeHandles,
   applyCrispSelectionStroke,
+  setZoomStroke,
   isElementHidden,
   purgeElementOverlays
 } from './overlayDomUtils';
@@ -351,7 +352,8 @@ export const createOverlayHighlightRenderer = ({
 
           if (isVectorPath) {
             const d = el.getAttribute('d');
-            if (d && isHover) {
+            // Path highlight on hover AND when selected (selected = box + handles + this outline)
+            if (d && (isHover || isSelected)) {
               if (!pathOverlay) {
                 pathOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 pathOverlay.id = pathOverlayId;
@@ -367,7 +369,7 @@ export const createOverlayHighlightRenderer = ({
 
               const vectorColor = '#5255CA';
               pathOverlay.setAttribute('stroke', vectorColor);
-              pathOverlay.setAttribute('stroke-width', String(1.8 / zoomScale));
+              setZoomStroke(pathOverlay, 1.8, zoomScale);
               pathOverlay.setAttribute('vector-effect', 'non-scaling-stroke');
               pathOverlay.setAttribute('stroke-linecap', el.getAttribute('stroke-linecap') || 'round');
               pathOverlay.setAttribute('stroke-linejoin', el.getAttribute('stroke-linejoin') || 'round');
@@ -427,7 +429,7 @@ export const createOverlayHighlightRenderer = ({
               polygon.setAttribute('stroke-miterlimit', '4');
               polygon.setAttribute('stroke-linecap', 'square');
               polygon.setAttribute('shape-rendering', 'crispEdges');
-              polygon.setAttribute('stroke-width', String(1 / zoomScale));
+              setZoomStroke(polygon, 1, zoomScale);
             } else if (isBlackSelection) {
               polygon.setAttribute('stroke', (isHover && !isSelected) ? 'transparent' : '#000000');
               if (!polygon.classList.contains('interaction-frame-blinking') && polygon.getAttribute('data-blinking') !== 'true') {
@@ -450,8 +452,7 @@ export const createOverlayHighlightRenderer = ({
               polygon.setAttribute('points', pointsStr);
               applyCrispSelectionStroke(polygon, pointsStr, zoomScale);
             } else if (type === 'entered') {
-              polygon.setAttribute('stroke-width', String(1 / zoomScale));
-              polygon.setAttribute('stroke-dasharray', `${4 / zoomScale},${4 / zoomScale}`);
+              setZoomStroke(polygon, 1, zoomScale, 4);
             }
           }
 
@@ -549,7 +550,7 @@ export const createOverlayHighlightRenderer = ({
                     }
                   }
 
-                  handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(${safeScale}) translate(-50%, -50%)`;
+                  handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(var(--fbe-inv-zoom, ${safeScale})) translate(-50%, -50%)`;
                 } else if (isLCorner) {
                   const arm = 8.5;
                   const barThickness = 2.5;
@@ -585,7 +586,7 @@ export const createOverlayHighlightRenderer = ({
                     `;
                   }
 
-                  handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(${safeScale}) translate(-50%, -50%)`;
+                  handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(var(--fbe-inv-zoom, ${safeScale})) translate(-50%, -50%)`;
                 } else {
                   const targetStyle = `corner-${handleSize}-${handleBorderColor}`;
                   if (handle.dataset.styled !== targetStyle) {
@@ -602,7 +603,7 @@ export const createOverlayHighlightRenderer = ({
                     handle.style.height = `${handleSize}px`;
                   }
 
-                  handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(${safeScale}) translate(-50%, -50%)`;
+                  handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(var(--fbe-inv-zoom, ${safeScale})) translate(-50%, -50%)`;
                 }
 
                 handle.style.cursor = (isInteractiveResizable || activeTopToolRef.current === 'editor') ? getRotatingCursor(name, rotation) : 'default';
@@ -762,11 +763,16 @@ export const createOverlayHighlightRenderer = ({
           polygon.setAttribute('stroke-miterlimit', '4');
           polygon.setAttribute('stroke-linecap', 'square');
           polygon.setAttribute('shape-rendering', 'crispEdges');
-          polygon.setAttribute('stroke-width', String(1 / zoomScale2));
+          setZoomStroke(polygon, 1, zoomScale2);
         } else if (isLine) {
-          polygon.setAttribute('stroke', 'transparent');
+          // Blue highlight along the line on HOVER only; once selected, only the end-point handles show
+          const showLine = isHover && !isSelected && !isBlackSelectionFB;
+          polygon.setAttribute('stroke', showLine ? '#5255CA' : 'transparent');
           polygon.setAttribute('fill', 'none');
           polygon.setAttribute('points', pointsStr);
+          polygon.setAttribute('stroke-linecap', 'round');
+          polygon.setAttribute('stroke-linejoin', 'round');
+          setZoomStroke(polygon, 1.8, zoomScale2);
         } else if (isBlackSelectionFB) {
           polygon.setAttribute('stroke', (isHover && !isSelected) ? 'transparent' : '#000000');
           if (!polygon.classList.contains('interaction-frame-blinking') && polygon.getAttribute('data-blinking') !== 'true') {
@@ -796,8 +802,7 @@ export const createOverlayHighlightRenderer = ({
           polygon.setAttribute('stroke', isMediaOrText ? 'transparent' : '#5255CA');
           polygon.setAttribute('fill', 'none');
           polygon.setAttribute('points', pointsStr);
-          polygon.setAttribute('stroke-width', String(1 / zoomScale2));
-          polygon.setAttribute('stroke-dasharray', `${4 / zoomScale2},${4 / zoomScale2}`);
+          setZoomStroke(polygon, 1, zoomScale2, 4);
         }
       }
 
@@ -906,7 +911,7 @@ export const createOverlayHighlightRenderer = ({
                 }
               }
 
-              handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(${safeScale}) translate(-50%, -50%)`;
+              handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(var(--fbe-inv-zoom, ${safeScale})) translate(-50%, -50%)`;
             } else if (!isLine && isLCornerFB) {
               const arm = 8.5;
               const barThickness = 2.5;
@@ -942,7 +947,7 @@ export const createOverlayHighlightRenderer = ({
                 `;
               }
 
-              handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(${safeScale}) translate(-50%, -50%)`;
+              handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(var(--fbe-inv-zoom, ${safeScale})) translate(-50%, -50%)`;
             } else {
               const targetStyle = `corner-${handleSize}-${handleBorderColor}`;
               if (handle.dataset.styled !== targetStyle) {
@@ -959,7 +964,7 @@ export const createOverlayHighlightRenderer = ({
                 handle.style.height = `${handleSize}px`;
               }
 
-              handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(${safeScale}) translate(-50%, -50%)`;
+              handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(var(--fbe-inv-zoom, ${safeScale})) translate(-50%, -50%)`;
             }
             handle.style.cursor = (isInteractiveResizableFB || activeTopToolRef.current === 'editor') ? getRotatingCursor(name, rotation) : 'default';
           });

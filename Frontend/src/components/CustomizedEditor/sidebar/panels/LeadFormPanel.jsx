@@ -5,14 +5,9 @@ import { Icon } from '@iconify/react';
 import { Plus, Trash2, Mail, Sliders, ChevronsLeft } from 'lucide-react';
 import PremiumDropdown from '../../components/PremiumDropdown';
 import { ColorPallet } from '../../../Color';
-import { CUSTOM_FONT_FAMILIES } from '../../../../utils/customFonts';
+import { FONT_FAMILIES } from '../../../../config/fonts';
 
-const fontFamilies = [
-  'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
-  'Helvetica', 'Poppins', 'Roboto', 'Open Sans', 'Lato', 'Montserrat',
-  'Inter', 'Playfair Display', 'Oswald', 'Merriweather',
-  ...CUSTOM_FONT_FAMILIES
-];
+const fontFamilies = [...FONT_FAMILIES];
 
 const Switch = ({ enabled, onChange }) => (
   <button

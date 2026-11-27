@@ -54,6 +54,7 @@ import { applyTrimViewToSvg, cleanTrimViewFromHtml, isElementCompletelyOutside }
 import { drawShapeImageAdjustOverlay } from './penTool/penOverlayEngine';
 import { normalizeForeignObjectNamespaces } from './LeftActionMenu/Elements/utils/tableElementUtils';
 import { SHAPE_CURSOR, PENCIL_CURSOR, PEN_CURSOR, TYPE_CURSOR } from './mainEditor/utils/constants';
+import { loadFontsUsedIn } from '../../config/fonts';
 
 // Re-export geometry utilities for backward compatibility with external components
 
@@ -107,6 +108,12 @@ const MainEditor = ({
   useEffect(() => {
     setLocalRulerEnabled(isRulerEnabled);
   }, [isRulerEnabled]);
+
+  // Load every font the pages use (incl. fonts from imported templates/PDFs that aren't in the
+  // registry), so text never falls back to a default font on the canvas or in text edit mode.
+  useEffect(() => {
+    (pages || []).forEach((p) => { if (p?.html) loadFontsUsedIn(p.html); });
+  }, [pages]);
 
   useEffect(() => {
     const handleToggleTrim = (e) => {

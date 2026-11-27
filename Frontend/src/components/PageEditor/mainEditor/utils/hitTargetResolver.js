@@ -131,9 +131,83 @@ const isPickable = (el) => {
 const isPageRoot = (el) =>
   el.getAttribute?.('data-type') === 'frame' || /^Page\s*\d+$/i.test(el.getAttribute?.('data-name') || '');
 
+/**
+ * Stroke-only graphics (lines, polylines, vector paths with no fill): their box is mostly empty
+ * space, so they only count when the pointer is ON the stroke (± a few screen px), not anywhere
+ * inside their bounding box.
+ */
+const isStrokeOnly = (el) => {
+  const tag = el.tagName?.toLowerCase();
+  if (tag === 'line' || tag === 'polyline') return true;
+  if (tag !== 'path') return false;
+  const fill = (el.getAttribute('fill') || '').trim().toLowerCase();
+  const noFill = fill === 'none' || fill === 'transparent' || fill === 'rgba(0,0,0,0)' || el.getAttribute('fill-opacity') === '0';
+  return noFill && el.getAttribute('data-mask-enabled') !== 'true';
+};
+
+const STROKE_HIT_TOLERANCE_PX = 5;
+
+/** Screen-space distance from point p to segment a–b. */
+const distToSegment = (p, a, b) => {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+};
+
+/**
+ * True when the pointer is on (or within a few screen px of) the element's stroke.
+ * Pure geometry in screen space (no isPointInStroke: it ignores non-scaling strokes and Safari
+ * rejects DOMPoint), so it behaves the same in every browser and at every zoom.
+ */
+export const pointNearStroke = (el, clientX, clientY, tolerancePx = STROKE_HIT_TOLERANCE_PX) => {
+  let ctm;
+  try { ctm = el.getScreenCTM(); } catch { ctm = null; }
+  if (!ctm) return false;
+  const toScreen = (x, y) => ({ x: ctm.a * x + ctm.c * y + ctm.e, y: ctm.b * x + ctm.d * y + ctm.f });
+  const p = { x: clientX, y: clientY };
+
+  // Half the visible stroke width on screen (non-scaling strokes are already in screen px)
+  const sw = parseFloat(el.getAttribute('data-stroke-width') || el.getAttribute('stroke-width') || '1') || 1;
+  const scale = Math.sqrt(Math.abs(ctm.a * ctm.d - ctm.b * ctm.c)) || 1;
+  const nonScaling = (el.getAttribute('vector-effect') || '').includes('non-scaling-stroke');
+  const reach = tolerancePx + (nonScaling ? sw : sw * scale) / 2;
+
+  const tag = el.tagName?.toLowerCase();
+  if (tag === 'line') {
+    const num = (n) => parseFloat(el.getAttribute(n)) || 0;
+    return distToSegment(p, toScreen(num('x1'), num('y1')), toScreen(num('x2'), num('y2'))) <= reach;
+  }
+
+  // Paths / polylines: sample along the geometry, test each small segment
+  if (typeof el.getTotalLength !== 'function') return false;
+  let total;
+  try { total = el.getTotalLength(); } catch { return false; }
+  if (!(total > 0)) return false;
+  // quick reject: outside the (padded) screen box
+  try {
+    const r = el.getBoundingClientRect();
+    if (clientX < r.left - reach || clientX > r.right + reach || clientY < r.top - reach || clientY > r.bottom + reach) return false;
+  } catch { /* ignore */ }
+  const steps = Math.max(8, Math.min(400, Math.ceil((total * scale) / 3)));
+  let prev = null;
+  for (let i = 0; i <= steps; i++) {
+    let lp;
+    try { lp = el.getPointAtLength((total * i) / steps); } catch { return false; }
+    const sp = toScreen(lp.x, lp.y);
+    if (prev && distToSegment(p, prev, sp) <= reach) return true;
+    prev = sp;
+  }
+  return false;
+};
+
 /** Pickable element whose rotated box contains the point (and is not a near-full-page wrapper). */
 const boxHit = (el, clientX, clientY, maxArea) => {
   if (!isPickable(el)) return false;
+  // Stroke-only graphics hit on their stroke only (works for 0-height horizontal / vertical lines too)
+  if (isStrokeOnly(el)) return pointNearStroke(el, clientX, clientY);
   const obb = getOBB(el);
   if (!obb) return false;
   if (maxArea && obb.screenArea >= maxArea) return false; // full-page wrappers are not gap targets

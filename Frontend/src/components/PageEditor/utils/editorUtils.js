@@ -370,6 +370,11 @@ export const parseLayersFromSVG = (element) => {
 
       const rawName = child.getAttribute('data-name') || id || `${child.tagName.charAt(0).toUpperCase() + child.tagName.slice(1)}`;
       const cleanName = rawName.replace(/^tpl-[a-z0-9]{4}-/, '');
+      const childDataType = child.getAttribute('data-type') || '';
+      const childShapeType = child.getAttribute('data-shape-type') || child.getAttribute('data-shape-title') || '';
+      const isCustomName = child.getAttribute('data-custom-name') === 'true';
+      const isTextNode = child.tagName.toLowerCase() === 'text' || childDataType === 'text';
+      const rawTextContent = isTextNode ? (child.textContent || '').replace(/\s+/g, ' ').trim() : '';
 
       const isHidden = child.getAttribute('data-hidden') === 'true' ||
                        child.getAttribute('style')?.includes('display:none') ||
@@ -380,6 +385,10 @@ export const parseLayersFromSVG = (element) => {
         id,
         name: cleanName,
         type: child.tagName.toLowerCase(),
+        'data-type': childDataType || undefined,
+        'data-shape-type': childShapeType || undefined,
+        textContent: rawTextContent || undefined,
+        isCustomName: isCustomName || undefined,
         visible: !isHidden,
         locked: child.getAttribute('data-locked') === 'true'
       };

@@ -5,7 +5,7 @@ import { Icon } from '@iconify/react';
 import ColorPicker from '../../../../Color';
 import { DEFAULT_MAP_DATA, MAP_TEMPLATES, generateOverlayHtml, escapeXml } from '../utils/mapElementUtils';
 import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIControls';
-import { handleScrubHelper } from '../../../properties/controls/propertiesShared';
+import { ScrubPercentInput } from '../../../properties/controls/propertiesShared';
 
 // Section header matching editor design standards
 const SectionHeader = ({ title, rightElement }) => (
@@ -75,25 +75,13 @@ const ColorBoxRow = ({
                 onChange(finalVal);
               }
             }}
-            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
             maxLength={9}
           />
-          <div
-            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-            onPointerDown={(e) => {
-              const currentPct = Math.round(parseFloat(opacity !== undefined ? opacity : 100));
-              handleScrubHelper(e, currentPct, (val) => {
-                const num = parseInt(val);
-                const clamped = Math.min(Math.max(num, 0), 100);
-                onOpacityChange(clamped);
-              });
-            }}
-            title="Drag horizontally to adjust opacity"
-          >
-            <span className="text-[0.8vw] font-medium text-gray-700">
-              {Math.round(parseFloat(opacity !== undefined ? opacity : 100))}%
-            </span>
-          </div>
+          <ScrubPercentInput
+            value={Math.round(parseFloat(opacity !== undefined ? opacity : 100))}
+            onChange={(clamped) => onOpacityChange(clamped)}
+          />
         </div>
       </div>
     </div>

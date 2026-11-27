@@ -63,7 +63,7 @@ const ModalSlider = ({ label, value = 0, onChange, onReset, min = -100, max = 10
         {/* Active colored track */}
         {num !== 0 && (
           <div
-            className="absolute h-[0.25vw] bg-[#4D47FF] rounded-full pointer-events-none"
+            className="absolute h-[0.25vw] bg-[#EC5137] rounded-full pointer-events-none"
             style={{
               left: `${activeLeft}%`,
               width: `${activeWidth}%`,
@@ -77,7 +77,7 @@ const ModalSlider = ({ label, value = 0, onChange, onReset, min = -100, max = 10
 
         {/* Knob */}
         <div
-          className="absolute w-[0.9vw] h-[0.9vw] bg-[#4D47FF] rounded-full pointer-events-none shadow-[0_0.1vw_0.4vw_rgba(77,71,255,0.45)] group-hover:scale-110 transition-transform duration-100"
+          className="absolute w-[0.9vw] h-[0.9vw] bg-[#EC5137] rounded-full pointer-events-none shadow-[0_0.1vw_0.4vw_rgba(236,81,55,0.45)] group-hover:scale-110 transition-transform duration-100"
           style={{
             left: `calc(${percentage}% - 0.45vw)`,
             border: '0.12vw solid #ffffff'

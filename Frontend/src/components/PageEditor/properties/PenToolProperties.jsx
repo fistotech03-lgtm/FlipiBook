@@ -69,7 +69,7 @@ const PenToolProperties = ({
         <ul className="flex flex-col gap-[0.35vw] text-[0.72vw] text-gray-500">
           {['Click to add a point', 'Click and drag to make a curve', 'Click the first point to close the shape', 'Press Enter or Esc to finish'].map((t) => (
             <li key={t} className="flex items-center gap-[0.45vw]">
-              <span className="w-[0.3vw] h-[0.3vw] rounded-full bg-indigo-400 shrink-0" />
+              <span className="w-[0.3vw] h-[0.3vw] rounded-full bg-[#EC5137] shrink-0" />
               {t}
             </li>
           ))}
@@ -95,16 +95,16 @@ const PenToolProperties = ({
               selectedNodeCount > 1
                 ? 'opacity-35 cursor-not-allowed bg-gray-50 border-gray-100 text-gray-400'
                 : activeNodeType === 'sharp'
-                ? 'bg-indigo-50 border-indigo-400 text-indigo-600 ring-1 ring-indigo-300/40 cursor-pointer'
+                ? 'bg-[#EC5137]/10 border-[#EC5137] text-[#EC5137] ring-1 ring-[#EC5137]/30 cursor-pointer'
                 : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 text-gray-700 cursor-pointer'
             }`}
             title={selectedNodeCount > 1 ? "Disabled when multiple points selected" : "Sharp Corner"}
           >
-            <svg width="1.2vw" height="1.2vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'sharp' ? 'text-indigo-600' : 'text-gray-700 group-hover:text-indigo-600'}>
+            <svg width="1.2vw" height="1.2vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'sharp' ? 'text-[#EC5137]' : 'text-gray-700 group-hover:text-[#EC5137]'}>
               <path d="M6 17V8a2 2 0 0 1 2-2h9" />
               <rect x="4" y="15" width="4" height="4" fill="white" stroke="currentColor" strokeWidth="1.5" />
             </svg>
-            <span className={`text-[0.62vw] font-medium text-center leading-tight ${selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'sharp' ? 'text-indigo-600 font-semibold' : 'text-gray-600 group-hover:text-indigo-600'}`}>Sharp Corner</span>
+            <span className={`text-[0.62vw] font-medium text-center leading-tight ${selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'sharp' ? 'text-[#EC5137] font-semibold' : 'text-gray-600 group-hover:text-[#EC5137]'}`}>Sharp Corner</span>
           </button>
 
           <button
@@ -114,17 +114,17 @@ const PenToolProperties = ({
               selectedNodeCount > 1
                 ? 'opacity-35 cursor-not-allowed bg-gray-50 border-gray-100 text-gray-400'
                 : activeNodeType === 'smooth'
-                ? 'bg-indigo-50 border-indigo-400 text-indigo-600 ring-1 ring-indigo-300/40 cursor-pointer'
+                ? 'bg-[#EC5137]/10 border-[#EC5137] text-[#EC5137] ring-1 ring-[#EC5137]/30 cursor-pointer'
                 : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 text-gray-700 cursor-pointer'
             }`}
             title={selectedNodeCount > 1 ? "Disabled when multiple points selected" : "Smooth Curve"}
           >
-            <svg width="1.2vw" height="1.2vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'smooth' ? 'text-indigo-600' : 'text-gray-700 group-hover:text-indigo-600'}>
+            <svg width="1.2vw" height="1.2vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'smooth' ? 'text-[#EC5137]' : 'text-gray-700 group-hover:text-[#EC5137]'}>
               <path d="M4 16C8 6 16 6 20 16" />
               <path d="M8 8h8" strokeDasharray="2 2" />
               <circle cx="12" cy="8" r="2.5" fill={selectedNodeCount > 1 ? "#A1A1AA" : "#4E9EFF"} stroke="white" strokeWidth="1" />
             </svg>
-            <span className={`text-[0.62vw] font-medium text-center leading-tight ${selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'smooth' ? 'text-indigo-600 font-semibold' : 'text-gray-600 group-hover:text-indigo-600'}`}>Smooth Curve</span>
+            <span className={`text-[0.62vw] font-medium text-center leading-tight ${selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'smooth' ? 'text-[#EC5137] font-semibold' : 'text-gray-600 group-hover:text-[#EC5137]'}`}>Smooth Curve</span>
           </button>
 
           <button
@@ -134,19 +134,19 @@ const PenToolProperties = ({
               selectedNodeCount > 1
                 ? 'opacity-35 cursor-not-allowed bg-gray-50 border-gray-100 text-gray-400'
                 : activeNodeType === 'balanced'
-                ? 'bg-indigo-50 border-indigo-400 text-indigo-600 ring-1 ring-indigo-300/40 cursor-pointer'
+                ? 'bg-[#EC5137]/10 border-[#EC5137] text-[#EC5137] ring-1 ring-[#EC5137]/30 cursor-pointer'
                 : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 text-gray-700 cursor-pointer'
             }`}
             title={selectedNodeCount > 1 ? "Disabled when multiple points selected" : "Balanced Curve"}
           >
-            <svg width="1.2vw" height="1.2vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'balanced' ? 'text-indigo-600' : 'text-gray-700 group-hover:text-indigo-600'}>
+            <svg width="1.2vw" height="1.2vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'balanced' ? 'text-[#EC5137]' : 'text-gray-700 group-hover:text-[#EC5137]'}>
               <path d="M4 15C8 7 16 7 20 15" />
               <line x1="6" y1="8" x2="18" y2="8" strokeDasharray="2 2" />
               <circle cx="6" cy="8" r="2" fill="currentColor" />
               <circle cx="18" cy="8" r="2" fill="currentColor" />
               <circle cx="12" cy="8" r="2.5" fill={selectedNodeCount > 1 ? "#A1A1AA" : "#4E9EFF"} stroke="white" strokeWidth="1" />
             </svg>
-            <span className={`text-[0.62vw] font-medium text-center leading-tight ${selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'balanced' ? 'text-indigo-600 font-semibold' : 'text-gray-600 group-hover:text-indigo-600'}`}>Balanced Curve</span>
+            <span className={`text-[0.62vw] font-medium text-center leading-tight ${selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'balanced' ? 'text-[#EC5137] font-semibold' : 'text-gray-600 group-hover:text-[#EC5137]'}`}>Balanced Curve</span>
           </button>
 
           <button
@@ -156,17 +156,17 @@ const PenToolProperties = ({
               selectedNodeCount > 1
                 ? 'opacity-35 cursor-not-allowed bg-gray-50 border-gray-100 text-gray-400'
                 : activeNodeType === 'custom'
-                ? 'bg-indigo-50 border-indigo-400 text-indigo-600 ring-1 ring-indigo-300/40 cursor-pointer'
+                ? 'bg-[#EC5137]/10 border-[#EC5137] text-[#EC5137] ring-1 ring-[#EC5137]/30 cursor-pointer'
                 : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 text-gray-700 cursor-pointer'
             }`}
             title={selectedNodeCount > 1 ? "Disabled when multiple points selected" : "Custom Curve"}
           >
-            <svg width="1.2vw" height="1.2vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'custom' ? 'text-indigo-600' : 'text-gray-700 group-hover:text-indigo-600'}>
+            <svg width="1.2vw" height="1.2vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'custom' ? 'text-[#EC5137]' : 'text-gray-700 group-hover:text-[#EC5137]'}>
               <path d="M4 17C8 8 13 6 13 11S17 17 20 8" />
               <path d="M13 11L7 4M13 11l7-3" strokeDasharray="2 2" />
               <circle cx="13" cy="11" r="2.5" fill={selectedNodeCount > 1 ? "#A1A1AA" : "#4E9EFF"} stroke="white" strokeWidth="1" />
             </svg>
-            <span className={`text-[0.62vw] font-medium text-center leading-tight ${selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'custom' ? 'text-indigo-600 font-semibold' : 'text-gray-600 group-hover:text-indigo-600'}`}>Custom Curve</span>
+            <span className={`text-[0.62vw] font-medium text-center leading-tight ${selectedNodeCount > 1 ? 'text-gray-400' : activeNodeType === 'custom' ? 'text-[#EC5137] font-semibold' : 'text-gray-600 group-hover:text-[#EC5137]'}`}>Custom Curve</span>
           </button>
         </div>
       </div>
@@ -185,16 +185,16 @@ const PenToolProperties = ({
             className={`border rounded-[0.45vw] p-[0.4vw] flex flex-col items-center justify-center gap-[0.25vw] shadow-2xs transition-all group ${
               !canJoinNodes
                 ? 'opacity-35 cursor-not-allowed bg-gray-50 border-gray-100 text-gray-400'
-                : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-indigo-300 cursor-pointer'
+                : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-[#EC5137]/50 cursor-pointer'
             }`}
             title={!canJoinNodes ? "Select 2 non-connected points to join" : "Join Points"}
           >
-            <svg width="1.1vw" height="1.1vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={!canJoinNodes ? 'text-gray-400' : 'text-gray-700 group-hover:text-indigo-600'}>
+            <svg width="1.1vw" height="1.1vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={!canJoinNodes ? 'text-gray-400' : 'text-gray-700 group-hover:text-[#EC5137]'}>
               <path d="M5 19C5 11 11 8 19 7" strokeDasharray="3 3" />
               <circle cx="5" cy="19" r="2.5" fill={!canJoinNodes ? "#A1A1AA" : "#4E9EFF"} />
               <circle cx="19" cy="7" r="2.5" fill={!canJoinNodes ? "#A1A1AA" : "#4E9EFF"} />
             </svg>
-            <span className={`text-[0.58vw] font-medium text-center leading-tight whitespace-nowrap ${!canJoinNodes ? 'text-gray-400' : 'text-gray-600 group-hover:text-indigo-600'}`}>Join Points</span>
+            <span className={`text-[0.58vw] font-medium text-center leading-tight ${!canJoinNodes ? 'text-gray-400' : 'text-gray-600 group-hover:text-[#EC5137]'}`}>Join Points</span>
           </button>
 
           <button
@@ -203,25 +203,25 @@ const PenToolProperties = ({
             className={`border rounded-[0.45vw] p-[0.4vw] flex flex-col items-center justify-center gap-[0.25vw] shadow-2xs transition-all group ${
               !isLineSelected
                 ? 'opacity-35 cursor-not-allowed bg-gray-50 border-gray-100 text-gray-400'
-                : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-indigo-300 cursor-pointer'
+                : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-[#EC5137]/50 cursor-pointer'
             }`}
             title={!isLineSelected ? "Select a line segment to add point" : "Add Point"}
           >
-            <svg width="1.1vw" height="1.1vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={!isLineSelected ? 'text-gray-400' : 'text-gray-700 group-hover:text-indigo-600'}>
+            <svg width="1.1vw" height="1.1vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={!isLineSelected ? 'text-gray-400' : 'text-gray-700 group-hover:text-[#EC5137]'}>
               <path d="M12 5v14M5 12h14" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <span className={`text-[0.58vw] font-medium text-center leading-tight whitespace-nowrap ${!isLineSelected ? 'text-gray-400' : 'text-gray-600 group-hover:text-indigo-600'}`}>Add Point</span>
+            <span className={`text-[0.58vw] font-medium text-center leading-tight ${!isLineSelected ? 'text-gray-400' : 'text-gray-600 group-hover:text-[#EC5137]'}`}>Add Point</span>
           </button>
 
           <button
             onClick={() => triggerPathAction('curve-line')}
-            className="bg-white hover:bg-gray-50 border border-gray-200 hover:border-indigo-300 rounded-[0.45vw] p-[0.4vw] flex flex-col items-center justify-center gap-[0.25vw] shadow-2xs cursor-pointer transition-all group"
+            className="bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#EC5137]/50 rounded-[0.45vw] p-[0.4vw] flex flex-col items-center justify-center gap-[0.25vw] shadow-2xs cursor-pointer transition-all group"
             title="Curve Line"
           >
-            <svg width="1.1vw" height="1.1vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-gray-700 group-hover:text-indigo-600">
+            <svg width="1.1vw" height="1.1vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-gray-700 group-hover:text-[#EC5137]">
               <path d="M4 18C10 4 14 4 20 18" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <span className="text-[0.58vw] font-medium text-gray-600 group-hover:text-indigo-600 text-center leading-tight whitespace-nowrap">Curve Line</span>
+            <span className="text-[0.58vw] font-medium text-gray-600 group-hover:text-[#EC5137] text-center leading-tight">Curve Line</span>
           </button>
 
           <button
@@ -230,15 +230,15 @@ const PenToolProperties = ({
             className={`border rounded-[0.45vw] p-[0.4vw] flex flex-col items-center justify-center gap-[0.25vw] shadow-2xs transition-all group ${
               selectedNodeCount !== 1 || isLineSelected
                 ? 'opacity-35 cursor-not-allowed bg-gray-50 border-gray-100 text-gray-400'
-                : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-indigo-300 cursor-pointer'
+                : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-[#EC5137]/50 cursor-pointer'
             }`}
             title={selectedNodeCount !== 1 || isLineSelected ? "Select a single point node to split" : "Split Point"}
           >
-            <svg width="1.1vw" height="1.1vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={selectedNodeCount !== 1 || isLineSelected ? 'text-gray-400' : 'text-gray-700 group-hover:text-indigo-600'}>
+            <svg width="1.1vw" height="1.1vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={selectedNodeCount !== 1 || isLineSelected ? 'text-gray-400' : 'text-gray-700 group-hover:text-[#EC5137]'}>
               <path d="M4 16C7 10 9 8 11 8M14 8c2 0 4 2 6 8" />
               <rect x="10.5" y="6.5" width="3" height="3" transform="rotate(45 12 8)" fill={selectedNodeCount !== 1 || isLineSelected ? "#A1A1AA" : "#4E9EFF"} />
             </svg>
-            <span className={`text-[0.58vw] font-medium text-center leading-tight whitespace-nowrap ${selectedNodeCount !== 1 || isLineSelected ? 'text-gray-400' : 'text-gray-600 group-hover:text-indigo-600'}`}>Split Point</span>
+            <span className={`text-[0.58vw] font-medium text-center leading-tight ${selectedNodeCount !== 1 || isLineSelected ? 'text-gray-400' : 'text-gray-600 group-hover:text-[#EC5137]'}`}>Split Point</span>
           </button>
 
           <button
@@ -249,7 +249,7 @@ const PenToolProperties = ({
             <svg width="1.1vw" height="1.1vw" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-gray-700 group-hover:text-red-500">
               <path d="M18 6L6 18M6 6l12 12" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <span className="text-[0.58vw] font-medium text-gray-600 group-hover:text-red-500 text-center leading-tight whitespace-nowrap">Delete Point/Line</span>
+            <span className="text-[0.58vw] font-medium text-gray-600 group-hover:text-red-500 text-center leading-tight">Delete Point/Line</span>
           </button>
         </div>
       </div>

@@ -98,7 +98,7 @@ export const renderResizeHandles = ({
         }
       }
 
-      handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(${safeScale}) translate(-50%, -50%)`;
+      handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(var(--fbe-inv-zoom, ${safeScale})) translate(-50%, -50%)`;
     } else if (!isLine && isLCorner) {
       const arm = 8.5;
       const barThickness = 2.5;
@@ -134,7 +134,7 @@ export const renderResizeHandles = ({
         `;
       }
 
-      handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(${safeScale}) translate(-50%, -50%)`;
+      handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(var(--fbe-inv-zoom, ${safeScale})) translate(-50%, -50%)`;
     } else {
       const targetStyle = `corner-${handleSize}-${handleBorderColor}`;
       if (handle.dataset.styled !== targetStyle) {
@@ -151,7 +151,7 @@ export const renderResizeHandles = ({
         handle.style.height = `${handleSize}px`;
       }
 
-      handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(${safeScale}) translate(-50%, -50%)`;
+      handle.style.transform = `translate3d(${safeX}px, ${safeY}px, 0) rotate(${safeRot}deg) scale(var(--fbe-inv-zoom, ${safeScale})) translate(-50%, -50%)`;
     }
 
     if (!isSide && typeof onCornerHover === 'function') {

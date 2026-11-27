@@ -20,6 +20,7 @@ import {
   clearSmartGuides
 } from '../utils/smartGuides';
 import { convertTextToForeignObject } from '../utils/textConversionUtils';
+import { snapLineEnd, showLineAngleGuide } from '../utils/lineAngleGuide';
 import { isPageRootElement as fallbackIsPageRootElement } from '../utils/frameHierarchyUtils';
 
 /**
@@ -1557,23 +1558,30 @@ export const useInteractEngine = ({
               const safePoint = new DOMPoint(currentPoint.x, currentPoint.y);
               const localPt = safePoint.matrixTransform(invMatrix);
 
-              let finalLocalPt = localPt;
-
-              if (event.shiftKey) {
-                const anchorX = parseFloat(el.getAttribute(dir === 'linestart' ? 'x2' : 'x1')) || 0;
-                const anchorY = parseFloat(el.getAttribute(dir === 'linestart' ? 'y2' : 'y1')) || 0;
-
-                const dx = localPt.x - anchorX;
-                const dy = localPt.y - anchorY;
-
-                const angle = Math.atan2(dy, dx);
-                const snapAngle = Math.round(angle / (Math.PI / 2)) * (Math.PI / 2);
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                finalLocalPt = {
-                  x: anchorX + dist * Math.cos(snapAngle),
-                  y: anchorY + dist * Math.sin(snapAngle)
-                };
+              // Angle snap like drawing a line: near 0°/45°/90°/135° snaps exactly (Shift = always
+              // 45° steps, Ctrl/Cmd = free) + live angle badge from the fixed end to the moved end.
+              const anchor = {
+                x: parseFloat(el.getAttribute(dir === 'linestart' ? 'x2' : 'x1')) || 0,
+                y: parseFloat(el.getAttribute(dir === 'linestart' ? 'y2' : 'y1')) || 0,
+              };
+              const elScreenCtm = el.getScreenCTM?.();
+              const lineSnap = snapLineEnd(anchor, { x: localPt.x, y: localPt.y }, elScreenCtm, {
+                shiftKey: event.shiftKey,
+                disableSnap: event.ctrlKey || event.metaKey,
+              });
+              const finalLocalPt = lineSnap.end;
+              if (elScreenCtm && el.tagName?.toLowerCase() === 'line') {
+                const toClient = (p) => ({
+                  x: elScreenCtm.a * p.x + elScreenCtm.c * p.y + elScreenCtm.e,
+                  y: elScreenCtm.b * p.x + elScreenCtm.d * p.y + elScreenCtm.f,
+                });
+                showLineAngleGuide({
+                  startClient: toClient(anchor),
+                  endClient: toClient(finalLocalPt),
+                  snapped: lineSnap.snapped,
+                  angle: lineSnap.angle,
+                  cursor: { x: event.clientX, y: event.clientY },
+                });
               }
 
               if (dir === 'linestart') {
@@ -1605,7 +1613,7 @@ export const useInteractEngine = ({
                 });
                 const pageContainer = (el.closest ? el.closest('.page-svg-container') : null) || targetSvg.closest?.('.page-svg-container');
                 const pageIdx = pageContainer ? parseInt(pageContainer.getAttribute('data-page-index')) : activePageIndex;
-                renderSmartGuides(pageIdx, guideData.guides, guideData.badge, zoom / 100, targetSvg);
+                renderSmartGuides(pageIdx, guideData.guides, null, zoom / 100, targetSvg);
               }
               return;
             }

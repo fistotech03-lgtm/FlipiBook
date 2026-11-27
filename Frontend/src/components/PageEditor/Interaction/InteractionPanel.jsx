@@ -20,7 +20,7 @@ import AudioAction from "./actions/AudioAction";
 import CallAction from "./actions/CallAction";
 import SlideshowAction from "./actions/SlideshowAction";
 import PopupAction from "./actions/PopupAction";
-import ThreeDViewerAction from "./actions/ThreeDViewerAction";
+import ThreeDViewerAction from "./3d/ThreeDViewerAction";
 import ZoomAction from "./actions/ZoomAction";
 import OpenLinkAction from "./actions/OpenLinkAction";
 import WhatsAppAction from "./actions/WhatsAppAction";
@@ -226,6 +226,7 @@ const InteractionPanel = ({
     { id: "call", label: "Call", icon: "fluent:call-24-regular" },
     { id: "navigate-to", label: "Navigate to", icon: "iconoir:page-search" },
     { id: "3d-viewer", label: "3D Viewer", icon: "mage:box-3d" },
+    { id: "ar-view", label: "AR View", icon: "mdi:augmented-reality" },
     { id: "popup", label: "Popup", icon: "carbon:popup" },
     { id: "slideshow", label: "Slideshow", icon: "clarity:image-gallery-line" },
     { id: "zoom", label: "Zoom", icon: "fluent:zoom-in-32-regular" },
@@ -1418,7 +1419,7 @@ const InteractionPanel = ({
                         )}
 
                         <div
-                          className={`flex flex-col gap-[1.5vh] w-full ${resolvedActionId === "slideshow" ? "px-[1.2vw]" : "px-[1.6vw]"} ${["open-link", "whatsapp", "email", "navigate-to", "call", "slideshow", "zoom", "info-box", "download", "popup", "3d-viewer", "audio"].includes(resolvedActionId) ? (item.isHotspot ? "pt-[1vh] pb-[1.5vh]" : "pt-[1vh] pb-[1.5vh]") : "pt-[4vh] pb-[4vh]"}`}
+                          className={`flex flex-col gap-[1.5vh] w-full ${resolvedActionId === "slideshow" ? "px-[1.2vw]" : "px-[1.6vw]"} ${["open-link", "whatsapp", "email", "navigate-to", "call", "slideshow", "zoom", "info-box", "download", "popup", "3d-viewer", "ar-view", "audio"].includes(resolvedActionId) ? (item.isHotspot ? "pt-[1vh] pb-[1.5vh]" : "pt-[1vh] pb-[1.5vh]") : "pt-[4vh] pb-[4vh]"}`}
                         >
                           <div className="flex items-start gap-[0.5vw] w-full">
                             {(() => {
@@ -1436,6 +1437,7 @@ const InteractionPanel = ({
                                   "download",
                                   "popup",
                                   "3d-viewer",
+                                  "ar-view",
                                   "audio",
                                 ].includes(resolvedActionId)
                               )
@@ -1624,9 +1626,10 @@ const InteractionPanel = ({
                                 setPopupCustomHtmlOverrides={setPopupCustomHtmlOverrides}
                                 updateElementAttribute={updateElementAttribute}
                               />
-                            ) : resolvedActionId === "3d-viewer" ? (
+                            ) : (resolvedActionId === "3d-viewer" || resolvedActionId === "ar-view") ? (
                               <ThreeDViewerAction
                                 activePageIndex={activePageIndex}
+                                interactionType={resolvedActionId}
                                 item={item}
                                 openDropdownId={openDropdownId}
                                 resolvedValue={resolvedValue}

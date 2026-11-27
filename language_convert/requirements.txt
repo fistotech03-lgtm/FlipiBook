@@ -1,0 +1,15 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.8.0
+python-multipart>=0.0.9
+requests>=2.32.0
+
+# PyTorch and Transformers (pinned for IndicTrans2 and IndicTransToolkit compatibility)
+torch>=2.2.0
+transformers==4.40.2
+accelerate>=0.33.0
+sentencepiece>=0.2.0
+
+# AI4Bharat IndicTrans Preprocessing Toolkit
+# Install via git:
+# git+https://github.com/VarunGumma/IndicTransToolkit.git

@@ -8,10 +8,10 @@ import axios from 'axios';
 import 'swiper/css/bundle';
 import './index.css';
 import App from './App.jsx';
-import { injectCustomFonts } from './utils/customFonts';
+import { injectFonts } from './config/fonts';
 
 // Local display fonts (/public/lib/Fonts)
-injectCustomFonts();
+injectFonts();
 
 // Guarantee all axios calls across all components send HttpOnly auth cookies
 axios.defaults.withCredentials = true;

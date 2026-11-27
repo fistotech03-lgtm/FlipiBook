@@ -60,6 +60,7 @@ services:
       - RSA_PUBLIC_KEY=${RSA_PUBLIC_KEY}
       - STORAGE_PATH=/app/storage
       - REDIS_URL=${REDIS_URL:-redis://default:Flipibook123@flipibook-redis-vatxsj:6379}
+      - TRANSLATION_SERVICE_URL=${TRANSLATION_SERVICE_URL:-http://flipibook-translate:8010/translate/page}
     env_file:
       - path: ./Backend/.env
         required: false

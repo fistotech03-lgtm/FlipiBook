@@ -10,7 +10,7 @@ import ColorPicker from '../../../../Color';
 import Effect from '../../../properties/controls/Effect';
 import { ElementToggle, ElementDropdown } from './ElementUIControls';
 import { getEmbedOverlayHtml } from '../utils/embedElementUtils';
-import { handleScrubHelper } from '../../../properties/controls/propertiesShared';
+import { handleScrubHelper, ScrubPercentInput } from '../../../properties/controls/propertiesShared';
 
 const SectionHeader = ({ title, rightElement }) => (
   <div className="flex items-center gap-[0.8vw]">
@@ -79,25 +79,13 @@ const ColorBoxRow = ({
                 onChange(finalVal);
               }
             }}
-            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
             maxLength={9}
           />
-          <div
-            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-            onPointerDown={(e) => {
-              const currentPct = Math.round(parseFloat(opacity !== undefined ? opacity : 100));
-              handleScrubHelper(e, currentPct, (val) => {
-                const num = parseInt(val);
-                const clamped = Math.min(Math.max(num, 0), 100);
-                onOpacityChange(clamped);
-              });
-            }}
-            title="Drag horizontally to adjust opacity"
-          >
-            <span className="text-[0.8vw] font-medium text-gray-700">
-              {Math.round(parseFloat(opacity !== undefined ? opacity : 100))}%
-            </span>
-          </div>
+          <ScrubPercentInput
+            value={Math.round(parseFloat(opacity !== undefined ? opacity : 100))}
+            onChange={(clamped) => onOpacityChange(clamped)}
+          />
         </div>
       </div>
     </div>
@@ -432,7 +420,7 @@ const ElementEmbedProperties = ({
   const [allowFullscreen, setAllowFullscreen] = useState(true);
   const [behavior, setBehavior] = useState('Open in - Current Tab');
 
-  // --- 3. Stoke Color & Width ---
+  // --- 3. Stroke Color & Width ---
   const [strokeColor, setStrokeColor] = useState('#000000');
   const [strokeOpacity, setStrokeOpacity] = useState(100);
   const [strokeWidth, setStrokeWidth] = useState(1);
@@ -1151,7 +1139,7 @@ const ElementEmbedProperties = ({
     }
   };
 
-  // Handlers for Stoke Color & Width
+  // Handlers for Stroke Color & Width
   const handleStrokeColorChange = (newColor) => {
     setStrokeColor(newColor);
     if (!selectedElement) return;

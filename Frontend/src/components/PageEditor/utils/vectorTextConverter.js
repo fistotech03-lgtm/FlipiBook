@@ -1,5 +1,5 @@
 import opentype from 'opentype.js';
-import { getCustomFontUrl } from '../../../utils/customFonts';
+import { getCustomFontUrl } from '../../../config/fonts';
 
 // Cache for loaded opentype font instances
 const fontCache = new Map();

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Color from './FillStrokeProperties';
 import Effect from './controls/Effect';
+import { handleScrubHelper } from '../utils/scrubValue';
 import { applyStyleToActiveTextSelection, safeSerializeSvg } from '../utils/editorUtils';
 import { applyStyleToCharacterRange, getSelectionCharacterOffsets, setSelectionCharacterOffsets } from '../utils/vectorTextRuns';
 import { createOrUpdateSvgPatternGradient } from '../../Color/utils/colorUtils';
@@ -10,62 +11,13 @@ import {
   ChevronDown, AlignLeft, Bold, Minus, List,
   AlignCenter, AlignRight, AlignJustify,
   ListOrdered,
-  ArrowLeftRight, ArrowUpDown, Maximize
+  ArrowLeftRight, ArrowUpDown, Maximize, Check
 } from 'lucide-react';
-import { CUSTOM_FONT_FAMILIES } from '../../../utils/customFonts';
+import { FONT_FAMILIES, loadGoogleFont, getFontWeights } from '../../../config/fonts';
 
-const systemFonts = new Set([
-  'arial', 'times new roman', 'courier new', 'georgia', 'verdana',
-  'helvetica', 'sans-serif', 'serif', 'monospace', 'system-ui'
-]);
-
-export const loadGoogleFont = (font) => {
-  if (!font || typeof document === 'undefined') return;
-  const clean = font.replace(/['"]/g, '').split(',')[0].trim();
-  if (!clean || systemFonts.has(clean.toLowerCase()) || clean === 'Designer_Signature') return;
-
-  const fontId = `google-font-${clean.toLowerCase().replace(/\s+/g, '-')}`;
-  if (!document.getElementById(fontId)) {
-    const link = document.createElement('link');
-    link.id = fontId;
-    link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?family=${clean.replace(/\s+/g, '+')}:wght@300;400;500;600;700;800;900&display=swap`;
-    document.head.appendChild(link);
-  }
-};
-
-export const fontFamilies = [
-  'Outfit',
-  'Inter',
-  'Poppins',
-  'Roboto',
-  'Montserrat',
-  'Open Sans',
-  'Lato',
-  'Playfair Display',
-  'Oswald',
-  'Merriweather',
-  'Arial',
-  'Times New Roman',
-  'Courier New',
-  'Georgia',
-  'Verdana',
-  'Helvetica',
-  'Public Sans',
-  'Lora',
-  'Cabin',
-  'Raleway',
-  'Ubuntu',
-  'Allura',
-  'Parisienne',
-  'Satisfy',
-  'Bangers',
-  'Bebas Neue',
-  'Mr Dafoe',
-  'Kaushan Script',
-  'Designer_Signature',
-  ...CUSTOM_FONT_FAMILIES
-];
+// Font loading + the font list live in the single registry: src/config/fonts.js
+export { loadGoogleFont };
+export const fontFamilies = FONT_FAMILIES;
 
 export const fontWeights = [
   { name: 'Thin', value: 'thin' },
@@ -1142,6 +1094,16 @@ const TextProperties = ({
     return fontFamilies;
   }, [fontFamily]);
 
+  // Only the weights the current font really has (e.g. a single-weight display font shows just
+  // "Regular"); the current weight is always kept so the field never shows an unlisted value.
+  const availableWeights = useMemo(() => {
+    const has = getFontWeights(fontFamily);
+    if (!has) return fontWeights;
+    const set = new Set(has.map(String));
+    const list = fontWeights.filter((w) => set.has(weightToNumeric(w.value)) || w.value === fontWeight);
+    return list.length ? list : fontWeights;
+  }, [fontFamily, fontWeight]);
+
   useEffect(() => {
     if (fontFamily) {
       loadGoogleFont(fontFamily);
@@ -1422,25 +1384,31 @@ const TextProperties = ({
             ].includes(attribute);
             let selectionApplied = false;
             if (isCharacterProp) {
-              let runAttr = attribute;
-              let runVal = value;
-              if (attribute === 'stroke' || attribute === 'stroke-opacity') {
-                runAttr = 'strokeColor';
-                const s = attribute === 'stroke' ? finalVal : (liveEl.getAttribute('stroke') || 'none');
-                const op = attribute === 'stroke-opacity' ? finalVal : (liveEl.getAttribute('stroke-opacity') || '1');
-                runVal = getStrokeColorWithOpacity(s, op);
-              } else if (attribute === 'strokeWidth') {
-                runAttr = 'strokeWidth';
-                runVal = `${finalVal}px`;
-              }
-              selectionApplied = applyStyleToActiveTextSelection(elId, runAttr, runVal);
-              if (selectionApplied) {
-                appliedToTextSelection = true;
-                const liveTarget = liveEl.querySelector('.flipbook-text-scrollbar') || liveEl.firstElementChild;
-                if (liveTarget) {
-                  updateElementAttributeLocal(activePageIndex, elId, 'innerHTML', liveTarget.innerHTML, true);
+              const isLiveEditing = liveEl.getAttribute('data-editing') === 'true';
+              const shouldRouteToRange = attribute !== 'letterSpacing' || isLiveEditing;
+              if (shouldRouteToRange) {
+                let runAttr = attribute;
+                let runVal = value;
+                if (attribute === 'letterSpacing') {
+                  runVal = finalVal;
+                } else if (attribute === 'stroke' || attribute === 'stroke-opacity') {
+                  runAttr = 'strokeColor';
+                  const s = attribute === 'stroke' ? finalVal : (liveEl.getAttribute('stroke') || 'none');
+                  const op = attribute === 'stroke-opacity' ? finalVal : (liveEl.getAttribute('stroke-opacity') || '1');
+                  runVal = getStrokeColorWithOpacity(s, op);
+                } else if (attribute === 'strokeWidth') {
+                  runAttr = 'strokeWidth';
+                  runVal = `${finalVal}px`;
                 }
-                window.dispatchEvent(new CustomEvent('force-update-selection-box', { detail: { elementId: elId } }));
+                selectionApplied = applyStyleToActiveTextSelection(elId, runAttr, runVal);
+                if (selectionApplied) {
+                  appliedToTextSelection = true;
+                  const liveTarget = liveEl.querySelector('.flipbook-text-scrollbar') || liveEl.firstElementChild;
+                  if (liveTarget) {
+                    updateElementAttributeLocal(activePageIndex, elId, 'innerHTML', liveTarget.innerHTML, true);
+                  }
+                  window.dispatchEvent(new CustomEvent('force-update-selection-box', { detail: { elementId: elId } }));
+                }
               }
             }
 
@@ -2245,12 +2213,16 @@ const TextProperties = ({
                 element.firstElementChild.style.setProperty('-webkit-text-stroke-width', `${value}px`, 'important');
               } else {
                 const cssPropName = finalProp.replace(/[A-Z]/g, m => '-' + m.toLowerCase());
-                element.firstElementChild.style.setProperty(cssPropName, value, 'important');
+                let commitVal = finalVal;
+                if (finalProp === 'fontFamily' && typeof commitVal === 'string' && !commitVal.includes("'") && !commitVal.includes('"')) {
+                  commitVal = `'${commitVal}'`;
+                }
+                element.firstElementChild.style.setProperty(cssPropName, commitVal, 'important');
 
                 Array.from(element.firstElementChild.querySelectorAll('*')).forEach(child => {
                   if (child.style) {
                     if (attribute === 'fontFamily') {
-                      child.style.fontFamily = value;
+                      child.style.fontFamily = commitVal;
                       child.removeAttribute('face');
                       child.removeAttribute('font-family');
                     } else if (attribute === 'fontSize') {
@@ -2278,13 +2250,17 @@ const TextProperties = ({
 
                 const scrollTarget = element.querySelector('.flipbook-text-scrollbar');
                 if (scrollTarget) {
-                  scrollTarget.style.setProperty(cssPropName, value, 'important');
+                  scrollTarget.style.setProperty(cssPropName, commitVal, 'important');
                 }
               }
               applyScrollStyles(element.firstElementChild);
             }
             const attrName = SVG_ATTR_MAP[attribute] || attribute;
-            element.setAttribute(attrName, value);
+            const attrVal = attribute === 'letterSpacing' ? finalVal : value;
+            element.setAttribute(attrName, attrVal);
+            if (attribute === 'lineHeight') {
+              element.setAttribute('data-line-height', value);
+            }
 
             // Layout-affecting styles may have resized the live box: mirror its geometry
             if (tag === 'foreignobject' && liveEl && liveEl.getAttribute('data-scrollable') !== 'true') {
@@ -2304,12 +2280,16 @@ const TextProperties = ({
                   liveEl.firstElementChild.style.setProperty('-webkit-text-stroke-width', `${value}px`, 'important');
                 } else {
                   const cssPropName = finalProp.replace(/[A-Z]/g, m => '-' + m.toLowerCase());
-                  liveEl.firstElementChild.style.setProperty(cssPropName, value, 'important');
+                  let commitVal = finalVal;
+                  if (finalProp === 'fontFamily' && typeof commitVal === 'string' && !commitVal.includes("'") && !commitVal.includes('"')) {
+                    commitVal = `'${commitVal}'`;
+                  }
+                  liveEl.firstElementChild.style.setProperty(cssPropName, commitVal, 'important');
 
                   Array.from(liveEl.firstElementChild.querySelectorAll('*')).forEach(child => {
                     if (child.style) {
                       if (attribute === 'fontFamily') {
-                        child.style.fontFamily = value;
+                        child.style.fontFamily = commitVal;
                         child.removeAttribute('face');
                         child.removeAttribute('font-family');
                       } else if (attribute === 'fontSize') {
@@ -2337,13 +2317,17 @@ const TextProperties = ({
 
                   const scrollTarget = liveEl.querySelector('.flipbook-text-scrollbar');
                   if (scrollTarget) {
-                    scrollTarget.style.setProperty(cssPropName, value, 'important');
+                    scrollTarget.style.setProperty(cssPropName, commitVal, 'important');
                   }
                 }
                 applyScrollStyles(liveEl.firstElementChild);
               }
               const attrName = SVG_ATTR_MAP[attribute] || attribute;
-              liveEl.setAttribute(attrName, value);
+              const attrVal = attribute === 'letterSpacing' ? finalVal : value;
+              liveEl.setAttribute(attrName, attrVal);
+              if (attribute === 'lineHeight') {
+                liveEl.setAttribute('data-line-height', value);
+              }
             }
           } else {
             // For SVG elements (text, g, etc.) set both CSS style and SVG presentation attribute
@@ -2367,6 +2351,11 @@ const TextProperties = ({
             if (attribute === 'textAlign') {
               svgAttrVal = TEXT_ALIGN_TO_ANCHOR[value] || 'start';
               element.setAttribute('text-anchor', svgAttrVal);
+              element.setAttribute('data-text-align', value);
+              const syncedX = liveEl?.getAttribute('x');
+              if (syncedX !== null && syncedX !== undefined) {
+                element.setAttribute('x', syncedX);
+              }
             } else {
               element.setAttribute(svgAttrName, finalVal);
             }
@@ -2396,6 +2385,10 @@ const TextProperties = ({
                   child.style.setProperty(styleProp, finalVal, 'important');
                   if (attribute === 'textAlign') {
                     child.setAttribute('text-anchor', svgAttrVal);
+                    const syncedX = liveEl?.getAttribute('x');
+                    if (syncedX !== null && syncedX !== undefined) {
+                      child.setAttribute('x', syncedX);
+                    }
                   } else {
                     child.setAttribute(svgAttrName, finalVal);
                   }
@@ -2593,18 +2586,30 @@ const TextProperties = ({
       const numVal = value === 'Auto' || value === '' ? 1.5 : parseFloat(value);
       setLineHeight(numVal);
 
-      // SVG text: line-height is applied via dy attributes on tspan children
+      // SVG text: line-height is applied via clean y coordinates on tspan lines (removing stale dy/y conflicts)
       if (selectedLayerId) {
         const el = document.getElementById(selectedLayerId);
         if (el && el.tagName.toLowerCase() === 'text') {
           el.setAttribute('data-line-height', numVal.toString());
           const tspans = Array.from(el.querySelectorAll('tspan'));
+          const fsPx = parseFloat(el.getAttribute('font-size') || el.style?.fontSize || window.getComputedStyle(el).fontSize) || 14;
+          const stepY = fsPx * numVal;
+          let y0 = parseFloat(tspans[0]?.getAttribute('y'));
+          if (isNaN(y0)) y0 = parseFloat(el.getAttribute('y')) || 0;
+          let lineIdx = 0;
+          let prevOrigY = y0;
           tspans.forEach((tspan, i) => {
-            if (i > 0) tspan.setAttribute('dy', `${numVal.toFixed(2)}em`);
+            const rawY = parseFloat(tspan.getAttribute('y'));
+            const hasDy = Boolean(tspan.getAttribute('dy'));
+            if (i > 0 && (hasDy || (!isNaN(rawY) && Math.abs(rawY - prevOrigY) > 2))) {
+              lineIdx++;
+              prevOrigY = !isNaN(rawY) ? rawY : prevOrigY;
+            }
+            tspan.removeAttribute('dy');
+            tspan.setAttribute('y', (y0 + lineIdx * stepY).toFixed(2));
           });
           // Persist to pages state
           updateElementAttributeLocal(activePageIndex, selectedLayerId, 'data-line-height', numVal.toString());
-          // Also re-serialize tspan dy values into page HTML via a DOM sync
           const svgRoot = el.ownerSVGElement || el.closest('svg');
           if (svgRoot) {
             const container = svgRoot.closest('[data-page-index]');
@@ -2647,8 +2652,19 @@ const TextProperties = ({
                 if (docEl) {
                   docEl.setAttribute('data-line-height', numVal.toString());
                   const docTspans = Array.from(docEl.querySelectorAll('tspan'));
+                  let dY0 = parseFloat(docTspans[0]?.getAttribute('y'));
+                  if (isNaN(dY0)) dY0 = parseFloat(docEl.getAttribute('y')) || 0;
+                  let dLineIdx = 0;
+                  let dPrevY = dY0;
                   docTspans.forEach((ts, i) => {
-                    if (i > 0) ts.setAttribute('dy', `${numVal.toFixed(2)}em`);
+                    const rawY = parseFloat(ts.getAttribute('y'));
+                    const hasDy = Boolean(ts.getAttribute('dy'));
+                    if (i > 0 && (hasDy || (!isNaN(rawY) && Math.abs(rawY - dPrevY) > 2))) {
+                      dLineIdx++;
+                      dPrevY = !isNaN(rawY) ? rawY : dPrevY;
+                    }
+                    ts.removeAttribute('dy');
+                    ts.setAttribute('y', (dY0 + dLineIdx * stepY).toFixed(2));
                   });
                   page.html = safeSerializeSvg(doc) || page.html;
                   next[pageIdx2] = page;
@@ -2659,8 +2675,12 @@ const TextProperties = ({
             }
           }
         } else if (el) {
-          // For foreignObject / div elements, CSS line-height works fine
-          updateElementAttributeLocal(activePageIndex, selectedLayerId, 'lineHeight', numVal.toString());
+          // For foreignObject / div elements, apply CSS line-height and keep data-line-height synced
+          el.setAttribute('data-line-height', numVal.toString());
+          if (el.firstElementChild) {
+            el.firstElementChild.style.setProperty('line-height', numVal.toString(), 'important');
+          }
+          updateElementAttributeLocal(activePageIndex, selectedLayerId, 'lineHeight', numVal.toString(), false, immediate);
         }
       }
       return;
@@ -2792,10 +2812,12 @@ const TextProperties = ({
       ].includes(property);
       let selectionApplied = false;
 
-      if (isCharacterProp) {
+      if (isCharacterProp && (property !== 'letterSpacing' || el?.getAttribute('data-editing') === 'true')) {
         let runProp = property;
         let runVal = value;
-        if (property === 'stroke' || property === 'stroke-opacity') {
+        if (property === 'letterSpacing') {
+          runVal = !value.toString().includes('px') && !value.toString().includes('em') ? `${value}px` : value;
+        } else if (property === 'stroke' || property === 'stroke-opacity') {
           runProp = 'strokeColor';
           const s = property === 'stroke' ? value : (el.getAttribute('stroke') || 'none');
           const op = property === 'stroke-opacity' ? value : (el.getAttribute('stroke-opacity') || '1');
@@ -2898,8 +2920,24 @@ const TextProperties = ({
                 el.style.fontSize = `${ptVal}pt`;
               } else if (property === 'textAlign') {
                 const anchorVal = TEXT_ALIGN_TO_ANCHOR[value] || 'start';
+                let nextX = null;
+                if (el.tagName.toLowerCase() === 'text' && typeof el.getBBox === 'function') {
+                  try {
+                    const bb = el.getBBox();
+                    if (bb && isFinite(bb.x) && isFinite(bb.width) && bb.width > 0) {
+                      nextX = anchorVal === 'middle'
+                        ? (bb.x + bb.width / 2).toFixed(2)
+                        : anchorVal === 'end'
+                          ? (bb.x + bb.width).toFixed(2)
+                          : bb.x.toFixed(2);
+                    }
+                  } catch { /* fallback to keeping x */ }
+                }
                 el.setAttribute('text-anchor', anchorVal);
                 el.setAttribute('data-text-align', finalVal);
+                if (nextX !== null) {
+                  el.setAttribute('x', nextX);
+                }
               } else if (property === 'fontWeight') {
                 const twWeight = normalizeToTailwindWeight(adjustedValue);
                 el.setAttribute('font-weight', twWeight);
@@ -2911,6 +2949,7 @@ const TextProperties = ({
               // Propagate to tspan children
               const elTag = el.tagName.toLowerCase();
               if (elTag === 'text' || elTag === 'g') {
+                const alignedX = property === 'textAlign' ? el.getAttribute('x') : null;
                 Array.from(el.querySelectorAll('tspan')).forEach(child => {
                   child.style[styleProp] = finalVal;
                   if (property === 'fontFamily') {
@@ -2923,6 +2962,7 @@ const TextProperties = ({
                     child.style.fontSize = `${ptVal}pt`;
                   } else if (property === 'textAlign') {
                     child.setAttribute('text-anchor', TEXT_ALIGN_TO_ANCHOR[value] || 'start');
+                    if (alignedX !== null) child.setAttribute('x', alignedX);
                   } else if (property === 'fontWeight') {
                     const twWeight = normalizeToTailwindWeight(adjustedValue);
                     child.setAttribute('font-weight', twWeight);
@@ -2953,42 +2993,37 @@ const TextProperties = ({
 
   const handleScrub = useCallback((property, startValue, step = 1) => (e) => {
     e.preventDefault();
-    const startX = e.clientX;
     const initialVal = property === 'lineHeight' ? (parseFloat(startValue) || 1.2) : (parseFloat(startValue) || 0);
 
-    const onMouseMove = (moveEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const deltaValue = (deltaX / 10) * step;
-      let newValue = initialVal + deltaValue;
-
-      if (property === 'lineHeight') {
-        newValue = Math.max(0.1, parseFloat(newValue.toFixed(2)));
-      } else {
-        newValue = Math.round(newValue);
+    handleScrubHelper(
+      e,
+      initialVal,
+      (val) => {
+        let newValue = parseFloat(val);
+        if (property === 'lineHeight') {
+          newValue = Math.max(0.1, parseFloat(newValue.toFixed(2)));
+        } else {
+          newValue = Math.round(newValue);
+        }
+        updateStyle(property, newValue, false);
+      },
+      10,
+      {
+        step,
+        precision: property === 'lineHeight' ? 2 : null,
+        onEnd: () => {
+          if (commitTimerRef.current) {
+            clearTimeout(commitTimerRef.current);
+            commitTimerRef.current = null;
+          }
+          if (pendingCommitRef.current && typeof pendingCommitRef.current.flush === 'function') {
+            const task = pendingCommitRef.current;
+            pendingCommitRef.current = null;
+            task.flush();
+          }
+        }
       }
-
-      updateStyle(property, newValue, false); // Debounced 60fps
-    };
-
-    const onMouseUp = () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      document.body.style.cursor = 'default';
-      // Flush pending commit immediately on mouse up
-      if (commitTimerRef.current) {
-        clearTimeout(commitTimerRef.current);
-        commitTimerRef.current = null;
-      }
-      if (pendingCommitRef.current && typeof pendingCommitRef.current.flush === 'function') {
-        const task = pendingCommitRef.current;
-        pendingCommitRef.current = null;
-        task.flush();
-      }
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    document.body.style.cursor = 'ew-resize';
+    );
   }, [updateStyle]);
 
   const togglePanel = (panelName) => {
@@ -3322,10 +3357,13 @@ const TextProperties = ({
         ls = el.getAttribute('letter-spacing') || ls;
       }
       const targetLs = (ls && ls !== 'normal') ? parseFloat(ls) : 0;
-      setLetterSpacing(prev => prev === targetLs ? prev : targetLs);
-
-      const lh = calculateLineHeightMultiplier();
-      setLineHeight(prev => prev === lh ? prev : lh);
+      const isEditingSpacingInput = document.activeElement && document.activeElement.tagName === 'INPUT' &&
+        document.activeElement.closest('.text-editor-panel, .right-sidebar, #right-sidebar');
+      if (!isEditingSpacingInput) {
+        setLetterSpacing(prev => prev === targetLs ? prev : targetLs);
+        const lh = calculateLineHeightMultiplier();
+        setLineHeight(prev => prev === lh ? prev : lh);
+      }
 
       const storedMode = el.getAttribute('data-sizing-mode') || 'auto-width';
       setSizingMode(prev => prev === storedMode ? prev : storedMode);
@@ -3466,7 +3504,7 @@ const TextProperties = ({
           {showFontDropdown && (
             <>
               <div className="fixed inset-0 z-[90]" onClick={() => { endFontPreview(); setShowFontDropdown(false); }} />
-              <div onMouseLeave={endFontPreview} className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+              <div onMouseLeave={endFontPreview} className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[16vw] overflow-y-auto p-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
                 {availableFontFamilies.map(font => {
                   const isSelected = font.toLowerCase() === (fontFamily || '').toLowerCase();
                   return (
@@ -3568,7 +3606,7 @@ const TextProperties = ({
       {/* Font Selectors Row 2: Weight, Letter Spacing, Line Height */}
       <div className="flex items-center gap-[0.6vw]">
         {/* Font Weight */}
-        <div className="relative flex-1" ref={weightRef}>
+        <div className="relative w-[8.5vw] shrink-0" ref={weightRef}>
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()} // keep the selected text selected
@@ -3581,8 +3619,8 @@ const TextProperties = ({
           {showWeightDropdown && (
             <>
               <div className="fixed inset-0 z-[90]" onClick={() => { endFontPreview(); setShowWeightDropdown(false); }} />
-              <div onMouseLeave={endFontPreview} className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
-                {fontWeights.map(w => (
+              <div onMouseLeave={endFontPreview} className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[16vw] overflow-y-auto p-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                {availableWeights.map(w => (
                   <div
                     key={w.value}
                     onMouseEnter={() => startStylePreview('fontWeight', w.value)}
@@ -3592,9 +3630,11 @@ const TextProperties = ({
                       updateStyle('fontWeight', w.value);
                       setShowWeightDropdown(false);
                     }}
-                    className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] transition-colors ${fontWeight === w.value ? 'bg-gray-50 font-semibold text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+                    style={{ fontWeight: Number(weightToNumeric(w.value)) }}
+                    className={`flex items-center justify-between gap-[0.6vw] px-[0.6vw] py-[0.4vw] rounded-[0.35vw] whitespace-nowrap cursor-pointer text-[0.8vw] leading-none transition-colors ${fontWeight === w.value ? 'bg-[#4D47FF]/10 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
                   >
-                    {w.name}
+                    <span className="truncate">{w.name}</span>
+                    {fontWeight === w.value && <Check size="0.7vw" className="shrink-0" />}
                   </div>
                 ))}
               </div>
@@ -3614,12 +3654,17 @@ const TextProperties = ({
               setLetterSpacingDraft(raw);
               if (isCompleteNumber(raw)) updateStyle('letterSpacing', parseFloat(raw));
             }}
-            onBlur={() => setLetterSpacingDraft(null)}
+            onBlur={() => {
+              if (letterSpacingDraft !== null && isCompleteNumber(letterSpacingDraft)) {
+                updateStyle('letterSpacing', parseFloat(letterSpacingDraft), true);
+              }
+              setLetterSpacingDraft(null);
+            }}
             className="w-full bg-transparent outline-none text-[0.8vw] text-gray-800 font-medium"
           />
           <div
             className="flex items-center border-l border-gray-200 pl-[0.35vw] ml-[0.35vw] cursor-ew-resize text-gray-400 hover:text-gray-700 active:text-[#4D47FF]"
-            onMouseDown={handleScrub('letterSpacing', letterSpacing, 1)}
+            onPointerDown={handleScrub('letterSpacing', letterSpacing, 1)}
             title="Drag horizontally to adjust letter spacing"
           >
             <Icon icon="solar:paragraph-spacing-bold" className="w-[1vw] h-[1vw] rotate-90 pointer-events-none" />
@@ -3638,12 +3683,17 @@ const TextProperties = ({
               setLineHeightDraft(raw);
               if (isCompleteNumber(raw) && parseFloat(raw) > 0) updateStyle('lineHeight', parseFloat(raw));
             }}
-            onBlur={() => setLineHeightDraft(null)}
+            onBlur={() => {
+              if (lineHeightDraft !== null && isCompleteNumber(lineHeightDraft) && parseFloat(lineHeightDraft) > 0) {
+                updateStyle('lineHeight', parseFloat(lineHeightDraft), true);
+              }
+              setLineHeightDraft(null);
+            }}
             className="w-full bg-transparent outline-none text-[0.8vw] text-gray-800 font-medium"
           />
           <div
             className="flex items-center border-l border-gray-200 pl-[0.35vw] ml-[0.35vw] cursor-ew-resize text-gray-400 hover:text-gray-700 active:text-[#4D47FF]"
-            onMouseDown={handleScrub('lineHeight', lineHeight, 0.1)}
+            onPointerDown={handleScrub('lineHeight', lineHeight, 0.1)}
             title="Drag horizontally to adjust line height"
           >
             <Icon icon="solar:paragraph-spacing-bold" className="w-[1vw] h-[1vw] pointer-events-none" />

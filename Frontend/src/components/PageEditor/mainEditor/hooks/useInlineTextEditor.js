@@ -67,6 +67,9 @@ export const useInlineTextEditor = ({
     }
 
     isEditingTextRef.current = true;
+    if (typeof window !== 'undefined') {
+      window.__editingLayerId = foTarget.id;
+    }
     const svgRoot = foTarget.ownerSVGElement || foTarget.closest('svg');
     const svgContainer = foTarget.closest('.page-svg-container') || svgRoot?.parentElement;
 
@@ -227,6 +230,9 @@ export const useInlineTextEditor = ({
 
     const cleanup = () => {
       isEditingTextRef.current = false;
+      if (typeof window !== 'undefined' && window.__editingLayerId === foTarget.id) {
+        window.__editingLayerId = null;
+      }
       window.__savedTextSelection = null;
       clearSmartGuides();
       editCacheManager.endSession((el, highlightType) => drawOverlayHighlight(el, highlightType));
@@ -269,11 +275,21 @@ export const useInlineTextEditor = ({
     let sessionEnded = false;
     // After interacting with the panel the text div is no longer focused, so a canvas click
     // won't fire 'blur'. End editing explicitly when the user presses on the canvas elsewhere.
+    // If holding Shift/Ctrl/Cmd and clicking another canvas element, preserve current box for multi-select!
     const handleCanvasPressWhileEditing = (ev) => {
       if (sessionEnded) return;
       const t = ev.target;
       if (!t || !t.closest || !t.closest('[data-editor-canvas]')) return; // outside canvas: keep editing
       if (foTarget.contains(t)) return; // clicking inside the text keeps editing
+      const wantsMulti = Boolean(ev.shiftKey || ev.metaKey || (ev.ctrlKey && !ev.altKey));
+      if (wantsMulti && foTarget.id) {
+        window.__preserveEditSelectionForMulti = {
+          baseId: foTarget.id,
+          timestamp: Date.now()
+        };
+        handleBlur({ relatedTarget: null });
+        return;
+      }
       if (document.activeElement === div) return; // normal blur will handle it
       handleBlur({ relatedTarget: null });
     };
@@ -300,8 +316,16 @@ export const useInlineTextEditor = ({
         return;
       }
 
-      suppressClickRef.current = true;
-      setTimeout(() => { suppressClickRef.current = false; }, 200);
+      const preserveMultiInfo = (
+        typeof window !== 'undefined' &&
+        window.__preserveEditSelectionForMulti &&
+        (Date.now() - window.__preserveEditSelectionForMulti.timestamp < 500)
+      ) ? window.__preserveEditSelectionForMulti : null;
+
+      suppressClickRef.current = !preserveMultiInfo;
+      if (!preserveMultiInfo) {
+        setTimeout(() => { suppressClickRef.current = false; }, 200);
+      }
 
       const finalContent = div.innerText || '';
 
@@ -388,19 +412,58 @@ export const useInlineTextEditor = ({
 
       cleanup();
 
-      // Re-select element and redraw highlight
+      // Re-select element and redraw highlight (unless exiting into Shift/Ctrl/Cmd multi-select)
       if (foTarget.id) {
-        if (setSelectedLayerId) setSelectedLayerId(foTarget.id);
-        selectedLayerIdRef.current = foTarget.id;
-        if (setMultiSelectedIds) {
-          setMultiSelectedIds(new Set([foTarget.id]));
-          multiSelectedIdsRef.current = new Set([foTarget.id]);
+        if (preserveMultiInfo) {
+          const keepSet = new Set(multiSelectedIdsRef.current || []);
+          keepSet.add(foTarget.id);
+          if (setSelectedLayerId) setSelectedLayerId(foTarget.id);
+          selectedLayerIdRef.current = foTarget.id;
+          if (setMultiSelectedIds) setMultiSelectedIds(keepSet);
+          multiSelectedIdsRef.current = keepSet;
+        } else {
+          if (setSelectedLayerId) setSelectedLayerId(foTarget.id);
+          selectedLayerIdRef.current = foTarget.id;
+          if (setMultiSelectedIds) {
+            setMultiSelectedIds(new Set([foTarget.id]));
+            multiSelectedIdsRef.current = new Set([foTarget.id]);
+          }
+          drawOverlayHighlight(foTarget, 'selected');
         }
-        drawOverlayHighlight(foTarget, 'selected');
       }
 
       const container = foTarget.closest('.page-svg-container');
       if (container) saveModifiedPageHtml(parseInt(container.getAttribute('data-page-index')), svgRoot);
+    };
+
+    const findCompanionTextIds = () => {
+      if (!svgRoot || !foTarget) return foTarget?.id ? [foTarget.id] : [];
+      const isValidTextBox = (node) => {
+        if (!node || !node.id || node.getAttribute('data-hidden') === 'true' || node.getAttribute('data-locked') === 'true') return false;
+        const t = node.tagName.toLowerCase();
+        if (t === 'text') return Boolean((node.textContent || '').trim());
+        if (t === 'foreignobject') return Boolean((node.innerText || node.textContent || '').trim());
+        return false;
+      };
+      // Prefer text boxes sharing the nearest named <g> group (e.g. "How We" + "Work", "WHY" + "CHOOSE" + "US")
+      let groupEl = foTarget.parentElement?.closest('g[id]');
+      while (groupEl && groupEl !== svgRoot) {
+        if (groupEl.getAttribute('data-name') === 'Group' && groupEl.parentElement?.closest('g[id]') && groupEl.parentElement.closest('g[id]') !== svgRoot) {
+          const outer = groupEl.parentElement.closest('g[id]');
+          const outerTexts = Array.from(outer.querySelectorAll('text[id], foreignObject[id]')).filter(isValidTextBox);
+          if (outerTexts.length >= 2 && outerTexts.length <= 6) {
+            return outerTexts.map(el => el.id);
+          }
+        }
+        const groupTexts = Array.from(groupEl.querySelectorAll('text[id], foreignObject[id]')).filter(isValidTextBox);
+        if (groupTexts.length >= 2 && groupTexts.length <= 8) {
+          return groupTexts.map(el => el.id);
+        }
+        groupEl = groupEl.parentElement?.closest('g[id]');
+      }
+      // Fallback: all editable text boxes on the active page
+      const pageTexts = Array.from(svgRoot.querySelectorAll('text[id], foreignObject[id]')).filter(isValidTextBox);
+      return pageTexts.length > 0 ? pageTexts.map(el => el.id) : (foTarget.id ? [foTarget.id] : []);
     };
 
     const handleKeyDown = (e) => {
@@ -409,6 +472,36 @@ export const useInlineTextEditor = ({
         e.preventDefault();
         div.blur();
         return;
+      }
+
+      // Ctrl/Cmd+A inside inline text:
+      // 1st press selects all text inside the active box; 2nd press (when all text is already selected)
+      // or Ctrl+Shift+A promotes selection to sibling/all text boxes on the page so users can format/translate together!
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        const sel = window.getSelection();
+        const norm = (s) => (s || '').replace(/\s+/g, '');
+        const fullNorm = norm(div.innerText || div.textContent || '');
+        const selNorm = norm(sel ? sel.toString() : '');
+        const alreadyAllSelected = fullNorm.length > 0 && selNorm === fullNorm;
+
+        if (e.shiftKey || alreadyAllSelected) {
+          const targetIds = findCompanionTextIds();
+          if (targetIds.length > 1) {
+            e.preventDefault();
+            window.__preserveEditSelectionForMulti = {
+              baseId: foTarget.id,
+              timestamp: Date.now()
+            };
+            div.blur();
+            const newSet = new Set(targetIds);
+            multiSelectedIdsRef.current = newSet;
+            if (setMultiSelectedIds) setMultiSelectedIds(newSet);
+            const lastId = targetIds[targetIds.length - 1];
+            selectedLayerIdRef.current = lastId;
+            if (setSelectedLayerId) setSelectedLayerId(lastId);
+            return;
+          }
+        }
       }
 
       if (e.key === 'Enter') {

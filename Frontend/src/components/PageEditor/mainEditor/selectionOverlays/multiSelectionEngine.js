@@ -145,7 +145,7 @@ export const createMultiSelectionEngine = ({
           const posX = Number.isFinite(p?.x) ? p.x.toFixed(2) : '0';
           const posY = Number.isFinite(p?.y) ? p.y.toFixed(2) : '0';
           const safeScale = (zoomScale && Number.isFinite(zoomScale) && zoomScale > 0) ? (1 / zoomScale).toFixed(3) : '1';
-          handle.style.transform = `translate3d(${posX}px, ${posY}px, 0) scale(${safeScale}) translate(-50%, -50%)`;
+          handle.style.transform = `translate3d(${posX}px, ${posY}px, 0) scale(var(--fbe-inv-zoom, ${safeScale})) translate(-50%, -50%)`;
 
           const cursorMap = { nw: 'nwse-resize', ne: 'nesw-resize', se: 'nwse-resize', sw: 'nesw-resize', n: 'ns-resize', e: 'ew-resize', s: 'ns-resize', w: 'ew-resize' };
           handle.style.cursor = cursorMap[name] || 'pointer';
@@ -428,7 +428,7 @@ export const createMultiSelectionEngine = ({
             const posY = Number.isFinite(p?.y) ? p.y.toFixed(2) : '0';
             const safeRot = Number.isFinite(commonRotation) ? commonRotation.toFixed(1) : '0';
             const safeScale = (zoomScale && Number.isFinite(zoomScale) && zoomScale > 0) ? (1 / zoomScale).toFixed(3) : '1';
-            handle.style.transform = `translate3d(${posX}px, ${posY}px, 0) rotate(${safeRot}deg) scale(${safeScale}) translate(-50%, -50%)`;
+            handle.style.transform = `translate3d(${posX}px, ${posY}px, 0) rotate(${safeRot}deg) scale(var(--fbe-inv-zoom, ${safeScale})) translate(-50%, -50%)`;
 
             if (!isSide) {
               handle.onpointerenter = () => {

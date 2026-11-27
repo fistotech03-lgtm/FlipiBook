@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
+import { setOverlayInvZoom } from '../selectionOverlays/overlayDomUtils';
 
 const calculateFitZoom = (containerWidth, containerHeight, baseWidth, baseHeight) => {
   const padding = window.innerWidth * 0.01;
@@ -78,11 +79,12 @@ export const useCanvasZoomPan = ({
     const currentP = currentPanRef.current || pan || { x: 0, y: 0 };
     setZoom(prev => {
       const current = currentZoomRef.current || prev || 100;
-      const nextZoom = Math.min(Math.round(current * 1.15), 500);
+      const nextZoom = Math.min(Math.round(current * 1.15), 10000);
       currentZoomRef.current = nextZoom;
       if (zoomContainerRef.current) {
-        zoomContainerRef.current.style.transition = 'transform 0.15s ease-out';
+        zoomContainerRef.current.style.transition = 'transform 0.15s ease-out, --fbe-inv-zoom 0.15s ease-out';
         zoomContainerRef.current.style.transform = `translate(${currentP.x}px, ${currentP.y}px) scale(${nextZoom / 100})`;
+        setOverlayInvZoom(zoomContainerRef.current, nextZoom / 100);
       }
       return nextZoom;
     });
@@ -95,8 +97,9 @@ export const useCanvasZoomPan = ({
       const nextZoom = Math.max(Math.round(current / 1.15), 10);
       currentZoomRef.current = nextZoom;
       if (zoomContainerRef.current) {
-        zoomContainerRef.current.style.transition = 'transform 0.15s ease-out';
+        zoomContainerRef.current.style.transition = 'transform 0.15s ease-out, --fbe-inv-zoom 0.15s ease-out';
         zoomContainerRef.current.style.transform = `translate(${currentP.x}px, ${currentP.y}px) scale(${nextZoom / 100})`;
+        setOverlayInvZoom(zoomContainerRef.current, nextZoom / 100);
       }
       return nextZoom;
     });
@@ -185,7 +188,7 @@ export const useCanvasZoomPan = ({
         if (!containerEl) return;
 
         const minZ = 10;
-        const maxZ = 500;
+        const maxZ = 10000;
 
         // Normalize delta (line/page modes) and convert to a continuous zoom factor
         let delta = e.deltaY;
@@ -230,22 +233,25 @@ export const useCanvasZoomPan = ({
           currentPanRef.current = nextPan;
           if (zoomContainerRef.current) {
             zoomContainerRef.current.style.transform = `translate(${clampedX}px, ${clampedY}px) scale(${nextZoom / 100})`;
+            setOverlayInvZoom(zoomContainerRef.current, nextZoom / 100);
           }
-          window.dispatchEvent(new CustomEvent('editor-pan-update', { detail: nextPan }));
+          window.dispatchEvent(new CustomEvent('editor-pan-update', { detail: { ...nextPan, zoom: nextZoom } }));
 
-          // Commit every frame so selection box / handles (which counter-scale by zoom)
-          // stay a constant on-screen size throughout the animation
-          setZoom(nextZoom); // unrounded so zoom & pan stay consistent (display rounds)
-          setPan(nextPan);
-
+          // Commit to React only when the animation settles. Committing every frame re-rendered the
+          // whole editor and redrew every overlay per frame (visible glitching). The selection box /
+          // handles stay constant-size mid-zoom through the --fbe-inv-zoom CSS variable instead.
           if (done) {
+            setZoom(nextZoom); // unrounded so zoom & pan stay consistent (display rounds)
+            setPan(nextPan);
             wheelRafRef.current = null;
             targetZoomRef.current = null;
             return;
           }
           wheelRafRef.current = requestAnimationFrame(step);
         };
-        if (zoomContainerRef.current) zoomContainerRef.current.style.willChange = 'transform';
+        // No will-change while zooming: it makes the browser stretch a cached bitmap (blurry until
+        // it re-rasterises). Without it, content is re-rendered crisp at every zoom step.
+        if (zoomContainerRef.current) zoomContainerRef.current.style.willChange = 'auto';
         wheelRafRef.current = requestAnimationFrame(step);
       } else {
         // Standard Scroll:
@@ -333,6 +339,7 @@ export const useCanvasZoomPan = ({
           if (zoomContainerRef.current) {
             zoomContainerRef.current.style.transition = 'none';
             zoomContainerRef.current.style.transform = `translate(${stepX}px, ${stepY}px) scale(${scale})`;
+            setOverlayInvZoom(zoomContainerRef.current, scale);
           }
           window.dispatchEvent(new CustomEvent('editor-pan-update', { detail: nextP }));
 

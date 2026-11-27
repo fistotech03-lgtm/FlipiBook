@@ -27,6 +27,7 @@ import { useAuth, useActiveBook, useUIModals } from "../../store/hooks";
 import { queryClient } from "../../queryClient";
 import { useConfirm } from "../../context/ConfirmationContext";
 import { useTranslation } from "../../context/TranslationContext";
+import { TRANSLATE_LANGUAGES } from "../PageEditor/utils/inlineTranslationHelper";
 
 const EditorNavbar = ({
   onExport: onExportProp,
@@ -105,6 +106,9 @@ const EditorNavbar = ({
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isPublishMenuOpen, setIsPublishMenuOpen] = useState(false);
   const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
+  const [showTranslateMenu, setShowTranslateMenu] = useState(false);
+  const [selectedTranslateLang, setSelectedTranslateLang] = useState("tam_Taml");
+  const translateMenuRef = useRef(null);
   const deviceMenuRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -369,8 +373,8 @@ const EditorNavbar = ({
 
         {/* Right Section - Primary Book Actions & Account Utilities */}
         <div className="flex items-center gap-[0.5vw] justify-end relative">
-          {/* Save & Sync Status Area: Hidden when AutoSave is enabled */}
-          {!isAutoSaveEnabled && (
+          {/* Save & Sync Status Area: Hidden in Customized Editor (always auto-save) and when AutoSave is enabled */}
+          {!isAutoSaveEnabled && !isCustomizedEditor && (
             <div className="relative flex items-center">
               {isThreedEditor ? (
                 /* 3D Editor Save Split Dropdown Button */
@@ -506,22 +510,80 @@ const EditorNavbar = ({
             </div>
           )}
 
-          {/* Translate Button - Shown only in Customized Editor for non-PDF books */}
-          {isCustomizedEditor && !isPdfBook && (
-            <div className="relative group/tooltip flex items-center">
+          {/* Inline Text Translation - Shown in Customized Editor */}
+          {isCustomizedEditor && (
+            <div className="relative flex items-center" ref={translateMenuRef}>
               <button
-                onClick={() => currentBook && openTranslateModal(currentBook)}
-                className="h-[2.3vw] flex items-center gap-[0.35vw] px-[0.85vw] bg-white border border-gray-200 hover:border-[#ea543a] rounded-[0.5vw] text-gray-700 hover:text-[#ea543a] transition-colors flex-shrink-0 cursor-pointer"
+                type="button"
+                onMouseDown={(e) => {
+                  // Preserve active input focus & text selection while picking language
+                  e.preventDefault();
+                }}
+                onClick={() => setShowTranslateMenu((prev) => !prev)}
+                title="Translate selected or focused text field"
+                className={`h-[2.3vw] flex items-center gap-[0.35vw] px-[0.85vw] bg-white border rounded-[0.5vw] transition-colors flex-shrink-0 cursor-pointer ${
+                  showTranslateMenu
+                    ? "border-gray-400 text-gray-900 bg-gray-50"
+                    : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+                }`}
               >
-                <Languages className="w-[1vw] h-[1vw] text-[#ea543a]" />
+                <Icon icon="bi:translate" className="w-[1vw] h-[1vw] text-gray-700" />
                 <span className="font-medium text-[0.8vw]">Translate</span>
+                <ChevronDown
+                  className={`w-[0.85vw] h-[0.85vw] transition-transform duration-150 ${
+                    showTranslateMenu ? "rotate-180 text-gray-900" : "text-gray-400"
+                  }`}
+                />
               </button>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-[0.4vw] hidden group-hover/tooltip:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap">
-                <div className="w-0 h-0 border-x-[0.3vw] border-x-transparent border-b-[0.3vw] border-b-gray-900/90" />
-                <div className="bg-gray-900/90 text-white text-[0.65vw] font-medium px-[0.5vw] py-[0.25vw] rounded-[0.3vw] shadow-md backdrop-blur-xs">
-                  Translate Book to Indian Language
-                </div>
-              </div>
+
+              {showTranslateMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setShowTranslateMenu(false)}
+                  />
+                  <div
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="absolute right-0 top-full mt-[0.5vw] w-[13.5vw] bg-white rounded-[0.6vw] shadow-[0_12px_36px_rgba(0,0,0,0.16)] border border-gray-100 p-[0.4vw] z-50 flex flex-col gap-[0.2vw]"
+                  >
+                    <div className="px-[0.5vw] py-[0.3vw] border-b border-gray-100 flex items-center justify-between">
+                      <span className="text-[0.7vw] font-bold text-gray-800">Translate Field Text</span>
+                    </div>
+                    <div className="max-h-[34vh] overflow-y-auto flex flex-col gap-[0.1vw] py-[0.2vw]">
+                      {TRANSLATE_LANGUAGES.map((lang) => (
+                        <button
+                          key={lang.code}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setSelectedTranslateLang(lang.code);
+                            window.dispatchEvent(
+                              new CustomEvent("trigger-inline-translate", {
+                                detail: { targetLang: lang.code },
+                              })
+                            );
+                            setShowTranslateMenu(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-[0.6vw] py-[0.4vw] text-[0.72vw] font-medium rounded-[0.4vw] transition-colors cursor-pointer text-left ${
+                            lang.code === selectedTranslateLang
+                              ? "bg-gray-100 text-gray-900 font-semibold hover:bg-gray-200/70"
+                              : "text-gray-700 hover:bg-gray-100 hover:text-black"
+                          }`}
+                        >
+                          <div className="flex items-center gap-[0.4vw]">
+                            {lang.code === selectedTranslateLang && (
+                              <span className="w-[0.4vw] h-[0.4vw] rounded-full bg-gray-700" />
+                            )}
+                            <span>{lang.name}</span>
+                          </div>
+                          <span className="text-[0.65vw] text-gray-400 font-normal">{lang.native}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 

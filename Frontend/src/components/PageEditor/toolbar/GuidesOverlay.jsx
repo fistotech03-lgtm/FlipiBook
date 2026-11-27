@@ -97,7 +97,8 @@ const GuidesOverlay = ({
   useEffect(() => {
     const handlePanUpdate = (e) => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      panRef.current = e.detail;
+      panRef.current = { x: e.detail.x, y: e.detail.y };
+      if (Number.isFinite(e.detail.zoom)) zoomRef.current = e.detail.zoom; // live wheel-zoom frames
       updateLinesDOM(zoomRef.current, panRef.current);
     };
     window.addEventListener('editor-pan-update', handlePanUpdate);

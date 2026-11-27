@@ -12,7 +12,9 @@ import { safeSerializeSvg } from '../utils/editorUtils';
 import { applyIconPaint, neutralizeIconHitBox } from '../utils/iconPaint';
 export const useElementAttributeSync = ({ setPages, saveToHistory }) => {
     const updateElementAttribute = (pageIndex, elementId, attribute, value) => {
-    saveToHistory();
+    saveToHistory(undefined, undefined, undefined, undefined, {
+      coalesceKey: `attr:${pageIndex}:${elementId || 'page'}`
+    });
     // Special case: ImageProperties or ShapeProperties serializes the whole SVG and passes it directly
     const isDomSync = attribute === '__dom_sync__' || (typeof attribute === 'object' && attribute !== null && Boolean(attribute.__dom_sync__));
     if (isDomSync) {

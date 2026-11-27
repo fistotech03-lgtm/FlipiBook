@@ -679,7 +679,7 @@ const Branding = ({
   return (
     <div ref={panelRef} className="flex flex-col h-full bg-transparent font-sans">
       {/* Sub-header */}
-      <div className="h-[7.5vh] flex items-center justify-between px-[1.2vw] border-b border-gray-100 flex-shrink-0">
+      <div className="flex items-center justify-between px-[1.2vw] pt-[1.1vw] pb-[0.5vw] flex-shrink-0">
         <div className="flex items-center gap-[0.75vw] text-gray-800">
           <Icon icon="lucide:gem" className="w-[1.2vw] h-[1.2vw] text-black" />
           <h2 className="text-[1vw] font-semibold text-gray-900">Branding</h2>
@@ -704,13 +704,13 @@ const Branding = ({
       `}</style>
 
       <div
-        className="flex-1 overflow-y-auto px-[1.2vw] pt-[1vw] pb-[3vw] flex flex-col gap-[1vw] hide-scrollbar"
+        className="flex-1 overflow-y-auto px-[1.2vw] pt-[0.25vw] pb-[3vw] flex flex-col gap-[0.8vw] hide-scrollbar"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {/* Upload your Logo Header */}
         <div className="mb-[0.5vw]">
-          <div className="flex items-center gap-[0.5vw] mt-[0.5vw]">
-            <span className="text-[0.85vw] font-semibold text-gray-900 whitespace-nowrap mb-[1vw]">
+          <div className="flex items-center gap-[0.5vw]">
+            <span className="text-[0.85vw] font-semibold text-gray-900 whitespace-nowrap mb-[0.75vw]">
               Upload your Logo
             </span>
             <div className="h-[0.0925vw] bg-gray-200 flex-1"> </div>
@@ -1449,13 +1449,16 @@ const Branding = ({
                 ? "Preparing Flipibook"
                 : rawDisplayText;
 
-            const cardColor = isCustom ? (displayPreloader?.textColor || "#1E293B") : "#1E293B";
+            const cardBg = isCustom
+              ? ((!displayPreloader?.bgColor || displayPreloader.bgColor === "#D6E0F4") ? darkBg : displayPreloader.bgColor)
+              : darkBg;
+            const cardColor = isCustom ? (displayPreloader?.textColor || whiteText) : whiteText;
 
             return (
               <div
                 className="relative w-full h-[9.2vw] min-h-[120px] rounded-[1vw] flex flex-col items-center justify-center shadow-md border border-white/10 group overflow-hidden flex-shrink-0"
                 style={{
-                  backgroundColor: isCustom ? (displayPreloader?.bgColor || "#D6E0F4") : "#D6E0F4",
+                  backgroundColor: cardBg,
                   color: cardColor,
                 }}
               >
@@ -1491,20 +1494,20 @@ const Branding = ({
                 </button>
 
                 {/* Badge: Default vs Custom */}
-                <div className="absolute top-[0.7vw] left-[0.8vw] z-[20] flex items-center gap-1 px-[0.4vw] py-[0.1vw] rounded-full bg-black/15 text-[0.58vw] font-medium backdrop-blur-xs">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isCustom ? "bg-indigo-500" : "bg-emerald-500"}`} />
+                <div className="absolute top-[0.7vw] left-[0.8vw] z-[20] flex items-center gap-1 px-[0.45vw] py-[0.12vw] rounded-full bg-white/10 text-white/90 text-[0.58vw] font-medium backdrop-blur-xs">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isCustom ? "bg-indigo-400" : "bg-emerald-400"}`} />
                   <span>{isCustom ? "Custom Preloader" : "Default Preloader"}</span>
                 </div>
 
                 <div className={`flex items-center gap-[0.45vw] px-[1vw] pt-2 ${displayPreloader?.textPosition === "top" ? "flex-col-reverse" : "flex-col"}`}>
                   {!isCustom ? (
-                    /* DEFAULT PRELOADER DISPLAY (Matching Image 1: Dark theme with centered spinner & Preparing Flipbook...) */
+                    /* DEFAULT PRELOADER DISPLAY (Dark theme with centered spinner & Preparing Flipibook) */
                     <div className={`flex items-center justify-center gap-[0.4vw] ${displayPreloader?.textPosition === "top" ? "flex-col-reverse" : "flex-col"}`}>
                       <div className="relative flex items-center justify-center">
                         <div
                           className="w-[1.6vw] h-[1.6vw] border-[2.5px] border-t-transparent rounded-full animate-spin"
                           style={{
-                            borderColor: "#3B3C8A #3B3C8A #3B3C8A transparent",
+                            borderColor: `${defaultSpinner} ${defaultSpinner} ${defaultSpinner} transparent`,
                           }}
                         />
                       </div>

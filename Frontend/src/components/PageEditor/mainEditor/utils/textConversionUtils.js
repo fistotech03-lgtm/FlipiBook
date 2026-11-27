@@ -1,3 +1,4 @@
+import { loadFont } from '../../../../config/fonts';
 
 /**
  * Utility to convert raw SVG <text> elements to responsive, multi-line <foreignObject> elements
@@ -6,24 +7,64 @@
 export const convertTextToForeignObject = (el) => {
     if (!el || el.tagName.toLowerCase() !== 'text') return null;
 
-    const bbox = el.getBBox();
+    const tspans = Array.from(el.querySelectorAll('tspan'));
+
+    // Strip whitespace-only direct text nodes inside <text xml:space="preserve"> so stray "\n" tokens
+    // sitting at the <text> default (0,0) origin don't inflate getBBox() up to (0,0).
+    if (tspans.length > 0) {
+      Array.from(el.childNodes).forEach((node) => {
+        if (node.nodeType === 3 && !node.nodeValue.trim()) {
+          node.remove();
+        }
+      });
+    }
+
+    let bbox = el.getBBox();
+    if (tspans.length > 0) {
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      tspans.forEach((t) => {
+        if (!(t.textContent || '').trim()) return;
+        try {
+          const tb = t.getBBox();
+          if (tb && (tb.width > 0 || tb.height > 0)) {
+            minX = Math.min(minX, tb.x);
+            minY = Math.min(minY, tb.y);
+            maxX = Math.max(maxX, tb.x + tb.width);
+            maxY = Math.max(maxY, tb.y + tb.height);
+          }
+        } catch (e) {}
+      });
+      if (Number.isFinite(minX) && Number.isFinite(minY) && maxX > minX && maxY > minY) {
+        bbox = {
+          x: minX,
+          y: minY,
+          width: maxX - minX,
+          height: maxY - minY
+        };
+      }
+    }
+
     const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
     fo.id = el.id;
 
-    // Copy all attributes except positional/size/clip ones (we'll set those from bbox, and clip-path causes issues on resize)
+    // Copy attributes except positional/size/clip/white-space ones (preserve style properties explicitly on inner div)
     Array.from(el.attributes).forEach(attr => {
-      if (!['x', 'y', 'width', 'height', 'clip-path'].includes(attr.name)) {
+      if (!['x', 'y', 'width', 'height', 'clip-path', 'style', 'xml:space'].includes(attr.name)) {
         fo.setAttribute(attr.name, attr.value);
       }
     });
+    if (el.style?.opacity) fo.style.opacity = el.style.opacity;
+    if (el.style?.mixBlendMode) fo.style.mixBlendMode = el.style.mixBlendMode;
 
     // ── Computed Style & Child Inspection (Figma / Vector-Studio Style) ─────────
     const comp = window.getComputedStyle(el);
-    const tspans = Array.from(el.querySelectorAll('tspan'));
     const firstTspan = tspans.length > 0 ? tspans[0] : null;
     const tspanComp = firstTspan ? window.getComputedStyle(firstTspan) : null;
 
-    // 1. Font Family Detection
+    // 1. Font Family Detection (preserve full fallback stack, e.g. 'Inria Serif', 'Noto Sans Tamil', sans-serif)
     let rawFf = el.getAttribute('font-family') || el.style.fontFamily || el.getAttribute('data-font-family');
     if (!rawFf) {
       rawFf = firstTspan?.getAttribute('font-family') || firstTspan?.style.fontFamily;
@@ -35,7 +76,17 @@ export const convertTextToForeignObject = (el) => {
       else if (tspanFf && !tspanFf.includes('sans-serif')) rawFf = tspanFf;
       else rawFf = compFf || tspanFf || 'Inter, sans-serif';
     }
+    const genericCssFonts = new Set(['sans-serif', 'serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-sans-serif', 'ui-serif']);
+    const ffParts = rawFf
+      .split(',')
+      .map((p) => p.trim().replace(/^['"]|['"]$/g, ''))
+      .filter(Boolean);
+    const formattedFfParts = ffParts.map((p) => (genericCssFonts.has(p.toLowerCase()) ? p.toLowerCase() : `'${p}'`));
+    if (formattedFfParts.length === 0) formattedFfParts.push("'Inter'");
+    if (!formattedFfParts.some((p) => genericCssFonts.has(p))) formattedFfParts.push('sans-serif');
+    const finalFontFamily = formattedFfParts.join(', ');
     const cleanFontFamily = rawFf.replace(/['"]/g, '').split(',')[0].trim();
+    loadFont(cleanFontFamily); // make sure the edit box renders in the real font, not a fallback
 
     // 2. Font Size Detection
     let rawFs = el.getAttribute('font-size') || el.style.fontSize || el.getAttribute('data-font-size');
@@ -160,7 +211,45 @@ export const convertTextToForeignObject = (el) => {
       }
     }
 
-    const isParagraph = tspans.length > 1 || (el.textContent && el.textContent.includes('\n'));
+    // Group tspans into visual baseline lines first so trailing "\n" inside single-line tspans
+    // doesn't misclassify a single-line heading as a multi-line wrapped paragraph.
+    let linesData = [];
+    let lineHeights = [];
+    if (tspans.length > 0) {
+      let currentLineTspans = [];
+      let lastY = null;
+      const fontSize = parseFloat(rawFs) || 12;
+
+      tspans.forEach((t, i) => {
+        const y = t.getAttribute('y');
+        const dy = t.getAttribute('dy');
+        const isNewLine = i > 0 && (dy || (y !== null && lastY !== null && Math.abs(parseFloat(y) - parseFloat(lastY)) > 2));
+
+        if (isNewLine) {
+          let deltaY = null;
+          if (dy) {
+            if (dy.endsWith('em')) deltaY = parseFloat(dy) * fontSize;
+            else deltaY = parseFloat(dy);
+          } else if (y !== null && lastY !== null) {
+            deltaY = Math.abs(parseFloat(y) - parseFloat(lastY));
+          }
+          if (deltaY !== null && !isNaN(deltaY) && deltaY > 0 && deltaY < fontSize * 6) {
+            lineHeights.push(deltaY);
+          }
+          linesData.push(currentLineTspans);
+          currentLineTspans = [];
+        }
+        currentLineTspans.push(t);
+        if (y !== null) lastY = y;
+      });
+      if (currentLineTspans.length > 0) {
+        linesData.push(currentLineTspans);
+      }
+    }
+
+    const isParagraph = tspans.length > 0
+      ? linesData.length > 1
+      : Boolean(el.textContent && el.textContent.trim().includes('\n'));
     const defaultSizing = isParagraph ? 'auto-height' : 'auto-width';
     const sizingMode = el.getAttribute('data-sizing-mode') || defaultSizing;
 
@@ -173,6 +262,7 @@ export const convertTextToForeignObject = (el) => {
     fo.setAttribute('data-type', 'text');
     fo.setAttribute('data-sizing-mode', sizingMode);
     fo.setAttribute('data-text-align', finalAlign);
+    fo.setAttribute('data-font-weight', rawFw);
     fo.setAttribute('x', bbox.x);
     fo.setAttribute('y', bbox.y);
     fo.setAttribute('width', foWidth);
@@ -193,9 +283,10 @@ export const convertTextToForeignObject = (el) => {
       div.style.overflowX = 'hidden';
     }
     div.style.color = rawFill;
-    div.style.fontFamily = `'${cleanFontFamily}', sans-serif`;
+    div.style.fontFamily = finalFontFamily;
     div.style.fontSize = rawFs;
     div.style.fontWeight = rawFw;
+    div.setAttribute('data-font-weight', rawFw);
     div.style.fontStyle = rawStyle;
     div.style.textDecoration = rawDeco;
     div.style.textAlign = finalAlign;
@@ -229,38 +320,7 @@ export const convertTextToForeignObject = (el) => {
 
     // Fast, natural tspan-to-lines reconstruction: preserve exact SVG line structure without layout thrashing
     if (tspans.length > 0) {
-      let linesData = [];
-      let currentLineTspans = [];
-      let lastY = null;
-      let lineHeights = [];
-
       const fontSize = parseFloat(rawFs) || 12;
-
-      tspans.forEach((t, i) => {
-        const y = t.getAttribute('y');
-        const dy = t.getAttribute('dy');
-        const isNewLine = i > 0 && (dy || (y !== null && lastY !== null && Math.abs(parseFloat(y) - parseFloat(lastY)) > 2));
-
-        if (isNewLine) {
-          let deltaY = null;
-          if (dy) {
-            if (dy.endsWith('em')) deltaY = parseFloat(dy) * fontSize;
-            else deltaY = parseFloat(dy);
-          } else if (y !== null && lastY !== null) {
-            deltaY = Math.abs(parseFloat(y) - parseFloat(lastY));
-          }
-          if (deltaY !== null && !isNaN(deltaY) && deltaY > 0 && deltaY < fontSize * 3) {
-            lineHeights.push(deltaY);
-          }
-          linesData.push(currentLineTspans);
-          currentLineTspans = [];
-        }
-        currentLineTspans.push(t);
-        if (y !== null) lastY = y;
-      });
-      if (currentLineTspans.length > 0) {
-        linesData.push(currentLineTspans);
-      }
 
       // Preserve proportional line-height ratio
       if (!el.hasAttribute('data-line-height') && lineHeights.length > 0) {

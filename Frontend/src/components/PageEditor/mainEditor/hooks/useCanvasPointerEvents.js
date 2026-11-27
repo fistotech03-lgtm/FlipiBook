@@ -11,7 +11,8 @@ import {
   getLocalPoint,
   clearOverlayType
 } from '../utils/geometryUtils';
-import { clearSmartGuides } from '../utils/smartGuides';
+import { clearSmartGuides, initSmartGuides, computeResizeSmartGuides, collectResizeGuideLines, renderSmartGuides, getBoxInSvg } from '../utils/smartGuides';
+import { snapLineEnd, showLineAngleGuide, clearLineAngleGuide } from '../utils/lineAngleGuide';
 import { getTopLevelFrames, getDirectChildFrames, hitTest, isPageRootElement, getAllSelectablePageElements } from '../utils/frameHierarchyUtils';
 import { useInlineTextEditor } from './useInlineTextEditor';
 import { resolveGroupTarget, findGroupAtPoint } from '../utils/hitTargetResolver';
@@ -1638,8 +1639,28 @@ export const useCanvasPointerEvents = ({
     if (drawingShapeRef.current) {
       const svg = drawingSvgRef.current;
       const shape = drawingShapeRef.current;
-      const pt = getLocalPoint(svg, shape.parentElement || svg, e.clientX, e.clientY);
+      let pt = getLocalPoint(svg, shape.parentElement || svg, e.clientX, e.clientY);
       const start = shapeStartPointRef.current;
+
+      // Smart guides while drawing (page edges / centre + other elements), cached once per shape.
+      // Ctrl/Cmd = no snapping. The Line tool snaps its own end point (angle + guides) below.
+      const shapeParentCtm = (shape.parentElement || svg)?.getScreenCTM?.();
+      const shapeNoSnap = e.ctrlKey || e.metaKey;
+      const isLineTool = selectedShapeTool === 'line';
+      if (!shape.__shapeGuideState) {
+        shape.__shapeGuideState = { svgElement: svg, svg, element: shape };
+        try { initSmartGuides(shape.__shapeGuideState); } catch { /* no guides */ }
+      }
+      if (pt && start && !isLineTool && !shapeNoSnap && shapeParentCtm && shape.__shapeGuideState.smartGuidesData) {
+        const { snappedPoint } = computeResizeSmartGuides({
+          resizeState: shape.__shapeGuideState,
+          currentPoint: pt,
+          parentCTM: shapeParentCtm,
+          dir: 'se',
+          zoomScale: zoom / 100,
+        });
+        if (snappedPoint) pt = { x: snappedPoint.x, y: snappedPoint.y };
+      }
 
       if (pt && start) {
         const dx = pt.x - start.x;
@@ -1690,23 +1711,59 @@ export const useCanvasPointerEvents = ({
             break;
           }
           case 'line': {
-            if (e.shiftKey) {
-              const absDx = Math.abs(dx);
-              const absDy = Math.abs(dy);
+            // Straightness guide: auto-snap near 0°/45°/90°/135° (Shift = always snap to 45° steps,
+            // Ctrl/Cmd = free angle) + orange guide when perfectly straight + live angle badge.
+            const parentCtm = (shape.parentElement || svg).getScreenCTM?.();
+            const noSnap = e.ctrlKey || e.metaKey;
+            const angleSnap = snapLineEnd(start, pt, parentCtm, { shiftKey: e.shiftKey, disableSnap: noSnap });
+            const { snapped } = angleSnap;
+            let { end, angle } = angleSnap;
 
-              let newDx = 0, newDy = 0;
-              if (absDx >= absDy) {
-                newDx = dx;
-                newDy = 0;
-              } else {
-                newDx = 0;
-                newDy = dy;
-              }
-              shape.setAttribute('x2', start.x + newDx);
-              shape.setAttribute('y2', start.y + newDy);
+            // Smart guides on the end point (page edges / centre + other elements), like resizing.
+            // Horizontal line → snap x only, vertical → y only (keeps it perfectly straight),
+            // 45° → keep the exact angle, free angle → both axes.
+            const guideState = shape.__shapeGuideState;
+            const axisOnly = snapped ? (angle % 180 === 0 ? 'x' : (angle % 180 === 90 ? 'y' : 'none')) : 'both';
+            if (!noSnap && axisOnly !== 'none' && parentCtm && guideState.smartGuidesData) {
+              const { snappedPoint } = computeResizeSmartGuides({
+                resizeState: guideState,
+                currentPoint: end,
+                parentCTM: parentCtm,
+                dir: axisOnly === 'x' ? 'e' : (axisOnly === 'y' ? 's' : 'se'),
+                zoomScale: zoom / 100,
+              });
+              if (snappedPoint) end = { x: snappedPoint.x, y: snappedPoint.y };
+              if (!snapped) angle = snapLineEnd(start, end, parentCtm, { disableSnap: true }).angle;
+            }
+            shape.setAttribute('x2', end.x);
+            shape.setAttribute('y2', end.y);
+
+            // Magenta smart-guide lines for the end point (badge = the angle badge below)
+            if (guideState.smartGuidesData && !noSnap) {
+              try {
+                const svgInv = svg.getScreenCTM()?.inverse();
+                const endSvg = (parentCtm && svgInv)
+                  ? new DOMPoint(end.x, end.y).matrixTransform(svgInv.multiply(parentCtm))
+                  : { x: end.x, y: end.y };
+                const pointBox = { left: endSvg.x, right: endSvg.x, top: endSvg.y, bottom: endSvg.y, width: 0, height: 0, centerX: endSvg.x, centerY: endSvg.y };
+                const { guides } = collectResizeGuideLines({ resizeState: guideState, currentBox: pointBox, dir: 'se' });
+                renderSmartGuides(drawingPageIndexRef.current ?? activePageIndex, guides, null, zoom / 100, svg);
+              } catch { /* ignore */ }
             } else {
-              shape.setAttribute('x2', pt.x);
-              shape.setAttribute('y2', pt.y);
+              clearSmartGuides();
+            }
+            if (parentCtm && shape.tagName?.toLowerCase() === 'line') {
+              const toClient = (p) => ({
+                x: parentCtm.a * p.x + parentCtm.c * p.y + parentCtm.e,
+                y: parentCtm.b * p.x + parentCtm.d * p.y + parentCtm.f,
+              });
+              showLineAngleGuide({
+                startClient: toClient(start),
+                endClient: toClient(end),
+                snapped,
+                angle,
+                cursor: { x: e.clientX, y: e.clientY },
+              });
             }
             break;
           }
@@ -1744,6 +1801,26 @@ export const useCanvasPointerEvents = ({
             break;
           }
         }
+
+        // Smart-guide lines + W × H badge for the shape being drawn (the line has its own guides)
+        if (!isLineTool) {
+          if (!shapeNoSnap && shape.__shapeGuideState?.smartGuidesData) {
+            try {
+              const currentBox = getBoxInSvg(shape, svg);
+              const dir = `${dy < 0 ? 'n' : 's'}${dx < 0 ? 'w' : 'e'}`;
+              const { guides, badge } = collectResizeGuideLines({ resizeState: shape.__shapeGuideState, currentBox, dir });
+              if (badge && currentBox) {
+                // badge under the moving corner
+                badge.x = dx < 0 ? currentBox.left : currentBox.right;
+                badge.y = dy < 0 ? currentBox.top : currentBox.bottom;
+              }
+              renderSmartGuides(drawingPageIndexRef.current ?? activePageIndex, guides, badge, zoom / 100, svg);
+            } catch { /* ignore */ }
+          } else {
+            clearSmartGuides();
+          }
+        }
+
         if (typeof drawOverlayHighlight === 'function') {
           drawOverlayHighlight(shape, 'selected');
         }
@@ -2121,6 +2198,9 @@ export const useCanvasPointerEvents = ({
 
       // Termination for Shape tools
       if (drawingShapeRef.current) {
+        clearLineAngleGuide();
+        clearSmartGuides();
+        delete drawingShapeRef.current.__shapeGuideState;
         const shape = drawingShapeRef.current;
         const pageIdx = drawingPageIndexRef.current;
         const svgEl = shape?.ownerSVGElement;

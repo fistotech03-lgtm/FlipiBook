@@ -12,7 +12,7 @@ import { getClientDeviceInfo, getPublicClientIpAndLocation } from '../../utils/a
 import { prefetchMyFlipbooks } from '../../queryClient';
 
 export default function Signup({ onSwitchToSignin }) {
-  const { setUser, closeAuthModal, authRedirectPath } = useAuth();
+  const { setUser, setAuthModalMode } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -80,10 +80,7 @@ export default function Signup({ onSwitchToSignin }) {
             setUser(res.data.user);
             prefetchMyFlipbooks(res.data.user?.emailId || res.data.user?.email);
             toast.success('Registration successful with Google!');
-            closeAuthModal?.();
-            if (authRedirectPath) {
-              navigate(authRedirectPath);
-            }
+            setAuthModalMode('onboard');
           }
         } catch (err) {
           console.error('Google Auth Error:', err);
@@ -210,10 +207,7 @@ export default function Signup({ onSwitchToSignin }) {
         setUser(res.data.user || { emailId: cleanEmail });
         prefetchMyFlipbooks(res.data.user?.emailId || cleanEmail);
         toast.success('Account created & verified successfully!');
-        closeAuthModal?.();
-        if (authRedirectPath) {
-          navigate(authRedirectPath);
-        }
+        setAuthModalMode('onboard');
       } else {
         toast.error(res.data?.message || 'Verification failed');
       }

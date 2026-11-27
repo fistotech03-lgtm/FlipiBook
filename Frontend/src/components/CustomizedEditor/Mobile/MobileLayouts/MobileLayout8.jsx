@@ -594,9 +594,9 @@ const MobileLayout8 = ({
                 {showSharePopup && (
                     <FlipbookSharePopup
                     onClose={() => setShowSharePopup(false)}
-                    bookName={props.currentBook?.flipbookName || bookName}
-                    url={props.currentBook?.shareUrl || window.location.href}
-                    isPublished={props.currentBook?.status === 'Published'}
+                    bookName={bookName}
+                    url={window.location.href}
+                    isPublished={false}
                     isMobile={true}
                     isLandscape={isLandscape}
                 />
@@ -606,7 +606,7 @@ const MobileLayout8 = ({
     }
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: getLayoutColor('page-bg', '#DADBE8') }}>
+        <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: '#ECECF0' }}>
             {/* Notch Area */}
             {!isPhysicalMobile && <div className="shrink-0 h-10 z-50 bg-[#1e1e24]" />}
 
@@ -712,26 +712,50 @@ const MobileLayout8 = ({
             {/* Toolbar: 8 Circular Icons */}
             <div className="px-5 py-2 flex justify-between items-center relative z-[2200] bg-transparent">
                 {[
-                    { id: 'toc', icon: 'mdi:table-of-contents', action: (e) => { e.stopPropagation(); setShowTOC(!showTOC); } },
-                    { id: 'grid', icon: 'ep:menu', action: (e) => { e.stopPropagation(); setShowThumbnailBar(!showThumbnailBar); } },
-                    { id: 'image', icon: 'clarity:image-gallery-solid', action: (e) => { e.stopPropagation(); } },
-                    { id: 'music', icon: 'solar:music-notes-bold', action: (e) => { e.stopPropagation(); setShowSoundPopup(!showSoundPopup); } },
-                    { id: 'share', icon: 'mage:share-fill', action: (e) => { e.stopPropagation(); handleShare(); } },
-                    { id: 'download', icon: 'meteor-icons:download', action: (e) => { e.stopPropagation(); handleDownload(); } },
+                    { id: 'toc', label: 'TOC', icon: 'mdi:table-of-contents', action: (e) => { e.stopPropagation(); setShowTOC(!showTOC); } },
+                    { id: 'grid', label: 'Thumbnails', icon: 'ep:menu', action: (e) => { e.stopPropagation(); setShowThumbnailBar(!showThumbnailBar); } },
+                    { id: 'image', label: 'Gallery', icon: 'clarity:image-gallery-solid', action: (e) => { e.stopPropagation(); } },
+                    { id: 'music', label: 'Sound', icon: 'solar:music-notes-bold', action: (e) => { e.stopPropagation(); setShowSoundPopup(!showSoundPopup); } },
+                    { id: 'share', label: 'Share', icon: 'mage:share-fill', action: (e) => { e.stopPropagation(); handleShare(); } },
+                    { id: 'download', label: 'Download', icon: 'meteor-icons:download', action: (e) => { e.stopPropagation(); handleDownload(); } },
                 ].map((btn, i) => {
                     const isActive = (btn.id === 'grid' && showThumbnailBar) || (btn.id === 'toc' && showTOC) || (btn.id === 'search' && showTopNotesOptions) || (btn.id === 'music' && showSoundPopup) || (btn.id === 'profile' && showProfilePopup);
                     return (
-                        <button
-                            key={i}
-                            onClick={btn.action}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center active:scale-95 transition-all shadow-md`}
-                            style={{
-                                backgroundColor: isActive ? getLayoutColor('toolbar-text-main', '#FFFFFF') : getLayoutColor('toolbar-bg', '#555555'),
-                                color: isActive ? getLayoutColor('toolbar-bg', '#555555') : getLayoutColor('toolbar-text-main', '#FFFFFF')
-                            }}
-                        >
-                            <Icon icon={btn.icon} className="w-[1.1rem] h-[1.1rem]" />
-                        </button>
+                        <div key={i} className="relative group flex items-center justify-center">
+                            <button
+                                onClick={btn.action}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center active:scale-95 transition-all shadow-md`}
+                                style={{
+                                    backgroundColor: isActive ? getLayoutColor('toolbar-text-main', '#FFFFFF') : getLayoutColor('toolbar-bg', '#555555'),
+                                    color: isActive ? getLayoutColor('toolbar-bg', '#555555') : getLayoutColor('toolbar-text-main', '#FFFFFF')
+                                }}
+                            >
+                                <Icon icon={btn.icon} className="w-[1.1rem] h-[1.1rem]" />
+                            </button>
+                            {btn.label && (
+                                <div
+                                    className="absolute top-[calc(100%+6px)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]"
+                                    style={{
+                                        background: 'rgba(10, 10, 12, 0.65)',
+                                        backdropFilter: 'blur(20px)',
+                                        WebkitBackdropFilter: 'blur(20px)',
+                                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                                        color: '#ffffff',
+                                        padding: '2px 7px',
+                                        borderRadius: '4px',
+                                        fontSize: '10px',
+                                        fontWeight: 600,
+                                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)'
+                                    }}
+                                >
+                                    {btn.label}
+                                    <div
+                                        className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[4px] border-l-[4px] border-r-[4px]"
+                                        style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     );
                 })}
             </div>
@@ -815,7 +839,7 @@ const MobileLayout8 = ({
                     <TableOfContentsPopup
                         onClose={() => setShowTOC(false)}
                         settings={settings?.tocSettings}
-                        activeLayout={9}
+                        activeLayout={8}
                         isMobile={true}
                         onNavigate={(pageIndex) => {
                             onPageClick(pageIndex);

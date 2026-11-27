@@ -19,6 +19,7 @@
       'audio': 'Audio',
       'download': 'Download',
       '3d-viewer': '3D Viewer',
+      'ar-view': 'AR View',
       'popup': 'Popup',
       'info-box': 'Info Box',
       'tooltip': 'Tooltip'
@@ -337,15 +338,16 @@
               message: `Please upload a file for "Download" on Page ${pageIdx + 1}`
             };
           }
-        } else if (action === '3d-viewer') {
+        } else if (action === '3d-viewer' || action === 'ar-view') {
           if (isBlank(val)) {
+            const label = action === 'ar-view' ? 'AR View' : '3D Viewer';
             return {
               isValid: false,
               pageIndex: pageIdx,
               elementId: targetEl.id,
               action: action,
-              actionLabel: '3D Viewer',
-              message: `Please select or upload a 3D model for "3D Viewer" on Page ${pageIdx + 1}`
+              actionLabel: label,
+              message: `Please select or upload a 3D model for "${label}" on Page ${pageIdx + 1}`
             };
           }
         } else if (action === 'popup') {

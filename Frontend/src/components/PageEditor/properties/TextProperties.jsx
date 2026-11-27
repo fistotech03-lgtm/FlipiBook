@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Color from './FillStrokeProperties';
 import Effect from './controls/Effect';
+import { handleScrubHelper } from '../utils/scrubValue';
 import { applyStyleToActiveTextSelection, safeSerializeSvg } from '../utils/editorUtils';
 import { applyStyleToCharacterRange, getSelectionCharacterOffsets, setSelectionCharacterOffsets } from '../utils/vectorTextRuns';
 import { createOrUpdateSvgPatternGradient } from '../../Color/utils/colorUtils';
@@ -10,62 +11,13 @@ import {
   ChevronDown, AlignLeft, Bold, Minus, List,
   AlignCenter, AlignRight, AlignJustify,
   ListOrdered,
-  ArrowLeftRight, ArrowUpDown, Maximize
+  ArrowLeftRight, ArrowUpDown, Maximize, Check
 } from 'lucide-react';
-import { CUSTOM_FONT_FAMILIES } from '../../../utils/customFonts';
+import { FONT_FAMILIES, loadGoogleFont, getFontWeights } from '../../../config/fonts';
 
-const systemFonts = new Set([
-  'arial', 'times new roman', 'courier new', 'georgia', 'verdana',
-  'helvetica', 'sans-serif', 'serif', 'monospace', 'system-ui'
-]);
-
-export const loadGoogleFont = (font) => {
-  if (!font || typeof document === 'undefined') return;
-  const clean = font.replace(/['"]/g, '').split(',')[0].trim();
-  if (!clean || systemFonts.has(clean.toLowerCase()) || clean === 'Designer_Signature') return;
-
-  const fontId = `google-font-${clean.toLowerCase().replace(/\s+/g, '-')}`;
-  if (!document.getElementById(fontId)) {
-    const link = document.createElement('link');
-    link.id = fontId;
-    link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?family=${clean.replace(/\s+/g, '+')}:wght@300;400;500;600;700;800;900&display=swap`;
-    document.head.appendChild(link);
-  }
-};
-
-export const fontFamilies = [
-  'Outfit',
-  'Inter',
-  'Poppins',
-  'Roboto',
-  'Montserrat',
-  'Open Sans',
-  'Lato',
-  'Playfair Display',
-  'Oswald',
-  'Merriweather',
-  'Arial',
-  'Times New Roman',
-  'Courier New',
-  'Georgia',
-  'Verdana',
-  'Helvetica',
-  'Public Sans',
-  'Lora',
-  'Cabin',
-  'Raleway',
-  'Ubuntu',
-  'Allura',
-  'Parisienne',
-  'Satisfy',
-  'Bangers',
-  'Bebas Neue',
-  'Mr Dafoe',
-  'Kaushan Script',
-  'Designer_Signature',
-  ...CUSTOM_FONT_FAMILIES
-];
+// Font loading + the font list live in the single registry: src/config/fonts.js
+export { loadGoogleFont };
+export const fontFamilies = FONT_FAMILIES;
 
 export const fontWeights = [
   { name: 'Thin', value: 'thin' },
@@ -1141,6 +1093,16 @@ const TextProperties = ({
     }
     return fontFamilies;
   }, [fontFamily]);
+
+  // Only the weights the current font really has (e.g. a single-weight display font shows just
+  // "Regular"); the current weight is always kept so the field never shows an unlisted value.
+  const availableWeights = useMemo(() => {
+    const has = getFontWeights(fontFamily);
+    if (!has) return fontWeights;
+    const set = new Set(has.map(String));
+    const list = fontWeights.filter((w) => set.has(weightToNumeric(w.value)) || w.value === fontWeight);
+    return list.length ? list : fontWeights;
+  }, [fontFamily, fontWeight]);
 
   useEffect(() => {
     if (fontFamily) {
@@ -3031,42 +2993,37 @@ const TextProperties = ({
 
   const handleScrub = useCallback((property, startValue, step = 1) => (e) => {
     e.preventDefault();
-    const startX = e.clientX;
     const initialVal = property === 'lineHeight' ? (parseFloat(startValue) || 1.2) : (parseFloat(startValue) || 0);
 
-    const onMouseMove = (moveEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const deltaValue = (deltaX / 10) * step;
-      let newValue = initialVal + deltaValue;
-
-      if (property === 'lineHeight') {
-        newValue = Math.max(0.1, parseFloat(newValue.toFixed(2)));
-      } else {
-        newValue = Math.round(newValue);
+    handleScrubHelper(
+      e,
+      initialVal,
+      (val) => {
+        let newValue = parseFloat(val);
+        if (property === 'lineHeight') {
+          newValue = Math.max(0.1, parseFloat(newValue.toFixed(2)));
+        } else {
+          newValue = Math.round(newValue);
+        }
+        updateStyle(property, newValue, false);
+      },
+      10,
+      {
+        step,
+        precision: property === 'lineHeight' ? 2 : null,
+        onEnd: () => {
+          if (commitTimerRef.current) {
+            clearTimeout(commitTimerRef.current);
+            commitTimerRef.current = null;
+          }
+          if (pendingCommitRef.current && typeof pendingCommitRef.current.flush === 'function') {
+            const task = pendingCommitRef.current;
+            pendingCommitRef.current = null;
+            task.flush();
+          }
+        }
       }
-
-      updateStyle(property, newValue, false); // Debounced 60fps
-    };
-
-    const onMouseUp = () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      document.body.style.cursor = 'default';
-      // Flush pending commit immediately on mouse up
-      if (commitTimerRef.current) {
-        clearTimeout(commitTimerRef.current);
-        commitTimerRef.current = null;
-      }
-      if (pendingCommitRef.current && typeof pendingCommitRef.current.flush === 'function') {
-        const task = pendingCommitRef.current;
-        pendingCommitRef.current = null;
-        task.flush();
-      }
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    document.body.style.cursor = 'ew-resize';
+    );
   }, [updateStyle]);
 
   const togglePanel = (panelName) => {
@@ -3547,7 +3504,7 @@ const TextProperties = ({
           {showFontDropdown && (
             <>
               <div className="fixed inset-0 z-[90]" onClick={() => { endFontPreview(); setShowFontDropdown(false); }} />
-              <div onMouseLeave={endFontPreview} className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+              <div onMouseLeave={endFontPreview} className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[16vw] overflow-y-auto p-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
                 {availableFontFamilies.map(font => {
                   const isSelected = font.toLowerCase() === (fontFamily || '').toLowerCase();
                   return (
@@ -3649,7 +3606,7 @@ const TextProperties = ({
       {/* Font Selectors Row 2: Weight, Letter Spacing, Line Height */}
       <div className="flex items-center gap-[0.6vw]">
         {/* Font Weight */}
-        <div className="relative flex-1" ref={weightRef}>
+        <div className="relative w-[8.5vw] shrink-0" ref={weightRef}>
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()} // keep the selected text selected
@@ -3662,8 +3619,8 @@ const TextProperties = ({
           {showWeightDropdown && (
             <>
               <div className="fixed inset-0 z-[90]" onClick={() => { endFontPreview(); setShowWeightDropdown(false); }} />
-              <div onMouseLeave={endFontPreview} className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[14vw] overflow-y-auto py-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
-                {fontWeights.map(w => (
+              <div onMouseLeave={endFontPreview} className="absolute left-0 top-full mt-[0.35vw] w-full bg-white border border-gray-200 rounded-[0.5vw] shadow-xl max-h-[16vw] overflow-y-auto p-[0.25vw] z-[100] [&::-webkit-scrollbar]:w-[0.25vw] [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full animate-in fade-in zoom-in-95 duration-150">
+                {availableWeights.map(w => (
                   <div
                     key={w.value}
                     onMouseEnter={() => startStylePreview('fontWeight', w.value)}
@@ -3673,9 +3630,11 @@ const TextProperties = ({
                       updateStyle('fontWeight', w.value);
                       setShowWeightDropdown(false);
                     }}
-                    className={`px-[0.75vw] py-[0.35vw] cursor-pointer text-[0.8vw] transition-colors ${fontWeight === w.value ? 'bg-gray-50 font-semibold text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+                    style={{ fontWeight: Number(weightToNumeric(w.value)) }}
+                    className={`flex items-center justify-between gap-[0.6vw] px-[0.6vw] py-[0.4vw] rounded-[0.35vw] whitespace-nowrap cursor-pointer text-[0.8vw] leading-none transition-colors ${fontWeight === w.value ? 'bg-[#4D47FF]/10 text-[#4D47FF]' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
                   >
-                    {w.name}
+                    <span className="truncate">{w.name}</span>
+                    {fontWeight === w.value && <Check size="0.7vw" className="shrink-0" />}
                   </div>
                 ))}
               </div>
@@ -3705,7 +3664,7 @@ const TextProperties = ({
           />
           <div
             className="flex items-center border-l border-gray-200 pl-[0.35vw] ml-[0.35vw] cursor-ew-resize text-gray-400 hover:text-gray-700 active:text-[#4D47FF]"
-            onMouseDown={handleScrub('letterSpacing', letterSpacing, 1)}
+            onPointerDown={handleScrub('letterSpacing', letterSpacing, 1)}
             title="Drag horizontally to adjust letter spacing"
           >
             <Icon icon="solar:paragraph-spacing-bold" className="w-[1vw] h-[1vw] rotate-90 pointer-events-none" />
@@ -3734,7 +3693,7 @@ const TextProperties = ({
           />
           <div
             className="flex items-center border-l border-gray-200 pl-[0.35vw] ml-[0.35vw] cursor-ew-resize text-gray-400 hover:text-gray-700 active:text-[#4D47FF]"
-            onMouseDown={handleScrub('lineHeight', lineHeight, 0.1)}
+            onPointerDown={handleScrub('lineHeight', lineHeight, 0.1)}
             title="Drag horizontally to adjust line height"
           >
             <Icon icon="solar:paragraph-spacing-bold" className="w-[1vw] h-[1vw] pointer-events-none" />

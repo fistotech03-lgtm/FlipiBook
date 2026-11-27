@@ -16,8 +16,8 @@ import {
   getMotionGraphicProperties,
   updateMotionGraphicAttributes
 } from '../utils/motionGraphicUtils';
-import { handleScrubHelper } from '../../../properties/controls/propertiesShared';
-import { CUSTOM_FONT_FAMILIES } from '../../../../../utils/customFonts';
+import { ScrubPercentInput } from '../../../properties/controls/propertiesShared';
+import { FONT_FAMILIES } from '../../../../../config/fonts';
 
 const SectionHeader = ({ title, rightElement }) => (
   <div className="flex items-center gap-[0.8vw]">
@@ -86,25 +86,13 @@ const ColorBoxRow = ({
                 onChange(finalVal);
               }
             }}
-            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
             maxLength={9}
           />
-          <div
-            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-            onPointerDown={(e) => {
-              const currentPct = Math.round(parseFloat(opacity !== undefined ? opacity : 100));
-              handleScrubHelper(e, currentPct, (val) => {
-                const num = parseInt(val);
-                const clamped = Math.min(Math.max(num, 0), 100);
-                if (onOpacityChange) onOpacityChange(clamped);
-              });
-            }}
-            title="Drag horizontally to adjust opacity"
-          >
-            <span className="text-[0.8vw] font-medium text-gray-700">
-              {Math.round(parseFloat(opacity !== undefined ? opacity : 100))}%
-            </span>
-          </div>
+          <ScrubPercentInput
+            value={Math.round(parseFloat(opacity !== undefined ? opacity : 100))}
+            onChange={(clamped) => { if (onOpacityChange) onOpacityChange(clamped); }}
+          />
         </div>
       </div>
       {/* Scrubbing & Input styling */}
@@ -136,18 +124,6 @@ const ColorBoxRow = ({
   );
 };
 
-const FONT_FAMILIES = [
-  'Poppins',
-  'Inter',
-  'Roboto',
-  'Outfit',
-  'Montserrat',
-  'Impact',
-  'Arial',
-  'Arial Black',
-  'Playfair Display',
-  ...CUSTOM_FONT_FAMILIES
-];
 
 // Titles are sized in px internally; the panel shows pt (1pt = 4/3 px)
 const pxToPt = (px) => Math.round((parseFloat(px) || 0) * 0.75 * 10) / 10;

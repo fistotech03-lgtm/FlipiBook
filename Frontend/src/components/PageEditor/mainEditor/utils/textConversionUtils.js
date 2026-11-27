@@ -1,3 +1,4 @@
+import { loadFont } from '../../../../config/fonts';
 
 /**
  * Utility to convert raw SVG <text> elements to responsive, multi-line <foreignObject> elements
@@ -84,6 +85,8 @@ export const convertTextToForeignObject = (el) => {
     if (formattedFfParts.length === 0) formattedFfParts.push("'Inter'");
     if (!formattedFfParts.some((p) => genericCssFonts.has(p))) formattedFfParts.push('sans-serif');
     const finalFontFamily = formattedFfParts.join(', ');
+    const cleanFontFamily = rawFf.replace(/['"]/g, '').split(',')[0].trim();
+    loadFont(cleanFontFamily); // make sure the edit box renders in the real font, not a fallback
 
     // 2. Font Size Detection
     let rawFs = el.getAttribute('font-size') || el.style.fontSize || el.getAttribute('data-font-size');

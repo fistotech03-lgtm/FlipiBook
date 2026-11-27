@@ -476,7 +476,7 @@ const Effect = ({
                       type="text"
                       value={(pseudoProps[`data-effect-${activeEffectPopupId}-color`] || '#000000').toUpperCase()}
                       onChange={(e) => updateAttr(`data-effect-${activeEffectPopupId}-color`, e.target.value)}
-                      className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+                      className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
                     />
                     <Pipette
                       size="0.85vw"

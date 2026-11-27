@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Effect from './controls/Effect';
 import ColorPicker from '../../Color';
-import { handleScrubHelper, normalizeHex, getIntAttr, getFloatAttr } from './controls/propertiesShared';
+import { ScrubPercentInput, normalizeHex, getIntAttr, getFloatAttr } from './controls/propertiesShared';
 
 export default function GroupProperties({
   selectedElement,
@@ -872,24 +872,14 @@ export default function GroupProperties({
                         handleColorChange(cItem.hex, finalVal);
                       }
                     }}
-                    className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+                    className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
                     maxLength={8}
                   />
-                  <div
-                    className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-                    onPointerDown={(e) => {
-                      handleScrubHelper(e, cItem.opacity, (val) => {
-                        const num = parseInt(val);
-                        const clamped = Math.min(Math.max(num, 0), 100);
-                        handleColorOpacityChange(cItem.hex, clamped);
-                      });
-                    }}
-                    title="Drag horizontally to adjust opacity"
-                  >
-                    <span className="text-[0.8vw] font-medium text-gray-700">
-                      {cItem.opacity}%
-                    </span>
-                  </div>
+                  <ScrubPercentInput
+                    value={cItem.opacity}
+                    onChange={(clamped) => handleColorOpacityChange(cItem.hex, clamped)}
+                    title="Drag horizontally on % to adjust opacity"
+                  />
                 </div>
               </div>
             ))}

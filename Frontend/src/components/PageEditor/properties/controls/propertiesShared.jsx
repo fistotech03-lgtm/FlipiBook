@@ -8,59 +8,102 @@ import { ElementSlider } from '../../LeftActionMenu/Elements/properties/ElementU
 /**
  * Common horizontal scrub helper for dragging to change numbers.
  */
-export const handleScrubHelper = (e, initialVal, updateFn, sensitivity = 5) => {
-  const sValue = parseFloat(initialVal) || 0;
-  let accumulatedDelta = 0;
-  let virtualX = e.clientX;
-  let virtualY = e.clientY;
+import { handleScrubHelper } from '../../utils/scrubValue';
+export { handleScrubHelper };
 
-  document.body.classList.add('is-scrubbing');
+/**
+ * Percentage input:
+ * - Hovering the number shows the normal cursor; clicking selects the full number for inline editing on the same background while keeping `%` visible.
+ * - Hovering `%` shows the ew-resize cursor and dragging adjusts the value.
+ */
+export const ScrubPercentInput = ({
+  value = 100,
+  onChange,
+  min = 0,
+  max = 100,
+  title = 'Drag horizontally on % to adjust opacity',
+  className = 'flex items-center select-none px-[0.2vw]',
+  textClassName = 'text-[0.8vw] font-medium text-gray-700',
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+  const inputRef = useRef(null);
 
-  if (e.pointerId !== undefined) {
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch { }
-  }
-
-  const vCursor = document.createElement('div');
-  vCursor.className = 'virtual-scrub-cursor';
-  vCursor.style.left = `${virtualX}px`;
-  vCursor.style.top = `${virtualY}px`;
-  vCursor.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18 15L21 12L18 9" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M6 9L3 12L6 15" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M4 12H20" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M18 15L21 12L18 9" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M6 9L3 12L6 15" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M4 12H20" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-  document.body.appendChild(vCursor);
-
-  const onMouseMove = (moveEvent) => {
-    const dx = moveEvent.movementX || 0;
-    accumulatedDelta += dx;
-
-    virtualX += dx;
-    if (virtualX < 0) virtualX = window.innerWidth;
-    if (virtualX > window.innerWidth) virtualX = 0;
-    vCursor.style.left = `${virtualX}px`;
-
-    const newVal = sValue + Math.round(accumulatedDelta / sensitivity);
-    updateFn(newVal.toString());
-  };
-
-  const onMouseUp = (moveEvent) => {
-    if (moveEvent.pointerId !== undefined) {
-      try { moveEvent.target.releasePointerCapture(moveEvent.pointerId); } catch { }
+  useEffect(() => {
+    if (!isEditing) {
+      setDraft(String(value));
     }
-    if (vCursor.parentNode) vCursor.parentNode.removeChild(vCursor);
-    document.body.classList.remove('is-scrubbing');
-    window.removeEventListener('pointermove', onMouseMove);
-    window.removeEventListener('pointerup', onMouseUp);
+  }, [value, isEditing]);
+
+  const commit = () => {
+    setIsEditing(false);
+    const num = parseInt(draft, 10);
+    if (!isNaN(num)) {
+      const clamped = Math.min(Math.max(num, min), max);
+      setDraft(String(clamped));
+      onChange(clamped);
+    } else {
+      setDraft(String(value));
+    }
   };
 
-  window.addEventListener('pointermove', onMouseMove);
-  window.addEventListener('pointerup', onMouseUp);
+  const displayText = isEditing ? draft : String(value);
+  const charCount = Math.max(1, displayText.length);
+
+  return (
+    <div className={className.replace(/\bcursor-ew-resize\b/g, '').replace(/\bhover:bg-gray-50\b/g, '')}>
+      <input
+        ref={inputRef}
+        type="text"
+        value={displayText}
+        onFocus={(e) => {
+          setIsEditing(true);
+          setDraft(String(value));
+          requestAnimationFrame(() => e.target?.select?.());
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.target?.select?.();
+        }}
+        onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, ''))}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            commit();
+            e.target.blur();
+          }
+          if (e.key === 'Escape') {
+            setIsEditing(false);
+            setDraft(String(value));
+            e.target.blur();
+          }
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        style={{ width: `${charCount}ch` }}
+        className={`${textClassName} bg-transparent border-none outline-none text-right p-0 m-0 cursor-default focus:cursor-text`}
+        maxLength={3}
+      />
+      <span
+        className={`${textClassName} cursor-ew-resize select-none`}
+        title={title}
+        onPointerDown={(e) => {
+          if (e.button !== 0) return;
+          e.stopPropagation();
+          handleScrubHelper(
+            e,
+            value,
+            (val) => {
+              const num = parseInt(val, 10);
+              onChange(Math.min(Math.max(isNaN(num) ? value : num, min), max));
+            },
+            5
+          );
+        }}
+      >
+        %
+      </span>
+    </div>
+  );
 };
 
 /**

@@ -658,7 +658,7 @@ export const createShapeSvgNode = (shapeData, cx, cy, customSize) => {
   const initialSw = shapeData.strokeWidth !== undefined ? parseFloat(shapeData.strokeWidth) : 0;
   shapeEl.setAttribute('data-stroke-width', String(initialSw));
   shapeEl.setAttribute('stroke-width', String(initialSw * 2));
-  shapeEl.setAttribute('data-stroke-position', 'Outside');
+  shapeEl.setAttribute('data-stroke-position', 'Inside');
   shapeEl.setAttribute('paint-order', 'stroke fill');
   shapeEl.style.paintOrder = 'stroke fill';
   shapeEl.setAttribute('vector-effect', 'non-scaling-stroke');

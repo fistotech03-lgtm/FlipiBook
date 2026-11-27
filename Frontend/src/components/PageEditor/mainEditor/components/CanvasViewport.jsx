@@ -123,14 +123,20 @@ export const CanvasViewport = ({
     return clean;
   };
 
-  // Promote the zoom layer only during an active zoom/pan gesture, then let it re-render crisp
+  // Promote the zoom layer only during a pan gesture (pure translate keeps the bitmap sharp).
+  // Never during zoom: a promoted layer is scaled as a bitmap and looks blurry until re-rasterised.
   useEffect(() => {
     const el = zoomContainerRef?.current;
     if (!el) return undefined;
     el.style.willChange = 'transform';
     const t = setTimeout(() => { el.style.willChange = 'auto'; }, 150);
     return () => clearTimeout(t);
-  }, [zoom, pan.x, pan.y]);
+  }, [pan.x, pan.y]);
+
+  useEffect(() => {
+    const el = zoomContainerRef?.current;
+    if (el) el.style.willChange = 'auto';
+  }, [zoom]);
 
   return (
           <div
@@ -144,6 +150,7 @@ export const CanvasViewport = ({
               // switched on only while zooming/panning (effect below) and dropped right after, so the
               // browser re-renders crisp at the current zoom.
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom / 100})`,
+              '--fbe-inv-zoom': 100 / (zoom || 100),
               cursor: isSpaceDown
                 ? 'grab'
                 : (activeMainTool === 'shapes'
@@ -232,16 +239,23 @@ export const CanvasViewport = ({
                                       // Fast path: Direct innerHTML swap is hardware accelerated and avoids recursive syncDOM freezes
                                       // unless actively editing inline text where DOM input focus must be preserved.
                                       const isTextEditing = isEditingTextRef?.current;
-                                      // Same page with live map/embed iframes: patch in place (keyed by id) so the
-                                      // iframes are never detached — avoids reload/glitch on delete, undo, redo.
-                                      const hasLiveFrames = el.__lastPageIndex === displayIndex && !!el.querySelector('foreignObject iframe');
+                                      // Same page: patch in place (keyed by id). Only changed nodes/attributes are
+                                      // touched, so other text boxes, images and live iframes are never rebuilt —
+                                      // a full innerHTML swap re-created every text on each property change (glitch).
+                                      // Full swap only for the first render / a page switch, or if patching fails.
+                                      const isSamePage = el.__lastPageIndex === displayIndex && el.childNodes.length > 0;
                                       if (el.__lastPageIndex !== displayIndex || !isTextEditing) {
-                                        if (hasLiveFrames) {
-                                          const parsed = new DOMParser().parseFromString(newHtml, 'text/html');
-                                          syncChildrenKeyed(el, parsed.body);
-                                        } else {
-                                          el.innerHTML = newHtml;
+                                        let patched = false;
+                                        if (isSamePage) {
+                                          try {
+                                            const parsed = new DOMParser().parseFromString(newHtml, 'text/html');
+                                            syncChildrenKeyed(el, parsed.body);
+                                            patched = true;
+                                          } catch (err) {
+                                            console.warn('[canvas] in-place patch failed, full re-render', err);
+                                          }
                                         }
+                                        if (!patched) el.innerHTML = newHtml;
                                         el.__lastPageIndex = displayIndex;
                                         el.__lastHtml = newHtml;
                                         // Auto-heal any path.audio-fill-layer into rect.audio-fill-layer

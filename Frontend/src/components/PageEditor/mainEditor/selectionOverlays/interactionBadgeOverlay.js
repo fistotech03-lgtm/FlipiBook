@@ -304,11 +304,11 @@ export const createInteractionBadgeOverlay = ({
       if (midN.y < 35 / zoomScale) {
         badge.style.top = `${midN.y + vwOffset}px`;
         badge.style.transformOrigin = 'top center';
-        badge.style.transform = `translate(-50%, 0%) scale(${1 / zoomScale})`;
+        badge.style.transform = `translate(-50%, 0%) scale(var(--fbe-inv-zoom, ${1 / zoomScale}))`;
       } else {
         badge.style.top = `${midN.y - vwOffset}px`;
         badge.style.transformOrigin = 'bottom center';
-        badge.style.transform = `translate(-50%, -100%) scale(${1 / zoomScale})`;
+        badge.style.transform = `translate(-50%, -100%) scale(var(--fbe-inv-zoom, ${1 / zoomScale}))`;
       }
 
       const containerWidth = htmlOverlay?.getBoundingClientRect?.()?.width || 9999;

@@ -5,7 +5,7 @@ import {
   ArrowLeft, MoreVertical, Layers, Plus, Copy, Edit2,
   Layout, ArrowUp, ArrowDown, ArrowUpToLine, ArrowDownToLine,
   Ban, Trash2, FilePlus, GripVertical,
-  Folder, Type, Image as ImageIcon, Square, Circle, Triangle, Star, Minus,
+  Folder, Type, Image as ImageIcon, Square, Circle, Triangle, Star,
   Video, ImagePlay, Music, QrCode, MousePointerClick,
   MapPin, SlidersHorizontal, Table2, Sparkles,
   ChevronRight, ChevronDown, Eye, EyeOff, Lock, Unlock,
@@ -158,6 +158,154 @@ export const isInteractionLayer = (layer) => {
   );
 };
 
+// Known generic / auto-generated base names that should be counted Figma-style (e.g. "Vector 1", "Square 1")
+const AUTO_LAYER_BASE_PREFIXES = [
+  'Vector Path', 'Vector', 'Square', 'Circle', 'Ellipse', 'Rectangle', 'Rect',
+  'Triangle', 'Star', 'Polygon', 'Line', 'Arrow', 'Diamond', 'Hexagon', 'Pentagon',
+  'Heart', 'Cloud', 'Shape', 'Image Frame', 'Image Group', 'Image', 'Video Group',
+  'Video', 'GIF Group', 'GIF', 'Mask Group', 'Group', 'Button', 'Table', 'QR Code',
+  'Qr Code', 'Map', 'Slideshow', 'Audio', 'Free Frame', 'Hotspot', 'Decorator', 'Frame'
+];
+
+const normalizeBaseLabel = (label) => {
+  const lower = label.toLowerCase();
+  if (lower === 'vector path' || lower === 'vector' || lower === 'path' || lower === 'polyline') return 'Vector';
+  if (lower === 'rect' || lower === 'rectangle') return 'Rectangle';
+  if (lower === 'image group') return 'Image';
+  if (lower === 'video group') return 'Video';
+  if (lower === 'gif group' || lower === 'gif') return 'GIF';
+  if (lower === 'qr code') return 'QR Code';
+  if (lower === 'g') return 'Group';
+  return label;
+};
+
+const resolveAutoBaseLabel = (layer, domEl) => {
+  const raw = (layer.name || '').trim();
+  const typeLower = (layer.type || '').toLowerCase();
+  const dataType = (layer['data-type'] || domEl?.getAttribute?.('data-type') || '').toLowerCase();
+
+  if (dataType === 'vector-path' || raw.toLowerCase() === 'vector path') return 'Vector';
+
+  // Match exact generic name or "<GenericName> <shortId/number>"
+  for (const prefix of AUTO_LAYER_BASE_PREFIXES) {
+    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`^${escaped}(?:\\s+[a-z0-9_-]{1,10})?$`, 'i');
+    if (re.test(raw)) {
+      return normalizeBaseLabel(prefix);
+    }
+  }
+
+  // Fallback for raw tag-id names like "rect-abc12", "path-1234", "g-xyz99"
+  if (!raw || raw === layer.id || /^[a-z]+-[a-z0-9]{4,}$/i.test(raw)) {
+    if (dataType === 'image' || dataType === 'image-frame' || typeLower === 'image') return 'Image';
+    if (dataType === 'video' || (typeLower === 'foreignobject' && dataType !== 'text')) return 'Video';
+    if (dataType === 'gif') return 'GIF';
+    if (dataType === 'button') return 'Button';
+    if (dataType === 'table' || dataType === 'table-frame') return 'Table';
+    if (dataType === 'qrcode' || dataType === 'qr-code') return 'QR Code';
+    if (dataType === 'map') return 'Map';
+    if (dataType === 'slideshow') return 'Slideshow';
+    if (dataType === 'audio-frame' || dataType === 'audio') return 'Audio';
+    if (typeLower === 'path' || typeLower === 'polyline') return 'Vector';
+    if (typeLower === 'rect') return 'Rectangle';
+    if (typeLower === 'circle') return 'Circle';
+    if (typeLower === 'ellipse') return 'Ellipse';
+    if (typeLower === 'line') return 'Line';
+    if (typeLower === 'polygon') return 'Polygon';
+    if (typeLower === 'g') return 'Group';
+  }
+
+  return null;
+};
+
+/**
+ * Computes Figma-style layer display names for a page's layer tree:
+ * - Text layers show their typed text content (or "Text" if empty).
+ * - Non-text generic/auto-named layers are counted sequentially bottom-to-top
+ *   (e.g. "Vector 1", "Vector 2", "Square 1").
+ * - Custom user-renamed layers and page roots are preserved.
+ */
+const applyFigmaLayerNames = (layers, liveSvg, pageName) => {
+  if (!Array.isArray(layers) || layers.length === 0) return layers;
+  const typeCounts = {};
+
+  const transformNode = (layer, isRootSingle) => {
+    let domEl = null;
+    if (liveSvg && layer.id) {
+      try {
+        const escapedId = (window.CSS && CSS.escape) ? CSS.escape(layer.id) : layer.id;
+        domEl = liveSvg.querySelector(`[id="${escapedId}"]`);
+      } catch {
+        domEl = null;
+      }
+    }
+
+    const typeLower = (layer.type || '').toLowerCase();
+    const dataType = (layer['data-type'] || domEl?.getAttribute?.('data-type') || '').toLowerCase();
+    const nameLower = (layer.name || '').toLowerCase();
+
+    const isPageRoot =
+      dataType === 'frame' ||
+      (isRootSingle && (layer.name === pageName || layer.name?.startsWith('Page '))) ||
+      /^page\s*\d+$/i.test(layer.name || '') ||
+      /^slide\s*\d+$/i.test(layer.name || '') ||
+      /^pdf page\s*\d+$/i.test(layer.name || '');
+
+    const isPdfBg =
+      nameLower.endsWith('-pdf') ||
+      layer.name === 'PDF Background' ||
+      dataType === 'pdf-background';
+
+    const isCustom = Boolean(
+      layer.isCustomName ||
+      domEl?.getAttribute?.('data-custom-name') === 'true'
+    );
+
+    const isTextLayer =
+      typeLower === 'text' ||
+      dataType === 'text' ||
+      domEl?.tagName?.toLowerCase() === 'text' ||
+      (typeLower === 'foreignobject' && dataType !== 'video' && (
+        Boolean(domEl?.querySelector?.('[contenteditable], div')) ||
+        (layer.id && layer.id.toLowerCase().startsWith('text-')) ||
+        nameLower.startsWith('text')
+      ));
+
+    let displayName = layer.name;
+
+    if (!isPageRoot && !isPdfBg && !isCustom) {
+      if (isTextLayer) {
+        const liveText = domEl
+          ? (domEl.innerText ?? domEl.textContent ?? '').replace(/\s+/g, ' ').trim()
+          : '';
+        const fallbackText = (layer.textContent || '').replace(/\s+/g, ' ').trim();
+        const typedText = liveText || fallbackText;
+        displayName = typedText || 'Text';
+      } else {
+        const baseLabel = resolveAutoBaseLabel(layer, domEl);
+        if (baseLabel) {
+          typeCounts[baseLabel] = (typeCounts[baseLabel] || 0) + 1;
+          displayName = `${baseLabel} ${typeCounts[baseLabel]}`;
+        }
+      }
+    }
+
+    const nextChildren = Array.isArray(layer.children)
+      ? layer.children.map((c) => transformNode(c, false))
+      : undefined;
+
+    return {
+      ...layer,
+      displayName,
+      isTextLayer: isTextLayer || undefined,
+      ...(nextChildren ? { children: nextChildren } : {})
+    };
+  };
+
+  const isSingleRoot = layers.length === 1;
+  return layers.map((l) => transformNode(l, isSingleRoot));
+};
+
 const LayerItem = ({
   layer,
   depth = 0,
@@ -178,9 +326,10 @@ const LayerItem = ({
   currentFrameId,
   setCurrentFrameId
 }) => {
+  const displayName = layer.displayName || layer.name;
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(layer.name);
+  const [editName, setEditName] = useState(displayName);
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef(null);
   const isInteraction = isInteractionLayer(layer);
@@ -192,12 +341,12 @@ const LayerItem = ({
     const handleTriggerRename = (e) => {
       if (e.detail.layerId === layer.id) {
         setIsEditing(true);
-        setEditName(layer.name);
+        setEditName(displayName);
       }
     };
     window.addEventListener('trigger-rename-layer', handleTriggerRename);
     return () => window.removeEventListener('trigger-rename-layer', handleTriggerRename);
-  }, [layer.id, layer.name]);
+  }, [layer.id, displayName]);
 
   const isAudioLayerItem = (() => {
     const name = (layer.name || '').toLowerCase();
@@ -333,6 +482,11 @@ const LayerItem = ({
     const nameLower = (layer.name || '').toLowerCase();
     const typeLower = (layer.type || '').toLowerCase();
 
+    // Text layers always use the Type ("T") icon regardless of typed words
+    if (layer.isTextLayer || typeLower === 'text' || layer['data-type'] === 'text') {
+      return <Type size="0.85vw" className="text-gray-400 group-hover/layer:text-[#EC5137]" />;
+    }
+
     // 0. Check Hotspot & Free Frame (Interaction elements)
     const isHotspot = typeLower === 'hotspot' || layer['data-is-hotspot'] === 'true' || layer['data-type'] === 'hotspot' || nameLower.includes('hotspot') || (layer.id && layer.id.startsWith('hotspot-'));
     if (isHotspot) {
@@ -344,7 +498,7 @@ const LayerItem = ({
     }
 
     // 1. Check Video
-    const isVideo = typeLower === 'video' || nameLower.includes('video') || typeLower === 'foreignobject' || layer['data-type'] === 'video';
+    const isVideo = typeLower === 'video' || nameLower.includes('video') || (typeLower === 'foreignobject' && layer['data-type'] !== 'text') || layer['data-type'] === 'video';
     if (isVideo) {
       return <Video size="0.85vw" className="text-gray-400 group-hover/layer:text-[#EC5137]" />;
     }
@@ -412,6 +566,9 @@ const LayerItem = ({
     const isShape = typeLower === 'shape' || layer['data-type'] === 'shape' || nameLower === 'shape' || nameLower.includes('shape');
     if (isShape) {
       const shapeType = (layer['data-shape-type'] || layer['data-shape-title'] || '').toLowerCase();
+      if (shapeType === 'line' || layer['data-shape-id'] === 'straight-line' || (layer.tagName || layer.type || '').toLowerCase() === 'line') {
+        return <Icon icon="tabler:line" className="w-[0.85vw] h-[0.85vw] text-gray-400 group-hover/layer:text-[#EC5137]" />;
+      }
       if (nameLower.includes('circle') || nameLower.includes('ellipse') || shapeType.includes('circle') || shapeType.includes('ellipse')) {
         return <Circle size="0.85vw" className="text-gray-400 group-hover/layer:text-[#EC5137]" />;
       }
@@ -433,7 +590,7 @@ const LayerItem = ({
       case 'triangle':
       case 'path': return <Triangle size="0.85vw" className="text-gray-400 group-hover/layer:text-[#EC5137]" />;
       case 'star': return <Star size="0.85vw" className="text-gray-400 group-hover/layer:text-[#EC5137]" />;
-      case 'line': return <Minus size="0.85vw" className="text-gray-400 group-hover/layer:text-[#EC5137]" />;
+      case 'line': return <Icon icon="tabler:line" className="w-[0.85vw] h-[0.85vw] text-gray-400 group-hover/layer:text-[#EC5137]" />;
       default: return <Layers size="0.85vw" className="text-gray-400 group-hover/layer:text-[#EC5137]" />;
     }
   };
@@ -543,11 +700,12 @@ const LayerItem = ({
   const handleDoubleClick = (e) => {
     e.stopPropagation();
     if (layer.isVirtualImageChild || isPdfBackgroundLayer || isInteractionDisabled) return; // Disallow renaming effect layers, PDF Backgrounds, or disabled interaction layers
+    setEditName(displayName);
     setIsEditing(true);
   };
 
   const handleRenameSubmit = () => {
-    if (editName.trim() !== '' && editName !== layer.name) {
+    if (editName.trim() !== '' && editName !== displayName) {
       renameLayer(pageIndex, layer.id, editName);
     }
     setIsEditing(false);
@@ -645,7 +803,7 @@ const LayerItem = ({
             <span className={`block text-[0.7vw] truncate transition-colors ${
               isSelected ? 'font-semibold text-gray-900' : layer.visible === false ? 'text-gray-400 italic' : 'font-medium text-gray-700 group-hover/layer:text-gray-900'
             }`}>
-              {layer.name}
+              {displayName}
             </span>
           )}
         </div>
@@ -773,6 +931,13 @@ const Layer = ({
   const { folder, v_id } = useParams();
   const { hasUnsavedChanges, isAutoSaveEnabled } = useOutletContext() || {};
   const [activeLayerMenu, setActiveLayerMenu] = useState(null); // { layerId, x, y }
+  const [, setLayerSyncTick] = useState(0);
+
+  useEffect(() => {
+    const onSyncLayers = () => setLayerSyncTick(t => t + 1);
+    window.addEventListener('sync-layers-panel', onSyncLayers);
+    return () => window.removeEventListener('sync-layers-panel', onSyncLayers);
+  }, []);
   const layerMenuRef = useRef(null);
   const [isVisible, setIsVisible] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
@@ -1809,9 +1974,11 @@ const Layer = ({
                                   </div>
                                 ) : (() => {
                                   let effectiveLayers = null;
-                                  if (index === activePageIndex && typeof document !== 'undefined') {
+                                  let activeSvgRef = null;
+                                  if (index === activePageIndex && typeof document !== 'undefined' && !window.__isApplyingHistory) {
                                     const liveSvg = document.querySelector(`.page-svg-container[data-page-index="${index}"] svg`);
                                     if (liveSvg) {
+                                      activeSvgRef = liveSvg;
                                       try {
                                         const parsed = parseLayersFromSVG(liveSvg);
                                         if (Array.isArray(parsed)) {
@@ -1836,12 +2003,13 @@ const Layer = ({
                                         svgEl = doc.querySelector('svg');
                                       }
                                       if (svgEl) {
+                                        activeSvgRef = activeSvgRef || svgEl;
                                         effectiveLayers = parseLayersFromSVG(svgEl);
                                         pageCacheManager.setCachedLayers(page.id, page.html, effectiveLayers);
                                       }
                                     } catch (e) {}
                                   }
-                                  const realLayers = effectiveLayers || [];
+                                  const realLayers = applyFigmaLayerNames(effectiveLayers || [], activeSvgRef, page.name);
                                   if (realLayers.length === 0) {
                                     return (
                                       <div className="text-[0.7vw] text-gray-400 italic px-[0.8vw] py-[0.5vh]">

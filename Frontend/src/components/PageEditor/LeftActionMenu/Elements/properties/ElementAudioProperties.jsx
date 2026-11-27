@@ -17,7 +17,7 @@ import axios from 'axios';
 import { resolveUploadsPath } from '../../../../../utils/assets/assetUtils';
 import sampleAudio from '../../../../../assets/Audios/bg music1.mp3';
 import ColorPicker, { parseGradient, generateGradientString } from '../../../../Color';
-import { handleScrubHelper } from '../../../properties/FillStrokeProperties';
+import { ScrubPercentInput } from '../../../properties/controls/propertiesShared';
 import Effect from '../../../properties/controls/Effect';
 import {
   AUDIO_TEMPLATES,
@@ -277,24 +277,15 @@ const FillColorCard = ({
                 onColorChange(finalVal);
               }
             }}
-            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
             maxLength={isGradient ? 10 : 8}
           />
-          <div
-            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-100 rounded text-gray-500"
-            onPointerDown={(e) => {
-              if (!onOpacityChange) return;
-              const currentPct = Math.round(Number(opacity) || 100);
-              handleScrubHelper(e, currentPct, (val) => {
-                const num = parseInt(val, 10);
-                const clamped = Math.min(Math.max(isNaN(num) ? 100 : num, 0), 100);
-                onOpacityChange(clamped);
-              });
-            }}
-            title="Drag horizontally to scrub opacity"
-          >
-            <span className="text-[0.72vw] font-medium">{Math.round(Number(opacity) || 100)}%</span>
-          </div>
+          <ScrubPercentInput
+            value={Math.round(Number(opacity) || 100)}
+            onChange={(clamped) => onOpacityChange && onOpacityChange(clamped)}
+            className="flex items-center select-none px-[0.2vw] text-gray-500"
+            textClassName="text-[0.72vw] font-medium text-gray-600"
+          />
         </div>
       </div>
     </div>

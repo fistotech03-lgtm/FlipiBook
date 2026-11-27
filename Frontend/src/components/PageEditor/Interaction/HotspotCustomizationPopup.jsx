@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import ColorPicker from '../../Color';
 import { PRESETS, generateHotspotSVG, generateButtonSVG, generateSvgGradient } from './hotspotSvgUtils';
+import { handleScrubHelper } from '../utils/scrubValue';
 
 const ALL_ICON_ASSETS = import.meta.glob('../../../assets/hotspot preset icon/**/*.svg', { query: '?url', import: 'default', eager: true });
 const BUTTON_ICON_ASSETS = import.meta.glob('../../../assets/hotspot preset icon/interactive_button/*.png', { query: '?url', import: 'default', eager: true });
@@ -384,27 +385,15 @@ const HotspotCustomizationPopup = ({ isOpen, onClose, initialData, onSave }) => 
   const handleScrubOpacity = (e, initialVal, setFn) => {
     if (e.button !== 0) return; // Only left click
     e.preventDefault();
-    let accumulatedDelta = 0;
-    const sensitivity = 2;
-
-    document.body.classList.add('is-scrubbing');
-
-    const onMouseMove = (moveEvent) => {
-      accumulatedDelta += moveEvent.movementX || 0;
-      let newVal = initialVal + Math.round(accumulatedDelta / sensitivity);
-      if (newVal < 0) newVal = 0;
-      if (newVal > 100) newVal = 100;
-      setFn(newVal);
-    };
-
-    const onMouseUp = () => {
-      document.body.classList.remove('is-scrubbing');
-      window.removeEventListener('pointermove', onMouseMove);
-      window.removeEventListener('pointerup', onMouseUp);
-    };
-
-    window.addEventListener('pointermove', onMouseMove);
-    window.addEventListener('pointerup', onMouseUp);
+    handleScrubHelper(
+      e,
+      initialVal,
+      (val) => {
+        const clamped = Math.min(100, Math.max(0, parseInt(val, 10) || 0));
+        setFn(clamped);
+      },
+      2
+    );
   };
 
   const extractOpacity = (colorStr) => {
@@ -777,7 +766,7 @@ const HotspotCustomizationPopup = ({ isOpen, onClose, initialData, onSave }) => 
                           <div className="flex-1 bg-white border border-gray-200 rounded-[0.3vw] h-[1.8vw] flex items-center justify-between px-[0.5vw] min-w-0">
                             <input
                               type="text"
-                              className="text-[0.65vw] text-gray-600 uppercase font-mono bg-transparent outline-none flex-1 min-w-0"
+                              className="text-[0.65vw] text-gray-600 uppercase bg-transparent outline-none flex-1 min-w-0"
                               value={btnIconColor}
                               onChange={(e) => setBtnIconColor(e.target.value)}
                             />
@@ -834,7 +823,7 @@ const HotspotCustomizationPopup = ({ isOpen, onClose, initialData, onSave }) => 
                       <div className="flex-1 bg-white border border-gray-200 rounded-[0.3vw] h-[1.8vw] flex items-center justify-between px-[0.5vw] min-w-0">
                         <input
                           type="text"
-                          className="text-[0.65vw] text-gray-600 uppercase font-mono bg-transparent outline-none flex-1 min-w-0"
+                          className="text-[0.65vw] text-gray-600 uppercase bg-transparent outline-none flex-1 min-w-0"
                           value={iconColor}
                           onChange={(e) => setIconColor(e.target.value)}
                         />
@@ -868,7 +857,7 @@ const HotspotCustomizationPopup = ({ isOpen, onClose, initialData, onSave }) => 
                       <div className="flex-1 bg-white border border-gray-200 rounded-[0.3vw] h-[1.8vw] flex items-center justify-between px-[0.5vw] min-w-0">
                         <input
                           type="text"
-                          className="text-[0.65vw] text-gray-600 uppercase font-mono bg-transparent outline-none flex-1 min-w-0"
+                          className="text-[0.65vw] text-gray-600 uppercase bg-transparent outline-none flex-1 min-w-0"
                           value={bgColor}
                           onChange={(e) => setBgColor(e.target.value)}
                         />
@@ -928,7 +917,7 @@ const HotspotCustomizationPopup = ({ isOpen, onClose, initialData, onSave }) => 
                       <div className="flex-1 bg-white border border-gray-200 rounded-[0.3vw] h-[1.8vw] flex items-center justify-between px-[0.5vw] min-w-0">
                         <input
                           type="text"
-                          className="text-[0.65vw] text-gray-600 uppercase font-mono bg-transparent outline-none flex-1 min-w-0"
+                          className="text-[0.65vw] text-gray-600 uppercase bg-transparent outline-none flex-1 min-w-0"
                           value={iconColor}
                           onChange={(e) => setIconColor(e.target.value)}
                         />
@@ -962,7 +951,7 @@ const HotspotCustomizationPopup = ({ isOpen, onClose, initialData, onSave }) => 
                       <div className="flex-1 bg-white border border-gray-200 rounded-[0.3vw] h-[1.8vw] flex items-center justify-between px-[0.5vw] min-w-0">
                         <input
                           type="text"
-                          className="text-[0.65vw] text-gray-600 uppercase font-mono bg-transparent outline-none flex-1 min-w-0"
+                          className="text-[0.65vw] text-gray-600 uppercase bg-transparent outline-none flex-1 min-w-0"
                           value={bgColor}
                           onChange={(e) => setBgColor(e.target.value)}
                         />

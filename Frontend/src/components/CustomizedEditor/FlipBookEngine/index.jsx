@@ -131,9 +131,22 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
     singlePage = false,
     hardCoverZoom,
     onBookReady,
+    bookShadow = 'none', // box-shadow string from Book Appearance → Drop Shadow ('none' = off)
+    bookShadowFilter = 'none', // same shadow as a drop-shadow() filter, used only while a peel/turn runs
   },
   ref,
 ) {
+  // Shadow used while peeling/turning, derived from the resting box-shadow so both look identical.
+  // In drop-shadow() the blur value is a standard deviation (renders ~2x wider than the same value in
+  // box-shadow), so it is halved. box-shadow "x y blur spread color" → drop-shadow(x y blur/2 color).
+  const turnShadowFilter = useMemo(() => {
+    if (!bookShadow || bookShadow === "none") return "none";
+    const m = String(bookShadow).trim().match(/^(-?[\d.]+)px\s+(-?[\d.]+)px\s+([\d.]+)px(?:\s+(-?[\d.]+)px)?\s+(.+)$/);
+    if (!m) return bookShadowFilter && bookShadowFilter !== "none" ? bookShadowFilter : "none";
+    const [, x, y, blur, , color] = m;
+    return `drop-shadow(${x}px ${y}px ${parseFloat(blur) / 2}px ${color})`;
+  }, [bookShadow, bookShadowFilter]);
+
   const containerRef = useRef(null); // DOM node for outer wrapper
   const bookEl = useRef(null); // DOM node for turn.js
   const reactFlipRef = useRef(null); // ref for react-pageflip
@@ -1124,7 +1137,7 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
       try {
         if (!window.jQuery) await loadScript("/lib/jquery.min.js");
         if (!window.jQuery?.fn?.turn || window._turnJsVersion !== 4) {
-          await loadScript("/lib/turn.min.js?v=5.4-fbe");
+          await loadScript("/lib/turn.min.js?v=5.6-fbe");
         }
         if (alive) {
           setScriptsLoaded(true);
@@ -1289,32 +1302,28 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
     augmented.forEach((page, i) => {
       const pageDiv = document.createElement("div");
 
-      let isPageHard = false;
-      if (makeFirstLastPageHard) {
-        if (i === 0) isPageHard = true;
-        if (augmented.length % 2 === 0) {
-          if (i === augmented.length - 1) isPageHard = true;
+      // Hard by the Book Appearance rules (first/last page, custom pages, default hard covers)
+      const hardByRule = (k) => {
+        if (k < 0 || k >= augmented.length) return false;
+        if (makeFirstLastPageHard) {
+          if (k === 0) return true;
+          if (augmented.length % 2 === 0 && k === augmented.length - 1) return true;
         }
-      }
-
-      if (selectCustomHardPages) {
-        if ((customHardPages || []).some((hp) => Number(hp) === i))
-          isPageHard = true;
-        if (
-          page.isPad &&
-          i > 0 &&
-          (customHardPages || []).some((hp) => Number(hp) === i - 1)
-        ) {
-          isPageHard = true;
+        if (selectCustomHardPages) {
+          if ((customHardPages || []).some((hp) => Number(hp) === k)) return true;
+          if (augmented[k]?.isPad && k > 0 && (customHardPages || []).some((hp) => Number(hp) === k - 1)) return true;
         }
-      }
-
-      if (!makeFirstLastPageHard && !selectCustomHardPages && hardCovers) {
-        if (i === 0) isPageHard = true;
-        if (augmented.length % 2 === 0) {
-          if (i === augmented.length - 1) isPageHard = true;
+        if (!makeFirstLastPageHard && !selectCustomHardPages && hardCovers) {
+          if (k === 0) return true;
+          if (augmented.length % 2 === 0 && k === augmented.length - 1) return true;
         }
-      }
+        return false;
+      };
+      // Front and back of a sheet turn together (Turn.js sheets: pages 1–2, 3–4, …), so a page is hard
+      // if it OR the other side of its sheet is hard — otherwise e.g. the back of a hard cover (page 2)
+      // would bend like soft paper when turned back.
+      const sheetPartner = i % 2 === 0 ? i + 1 : i - 1;
+      const isPageHard = hardByRule(i) || hardByRule(sheetPartner);
 
       const isFirst = i === 0;
       // Real final page only (see note above) — a page followed by the odd-count pad is an inner page.
@@ -2179,6 +2188,38 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
             }
           }}
         >
+          {/* Book drop shadow: a static box-shadow behind each half that actually has a page in the
+              current spread (never on an empty half). Static, so it is not re-drawn during turns —
+              a drop-shadow filter on this container cost ~30fps on the first turn. */}
+          {bookShadow && bookShadow !== "none" &&
+            (singlePage
+              ? [["single", 0, rightIdx]]
+              : [["left", 0, leftIdx], ["right", width, rightIdx]]
+            ).map(([side, left, idx]) => {
+              const hasPage = idx !== null && idx !== undefined && idx >= 0 && idx < pages.length && !pages[idx]?.isPad;
+              return (
+                <div
+                  key={`fbe-book-shadow-${side}`}
+                  aria-hidden="true"
+                  className="fbe-book-shadow"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left,
+                    width,
+                    height,
+                    boxShadow: bookShadow,
+                    borderRadius:
+                      side === "single" ? cornerRadius
+                        : side === "left" ? `${cornerRadius} 0 0 ${cornerRadius}`
+                        : `0 ${cornerRadius} ${cornerRadius} 0`,
+                    opacity: hasPage ? 1 : 0,
+                    pointerEvents: "none",
+                    zIndex: 0,
+                  }}
+                />
+              );
+            })}
           <div
             ref={bookEl}
             className="fbe-book"
@@ -2188,6 +2229,10 @@ const FlipBookEngine = forwardRef(function FlipBookEngine(
               position: "relative",
               background: "transparent",
               margin: 0,
+              // While peeling/turning, the shadow becomes a drop-shadow of the real (curling) pages — see
+              // FlipBookStyles. Layer is prepared up-front so the first turn doesn't pay for creating it.
+              "--fbe-book-shadow-filter": turnShadowFilter,
+              willChange: turnShadowFilter !== "none" ? "filter" : undefined,
             }}
           />
         </div>

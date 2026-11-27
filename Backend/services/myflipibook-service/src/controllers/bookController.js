@@ -4588,18 +4588,20 @@ exports.translateCloneBook = async (req, res) => {
     );
     let foundDir = false;
 
+    // First pass: prefer directories that actually contain a pages/ folder
     for (const uf of userFolders) {
       if (foundDir) break;
       for (const variant of dirVariants) {
         const candidates = [
           path.join(storageRoot, uf, "books", folder, variant),
           path.join(storageRoot, uf, "books", "default", variant),
+          path.join(storageRoot, uf, "books", "My_Flipbooks", variant),
           path.join(storageRoot, uf, "books", variant),
           path.join(storageRoot, uf, folder, variant),
           path.join(storageRoot, uf, variant),
         ];
         for (const cand of candidates) {
-          if (fs.existsSync(cand)) {
+          if (fs.existsSync(path.join(cand, "pages"))) {
             wsBookDir = cand;
             foundDir = true;
             break;
@@ -4607,6 +4609,51 @@ exports.translateCloneBook = async (req, res) => {
         }
         if (foundDir) break;
       }
+    }
+    // Second pass fallback if pages/ subfolder did not match
+    if (!foundDir) {
+      for (const uf of userFolders) {
+        if (foundDir) break;
+        for (const variant of dirVariants) {
+          const candidates = [
+            path.join(storageRoot, uf, "books", folder, variant),
+            path.join(storageRoot, uf, "books", "default", variant),
+            path.join(storageRoot, uf, "books", "My_Flipbooks", variant),
+            path.join(storageRoot, uf, "books", variant),
+            path.join(storageRoot, uf, folder, variant),
+            path.join(storageRoot, uf, variant),
+          ];
+          for (const cand of candidates) {
+            if (fs.existsSync(cand)) {
+              wsBookDir = cand;
+              foundDir = true;
+              break;
+            }
+          }
+          if (foundDir) break;
+        }
+      }
+    }
+
+    // Preflight health check: fail fast BEFORE cloning directories or creating a duplicate book
+    const translationUrl = process.env.TRANSLATION_SERVICE_URL || "http://127.0.0.1:8010/translate/page";
+    const microserviceBase = translationUrl.replace(/\/translate\/page\/?$/, "");
+    try {
+      const healthRes = await fetch(`${microserviceBase}/health`, {
+        method: "GET",
+        signal: AbortSignal.timeout(5000)
+      });
+      if (!healthRes.ok) {
+        return res.status(503).json({
+          success: false,
+          message: "Translation service is not available right now. Please try again later."
+        });
+      }
+    } catch (healthErr) {
+      return res.status(503).json({
+        success: false,
+        message: "Translation service is not available. Please start the translation service and try again."
+      });
     }
 
     // Register active job in memory
@@ -4669,19 +4716,35 @@ exports.translateCloneBook = async (req, res) => {
           copyDirSyncRecursive(sourceThumbsDir, targetThumbsDir);
         }
         const translationUrl = process.env.TRANSLATION_SERVICE_URL || "http://127.0.0.1:8010/translate/page";
+        const cloneData = existing.toObject();
+        delete cloneData._id;
+        delete cloneData.createdAt;
+        delete cloneData.updatedAt;
+        cloneData.v_id = newVId;
+        cloneData.book_v_id = newVId;
+        cloneData.flipbookName = newBookName;
+        cloneData.trash = false;
+        cloneData.trashedAt = null;
+        cloneData.isPublished = false;
 
-        // Translate each page's SVG
-        if (existing.pages && existing.pages.length > 0) {
-          for (let i = 0; i < existing.pages.length; i++) {
-            const page = existing.pages[i];
+        // Translate each page's SVG (including pages stored by custom name, Page N.svg, or inline HTML/content)
+        let translatedPageCount = 0;
+        let svgPageCount = 0;
+        let serviceUnavailableReason = null;
+
+        if (Array.isArray(cloneData.pages) && cloneData.pages.length > 0) {
+          for (let i = 0; i < cloneData.pages.length; i++) {
+            const page = cloneData.pages[i];
             const pageNum = page.pageNumber || (i + 1);
+            const cleanPageName = String(page.name || "").replace(/[\\/:*?"<>|]/g, "").trim();
 
-            // Find SVG file for this page
             const candidateNames = [
+              page.fileName,
+              cleanPageName ? (cleanPageName.endsWith(".svg") ? cleanPageName : `${cleanPageName}.svg`) : null,
               `Page ${pageNum}.svg`,
+              `${pageNum}.svg`,
               `page_${pageNum}.svg`,
               `page${pageNum}.svg`,
-              page.fileName,
               `Page ${pageNum}.html`
             ].filter(Boolean);
 
@@ -4694,9 +4757,19 @@ exports.translateCloneBook = async (req, res) => {
               }
             }
 
+            let rawSvg = null;
             if (pageSvgPath && fs.existsSync(pageSvgPath)) {
-              const rawSvg = fs.readFileSync(pageSvgPath, "utf-8");
+              rawSvg = fs.readFileSync(pageSvgPath, "utf-8");
+            } else if (typeof page.html === "string" && page.html.includes("<svg")) {
+              rawSvg = page.html;
+            } else if (typeof page.content === "string" && page.content.includes("<svg")) {
+              rawSvg = page.content;
+            }
+
+            if (rawSvg) {
+              svgPageCount++;
               let translatedSvg = rawSvg;
+              let pageTranslated = false;
 
               try {
                 const response = await fetch(translationUrl, {
@@ -4707,26 +4780,58 @@ exports.translateCloneBook = async (req, res) => {
                     src_lang,
                     tgt_lang
                   }),
-                  signal: AbortSignal.timeout(180000)
+                  signal: AbortSignal.timeout(240000)
                 });
 
                 if (response.ok) {
                   const data = await response.json();
                   if (data && data.translated_svg) {
                     translatedSvg = data.translated_svg;
+                    pageTranslated = true;
+                    translatedPageCount++;
                     console.log(`[Translation] Page ${pageNum} translated successfully (${data.translated_count || data.segments_translated || 0} segments)`);
                   }
                 } else {
                   const errText = await response.text();
                   console.error(`[Translation] Microservice HTTP ${response.status} for Page ${pageNum}:`, errText.slice(0, 300));
+                  if (response.status >= 500) {
+                    serviceUnavailableReason = `Translation service error (${response.status})`;
+                  }
                 }
               } catch (transErr) {
                 console.warn(`[Translation] Page ${pageNum} microservice warning:`, transErr.message);
+                const causeCode = transErr?.cause?.code || transErr?.code || "";
+                if (
+                  transErr?.message === "fetch failed" ||
+                  causeCode === "ECONNREFUSED" ||
+                  causeCode === "ECONNRESET" ||
+                  transErr?.name === "TimeoutError" ||
+                  transErr?.name === "AbortError"
+                ) {
+                  serviceUnavailableReason = "Translation service is not available.";
+                  break;
+                }
               }
 
-              // Save translated SVG
-              const outSvgPath = path.join(targetPagesDir, `Page ${pageNum}.svg`);
+              // Save translated SVG using exact filename expected by getBook + Page N.svg
+              const targetFileName = page.fileName || (pageSvgPath ? path.basename(pageSvgPath) : `Page ${pageNum}.svg`);
+              const outSvgPath = path.join(targetPagesDir, targetFileName);
               fs.writeFileSync(outSvgPath, translatedSvg, "utf-8");
+              if (targetFileName !== `Page ${pageNum}.svg`) {
+                fs.writeFileSync(path.join(targetPagesDir, `Page ${pageNum}.svg`), translatedSvg, "utf-8");
+              }
+
+              // Keep MongoDB page subdocument fields in sync if present
+              if (typeof page.html === "string" && page.html.trim()) {
+                page.html = translatedSvg;
+              }
+              if (typeof page.content === "string" && page.content.trim()) {
+                page.content = translatedSvg;
+              }
+
+              if (!pageTranslated && serviceUnavailableReason) {
+                break;
+              }
             }
 
             // Update job progress
@@ -4736,6 +4841,24 @@ exports.translateCloneBook = async (req, res) => {
               job.percent = Math.round(((i + 1) / totalPages) * 100);
             }
           }
+        }
+
+        // If the translation service became unavailable or translated zero pages, roll back the clone
+        if (serviceUnavailableReason || (svgPageCount > 0 && translatedPageCount === 0)) {
+          try {
+            if (fs.existsSync(targetBookDir)) {
+              fs.rmSync(targetBookDir, { recursive: true, force: true });
+            }
+          } catch (cleanupErr) {
+            console.warn("[Translation] Cleanup warning:", cleanupErr.message);
+          }
+          const job = activeTranslationJobs.get(jobId);
+          if (job) {
+            job.status = "failed";
+            job.error = serviceUnavailableReason || "Translation service is not available. Please try again.";
+          }
+          console.error(`[Translation] Aborted clone ${newBookName}: ${serviceUnavailableReason || "No pages were translated"}`);
+          return;
         }
 
         // Mirror target book directory across alternate roots (e.g. default <-> My_Flipbooks)
@@ -4750,18 +4873,6 @@ exports.translateCloneBook = async (req, res) => {
         } catch (mirrorErr) {
           console.warn("[Translation] Mirror directory error:", mirrorErr.message);
         }
-
-        // Clone Flipbook metadata in MongoDB
-        const cloneData = existing.toObject();
-        delete cloneData._id;
-        delete cloneData.createdAt;
-        delete cloneData.updatedAt;
-        cloneData.v_id = newVId;
-        cloneData.book_v_id = newVId;
-        cloneData.flipbookName = newBookName;
-        cloneData.trash = false;
-        cloneData.trashedAt = null;
-        cloneData.isPublished = false;
 
         const createdDoc = await Flipbook.create(cloneData);
 
@@ -4832,7 +4943,7 @@ exports.translateTextSnippet = async (req, res) => {
         src_lang,
         tgt_lang
       }),
-      signal: AbortSignal.timeout(60000)
+      signal: AbortSignal.timeout(240000)
     });
 
     if (!response.ok) {
@@ -4855,6 +4966,19 @@ exports.translateTextSnippet = async (req, res) => {
     });
   } catch (err) {
     console.error("[Translation] translateTextSnippet error:", err);
+    if (err?.name === "TimeoutError" || err?.name === "AbortError") {
+      return res.status(504).json({
+        success: false,
+        message: "Translation timed out while waiting for the language model. Please try again in a moment."
+      });
+    }
+    const causeCode = err?.cause?.code || err?.code || "";
+    if (err?.message === "fetch failed" || causeCode === "ECONNREFUSED" || causeCode === "ECONNRESET") {
+      return res.status(503).json({
+        success: false,
+        message: "Translation service is unavailable or still warming up. Ensure the translation service is running and try again."
+      });
+    }
     return res.status(500).json({ success: false, message: err.message || "Failed to translate text" });
   }
 };

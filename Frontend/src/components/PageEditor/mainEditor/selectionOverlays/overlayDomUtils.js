@@ -26,6 +26,43 @@ export const applyCrispSelectionStroke = (polygon, pointsStr, zoomScale, thickne
   }
   const strokeW = scale ? (thickness / scale).toFixed(3) : String(thickness);
   polygon.setAttribute('stroke-width', strokeW);
+  // Live counter-scale: follows the zoom container's --fbe-inv-zoom in the same frame as the zoom
+  // transform, so the outline never visibly thickens/thins while zooming.
+  if (zoomScale) polygon.style.strokeWidth = `calc(${thickness}px * var(--fbe-inv-zoom, ${(1 / zoomScale).toFixed(4)}))`;
+  else polygon.style.removeProperty('stroke-width');
+  polygon.style.removeProperty('stroke-dasharray');
+};
+
+/**
+ * Inverse zoom CSS variable. Set on the zoom container in the same frame as its scale transform;
+ * every selection stroke / handle multiplies by it so they keep a constant on-screen size while
+ * zooming, without waiting for a React redraw. Registered so it can transition with the container.
+ */
+if (typeof window !== 'undefined' && window.CSS && typeof CSS.registerProperty === 'function' && !window.__fbeInvZoomRegistered) {
+  window.__fbeInvZoomRegistered = true;
+  try {
+    CSS.registerProperty({ name: '--fbe-inv-zoom', syntax: '<number>', inherits: true, initialValue: '1' });
+  } catch { /* already registered */ }
+}
+
+export const setOverlayInvZoom = (el, scale) => {
+  if (!el || !scale || !Number.isFinite(scale) || scale <= 0) return;
+  el.style.setProperty('--fbe-inv-zoom', String(1 / scale));
+};
+
+/** Constant on-screen stroke width (and optional dash) for an overlay SVG node at any zoom. */
+export const setZoomStroke = (node, px, zoomScale, dash = null) => {
+  if (!node) return;
+  const z = zoomScale && Number.isFinite(zoomScale) && zoomScale > 0 ? zoomScale : 1;
+  const inv = `var(--fbe-inv-zoom, ${(1 / z).toFixed(4)})`;
+  node.setAttribute('stroke-width', String(px / z));
+  node.style.strokeWidth = `calc(${px}px * ${inv})`;
+  if (dash) {
+    node.setAttribute('stroke-dasharray', `${dash / z},${dash / z}`);
+    node.style.strokeDasharray = `calc(${dash}px * ${inv})`;
+  } else {
+    node.style.removeProperty('stroke-dasharray');
+  }
 };
 
 export const isElementHidden = (target) => {

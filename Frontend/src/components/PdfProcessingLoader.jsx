@@ -568,30 +568,13 @@ const PdfProcessingLoader = ({
                                         )}
                                     </div>
 
-                                    {/* Step Title with Extract Count beside Point 2 (Locked minimum height to eliminate layout jumping) */}
-                                    <div className="mt-[0.5vw] min-h-[1.7vw] flex items-center justify-center gap-[0.35vw] whitespace-nowrap">
+                                    {/* Step Title (Locked minimum height to eliminate layout jumping) */}
+                                    <div className="mt-[0.5vw] min-h-[1.7vw] flex items-center justify-center whitespace-nowrap">
                                         <span className={`text-[0.85vw] font-bold tracking-tight transition-colors duration-300 ${
                                             isActive || isCompleted ? 'text-[#0F172A]' : 'text-[#64748B]'
                                         }`}>
                                             {step.label}
                                         </span>
-                                        {step.id === 2 && totalPagesCount > 0 && (
-                                            <motion.span
-                                                layout
-                                                className={`inline-flex items-center gap-[0.25vw] px-[0.4vw] py-[0.12vw] rounded-full text-[0.65vw] font-extrabold tracking-tight shadow-2xs transition-all duration-300 whitespace-nowrap ${
-                                                    isActive
-                                                        ? 'bg-indigo-50 text-indigo-600 border border-indigo-200/90'
-                                                        : isCompleted
-                                                        ? 'bg-slate-100 text-slate-600 border border-slate-200/80'
-                                                        : 'bg-gray-100 text-gray-400 border border-gray-200'
-                                                }`}
-                                            >
-                                                {isActive && (
-                                                    <span className="w-[0.35vw] h-[0.35vw] rounded-full bg-[#4F46E5] animate-pulse flex-shrink-0" />
-                                                )}
-                                                <span>{displayedPagesCount}/{totalPagesCount}</span>
-                                            </motion.span>
-                                        )}
                                     </div>
 
                                     {/* Step Sublabel (Locked minimum height) */}

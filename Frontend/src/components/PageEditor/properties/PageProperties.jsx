@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import ColorPicker, { parseGradient, generateGradientString } from '../../Color';
-import { handleScrubHelper } from './FillStrokeProperties';
+import { ScrubPercentInput } from './controls/propertiesShared';
 
 export const getDocumentInfo = (w, h) => {
   const roundedW = Math.round(w || 210);
@@ -165,23 +165,14 @@ const ColorPropertyRow = ({
               type="text"
               value={hexValue}
               onChange={onHexChange}
-              className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent w-[5.5vw] uppercase"
+              className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent w-[5.5vw] uppercase"
               maxLength={7}
             />
           )}
-          <div
-            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-            onPointerDown={(e) => {
-              handleScrubHelper(e, opacityPct, (val) => {
-                const num = parseInt(val, 10);
-                const clamped = Math.min(Math.max(num, 0), 100);
-                onOpacityChange(clamped / 100);
-              });
-            }}
-            title="Drag horizontally to adjust opacity"
-          >
-            <span className="text-[0.8vw] font-medium text-gray-700">{opacityPct}%</span>
-          </div>
+          <ScrubPercentInput
+            value={opacityPct}
+            onChange={(clamped) => onOpacityChange(clamped / 100)}
+          />
         </div>
       </div>
 

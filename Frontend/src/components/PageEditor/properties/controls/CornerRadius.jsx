@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Link2, Link2Off } from 'lucide-react';
-import { handleScrubHelper } from '../FillStrokeProperties';
+import { Link2, Link2Off } from 'lucide-react';
+import { handleScrubHelper } from '../../utils/scrubValue';
 
 const CornerRadius = ({
   radius,
@@ -51,11 +51,6 @@ const CornerRadius = ({
     }
   };
 
-  const handleStepCorner = (corner, delta) => {
-    const currentVal = parseInt(radius?.[corner] || 0, 10);
-    handleCornerValueChange(corner, currentVal + delta);
-  };
-
   const handleToggle = () => {
     const nextLinked = !effectiveLinked;
     setInternalLinked(nextLinked);
@@ -83,10 +78,34 @@ const CornerRadius = ({
   };
 
   const corners = [
-    { key: 'tl', label: 'Top-Left', roundedClass: 'rounded-tl-[0.9vw] rounded-tr-none rounded-bl-none rounded-br-none' },
-    { key: 'tr', label: 'Top-Right', roundedClass: 'rounded-tr-[0.9vw] rounded-tl-none rounded-bl-none rounded-br-none' },
-    { key: 'bl', label: 'Bottom-Left', roundedClass: 'rounded-bl-[0.9vw] rounded-tl-none rounded-tr-none rounded-br-none' },
-    { key: 'br', label: 'Bottom-Right', roundedClass: 'rounded-br-[0.9vw] rounded-tl-none rounded-tr-none rounded-bl-none' },
+    {
+      key: 'tl',
+      label: 'Top-Left',
+      roundedClass: 'rounded-tl-[0.9vw] rounded-tr-none rounded-bl-none rounded-br-none',
+      iconPositionClass: 'top-[0.52vw] left-[0.58vw]',
+      iconPath: 'M 10.5 2 H 6 A 4 4 0 0 0 2 6 V 10.5'
+    },
+    {
+      key: 'tr',
+      label: 'Top-Right',
+      roundedClass: 'rounded-tr-[0.9vw] rounded-tl-none rounded-bl-none rounded-br-none',
+      iconPositionClass: 'top-[0.52vw] right-[0.58vw]',
+      iconPath: 'M 1.5 2 H 6 A 4 4 0 0 1 10 6 V 10.5'
+    },
+    {
+      key: 'bl',
+      label: 'Bottom-Left',
+      roundedClass: 'rounded-bl-[0.9vw] rounded-tl-none rounded-tr-none rounded-br-none',
+      iconPositionClass: 'bottom-[0.52vw] left-[0.58vw]',
+      iconPath: 'M 2 1.5 V 6 A 4 4 0 0 0 6 10 H 10.5'
+    },
+    {
+      key: 'br',
+      label: 'Bottom-Right',
+      roundedClass: 'rounded-br-[0.9vw] rounded-tl-none rounded-tr-none rounded-bl-none',
+      iconPositionClass: 'bottom-[0.52vw] right-[0.58vw]',
+      iconPath: 'M 10 1.5 V 6 A 4 4 0 0 1 6 10 H 1.5'
+    },
   ];
 
   return (
@@ -107,49 +126,34 @@ const CornerRadius = ({
 
       <div className="relative flex items-center justify-center my-[0.4vw]">
         <div className="grid grid-cols-2 gap-x-[2.5vw] gap-y-[1.2vw] relative">
-          {corners.map(({ key, roundedClass }) => (
+          {corners.map(({ key, label, roundedClass, iconPositionClass, iconPath }) => (
             <div
               key={key}
-              onPointerDown={(e) => {
-                if (e.target.tagName === 'INPUT' || e.target.closest('button')) return;
-                handleScrubHelper(e, radius?.[key] ?? 0, (newVal) => handleCornerValueChange(key, newVal));
-              }}
-              className={`w-[5.2vw] h-[2.3vw] bg-white border border-gray-300 ${roundedClass} flex items-center justify-between px-[0.4vw] shadow-2xs hover:border-gray-400 transition-colors cursor-ew-resize select-none relative`}
+              className={`w-[5.2vw] h-[2.3vw] bg-white border border-gray-300 ${roundedClass} flex items-center justify-center shadow-2xs hover:border-gray-400 transition-colors select-none relative`}
             >
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
+              <span
+                onPointerDown={(e) => {
                   e.stopPropagation();
-                  handleStepCorner(key, -1);
+                  handleScrubHelper(e, radius?.[key] ?? 0, (newVal) => handleCornerValueChange(key, newVal));
                 }}
-                className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer h-full flex items-center justify-center px-[0.2vw] z-10"
-                title="Decrease"
+                title={`Drag horizontally to adjust ${label} radius`}
+                className={`absolute ${iconPositionClass} p-[0.08vw] text-gray-500 hover:text-gray-800 transition-colors cursor-ew-resize flex items-center justify-center z-20`}
               >
-                <ChevronLeft size="0.8vw" />
-              </button>
+                <svg className="w-[0.72vw] h-[0.72vw]" viewBox="0 0 12 12" fill="none">
+                  <path d={iconPath} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
               <input
                 type="number"
                 min="0"
                 max="100"
                 value={radius?.[key] ?? 0}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => handleCornerValueChange(key, e.target.value)}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full text-center text-[0.8vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text z-10"
+                className="w-full px-[1.35vw] text-center text-[0.8vw] font-medium text-gray-700 outline-none bg-transparent no-spin cursor-text z-10"
               />
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStepCorner(key, 1);
-                }}
-                className="text-gray-300 hover:text-gray-600 transition-colors cursor-pointer h-full flex items-center justify-center px-[0.2vw] z-10"
-                title="Increase"
-              >
-                <ChevronRight size="0.8vw" />
-              </button>
             </div>
           ))}
 

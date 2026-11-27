@@ -570,6 +570,9 @@ export const useInteractEngine = ({
                 selectedLayerIdRef.current = elementToDrag.id;
               }
               multiSelectedIdsRef.current = nextSet;
+              if (typeof window !== 'undefined') {
+                window.__interactMultiHandledAt = Date.now();
+              }
               const idToSelect = selectedLayerIdRef.current;
               queueMicrotask(() => {
                 if (setSelectedLayerId) setSelectedLayerId(idToSelect);
@@ -1225,8 +1228,8 @@ export const useInteractEngine = ({
                   tagName: 'multi',
                   getAttribute: () => null,
                   hasAttribute: () => false,
-                  setAttribute: () => {},
-                  removeAttribute: () => {},
+                  setAttribute: () => { },
+                  removeAttribute: () => { },
                   querySelector: () => null,
                   querySelectorAll: () => [],
                   closest: (sel) => (pageContainer && pageContainer.matches?.(sel)) ? pageContainer : null,
@@ -1658,41 +1661,41 @@ export const useInteractEngine = ({
             const isCorner = ['nw', 'ne', 'se', 'sw'].includes(dir);
 
             const isButton = el.getAttribute?.('data-is-element-button') === 'true' ||
-                             el.getAttribute?.('data-type') === 'button' ||
-                             (el.id && el.id.startsWith('button-')) ||
-                             !!el.querySelector?.('[data-is-element-button="true"]');
+              el.getAttribute?.('data-type') === 'button' ||
+              (el.id && el.id.startsWith('button-')) ||
+              !!el.querySelector?.('[data-is-element-button="true"]');
 
             const isHotspot = el.getAttribute('data-is-hotspot') === 'true';
             const isInteractiveButton = isHotspot && state.childrenData && state.childrenData.some(c => c.child.tagName.toLowerCase() === 'rect') && state.childrenData.some(c => c.child.tagName.toLowerCase() === 'text' || c.child.getAttribute('data-type') === 'text');
             const isHotspotPreset = isHotspot && !isInteractiveButton;
 
             const isSlideshow = el.getAttribute?.('data-type') === 'slideshow' ||
-                             el.getAttribute?.('data-is-slideshow') === 'true' ||
-                             (el.id && el.id.startsWith('slideshow-'));
+              el.getAttribute?.('data-is-slideshow') === 'true' ||
+              (el.id && el.id.startsWith('slideshow-'));
 
             const isQRCode = el.getAttribute?.('data-type') === 'qrcode' ||
-                             (el.id && el.id.startsWith('qrcode-'));
+              (el.id && el.id.startsWith('qrcode-'));
 
             const isMap = el.getAttribute?.('data-type') === 'map' ||
-                          (el.id && el.id.startsWith('map-'));
+              (el.id && el.id.startsWith('map-'));
 
             const isAudio = el.getAttribute?.('data-type') === 'audio-frame' ||
-                            (el.id && el.id.startsWith('audio-'));
+              (el.id && el.id.startsWith('audio-'));
 
             const isEmbed = el.getAttribute?.('data-type') === 'embed-frame' ||
-                            (el.id && el.id.startsWith('embed-'));
+              (el.id && el.id.startsWith('embed-'));
 
             const isTable = el.getAttribute?.('data-type') === 'table-frame' ||
-                            el.getAttribute?.('data-type') === 'table' ||
-                            (el.id && el.id.startsWith('table-')) ||
-                            Boolean(el.querySelector?.('table'));
+              el.getAttribute?.('data-type') === 'table' ||
+              (el.id && el.id.startsWith('table-')) ||
+              Boolean(el.querySelector?.('table'));
 
             // Image frames: slot shapes + their <pattern> images must scale as ONE unit, proportionally,
             // so uploaded images stay in sync with the frame and never stretch.
             const isImageFrameEl = el.getAttribute?.('data-type') === 'image-frame' ||
-                                   el.getAttribute?.('data-is-image-frame') === 'true' ||
-                                   el.hasAttribute?.('data-frame-type') ||
-                                   (el.id && el.id.startsWith('image-frame-'));
+              el.getAttribute?.('data-is-image-frame') === 'true' ||
+              el.hasAttribute?.('data-frame-type') ||
+              (el.id && el.id.startsWith('image-frame-'));
 
             if (isButton || isSlideshow || isQRCode || isMap || isAudio || isEmbed || isImageFrameEl) {
               if (isCorner) {
@@ -1851,6 +1854,9 @@ export const useInteractEngine = ({
                           div.classList.remove('flipbook-text-scrollbar');
                           div.style.setProperty('overflow', 'visible', 'important');
                         }
+                        window.dispatchEvent(new CustomEvent('text-sizing-mode-changed', {
+                          detail: { elementId: el.id, mode: 'auto-height' }
+                        }));
                       } else if (['nw', 'ne', 'sw', 'se'].includes(dir)) {
                         el.setAttribute('data-sizing-mode', 'fixed');
                         el.setAttribute('data-auto-wrap', 'true');
@@ -1872,12 +1878,18 @@ export const useInteractEngine = ({
                   div.style.setProperty('min-height', '0px', 'important');
 
                   if (!isScrollable) {
-                    if (dir === 'e' || dir === 'w') {
+                    if ((dir === 'e' || dir === 'w') && el.getAttribute('data-sizing-mode') !== 'fixed') {
                       // Resize width -> Auto height (Can shrink).
                       // Apply the new width FIRST so wrapping is measured at the size being dragged to;
                       // otherwise the height lags one step and the centered text is clipped top & bottom.
                       el.setAttribute('width', adjustedWidth);
                       adjustedHeight = Math.max(10, div.scrollHeight + 4);
+                    } else if (dir === 'e' || dir === 'w') {
+                      // Fixed mode -> keep box height fixed; allow text to overflow outside the box
+                      el.setAttribute('width', adjustedWidth);
+                      el.style.setProperty('overflow', 'visible', 'important');
+                      div.style.setProperty('overflow', 'visible', 'important');
+                      adjustedHeight = finalHeight;
                     } else if ((dir === 'n' || dir === 's') && el.getAttribute('data-sizing-mode') !== 'fixed') {
                       // Resize height -> adjust width to match new height, keeping text inside
                       let minW = 10;
@@ -1948,8 +1960,8 @@ export const useInteractEngine = ({
                   if (hasRot) {
                     const anchorPt = state.localAnchor;
                     const newM = new DOMMatrix([matrix.a, matrix.b, matrix.c, matrix.d,
-                      worldAnchor.x - (matrix.a * anchorPt.x + matrix.c * anchorPt.y),
-                      worldAnchor.y - (matrix.b * anchorPt.x + matrix.d * anchorPt.y)
+                    worldAnchor.x - (matrix.a * anchorPt.x + matrix.c * anchorPt.y),
+                    worldAnchor.y - (matrix.b * anchorPt.x + matrix.d * anchorPt.y)
                     ]);
                     el.setAttribute('transform', matrixToTransform(newM));
                   }
@@ -1993,8 +2005,8 @@ export const useInteractEngine = ({
                   const hasRotation = Math.abs(matrix.b) > 0.001 || Math.abs(matrix.c) > 0.001;
                   if (!hasRotation) return; // No rotation — attribute changes alone are correct
                   const newM = new DOMMatrix([matrix.a, matrix.b, matrix.c, matrix.d,
-                    worldAnchor.x - (matrix.a * localAnchorPt.x + matrix.c * localAnchorPt.y),
-                    worldAnchor.y - (matrix.b * localAnchorPt.x + matrix.d * localAnchorPt.y)
+                  worldAnchor.x - (matrix.a * localAnchorPt.x + matrix.c * localAnchorPt.y),
+                  worldAnchor.y - (matrix.b * localAnchorPt.x + matrix.d * localAnchorPt.y)
                   ]);
                   el.setAttribute('transform', matrixToTransform(newM));
                 };
@@ -2111,35 +2123,35 @@ export const useInteractEngine = ({
                   // the group's outer translate+scale stays the same → no visible resize effect.
                   // ── TYPOGRAPHY & DECORATOR: scale outer transform to scale full content ──
                   const isTypography = el.getAttribute?.('data-is-element-typography') === 'true' ||
-                                       el.getAttribute?.('data-typography-type') === 'kinetic' ||
-                                       el.getAttribute?.('data-typography-type') === 'motion-graphic' ||
-                                       (el.id && el.id.startsWith('typography-')) ||
-                                       !!el.querySelector?.('.kinetic-container, .motion-click-boundary');
+                    el.getAttribute?.('data-typography-type') === 'kinetic' ||
+                    el.getAttribute?.('data-typography-type') === 'motion-graphic' ||
+                    (el.id && el.id.startsWith('typography-')) ||
+                    !!el.querySelector?.('.kinetic-container, .motion-click-boundary');
 
                   const isDecorator = el.getAttribute?.('data-type') === 'decorator' ||
-                                      (el.id && el.id.startsWith('decorator-')) ||
-                                      !!el.querySelector?.('.animated-decorator-container');
+                    (el.id && el.id.startsWith('decorator-')) ||
+                    !!el.querySelector?.('.animated-decorator-container');
 
                   const isButton = el.getAttribute?.('data-is-element-button') === 'true' ||
-                                   el.getAttribute?.('data-type') === 'button' ||
-                                   (el.id && el.id.startsWith('button-')) ||
-                                   !!el.querySelector?.('[data-is-element-button="true"]');
+                    el.getAttribute?.('data-type') === 'button' ||
+                    (el.id && el.id.startsWith('button-')) ||
+                    !!el.querySelector?.('[data-is-element-button="true"]');
 
                   const isSlideshow = el.getAttribute?.('data-type') === 'slideshow' ||
-                                   el.getAttribute?.('data-is-slideshow') === 'true' ||
-                                   (el.id && el.id.startsWith('slideshow-'));
+                    el.getAttribute?.('data-is-slideshow') === 'true' ||
+                    (el.id && el.id.startsWith('slideshow-'));
 
                   const isQRCode = el.getAttribute?.('data-type') === 'qrcode' ||
-                                   (el.id && el.id.startsWith('qrcode-'));
+                    (el.id && el.id.startsWith('qrcode-'));
 
                   const isMap = el.getAttribute?.('data-type') === 'map' ||
-                                (el.id && el.id.startsWith('map-'));
+                    (el.id && el.id.startsWith('map-'));
 
                   const isAudio = el.getAttribute?.('data-type') === 'audio-frame' ||
-                                  (el.id && el.id.startsWith('audio-'));
+                    (el.id && el.id.startsWith('audio-'));
 
                   const isEmbed = el.getAttribute?.('data-type') === 'embed-frame' ||
-                                  (el.id && el.id.startsWith('embed-'));
+                    (el.id && el.id.startsWith('embed-'));
 
                   if (isTypography || isDecorator || isButton || isSlideshow || isQRCode || isMap || isAudio || isEmbed || isImageFrameEl) {
                     try {
@@ -2167,8 +2179,8 @@ export const useInteractEngine = ({
                       const ptCorner = new DOMPoint(finalX + finalWidth, finalY + finalHeight).matrixTransform(matrix);
                       const newTx = Math.min(ptOrigin.x, ptCorner.x);
                       const newTy = Math.min(ptOrigin.y, ptCorner.y);
-                      const newW  = Math.abs(ptCorner.x - ptOrigin.x);
-                      const newH  = Math.abs(ptCorner.y - ptOrigin.y);
+                      const newW = Math.abs(ptCorner.x - ptOrigin.x);
+                      const newH = Math.abs(ptCorner.y - ptOrigin.y);
                       // Derive scale from inner content size (48×48 canonical size)
                       const innerSize = (state.bbox && state.bbox.width > 0) ? state.bbox.width : 48;
                       const newSx = newW / innerSize;

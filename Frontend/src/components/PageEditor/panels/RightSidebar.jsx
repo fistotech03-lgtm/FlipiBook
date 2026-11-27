@@ -262,6 +262,58 @@ const RightSidebar = ({
 
     const tag = (selectedElementProps.tagName || el.tagName || '').toLowerCase();
 
+    // Text foreignObject width adjustment: update box width (don't stretch font) and switch auto-width -> auto-height
+    if (
+      tag === 'foreignobject' &&
+      targetWidth !== null &&
+      !isNaN(targetWidth) &&
+      targetWidth > 0 &&
+      targetHeight === null &&
+      (el.getAttribute('data-type') === 'text' || el.firstElementChild?.tagName?.toLowerCase() === 'div')
+    ) {
+      const div = el.firstElementChild;
+      const unscaledW = Math.max(10, targetWidth / scaleX);
+      const currentMode = el.getAttribute('data-sizing-mode') || 'auto-width';
+      const nextMode = currentMode === 'auto-width' ? 'auto-height' : currentMode;
+
+      el.setAttribute('width', unscaledW.toString());
+      const attrsToUpdate = { width: unscaledW.toString() };
+
+      if (div) {
+        if (currentMode === 'auto-width') {
+          el.setAttribute('data-sizing-mode', 'auto-height');
+          el.setAttribute('data-auto-wrap', 'true');
+          div.style.setProperty('white-space', 'pre-wrap', 'important');
+          div.style.setProperty('overflow-wrap', 'break-word', 'important');
+          div.style.setProperty('word-break', 'break-word', 'important');
+          div.style.setProperty('width', '100%', 'important');
+          attrsToUpdate['data-sizing-mode'] = 'auto-height';
+          attrsToUpdate['data-auto-wrap'] = 'true';
+        }
+
+        if (nextMode === 'auto-height') {
+          const oldH = div.style.height;
+          const oldMinH = div.style.minHeight;
+          div.style.setProperty('height', 'auto', 'important');
+          div.style.setProperty('min-height', '0px', 'important');
+          const newH = Math.max(10, div.scrollHeight + 4);
+          div.style.setProperty('height', oldH || '100%', 'important');
+          div.style.setProperty('min-height', oldMinH || '100%', 'important');
+          el.setAttribute('height', newH.toString());
+          attrsToUpdate.height = newH.toString();
+        }
+      }
+
+      updateElementAttribute(activePageIndex, selectedLayerId, attrsToUpdate);
+      if (currentMode === 'auto-width') {
+        window.dispatchEvent(new CustomEvent('text-sizing-mode-changed', {
+          detail: { elementId: el.id, mode: 'auto-height' }
+        }));
+      }
+      window.dispatchEvent(new CustomEvent('force-update-selection-box', { detail: { elementId: el.id } }));
+      return;
+    }
+
     if (tag === 'line') {
       const x1 = parseFloat(el.getAttribute('x1')) || 0;
       const y1 = parseFloat(el.getAttribute('y1')) || 0;

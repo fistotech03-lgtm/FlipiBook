@@ -866,7 +866,7 @@ export default function ConverterWorkspace({
                 {isProcessing ? (
                   <>
                     <RefreshCw className="w-4 h-4 lg:w-[1vw] lg:h-[1vw] animate-spin text-white" />
-                    <span>Processing in browser...</span>
+                    <span>Processing...</span>
                   </>
                 ) : (
                   <>

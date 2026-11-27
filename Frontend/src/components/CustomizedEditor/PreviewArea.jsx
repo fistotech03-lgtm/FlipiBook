@@ -1674,28 +1674,97 @@ const PreviewArea = React.memo(({
 
                 if (container && img) {
                     const opacity = (ws?.opacity ?? 100) / 100;
+                    const wmType = ws?.type || 'Fit';
+                    const isFullPage = wmType === 'Fill' || wmType === 'Stretch';
+                    const objectFit = wmType === 'Fill' ? 'cover' : wmType === 'Stretch' ? 'fill' : 'contain';
 
-                    let positionStyle = "";
                     const offset = '4%';
                     const posX = ws?.positionX ?? 0;
                     const posY = ws?.positionY ?? 0;
 
-                    switch (ws?.position) {
-                        case 'Top Left': positionStyle = `top: ${offset}; left: ${offset}; bottom: auto; right: auto;`; break;
-                        case 'Top Right': positionStyle = `top: ${offset}; right: ${offset}; bottom: auto; left: auto;`; break;
-                        case 'Bottom Left': positionStyle = `bottom: ${offset}; left: ${offset}; top: auto; right: auto;`; break;
-                        case 'Center': positionStyle = `top: 50%; left: 50%; bottom: auto; right: auto;`; break;
-                        case 'Bottom Right':
-                        default: positionStyle = `bottom: ${offset}; right: ${offset}; top: auto; left: auto;`; break;
-                    }
-
-                    if (ws?.position === 'Center') {
-                        container.style.transform = `translate(calc(-50% + ${posX}%), calc(-50% + ${posY}%))`;
+                    if (isFullPage) {
+                        container.style.top = '0';
+                        container.style.left = '0';
+                        container.style.right = '0';
+                        container.style.bottom = '0';
+                        container.style.width = '100%';
+                        container.style.height = '100%';
+                        container.style.overflow = 'hidden';
+                        container.style.transform = 'none';
                     } else {
-                        container.style.transform = `translate(${posX}%, ${posY}%)`;
+                        container.style.top = 'auto';
+                        container.style.right = 'auto';
+                        container.style.bottom = 'auto';
+                        container.style.left = 'auto';
+                        container.style.width = '22%';
+                        container.style.height = 'auto';
+                        container.style.overflow = 'visible';
+
+                        let tx = '0%';
+                        let ty = '0%';
+                        let origin = 'center center';
+                        switch (ws?.position) {
+                            case 'Top Left':
+                                container.style.top = offset;
+                                container.style.left = offset;
+                                origin = 'top left';
+                                break;
+                            case 'Top Center':
+                                container.style.top = offset;
+                                container.style.left = '50%';
+                                tx = '-50%';
+                                origin = 'top center';
+                                break;
+                            case 'Top Right':
+                                container.style.top = offset;
+                                container.style.right = offset;
+                                origin = 'top right';
+                                break;
+                            case 'Middle Left':
+                                container.style.top = '50%';
+                                container.style.left = offset;
+                                ty = '-50%';
+                                origin = 'center left';
+                                break;
+                            case 'Center':
+                                container.style.top = '50%';
+                                container.style.left = '50%';
+                                tx = '-50%';
+                                ty = '-50%';
+                                origin = 'center center';
+                                break;
+                            case 'Middle Right':
+                                container.style.top = '50%';
+                                container.style.right = offset;
+                                ty = '-50%';
+                                origin = 'center right';
+                                break;
+                            case 'Bottom Left':
+                                container.style.bottom = offset;
+                                container.style.left = offset;
+                                origin = 'bottom left';
+                                break;
+                            case 'Bottom Center':
+                                container.style.bottom = offset;
+                                container.style.left = '50%';
+                                tx = '-50%';
+                                origin = 'bottom center';
+                                break;
+                            case 'Bottom Right':
+                            default:
+                                container.style.bottom = offset;
+                                container.style.right = offset;
+                                origin = 'bottom right';
+                                break;
+                        }
+                        container.style.transform = `translate(calc(${tx} + ${posX}%), calc(${ty} + ${posY}%))`;
+                        img.style.transformOrigin = origin;
                     }
 
-                    container.style.cssText += positionStyle;
+                    if (isFullPage) {
+                        img.style.transformOrigin = 'center center';
+                    }
+
                     container.style.opacity = opacity;
                     container.style.display = ws?.src ? 'block' : 'none';
 
@@ -1722,6 +1791,8 @@ const PreviewArea = React.memo(({
                     if (temperature > 0) filterStr += `sepia(${temperature / 2}%) `;
                     else if (temperature < 0) filterStr += `hue-rotate(180deg) sepia(${Math.abs(temperature) / 2}%) hue-rotate(-180deg) `;
 
+                    img.style.height = isFullPage ? '100%' : 'auto';
+                    img.style.objectFit = objectFit;
                     img.style.transform = `scale(${scale}) rotate(${rotate}deg)`;
                     img.style.filter = filterStr;
                 } else if (ws?.src && iframe.contentDocument?.body) {

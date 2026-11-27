@@ -3,15 +3,24 @@ import { Icon } from '@iconify/react';
 import {
   ShieldCheck,
   Zap,
-  Layers,
-  ArrowRight,
+  Globe,
+  Gem,
   AlertCircle,
-  FolderUp
+  Leaf,
+  Scaling,
+  UploadCloud,
+  SlidersHorizontal,
+  Download,
+  Info
 } from 'lucide-react';
 import Footer from './Footer';
 import ConverterWorkspace from './Converter/ConverterWorkspace';
 import { preloadBackgroundRemovalModel } from './Converter/backgroundRemovalService';
 import { extractFilesFromDataTransfer, packageFilesToZip, findPrimary3DModel } from './Converter/archiveModelHandler';
+import convertImageImg from '../assets/Features/Converter/convert-image.webp';
+import convertVideoImg from '../assets/Features/Converter/convert-video.webp';
+import convert3dImg from '../assets/Features/Converter/convert-3d.webp';
+import howToConvertImg from '../assets/Features/Converter/how-to-convert.webp';
 
 // Maximum recommended file sizes to ensure smooth browser performance without memory crashes
 const MAX_FILE_SIZES = {
@@ -24,59 +33,58 @@ const MAX_FILE_SIZES = {
 const MEDIA_CONVERTERS = [
   {
     id: 'image',
-    title: 'Image',
-    tagline: 'Convert or compress images.',
-    icon: 'solar:gallery-bold-duotone',
-    badgeIcon: 'heroicons:photo-solid',
-    badgeColor: 'text-gray-700 bg-gray-100 border-gray-200',
+    title: 'Convert Image',
+    tagline: 'Convert or compress images to web-optimized formats.',
+    buttonLabel: 'Upload Image File',
     formats: ['WEBP', 'PNG', 'JPG'],
-    supportedInputs: 'PNG, JPG, WEBP',
+    formatPills: ['PNG', 'JPG', 'WEBP'],
     accept: 'image/png,image/jpeg,image/webp',
-    gradient: 'from-gray-700/10 via-gray-500/5 to-transparent',
-    accentColor: '#1e232d',
-    accentBg: 'bg-[#1e232d]',
-    accentHover: 'hover:bg-[#ea543a]',
     defaultOutput: 'WEBP',
     compressionLevels: ['Original Quality (Format Only)', 'High Quality (85%)', 'Balanced (70%)', 'Low Quality (50%)'],
     maxSize: MAX_FILE_SIZES.image
   },
   {
     id: 'video',
-    title: 'Video',
-    tagline: 'Convert or compress videos.',
-    icon: 'solar:videocamera-record-bold-duotone',
-    badgeIcon: 'heroicons:video-camera-solid',
-    badgeColor: 'text-gray-700 bg-gray-100 border-gray-200',
+    title: 'Convert Video',
+    tagline: 'Convert or compress videos for smooth playback.',
+    buttonLabel: 'Upload Video File',
     formats: ['MP4', 'WEBM'],
-    supportedInputs: 'MP4, WEBM, MOV, AVI, MKV',
+    formatPills: ['MP4', 'MOV', 'WEBM', 'AVI', 'MKV'],
     accept: 'video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska',
-    gradient: 'from-gray-700/10 via-gray-500/5 to-transparent',
-    accentColor: '#1e232d',
-    accentBg: 'bg-[#1e232d]',
-    accentHover: 'hover:bg-[#ea543a]',
     defaultOutput: 'MP4',
     compressionLevels: ['Original Resolution & Quality (Format Only)', '1080p Web-Optimized', '720p HD Compact', '480p Mobile Saver'],
     maxSize: MAX_FILE_SIZES.video
   },
   {
     id: 'threed',
-    title: '3D Model',
-    tagline: 'Convert or compress 3D models.',
-    icon: 'solar:box-bold-duotone',
-    badgeIcon: 'heroicons:cube-solid',
-    badgeColor: 'text-gray-700 bg-gray-100 border-gray-200',
+    title: 'Convert 3D Model',
+    tagline: 'Convert or compress 3D models for interactive viewing.',
+    buttonLabel: 'Upload 3D Model File / Zip',
     formats: ['GLB', 'OBJ', 'FBX', 'USDZ'],
-    supportedInputs: 'GLB, GLTF, FBX, OBJ, STL, ZIP',
+    formatPills: ['GLB', 'GLTF', 'FBX', 'OBJ', 'STL', 'ZIP'],
     accept: '.glb,.gltf,.obj,.fbx,.usdz,.stl,.zip,.rar,.7z,.tar,.gz',
-    gradient: 'from-gray-700/10 via-gray-500/5 to-transparent',
-    accentColor: '#1e232d',
-    accentBg: 'bg-[#1e232d]',
-    accentHover: 'hover:bg-[#ea543a]',
     defaultOutput: 'GLB',
     compressionLevels: ['Original (Lossless)', 'Lossless (Optimized)', 'Draco + Meshopt (High)', 'Texture Only (70%)'],
     maxSize: MAX_FILE_SIZES.threed
   }
 ];
+
+const CARD_ILLUSTRATIONS = {
+  image: { src: convertImageImg, alt: 'Convert Image' },
+  video: { src: convertVideoImg, alt: 'Convert Video' },
+  threed: { src: convert3dImg, alt: 'Convert 3D Model' }
+};
+
+function MediaCardIllustration({ id }) {
+  const asset = CARD_ILLUSTRATIONS[id] || CARD_ILLUSTRATIONS.threed;
+  return (
+    <img
+      src={asset.src}
+      alt={asset.alt}
+      className="w-24 h-20 object-contain mx-auto select-none pointer-events-none"
+    />
+  );
+}
 
 export default function Converter() {
   const [activeWorkspaceMediaId, setActiveWorkspaceMediaId] = useState(null);
@@ -104,6 +112,12 @@ export default function Converter() {
     return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
   };
 
+const ALLOWED_EXTENSIONS = {
+  image: ['png', 'jpg', 'jpeg', 'webp'],
+  video: ['mp4', 'mov', 'webm', 'avi', 'mkv'],
+  threed: ['glb', 'gltf', 'fbx', 'obj', 'stl', 'usdz', 'zip', 'rar', '7z', 'tar', 'gz']
+};
+
   // Called when user selects or drops a single file, archive or folder
   const handleSelectFile = async (mediaId, fileList) => {
     const rawFiles = Array.from(fileList || []);
@@ -120,6 +134,17 @@ export default function Converter() {
       const primary = findPrimary3DModel(fileEntries);
       const pkgName = primary ? `${primary.file.name.replace(/\.[^/.]+$/, '')}_bundle.zip` : 'model_package.zip';
       file = await packageFilesToZip(fileEntries, pkgName);
+    }
+
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const allowedExts = ALLOWED_EXTENSIONS[mediaId];
+    if (allowedExts && !allowedExts.includes(ext)) {
+      const mediaLabel = mediaId === 'threed' ? '3D Model' : mediaId.charAt(0).toUpperCase() + mediaId.slice(1);
+      setSizeWarning(
+        `"${file.name}" is not a supported ${mediaLabel} file. Allowed formats: ${allowedExts.join(', ').toUpperCase()}.`
+      );
+      setTimeout(() => setSizeWarning(null), 5000);
+      return;
     }
 
     const limit = MAX_FILE_SIZES[mediaId];
@@ -225,183 +250,287 @@ export default function Converter() {
       />
 
       {/* Main Header / Title Section */}
-      <section className="w-full pt-8 sm:pt-12 lg:pt-[3vw] pb-6 sm:pb-8 lg:pb-[2vw] px-4 sm:px-6 lg:px-[2vw] text-center bg-gradient-to-b from-white via-slate-50 to-[#F8FAFC]">
-        <div className="max-w-4xl lg:max-w-[60vw] mx-auto flex flex-col items-center">
-          
+      <section className="w-full pt-10 sm:pt-14 pb-8 px-4 sm:px-6 text-center bg-[#F8FAFC]">
+        <div className="max-w-4xl mx-auto flex flex-col items-center">
           {/* Main Headline */}
-          <h1 className="text-2xl sm:text-4xl lg:text-[2.6vw] font-semibold text-[#35363A] tracking-tight leading-tight mb-2 sm:mb-3 lg:mb-[0.8vw]">
+          <h1 className="text-3xl sm:text-5xl font-bold text-[#2D3139] tracking-tight leading-tight mb-4">
             Convert &amp; Compress <span className="text-[#EC5137]">Your Media</span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-xs sm:text-sm lg:text-[0.9vw] text-gray-500 max-w-xl lg:max-w-[40vw] leading-relaxed">
-            Convert or compress your 3D models, videos, and images with live interactive previews.
+          <p className="text-sm sm:text-base text-gray-600 max-w-xl leading-relaxed mb-7">
+            Turn your images, videos, and 3D models into optimized, web-ready files for your interactive flipbooks.
           </p>
 
+          {/* 4 Feature Pills */}
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+            {[
+              {
+                label: 'Fast & Reliable',
+                svg: <Icon icon="andrsrxn:lightning-fast" className="w-4 h-4" />
+              },
+              {
+                label: 'High Quality Output',
+                svg: (
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 5h12l3 5-9 10L3 10l3-5z" />
+                    <path d="M3 10h18M9 5l-1 5 4 10 4-10-1-5" />
+                  </svg>
+                )
+              },
+              {
+                label: 'Optimized for Web',
+                svg: (
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="8.5" />
+                    <path d="M3.5 12h17M12 3.5a12 12 0 0 1 0 17M12 3.5a12 12 0 0 0 0 17" />
+                  </svg>
+                )
+              },
+              {
+                label: 'Secure & Private',
+                svg: (
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3.5l7 3v5.5c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6.5l7-3z" />
+                    <path d="M9.5 12l2 2 3.5-3.5" />
+                  </svg>
+                )
+              }
+            ].map(({ svg, label }) => (
+              <div key={label} className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-[#35363A]">
+                <span className="w-7 h-7 rounded-full bg-[#EC5137] text-white flex items-center justify-center shrink-0">
+                  {svg}
+                </span>
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+
           {sizeWarning && (
-            <div className="mt-4 lg:mt-[1vw] p-3 lg:p-[0.8vw] rounded-xl lg:rounded-[0.8vw] bg-amber-50 border border-amber-200 text-amber-800 text-xs lg:text-[0.8vw] font-semibold flex items-center gap-2 max-w-lg lg:max-w-[35vw] text-left shadow-xs">
-              <AlertCircle className="w-4 h-4 lg:w-[1.1vw] lg:h-[1.1vw] shrink-0 text-amber-600" />
-              <span>{sizeWarning}</span>
+            <div className="fixed top-20 right-5 z-[9999] p-3.5 pr-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm font-medium flex items-center gap-2.5 max-w-md text-left shadow-lg">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+              <span className="flex-1">{sizeWarning}</span>
+              <button
+                type="button"
+                onClick={() => setSizeWarning(null)}
+                className="text-amber-600 hover:text-amber-900 text-xs font-bold px-1 cursor-pointer"
+                aria-label="Close notification"
+              >
+                ✕
+              </button>
             </div>
           )}
         </div>
       </section>
 
       {/* 3 Main Converter Cards Section */}
-      <section className="w-full py-6 sm:py-8 lg:py-[1.8vw] px-4 sm:px-6 lg:px-[3vw]">
-        <div className="max-w-6xl lg:max-w-[78vw] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 lg:gap-[1.6vw] items-stretch">
+      <section className="w-full py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1440px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch">
           {MEDIA_CONVERTERS.map((media) => {
             const isDragging = dragOverMediaId === media.id;
 
             return (
               <div
                 key={media.id}
-                className="bg-white rounded-2xl lg:rounded-[1.2vw] border border-gray-200 hover:border-gray-300 transition-all duration-300 flex flex-col justify-between p-5 sm:p-6 lg:p-[1.5vw] shadow-xs hover:shadow-md relative overflow-hidden group"
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  setDragOverMediaId(media.id);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  setDragOverMediaId(null);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverMediaId(media.id);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOverMediaId(null);
+                  handleDropMedia(media.id, e.dataTransfer);
+                }}
+                className={`bg-white rounded-[24px] transition-all duration-300 flex flex-col px-7 pb-7 pt-5 sm:px-8 sm:pb-8 sm:pt-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.09)] relative overflow-hidden ${
+                  isDragging
+                    ? 'border-2 border-dashed border-[#EC5137] scale-[1.01]'
+                    : 'border border-gray-100/80'
+                }`}
               >
-                {/* Top Subtle Gradient Light */}
-                <div
-                  className={`absolute top-0 left-0 right-0 h-28 lg:h-[7vw] bg-gradient-to-b ${media.gradient} pointer-events-none transition-opacity`}
-                />
-
-                {/* Card Top Area */}
-                <div>
-                  
-                  {/* Drop / Select Canvas Box */}
-                  <div
-                    onDragEnter={(e) => {
-                      e.preventDefault();
-                      setDragOverMediaId(media.id);
-                    }}
-                    onDragLeave={(e) => {
-                      e.preventDefault();
-                      setDragOverMediaId(null);
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragOverMediaId(media.id);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setDragOverMediaId(null);
-                      handleDropMedia(media.id, e.dataTransfer);
-                    }}
-                    onClick={() => {
-                      fileInputRefs[media.id]?.current?.click();
-                    }}
-                    className={`w-full h-44 sm:h-48 lg:h-[13vw] rounded-2xl lg:rounded-[1vw] border-2 border-dashed flex flex-col items-center justify-center p-3 sm:p-4 lg:p-[1vw] transition-all duration-200 cursor-pointer relative overflow-hidden ${
-                      isDragging
-                        ? 'border-gray-900 bg-gray-100 scale-[1.02]'
-                        : 'border-gray-200 bg-gray-50/70 hover:bg-white hover:border-[#ea543a]'
-                    }`}
-                  >
-                    {/* Badge Icon */}
-                    <div className={`absolute top-2.5 sm:top-3 lg:top-[0.8vw] left-2.5 sm:left-3 lg:left-[0.8vw] p-1.5 lg:p-[0.4vw] rounded-lg lg:rounded-[0.5vw] border shadow-2xs ${media.badgeColor}`}>
-                      <Icon icon={media.badgeIcon} className="w-3.5 h-3.5 lg:w-[1vw] lg:h-[1vw]" />
-                    </div>
-
-                    {/* Max Size Indicator */}
-                    <div className="absolute top-2.5 sm:top-3 lg:top-[0.8vw] right-2.5 sm:right-3 lg:right-[0.8vw] text-[10px] lg:text-[0.65vw] font-medium text-gray-500 bg-white/90 px-2 lg:px-[0.5vw] py-0.5 lg:py-[0.15vw] rounded-md lg:rounded-[0.35vw] border border-gray-200">
-                      Max {media.maxSize.label}
-                    </div>
-
-                    {/* Empty State Prompt */}
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-[3.6vw] lg:h-[3.6vw] rounded-2xl lg:rounded-[0.9vw] bg-white border border-gray-200/80 shadow-xs flex items-center justify-center mb-2.5 lg:mb-[0.7vw] text-gray-800 group-hover:scale-110 group-hover:text-[#ea543a] group-hover:border-[#ea543a]/40 transition-all duration-300">
-                        <Icon icon={media.icon} className="w-7 h-7 sm:w-8 sm:h-8 lg:w-[2vw] lg:h-[2vw]" />
-                      </div>
-                      <p className="text-xs sm:text-sm lg:text-[0.85vw] font-medium text-gray-800 mb-0.5">
-                        {isDragging ? 'Drop file to upload' : `Drop ${media.title} here`}
-                      </p>
-                      <p className="text-[11px] sm:text-xs lg:text-[0.7vw] text-gray-400 font-normal">or click to browse</p>
-                      {media.supportedInputs && (
-                        <div className="mt-2 sm:mt-2.5 lg:mt-[0.6vw] px-2 sm:px-2.5 lg:px-[0.6vw] py-1 lg:py-[0.25vw] rounded-md lg:rounded-[0.4vw] bg-white border border-gray-300 shadow-2xs">
-                          <p className="text-[10px] sm:text-[11px] lg:text-[0.65vw] font-semibold text-gray-700 tracking-wide uppercase">
-                            {media.supportedInputs}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Title & Tagline */}
-                  <div className="text-center mt-4 sm:mt-5 lg:mt-[1.3vw] mb-0">
-                    <h2 className="text-base sm:text-lg lg:text-[1.1vw] font-semibold text-gray-900 tracking-tight">
-                      {media.title}
-                    </h2>
-                    <p className="text-xs lg:text-[0.75vw] text-gray-500 mt-1 lg:mt-[0.3vw] leading-relaxed px-1 font-normal">
-                      {media.tagline}
+                {isDragging && (
+                  <div className="absolute inset-0 z-20 bg-[#FFF5E6]/90 backdrop-blur-[2px] flex items-center justify-center pointer-events-none rounded-[22px]">
+                    <p className="text-2xl sm:text-3xl font-semibold text-[#EC5137] text-center leading-snug">
+                      Drop Your
+                      <br />
+                      File Here
                     </p>
                   </div>
-
+                )}
+                {/* Top-right MAX Size Badge */}
+                <div className="flex justify-end mb-2">
+                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[13px] font-medium text-[#525457]">
+                    <Info className="w-4 h-4 text-[#EC5137]" />
+                    <span>MAX : {media.maxSize.label}</span>
+                  </div>
                 </div>
 
-                {/* Bottom Trigger Action Button */}
-                <div className="mt-4 sm:mt-5 lg:mt-[1.3vw] pt-2 lg:pt-[0.6vw] flex flex-col gap-2 lg:gap-[0.5vw]">
+                {/* Card Center Content */}
+                <div className="flex flex-col items-center text-center pt-2">
+                  <div className="mb-5">
+                    <MediaCardIllustration id={media.id} />
+                  </div>
+
+                  <h2 className="text-xl sm:text-[22px] font-bold text-[#2D3139] tracking-tight">
+                    {media.title}
+                  </h2>
+                  <p className="text-xs sm:text-[13px] text-[#525457] mt-2 leading-relaxed max-w-[240px]">
+                    {media.tagline}
+                  </p>
+
+                  {/* Format Pills */}
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 mt-5">
+                    {media.formatPills.map((fmt) => (
+                      <span
+                        key={fmt}
+                        className="px-2.5 py-1 rounded-md bg-white border border-gray-100 shadow-[0px_2px_4px_rgba(0,0,0,0.25)] text-xs font-medium text-[#525457] tracking-wide"
+                      >
+                        {fmt}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bottom Action Buttons */}
+                <div className="mt-auto pt-6 flex flex-col gap-2.5">
                   {media.id === 'threed' && (
                     <button
                       type="button"
-                      onClick={() => {
-                        fileInputRefs.threedFolder?.current?.click();
-                      }}
-                      className="w-full py-2.5 lg:py-[0.6vw] px-3 lg:px-[0.8vw] rounded-xl lg:rounded-[0.7vw] text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 font-medium text-xs sm:text-sm lg:text-[0.8vw] border border-slate-200/80 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 lg:gap-[0.4vw] cursor-pointer"
+                      onClick={() => fileInputRefs.threedFolder?.current?.click()}
+                      className="w-full py-3 px-4 rounded-xl text-[#8A8C90] hover:text-[#2D3139] bg-[#F2F2F2] hover:bg-gray-200 font-medium text-sm transition-all active:scale-[0.98] cursor-pointer"
                     >
-                      <FolderUp className="w-3.5 h-3.5 lg:w-[0.9vw] lg:h-[0.9vw] text-slate-500" />
-                      <span>Upload 3D Model Folder</span>
+                      Upload 3D Model Folder
                     </button>
                   )}
 
                   <button
                     type="button"
-                    onClick={() => {
-                      fileInputRefs[media.id]?.current?.click();
-                    }}
-                    className="w-full py-2.5 sm:py-3 lg:py-[0.7vw] px-4 lg:px-[1vw] rounded-xl lg:rounded-[0.7vw] text-white font-medium text-xs sm:text-sm lg:text-[0.8vw] shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 lg:gap-[0.5vw] cursor-pointer bg-[#1e232d] hover:bg-[#ea543a]"
+                    onClick={() => fileInputRefs[media.id]?.current?.click()}
+                    className="w-full py-3 px-4 rounded-xl text-white font-medium text-sm shadow-sm transition-all active:scale-[0.98] cursor-pointer bg-[#555555] hover:bg-[#EC5137]"
                   >
-                    <span>Choose {media.title} File {media.id === 'threed' && ('/ Zip')}</span>
-                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-[1vw] lg:h-[1vw]" />
+                    {media.buttonLabel}
                   </button>
                 </div>
-
               </div>
             );
           })}
         </div>
       </section>
 
-      {/* Feature Highlights Section */}
-      <section className="w-full pb-10 sm:pb-14 lg:pb-[3vw] pt-3 sm:pt-4 lg:pt-[1vw] px-4 sm:px-6 lg:px-[3vw] mt-auto">
-        <div className="max-w-4xl lg:max-w-[65vw] mx-auto grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-7 lg:gap-[2vw] text-center">
-          
-          <div className="flex flex-col items-center group cursor-default">
-            <div className="mb-2 lg:mb-[0.6vw] text-[#ea543a] transition-transform duration-200 group-hover:scale-110">
-              <Zap className="w-5 h-5 lg:w-[1.4vw] lg:h-[1.4vw] stroke-[2]" />
-            </div>
-            <h4 className="font-medium text-xs sm:text-sm lg:text-[0.85vw] text-gray-900 mb-0.5 tracking-tight">Instant Processing</h4>
-            <p className="text-[11px] sm:text-xs lg:text-[0.75vw] text-gray-500 font-normal leading-relaxed">
-              Fast, high-fidelity in-browser conversion
-            </p>
+      {/* Dark Feature Highlights Banner */}
+      <section className="w-full py-8 sm:py-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1440px] mx-auto bg-[#292929] rounded-3xl px-6 sm:px-10 py-10 sm:py-12 text-white shadow-md">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0">
+            {[
+              {
+                icon: 'material-symbols:photo-size-select-small',
+                title: 'Smaller File Size',
+                desc: 'Reduce the size of your media files while maintaining the visual quality needed for your digital content.'
+              },
+              {
+                icon: 'evicons:fast-charging',
+                title: 'Faster Loading',
+                desc: 'Optimized media helps your flipbooks and digital content load faster and perform more smoothly.'
+              },
+              {
+                icon: 'clarity:world-line',
+                title: 'Web-Ready Media',
+                desc: 'Prepare your images, videos, and 3D models for seamless use across supported web experiences.'
+              },
+              {
+                icon: 'teenyicons:mongodb-outline',
+                title: 'Flexible Conversion',
+                desc: 'Choose from supported file formats and available optimization settings to suit your needs.'
+              }
+            ].map((item, idx) => (
+                <div
+                  key={item.title}
+                  className={`flex flex-col items-center text-center lg:px-6 ${
+                    idx < 3 ? 'lg:border-r lg:border-white/15' : ''
+                  }`}
+                >
+                  <Icon icon={item.icon} className="w-7 h-7 text-[#EC5137] mb-3.5" />
+                  <h3 className="text-sm sm:text-base font-semibold text-[#FFFFFF] mb-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs font-normal text-[#F3F3F3] leading-relaxed">
+                    {item.desc}
+                  </p>
+                </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How to Convert - 3 Simple Steps Section */}
+      <section className="w-full bg-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8 mt-4">
+        <div className="max-w-[1440px] mx-auto">
+          {/* Eyebrow */}
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 uppercase">
+              HOW TO CONVERT
+            </span>
+            <span className="w-12 h-px bg-gray-300" />
           </div>
 
-          <div className="flex flex-col items-center group cursor-default">
-            <div className="mb-2 lg:mb-[0.6vw] text-[#ea543a] transition-transform duration-200 group-hover:scale-110">
-              <ShieldCheck className="w-5 h-5 lg:w-[1.4vw] lg:h-[1.4vw] stroke-[2]" />
-            </div>
-            <h4 className="font-medium text-xs sm:text-sm lg:text-[0.85vw] text-gray-900 mb-0.5 tracking-tight">Lossless Quality</h4>
-            <p className="text-[11px] sm:text-xs lg:text-[0.75vw] text-gray-500 font-normal leading-relaxed">
-              Crisp texture resolution &amp; mesh fidelity
-            </p>
-          </div>
+          {/* Section Heading */}
+          <h2 className="text-2xl sm:text-4xl font-bold text-[#2D3139] tracking-tight mb-10 sm:mb-12">
+            Convert Your Files in <span className="text-[#EC5137]">3 Simple</span> Steps
+          </h2>
 
-          <div className="flex flex-col items-center group cursor-default">
-            <div className="mb-2 lg:mb-[0.6vw] text-[#ea543a] transition-transform duration-200 group-hover:scale-110">
-              <Layers className="w-5 h-5 lg:w-[1.4vw] lg:h-[1.4vw] stroke-[2]" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-stretch">
+            {/* Left Illustration */}
+            <div className="flex justify-center">
+              <img
+                src={howToConvertImg}
+                alt="Convert Your Files in 3 Simple Steps"
+                className="w-full max-w-sm object-contain select-none pointer-events-none"
+              />
             </div>
-            <h4 className="font-medium text-xs sm:text-sm lg:text-[0.85vw] text-gray-900 mb-0.5 tracking-tight">Web Optimized</h4>
-            <p className="text-[11px] sm:text-xs lg:text-[0.75vw] text-gray-500 font-normal leading-relaxed">
-              Ultra-compact assets ready for web &amp; mobile
-            </p>
-          </div>
 
+            {/* Right 3-Step Timeline */}
+            <div className="relative flex flex-col justify-between h-full py-4 gap-8 md:gap-0">
+              {/* Vertical connecting line */}
+              <div className="absolute left-6 top-6 bottom-6 w-px bg-gray-200 pointer-events-none" />
+
+              {[
+                {
+                  icon: 'ant-design:cloud-upload-outlined',
+                  title: 'Upload Your File',
+                  desc: 'Select an image, video, or 3D model from your device to get started.'
+                },
+                {
+                  icon: 'streamline-plump:convert-pdf-1',
+                  title: 'Customize & Convert',
+                  desc: 'Choose your output format and adjust the available conversion settings.'
+                },
+                {
+                  icon: 'akar-icons:download',
+                  title: 'Preview & Download',
+                  desc: "Review your converted file and download it when you're ready."
+                }
+              ].map((step) => (
+                  <div key={step.title} className="relative flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-[#FDF0ED] text-[#EC5137] flex items-center justify-center shrink-0 z-10 border border-[#FADBD4]">
+                      <Icon icon={step.icon} className="w-6 h-6" />
+                    </div>
+                    <div className="pt-1">
+                      <h3 className="text-base font-bold text-[#2D3139]">{step.title}</h3>
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1 leading-relaxed">
+                        {step.desc}
+                      </p>
+                    </div>
+                  </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 

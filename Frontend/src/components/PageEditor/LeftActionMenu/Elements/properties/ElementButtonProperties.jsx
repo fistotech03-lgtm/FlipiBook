@@ -14,9 +14,9 @@ import { IconsModal } from '../../Icons';
 import Effect from '../../../properties/controls/Effect';
 import CornerRadius from '../../../properties/controls/CornerRadius';
 import { ElementToggle, ElementDropdown, ElementSlider } from './ElementUIControls';
-import { handleScrubHelper } from '../../../properties/controls/propertiesShared';
+import { handleScrubHelper, ScrubPercentInput } from '../../../properties/controls/propertiesShared';
 import { BUTTON_TEMPLATES } from '../utils/buttonElementUtils';
-import { CUSTOM_FONT_FAMILIES } from '../../../../../utils/customFonts';
+import { FONT_FAMILIES } from '../../../../../config/fonts';
 
 const SectionHeader = ({ title }) => (
   <div className="flex items-center gap-[0.8vw]">
@@ -84,37 +84,20 @@ const ColorBoxRow = ({
                 onChange(finalVal);
               }
             }}
-            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
             maxLength={9}
           />
-          <div
-            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-            onPointerDown={(e) => {
-              handleScrubHelper(e, opacity, (val) => {
-                const num = parseInt(val, 10);
-                const clamped = Math.min(Math.max(isNaN(num) ? 0 : num, 0), 100);
-                onOpacityChange(clamped);
-              });
-            }}
-            title="Drag horizontally to adjust opacity"
-          >
-            <span className="text-[0.8vw] font-medium text-gray-700">
-              {opacity}%
-            </span>
-          </div>
+          <ScrubPercentInput
+            value={Math.round(parseFloat(opacity !== undefined ? opacity : 100))}
+            onChange={(clamped) => onOpacityChange(clamped)}
+          />
         </div>
       </div>
     </div>
   );
 };
 
-const fontFamilies = [
-  'Poppins', 'Arial', 'Bangers', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana',
-  'Helvetica', 'Roboto', 'Open Sans', 'Lato', 'Montserrat',
-  'Inter', 'Playfair Display', 'Oswald', 'Merriweather',
-  'Public Sans', 'Lora', 'Cabin', 'Satisfy',
-  ...CUSTOM_FONT_FAMILIES
-];
+const fontFamilies = [...FONT_FAMILIES];
 
 const fontWeights = [
   { name: 'Thin', value: '100' },
@@ -327,7 +310,7 @@ export const ButtonEditor = ({
   const [shapeFillColor, setShapeFillColor] = useState('#000000');
   const [shapeOpacity, setShapeOpacity] = useState(100);
 
-  // ─── 4. Stoke Color States ──────────────────────────────────────
+  // ─── 4. Stroke Color States ──────────────────────────────────────
   const [strokeColor, setStrokeColor] = useState('#000000');
   const [strokeOpacity, setStrokeOpacity] = useState(100);
   const [strokeAlignment, setStrokeAlignment] = useState('Outside');
@@ -1773,7 +1756,7 @@ export const ButtonEditor = ({
     syncButtonToCanvas();
   };
 
-  // Stoke Color Handlers
+  // Stroke Color Handlers
   const handleStrokeColorChange = (color) => {
     setStrokeColor(color);
     const el = resolveTargetElement();
@@ -2457,9 +2440,9 @@ export const ButtonEditor = ({
           isActive={activeColorPicker === 'buttonColor'}
         />
 
-        {/* Stoke Color */}
+        {/* Stroke Color */}
         <ColorBoxRow
-          title="Stoke Color"
+          title="Stroke Color"
           color={strokeColor}
           opacity={strokeOpacity}
           onOpenPicker={() => setActiveColorPicker('strokeColor')}

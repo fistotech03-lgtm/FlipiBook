@@ -1,6 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getElementMatrix, getVisualBBox, matrixToTransform } from '../utils/geometryUtils';
 
+const getLineWorldAngle = (el, matrix) => {
+  if (el?.tagName?.toLowerCase() !== 'line') return null;
+  const x1 = parseFloat(el.getAttribute('x1'));
+  const y1 = parseFloat(el.getAttribute('y1'));
+  const x2 = parseFloat(el.getAttribute('x2'));
+  const y2 = parseFloat(el.getAttribute('y2'));
+  if ([x1, y1, x2, y2].some(isNaN) || (x1 === x2 && y1 === y2)) return null;
+  const p1 = new DOMPoint(x1, y1).matrixTransform(matrix);
+  const p2 = new DOMPoint(x2, y2).matrixTransform(matrix);
+  return Math.atan2(p2.y - p1.y, p2.x - p1.x) * (180 / Math.PI);
+};
+
 /**
  * Hook managing canvas element transformation actions:
  * - Tracking current selection rotation angle from its DOM matrix
@@ -26,13 +38,18 @@ export const useCanvasTransforms = ({
       const el = document.getElementById(selId);
       if (el) {
         const matrix = getElementMatrix(el);
-        const isFlipH = el.getAttribute('data-flip-h') === 'true';
-        const isFlipV = el.getAttribute('data-flip-v') === 'true';
-        let angle = Math.round(Math.atan2(matrix.b, matrix.a) * (180 / Math.PI));
-        if (isFlipH && !isFlipV) {
-          angle = Math.round(Math.atan2(-matrix.b, -matrix.a) * (180 / Math.PI));
+        const lineAngle = getLineWorldAngle(el, matrix);
+        if (lineAngle !== null) {
+          setRotation(((Math.round(lineAngle) % 360) + 360) % 360);
+        } else {
+          const isFlipH = el.getAttribute('data-flip-h') === 'true';
+          const isFlipV = el.getAttribute('data-flip-v') === 'true';
+          let angle = Math.round(Math.atan2(matrix.b, matrix.a) * (180 / Math.PI));
+          if (isFlipH && !isFlipV) {
+            angle = Math.round(Math.atan2(-matrix.b, -matrix.a) * (180 / Math.PI));
+          }
+          setRotation(((angle % 360) + 360) % 360);
         }
-        setRotation(((angle % 360) + 360) % 360);
       }
     } else {
       setRotation(0);
@@ -147,8 +164,9 @@ export const useCanvasTransforms = ({
       const isFlipH = el.getAttribute('data-flip-h') === 'true';
       const isFlipV = el.getAttribute('data-flip-v') === 'true';
 
-      let currentAngle = (Math.atan2(matrix.b, matrix.a) * (180 / Math.PI));
-      if (isFlipH && !isFlipV) {
+      const lineAngle = getLineWorldAngle(el, matrix);
+      let currentAngle = lineAngle !== null ? lineAngle : (Math.atan2(matrix.b, matrix.a) * (180 / Math.PI));
+      if (lineAngle === null && isFlipH && !isFlipV) {
         currentAngle = (Math.atan2(-matrix.b, -matrix.a) * (180 / Math.PI));
       }
       const diff = newAngle - currentAngle;

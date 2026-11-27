@@ -30,9 +30,14 @@ export const useKeyboardShortcuts = ({
   // ── KEYBOARD SHORTCUTS (Cut, Copy, Paste, Delete, Undo, Redo) ─────────────
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ignore if user is typing in an input, textarea or contenteditable element
-      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) ||
-        document.activeElement.contentEditable === 'true') {
+      // Ignore if user is actively typing in an editable text input, textarea or contenteditable element
+      const activeEl = document.activeElement;
+      const isTextInput =
+        activeEl &&
+        ((activeEl.tagName === 'INPUT' && !activeEl.readOnly && !['range', 'checkbox', 'radio', 'color', 'button', 'submit'].includes((activeEl.type || '').toLowerCase())) ||
+         (activeEl.tagName === 'TEXTAREA' && !activeEl.readOnly) ||
+         activeEl.contentEditable === 'true');
+      if (isTextInput) {
         return;
       }
 

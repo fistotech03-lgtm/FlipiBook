@@ -6,7 +6,15 @@
 
 import * as THREE from 'three';
 import JSZip from 'jszip';
-import { GLTFLoader } from 'three-stdlib';
+import { GLTFLoader, DRACOLoader } from 'three-stdlib';
+
+function createGLTFLoader(manager) {
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+  const loader = manager ? new GLTFLoader(manager) : new GLTFLoader();
+  loader.setDRACOLoader(dracoLoader);
+  return loader;
+}
 import { OBJLoader } from 'three-stdlib';
 import { FBXLoader } from 'three-stdlib';
 import { STLLoader } from 'three-stdlib';
@@ -139,7 +147,7 @@ const load3DModel = async (file, onProgress) => {
       let loadedRoot = null;
 
       if (primaryExt === 'glb' || primaryExt === 'gltf') {
-        const loader = new GLTFLoader(manager);
+        const loader = createGLTFLoader(manager);
         loadedRoot = await new Promise((resolve, reject) => {
           loader.load(
             primaryEntry.objectUrl,
@@ -279,7 +287,7 @@ const load3DModel = async (file, onProgress) => {
   await yieldToMain();
 
   if (ext === 'glb' || ext === 'gltf') {
-    const loader = new GLTFLoader();
+    const loader = createGLTFLoader();
     return new Promise((resolve, reject) => {
       loader.parse(
         buffer,

@@ -157,7 +157,7 @@ export const useLayerOperations = ({
       const renameInLayers = (layersList) => {
         return layersList.map(layer => {
           if (layer.id === layerId) {
-            return { ...layer, name: newName };
+            return { ...layer, name: newName, isCustomName: true };
           }
           if (layer.children) {
             return { ...layer, children: renameInLayers(layer.children) };
@@ -173,6 +173,7 @@ export const useLayerOperations = ({
       const element = doc.querySelector(`[id="${layerId}"]`);
       if (element) {
         element.setAttribute('data-name', newName);
+        element.setAttribute('data-custom-name', 'true');
       }
 
       const newHtml = safeSerializeSvg(doc) || page.html;

@@ -524,34 +524,76 @@ export const getIframeContent = (html, pageNumber, watermarkSettings = null, pag
             else if (temperature < 0) filterStr += `hue-rotate(180deg) sepia(${Math.abs(temperature) / 2}%) hue-rotate(-180deg) `;
 
             const opacity = (watermarkSettings.opacity ?? 100) / 100;
+            const wmType = watermarkSettings.type || 'Fit';
+            const isFullPage = wmType === 'Fill' || wmType === 'Stretch';
+            const objectFit = wmType === 'Fill' ? 'cover' : wmType === 'Stretch' ? 'fill' : 'contain';
+
             let positionStyle = "";
+            let transformOrigin = "center center";
             const offset = '4%';
             const posX = watermarkSettings.positionX ?? 0;
             const posY = watermarkSettings.positionY ?? 0;
 
-            switch (watermarkSettings.position) {
-                case 'Top Left': positionStyle = `top: ${offset}; left: ${offset};`; break;
-                case 'Top Right': positionStyle = `top: ${offset}; right: ${offset};`; break;
-                case 'Bottom Left': positionStyle = `bottom: ${offset}; left: ${offset};`; break;
-                case 'Center': positionStyle = `top: 50%; left: 50%;`; break;
-                case 'Bottom Right':
-                default: positionStyle = `bottom: ${offset}; right: ${offset};`; break;
-            }
-
-            if (watermarkSettings.position === 'Center') {
-                positionStyle += ` transform: translate(calc(-50% + ${posX}%), calc(-50% + ${posY}%));`;
+            if (isFullPage) {
+                positionStyle = `top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; transform: none;`;
             } else {
-                positionStyle += ` transform: translate(${posX}%, ${posY}%);`;
+                let tx = '0%';
+                let ty = '0%';
+                switch (watermarkSettings.position) {
+                    case 'Top Left':
+                        positionStyle = `top: ${offset}; left: ${offset};`;
+                        transformOrigin = 'top left';
+                        break;
+                    case 'Top Center':
+                        positionStyle = `top: ${offset}; left: 50%;`;
+                        tx = '-50%';
+                        transformOrigin = 'top center';
+                        break;
+                    case 'Top Right':
+                        positionStyle = `top: ${offset}; right: ${offset};`;
+                        transformOrigin = 'top right';
+                        break;
+                    case 'Middle Left':
+                        positionStyle = `top: 50%; left: ${offset};`;
+                        ty = '-50%';
+                        transformOrigin = 'center left';
+                        break;
+                    case 'Center':
+                        positionStyle = `top: 50%; left: 50%;`;
+                        tx = '-50%';
+                        ty = '-50%';
+                        transformOrigin = 'center center';
+                        break;
+                    case 'Middle Right':
+                        positionStyle = `top: 50%; right: ${offset};`;
+                        ty = '-50%';
+                        transformOrigin = 'center right';
+                        break;
+                    case 'Bottom Left':
+                        positionStyle = `bottom: ${offset}; left: ${offset};`;
+                        transformOrigin = 'bottom left';
+                        break;
+                    case 'Bottom Center':
+                        positionStyle = `bottom: ${offset}; left: 50%;`;
+                        tx = '-50%';
+                        transformOrigin = 'bottom center';
+                        break;
+                    case 'Bottom Right':
+                    default:
+                        positionStyle = `bottom: ${offset}; right: ${offset};`;
+                        transformOrigin = 'bottom right';
+                        break;
+                }
+                positionStyle += ` width: 22%; height: auto; transform: translate(calc(${tx} + ${posX}%), calc(${ty} + ${posY}%));`;
             }
-
-            const objectFit = watermarkSettings.type === 'Fill' ? 'cover' : watermarkSettings.type === 'Stretch' ? 'fill' : 'contain';
 
             const scale = (watermarkSettings.scale ?? 100) / 100;
             const rotate = watermarkSettings.rotate ?? 0;
+            const imgHeight = isFullPage ? '100%' : 'auto';
 
             return `
-                        <div id="flipbook-watermark-container" style="position: absolute; z-index: 9999; pointer-events: none; opacity: ${opacity}; width: 15%; height: auto; ${positionStyle}">
-                            <img id="flipbook-watermark-img" src="${watermarkSettings.src}" style="width: 100%; height: auto; object-fit: ${objectFit}; filter: ${filterStr}; transform: scale(${scale}) rotate(${rotate}deg); transform-origin: center center;" />
+                        <div id="flipbook-watermark-container" style="position: absolute; z-index: 9999; pointer-events: none; opacity: ${opacity}; overflow: ${isFullPage ? 'hidden' : 'visible'}; ${positionStyle}">
+                            <img id="flipbook-watermark-img" src="${watermarkSettings.src}" style="width: 100%; height: ${imgHeight}; object-fit: ${objectFit}; filter: ${filterStr}; transform: scale(${scale}) rotate(${rotate}deg); transform-origin: ${transformOrigin};" />
                         </div>
                     `;
         })()}

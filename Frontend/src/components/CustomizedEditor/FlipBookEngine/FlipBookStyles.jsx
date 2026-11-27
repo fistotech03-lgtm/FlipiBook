@@ -33,6 +33,20 @@ export default function FlipBookStyles({ cornerRadius = '0px' }) {
             .fbe-static-bg {
                 backface-visibility: hidden;
             }
+            /* Book shadow follows the moving paper: at rest a static box-shadow layer (.fbe-book-shadow) is
+               used (free); while a peel/turn runs it is swapped — in the same frame — for an identical
+               drop-shadow() of the real pages, so curled corners and turning pages cast the shadow. */
+            .fbe-book.fbe-is-turning,
+            .fbe-book.fbe-is-dragging,
+            .fbe-book.fbe-is-flipping {
+                filter: var(--fbe-book-shadow-filter, none);
+            }
+            .fbe-wrapper.fbe-is-turning .fbe-book-shadow,
+            .fbe-wrapper.fbe-is-dragging .fbe-book-shadow,
+            .fbe-wrapper.fbe-is-flipping .fbe-book-shadow {
+                opacity: 0 !important;
+                transition: none !important;
+            }
             /* Transparent sheet texture layer. Per-sheet settings arrive as CSS variables set by the engine
                (FlipBookEngine/index.jsx → applySheetStyle) from the sheet's Book Appearance options:
                  --sheet-blur            blur of the page seen through the sheet

@@ -552,9 +552,11 @@ const ShapeProperties = ({
     ? selectedElementProps['data-corner-linked'] !== 'false'
     : (cornerShapeDefaults ? cornerShapeDefaults.linked : true);
 
-  const handleSetRadius = (updater) => {
+  // `extra` = additional attributes (e.g. data-corner-linked) written in the SAME update as the
+  // radius, so the full-SVG __dom_sync__ snapshot below already contains them and can't overwrite them.
+  const handleSetRadius = (updater, extra = {}) => {
     const next = typeof updater === 'function' ? updater(radius) : updater;
-    const updates = {};
+    const updates = { ...extra };
     updates['data-tl'] = (next.tl || 0).toString();
     updates['data-tr'] = (next.tr || 0).toString();
     updates['data-bl'] = (next.bl || 0).toString();
@@ -580,6 +582,10 @@ const ShapeProperties = ({
         el.setAttribute('data-br', updates['data-br']);
         el.setAttribute('rx', updates['rx']);
         el.setAttribute('ry', updates['ry']);
+        Object.entries(extra).forEach(([k, v]) => {
+          el.setAttribute(k, v);
+          if (target !== el) target.setAttribute(k, v);
+        });
         if (target !== el) {
           target.setAttribute('data-tl', updates['data-tl']);
           target.setAttribute('data-tr', updates['data-tr']);
@@ -656,18 +662,20 @@ const ShapeProperties = ({
 
   const handleSetIsRadiusLinked = (val) => {
     if (val) {
+      // One update: equalise all corners AND set the linked flag together (two separate updates
+      // raced — the radius DOM-sync snapshot still had data-corner-linked="false" and won).
       const maxR = Math.max(radius.tl || 0, radius.tr || 0, radius.bl || 0, radius.br || 0);
-      handleSetRadius({ tl: maxR, tr: maxR, bl: maxR, br: maxR });
-      updateElementAttribute(activePageIndex, selectedLayerId, {
-        'data-corner-linked': 'true',
-        'data-tl': maxR.toString(),
-        'data-tr': maxR.toString(),
-        'data-bl': maxR.toString(),
-        'data-br': maxR.toString(),
-        'rx': maxR.toString(),
-        'ry': maxR.toString()
-      });
+      handleSetRadius({ tl: maxR, tr: maxR, bl: maxR, br: maxR }, { 'data-corner-linked': 'true' });
     } else {
+      // Keep the live DOM in sync too, so a later radius DOM-sync doesn't bring back "true".
+      try {
+        const doc = document.getElementById('main-flipbook-editor')?.contentDocument || document;
+        const el = doc.getElementById(selectedLayerId);
+        if (el) {
+          el.setAttribute('data-corner-linked', 'false');
+          el.querySelectorAll?.('[data-corner-linked]').forEach((n) => n.setAttribute('data-corner-linked', 'false'));
+        }
+      } catch { /* noop */ }
       updateElementAttribute(activePageIndex, selectedLayerId, 'data-corner-linked', 'false');
     }
   };
@@ -849,7 +857,7 @@ const ShapeProperties = ({
     strokeDashLength: parseInt(((selectedElementProps?.['stroke-dasharray'] || selectedElementProps?.['data-stroke-dasharray'] || selectedElementProps?.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps?.['stroke-dasharray'] || selectedElementProps?.['data-stroke-dasharray'] || selectedElementProps?.strokeDasharray) || '10,10')).split(',')[0]) || 10,
     strokeDashGap: parseInt((((selectedElementProps?.['stroke-dasharray'] || selectedElementProps?.['data-stroke-dasharray'] || selectedElementProps?.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps?.['stroke-dasharray'] || selectedElementProps?.['data-stroke-dasharray'] || selectedElementProps?.strokeDasharray) || '10,10')).split(',')[1] || ((selectedElementProps?.['stroke-dasharray'] || selectedElementProps?.['data-stroke-dasharray'] || selectedElementProps?.strokeDasharray) === 'none' ? '10,10' : ((selectedElementProps?.['stroke-dasharray'] || selectedElementProps?.['data-stroke-dasharray'] || selectedElementProps?.strokeDasharray) || '10,10')).split(',')[0])) || 10,
     strokeLinecap: selectedElementProps?.['stroke-linecap'] || 'butt',
-    strokePosition: selectedElementProps?.['data-stroke-position'] || 'Outside',
+    strokePosition: selectedElementProps?.['data-stroke-position'] || 'Inside',
   };
 
   const handleSetBackgroundColor = (updater) => {
@@ -1011,7 +1019,7 @@ const ShapeProperties = ({
     if (backgroundColor.strokeOpacity !== next.strokeOpacity) updates['stroke-opacity'] = (next.strokeOpacity / 100).toString();
     if (backgroundColor.strokeWeight !== next.strokeWeight || backgroundColor.strokePosition !== next.strokePosition) {
       const sw = next.strokeWeight || 0;
-      const pos = next.strokePosition || 'Outside';
+      const pos = next.strokePosition || 'Inside';
       updates['data-stroke-width'] = sw.toString();
       updates['data-stroke-position'] = pos;
       if (!isIconShape) updates['vector-effect'] = 'non-scaling-stroke';
@@ -1060,6 +1068,13 @@ const ShapeProperties = ({
 
     // Direct live DOM updates for fluid feedback
     if (liveEl) {
+      if (updates['data-stroke-position'] === 'Center' && (!updates['stroke'] || updates['stroke'] === 'none')) {
+        const origStroke = liveEl.getAttribute('data-original-stroke') || liveEl.getAttribute('data-stroke-color');
+        if (origStroke && origStroke !== 'none' && liveEl.getAttribute('stroke') === 'none') {
+          liveEl.setAttribute('stroke', origStroke);
+          liveEl.removeAttribute('data-original-stroke');
+        }
+      }
       Object.entries(updates).forEach(([k, v]) => {
         if (k === 'fill' && isMaskedShape) {
           return;
@@ -1470,7 +1485,7 @@ const ShapeProperties = ({
         showDetailedPicker={showDetailedPicker}
         setShowDetailedPicker={setShowDetailedPicker}
         hideFill={shapeType === 'line'}
-        hideAlignment={isIconShape}
+        hideAlignment={isIconShape || shapeType === 'line'}
         hideLineCorner={isIconShape}
         hideDash={isIconShape}
         noAccordion={true}

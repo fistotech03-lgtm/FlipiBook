@@ -23,6 +23,7 @@ import DotStylesPopup, { DotRenderer } from '../popups/DotStylesPopup';
 import { saveToDB, getFromDB } from '../../../../../utils/storage/dbUtils';
 import ColorPicker from '../../../../Color';
 import Color from '../../../properties/FillStrokeProperties';
+import { ScrubPercentInput } from '../../../properties/controls/propertiesShared';
 import { ElementToggle, ElementSlider, ElementDropdown } from './ElementUIControls';
 import { update3FrameSlideshow, RingBuffer } from '../utils/slideshowElementUtils';
 import { optimizeImageForWeb, shouldOptimizeImage } from '../../../../../utils/imageOptimizer';
@@ -1509,8 +1510,8 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
         .custom-range-slider { -webkit-appearance: none; width: 100%; background: transparent; position: relative; }
         .custom-range-slider::before { content: ""; position: absolute; top: -0.75vw; bottom: -0.75vw; left: 0; right: 0; cursor: pointer; z-index: 1; }
         .custom-range-slider::-webkit-slider-runnable-track { height: 0.2vw; border-radius: 0.1vw; background: inherit; }
-        .custom-range-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 1vw; width: 1vw; border-radius: 50%; background: #4D47FF; border: 0.02vw solid #ffffff; box-shadow: 0 0.15vw 0.5vw rgba(77,71,255,0.4); margin-top: -0.4vw; cursor: pointer; transition: box-shadow 0.15s ease; position: relative; z-index: 2; }
-        .custom-range-slider::-webkit-slider-thumb:hover { box-shadow: 0 0.15vw 0.75vw rgba(77,71,255,0.6); }
+        .custom-range-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 1vw; width: 1vw; border-radius: 50%; background: #EC5137; border: 0.02vw solid #ffffff; box-shadow: 0 0.15vw 0.5vw rgba(236,81,55,0.4); margin-top: -0.4vw; cursor: pointer; transition: box-shadow 0.15s ease; position: relative; z-index: 2; }
+        .custom-range-slider::-webkit-slider-thumb:hover { box-shadow: 0 0.15vw 0.75vw rgba(236,81,55,0.6); }
       `}</style>
 
       {/* ── 1. Top Add Images Button ── */}
@@ -1518,19 +1519,19 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
         onClick={() => !isCompressingSlideshow && fileInputRef.current?.click()}
         className={`w-full border-2 border-dashed rounded-[0.55vw] bg-white py-[1.1vw] flex items-center justify-center gap-[0.5vw] transition-all shadow-2xs group ${
           isCompressingSlideshow
-            ? 'border-indigo-400 bg-indigo-50/30 cursor-wait text-[#4D47FF]'
-            : 'border-gray-300 text-gray-600 hover:text-[#4D47FF] hover:border-[#4D47FF] hover:bg-gray-50/60 cursor-pointer'
+            ? 'border-[#EC5137]/70 bg-orange-50/40 cursor-wait text-[#EC5137]'
+            : 'border-gray-300 text-gray-600 hover:text-[#EC5137] hover:border-[#EC5137] hover:bg-gray-50/60 cursor-pointer'
         }`}
       >
         {isCompressingSlideshow ? (
           <>
-            <Loader2 size="1vw" className="text-[#4D47FF] animate-spin" />
-            <span className="text-[0.82vw] font-semibold text-[#4D47FF]">Compressing images...</span>
+            <Loader2 size="1vw" className="text-[#EC5137] animate-spin" />
+            <span className="text-[0.82vw] font-semibold text-[#EC5137]">Compressing images...</span>
           </>
         ) : (
           <>
-            <Plus size="1vw" className="text-gray-500 group-hover:text-[#4D47FF] transition-colors" />
-            <span className="text-[0.82vw] font-semibold text-gray-700 group-hover:text-[#4D47FF] transition-colors">Add Images</span>
+            <Plus size="1vw" className="text-gray-500 group-hover:text-[#EC5137] transition-colors" />
+            <span className="text-[0.82vw] font-semibold text-gray-700 group-hover:text-[#EC5137] transition-colors">Add Images</span>
           </>
         )}
       </div>
@@ -1576,11 +1577,11 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                 }}
                 className={`flex flex-col p-[0.7vw] bg-white border rounded-[0.55vw] shadow-2xs cursor-pointer transition-all ${
                   draggedSlideIndex === i
-                    ? 'opacity-30 border-dashed border-[#4D47FF] scale-[0.98]'
+                    ? 'opacity-30 border-dashed border-[#EC5137] scale-[0.98]'
                     : dragOverSlideIndex === i
-                      ? 'border-[#4D47FF] ring-2 ring-[#4D47FF]/40 bg-[#EEF2FF]/30 scale-[1.01]'
+                      ? 'border-[#EC5137] ring-2 ring-[#EC5137]/40 bg-orange-50/30 scale-[1.01]'
                       : activeSlideIndex === i
-                        ? 'border-[#4D47FF] ring-1 ring-[#4D47FF]/30'
+                        ? 'border-[#EC5137] ring-1 ring-[#EC5137]/30'
                         : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -1606,9 +1607,9 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                     title={img.isUploading ? "Compressing image..." : "Click to replace image"}
                   >
                     {img.isUploading ? (
-                      <div className="w-full h-full bg-indigo-50/80 flex flex-col items-center justify-center">
-                        <Loader2 className="w-[1.2vw] h-[1.2vw] text-[#4D47FF] animate-spin" />
-                        <span className="text-[0.45vw] text-[#4D47FF] font-medium mt-[0.1vw]">Compressing</span>
+                      <div className="w-full h-full bg-orange-50/80 flex flex-col items-center justify-center">
+                        <Loader2 className="w-[1.2vw] h-[1.2vw] text-[#EC5137] animate-spin" />
+                        <span className="text-[0.45vw] text-[#EC5137] font-medium mt-[0.1vw]">Compressing</span>
                       </div>
                     ) : (
                       <>
@@ -1646,7 +1647,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                         setAdjustTargetIndex(i);
                         setShowAdjustModal(true);
                       }}
-                      className="text-gray-400 hover:text-[#4D47FF] transition-colors p-[0.25vw] rounded-[0.3vw] hover:bg-gray-50"
+                      className="text-gray-400 hover:text-[#EC5137] transition-colors p-[0.25vw] rounded-[0.3vw] hover:bg-gray-50"
                       title="Adjust / Crop Image"
                     >
                       <Crop size="0.9vw" />
@@ -1663,16 +1664,16 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                       }}
                       className={`transition-colors p-[0.25vw] rounded-[0.3vw] relative ${
                         isTextOpen 
-                          ? 'text-[#4D47FF] bg-[#4D47FF]/10' 
+                          ? 'text-[#EC5137] bg-[#EC5137]/10' 
                           : hasText 
-                            ? 'text-[#4D47FF] hover:bg-gray-100' 
-                            : 'text-gray-400 hover:text-[#4D47FF] hover:bg-gray-50'
+                            ? 'text-[#EC5137] hover:bg-gray-100' 
+                            : 'text-gray-400 hover:text-[#EC5137] hover:bg-gray-50'
                       }`}
                       title={isTextOpen ? "Hide Slide Heading & Subheading" : "Show Slide Heading & Subheading"}
                     >
                       <Type size="0.9vw" />
                       {hasText && !isTextOpen && (
-                        <span className="absolute top-[0.1vw] right-[0.1vw] w-[0.25vw] h-[0.25vw] bg-[#4D47FF] rounded-full" />
+                        <span className="absolute top-[0.1vw] right-[0.1vw] w-[0.25vw] h-[0.25vw] bg-[#EC5137] rounded-full" />
                       )}
                     </button>
                     <button
@@ -1702,7 +1703,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                         value={img.heading !== undefined ? img.heading : ''}
                         onChange={(e) => updateImageAtIndex(i, 'heading', e.target.value)}
                         placeholder="Enter slide heading..."
-                        className="flex-1 h-[1.8vw] rounded-[0.4vw] border border-gray-300 px-[0.5vw] text-[0.72vw] font-medium text-gray-800 outline-none focus:border-[#4D47FF] bg-white shadow-2xs transition-all"
+                        className="flex-1 h-[1.8vw] rounded-[0.4vw] border border-gray-300 px-[0.5vw] text-[0.72vw] font-medium text-gray-800 outline-none focus:border-[#EC5137] bg-white shadow-2xs transition-all"
                       />
                       <button
                         type="button"
@@ -1713,7 +1714,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                           initialSlideBackupRef.current = { ...slideshowImages[i] };
                           setShowSlideTextPopup(true);
                         }}
-                        className="text-gray-400 hover:text-[#4D47FF] transition-colors p-[0.2vw]"
+                        className="text-gray-400 hover:text-[#EC5137] transition-colors p-[0.2vw]"
                         title="Edit Text & Typography Styling"
                       >
                         <Type size="0.75vw" />
@@ -1726,7 +1727,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                         value={img.subtext !== undefined ? img.subtext : ''}
                         onChange={(e) => updateImageAtIndex(i, 'subtext', e.target.value)}
                         placeholder="Enter slide subheading..."
-                        className="flex-1 h-[1.8vw] rounded-[0.4vw] border border-gray-300 px-[0.5vw] text-[0.72vw] font-medium text-gray-700 outline-none focus:border-[#4D47FF] bg-white shadow-2xs transition-all"
+                        className="flex-1 h-[1.8vw] rounded-[0.4vw] border border-gray-300 px-[0.5vw] text-[0.72vw] font-medium text-gray-700 outline-none focus:border-[#EC5137] bg-white shadow-2xs transition-all"
                       />
                     </div>
                   </div>
@@ -1749,7 +1750,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
         <div className="flex-1 border-b border-dashed border-gray-200 mx-[0.75vw]" />
         <ElementToggle
           checked={slideshowSettings.autoSlide ?? slideshowSettings.autoPlay ?? false}
-          activeColor="#4D47FF"
+          activeColor="#EC5137"
           onChange={(checked) => {
             setSlideshowSettings(prev => ({
               ...prev,
@@ -1790,7 +1791,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
         <div className="flex-1 border-b border-dashed border-gray-200 mx-[0.75vw]" />
         <ElementToggle
           checked={slideshowSettings.infiniteLoop ?? true}
-          activeColor="#4D47FF"
+          activeColor="#EC5137"
           onChange={(checked) => updateSetting('infiniteLoop', checked)}
         />
       </div>
@@ -1802,7 +1803,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
           <div className="flex-1 border-b border-dashed border-gray-200 mx-[0.75vw]" />
           <ElementToggle
             checked={slideshowSettings.showArrows ?? true}
-            activeColor="#4D47FF"
+            activeColor="#EC5137"
             onChange={(next) => {
               updateSetting('showArrows', next);
               updateSetting('showNav', next);
@@ -1813,12 +1814,18 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
         {(slideshowSettings.showArrows ?? true) && (
           <div className="flex items-center justify-between gap-[1vw] pt-[0.2vw]">
             {/* Left Column: Size & Color */}
-            <div className="flex-1 flex flex-col gap-[0.55vw]">
+            <div className="flex-1 min-w-0 flex flex-col gap-[0.55vw]">
               <div className="flex items-center justify-between">
                 <span className="text-[0.75vw] font-medium text-gray-700">Button Size :</span>
-                <span className="text-[0.75vw] px-[0.4vw] py-[0.1vw] bg-gray-100 rounded-[0.3vw] text-gray-700 font-medium">
-                  {slideshowSettings.navButtonSize ?? 70}%
-                </span>
+                <ScrubPercentInput
+                  value={slideshowSettings.navButtonSize ?? 70}
+                  onChange={(val) => updateSetting('navButtonSize', val)}
+                  min={50}
+                  max={200}
+                  title="Drag horizontally on % to adjust button size"
+                  className="flex items-center px-[0.4vw] py-[0.1vw] bg-gray-100 rounded-[0.3vw] select-none"
+                  textClassName="text-[0.75vw] text-gray-700 font-medium"
+                />
               </div>
               {/* Range Slider */}
               <div className="flex items-center h-[1.6vw] px-[0.1vw]">
@@ -1830,7 +1837,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                   onChange={(e) => updateSetting('navButtonSize', Number(e.target.value))}
                   className="w-full cursor-pointer custom-range-slider"
                   style={{
-                    backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${((((slideshowSettings.navButtonSize ?? 70) - 50) / 150) * 100)}%, #E2E8F0 ${((((slideshowSettings.navButtonSize ?? 70) - 50) / 150) * 100)}%, #E2E8F0 100%)`
+                    backgroundImage: `linear-gradient(to right, #EC5137 0%, #EC5137 ${((((slideshowSettings.navButtonSize ?? 70) - 50) / 150) * 100)}%, #E2E8F0 ${((((slideshowSettings.navButtonSize ?? 70) - 50) / 150) * 100)}%, #E2E8F0 100%)`
                   }}
                 />
               </div>
@@ -1843,13 +1850,38 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                   title="Choose Icon Color"
                 />
                 <div
-                  onClick={() => setShowNavColorPicker(true)}
-                  className="flex-1 h-[2vw] border border-gray-300 rounded-[0.4vw] px-[0.6vw] flex items-center justify-between bg-white shadow-2xs cursor-pointer hover:border-gray-400 transition-colors"
+                  className="flex-1 min-w-0 h-[2vw] border border-gray-300 rounded-[0.4vw] px-[0.5vw] flex items-center justify-between gap-[0.25vw] bg-white shadow-2xs hover:border-gray-400 transition-colors"
                 >
-                  <span className="text-[0.78vw] text-gray-700 font-medium uppercase truncate">
-                    {slideshowSettings.navIconColor || '#ffffff'}
-                  </span>
-                  <span className="text-[0.72vw] text-gray-400 font-medium">100%</span>
+                  <input
+                    type="text"
+                    size={7}
+                    value={(slideshowSettings.navIconColor || '#ffffff').toUpperCase()}
+                    onFocus={(e) => e.target.select()}
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      const raw = e.target.value.trim();
+                      if (!raw || raw === '#') {
+                        updateSetting('navIconColor', '#');
+                      } else {
+                        const clean = raw.startsWith('#') ? raw : `#${raw}`;
+                        updateSetting('navIconColor', clean);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!slideshowSettings.navIconColor || slideshowSettings.navIconColor === '#') {
+                        updateSetting('navIconColor', '#ffffff');
+                      }
+                    }}
+                    maxLength={7}
+                    className="text-[0.78vw] text-gray-700 font-medium uppercase outline-none bg-transparent flex-1 min-w-0 cursor-text"
+                  />
+                  <ScrubPercentInput
+                    value={slideshowSettings.navIconOpacity ?? 100}
+                    onChange={(val) => updateSetting('navIconOpacity', val)}
+                    className="flex items-center select-none shrink-0"
+                    textClassName="text-[0.72vw] text-gray-400 font-medium"
+                  />
                 </div>
               </div>
             </div>
@@ -1857,9 +1889,9 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             {/* Right Column: Preview Card */}
             <div
               onClick={() => setShowNavStylesPopup(true)}
-              className="w-[7.8vw] h-[4.8vw] bg-white border border-gray-300 rounded-[0.55vw] relative flex items-center justify-center cursor-pointer hover:border-[#4D47FF] shadow-2xs shrink-0 group/nav overflow-hidden transition-all"
+              className="w-[7.8vw] h-[4.8vw] bg-white border border-gray-300 rounded-[0.55vw] relative flex items-center justify-center cursor-pointer hover:border-[#EC5137] shadow-2xs shrink-0 group/nav overflow-hidden transition-all"
             >
-              <div className="absolute top-[0.35vw] right-[0.4vw] text-gray-400 group-hover/nav:text-[#4D47FF] transition-colors">
+              <div className="absolute top-[0.35vw] right-[0.4vw] text-gray-400 group-hover/nav:text-[#EC5137] transition-colors">
                 <Icon icon="lucide:arrow-right-left" className="w-[0.85vw] h-[0.85vw]" />
               </div>
               <div
@@ -1888,7 +1920,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
           <div className="flex-1 border-b border-dashed border-gray-200 mx-[0.75vw]" />
           <ElementToggle
             checked={slideshowSettings.showDots ?? true}
-            activeColor="#4D47FF"
+            activeColor="#EC5137"
             onChange={(checked) => updateSetting('showDots', checked)}
           />
         </div>
@@ -1896,12 +1928,18 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
         {(slideshowSettings.showDots ?? true) && (
           <div className="flex items-center justify-between gap-[1vw] pt-[0.2vw]">
             {/* Left Column: Size & Color */}
-            <div className="flex-1 flex flex-col gap-[0.55vw]">
+            <div className="flex-1 min-w-0 flex flex-col gap-[0.55vw]">
               <div className="flex items-center justify-between">
                 <span className="text-[0.75vw] font-medium text-gray-700">Button Size :</span>
-                <span className="text-[0.75vw] px-[0.4vw] py-[0.1vw] bg-gray-100 rounded-[0.3vw] text-gray-700 font-medium">
-                  {slideshowSettings.dotButtonSize ?? 70}%
-                </span>
+                <ScrubPercentInput
+                  value={slideshowSettings.dotButtonSize ?? 70}
+                  onChange={(val) => updateSetting('dotButtonSize', val)}
+                  min={50}
+                  max={200}
+                  title="Drag horizontally on % to adjust button size"
+                  className="flex items-center px-[0.4vw] py-[0.1vw] bg-gray-100 rounded-[0.3vw] select-none"
+                  textClassName="text-[0.75vw] text-gray-700 font-medium"
+                />
               </div>
               {/* Range Slider */}
               <div className="flex items-center h-[1.6vw] px-[0.1vw]">
@@ -1913,7 +1951,7 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                   onChange={(e) => updateSetting('dotButtonSize', Number(e.target.value))}
                   className="w-full cursor-pointer custom-range-slider"
                   style={{
-                    backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${((((slideshowSettings.dotButtonSize ?? 70) - 50) / 150) * 100)}%, #E2E8F0 ${((((slideshowSettings.dotButtonSize ?? 70) - 50) / 150) * 100)}%, #E2E8F0 100%)`
+                    backgroundImage: `linear-gradient(to right, #EC5137 0%, #EC5137 ${((((slideshowSettings.dotButtonSize ?? 70) - 50) / 150) * 100)}%, #E2E8F0 ${((((slideshowSettings.dotButtonSize ?? 70) - 50) / 150) * 100)}%, #E2E8F0 100%)`
                   }}
                 />
               </div>
@@ -1926,13 +1964,38 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
                   title="Choose Dot Color"
                 />
                 <div
-                  onClick={() => setShowDotColorPicker(true)}
-                  className="flex-1 h-[2vw] border border-gray-300 rounded-[0.4vw] px-[0.6vw] flex items-center justify-between bg-white shadow-2xs cursor-pointer hover:border-gray-400 transition-colors"
+                  className="flex-1 min-w-0 h-[2vw] border border-gray-300 rounded-[0.4vw] px-[0.5vw] flex items-center justify-between gap-[0.25vw] bg-white shadow-2xs hover:border-gray-400 transition-colors"
                 >
-                  <span className="text-[0.78vw] text-gray-700 font-medium uppercase truncate">
-                    {slideshowSettings.dotColor || '#4D47FF'}
-                  </span>
-                  <span className="text-[0.72vw] text-gray-400 font-medium">100%</span>
+                  <input
+                    type="text"
+                    size={7}
+                    value={(slideshowSettings.dotColor || '#4D47FF').toUpperCase()}
+                    onFocus={(e) => e.target.select()}
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      const raw = e.target.value.trim();
+                      if (!raw || raw === '#') {
+                        updateSetting('dotColor', '#');
+                      } else {
+                        const clean = raw.startsWith('#') ? raw : `#${raw}`;
+                        updateSetting('dotColor', clean);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!slideshowSettings.dotColor || slideshowSettings.dotColor === '#') {
+                        updateSetting('dotColor', '#4D47FF');
+                      }
+                    }}
+                    maxLength={7}
+                    className="text-[0.78vw] text-gray-700 font-medium uppercase outline-none bg-transparent flex-1 min-w-0 cursor-text"
+                  />
+                  <ScrubPercentInput
+                    value={slideshowSettings.dotOpacity ?? 100}
+                    onChange={(val) => updateSetting('dotOpacity', val)}
+                    className="flex items-center select-none shrink-0"
+                    textClassName="text-[0.72vw] text-gray-400 font-medium"
+                  />
                 </div>
               </div>
             </div>
@@ -1940,9 +2003,9 @@ const SlideshowEditor = ({ selectedElement, activePageIndex, onUpdate, isOpen, o
             {/* Right Column: Preview Card */}
             <div
               onClick={() => setShowDotStylesPopup(true)}
-              className="w-[7.8vw] h-[4.8vw] bg-white border border-gray-300 rounded-[0.55vw] relative flex items-center justify-center cursor-pointer hover:border-[#4D47FF] shadow-2xs shrink-0 group/dots overflow-hidden transition-all"
+              className="w-[7.8vw] h-[4.8vw] bg-white border border-gray-300 rounded-[0.55vw] relative flex items-center justify-center cursor-pointer hover:border-[#EC5137] shadow-2xs shrink-0 group/dots overflow-hidden transition-all"
             >
-              <div className="absolute top-[0.35vw] right-[0.4vw] text-gray-400 group-hover/dots:text-[#4D47FF] transition-colors">
+              <div className="absolute top-[0.35vw] right-[0.4vw] text-gray-400 group-hover/dots:text-[#EC5137] transition-colors">
                 <Icon icon="lucide:arrow-right-left" className="w-[0.85vw] h-[0.85vw]" />
               </div>
               <div

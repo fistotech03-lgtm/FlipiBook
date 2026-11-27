@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import JSZip from 'jszip';
 import { OrbitControls } from 'three-stdlib';
-import { GLTFLoader } from 'three-stdlib';
+import { GLTFLoader, DRACOLoader } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
 import { FBXLoader } from 'three-stdlib';
 import { STLLoader } from 'three-stdlib';
@@ -412,7 +412,10 @@ export default function ThreePreviewCanvas({
         }
       })();
     } else if (fmt === 'GLB' || fmt === 'GLTF') {
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
       const loader = new GLTFLoader();
+      loader.setDRACOLoader(dracoLoader);
       loader.load(
         blobUrl,
         (gltf) => {

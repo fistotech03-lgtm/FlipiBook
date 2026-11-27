@@ -125,35 +125,6 @@ const Branding = ({
     });
     setShowPreloaderModal(true);
   };
-  const moveTimerRef = useRef(null);
-  const moveTimeoutRef = useRef(null);
-  const latestWatermarkRef = useRef(watermarkSettings);
-
-  useEffect(() => {
-    latestWatermarkRef.current = watermarkSettings;
-  }, [watermarkSettings]);
-
-  const startMove = (deltaX, deltaY) => {
-    const moveStep = () => {
-      if (!latestWatermarkRef.current) return;
-      onUpdateWatermark({
-        ...latestWatermarkRef.current,
-        positionX: (latestWatermarkRef.current.positionX || 0) + deltaX,
-        positionY: (latestWatermarkRef.current.positionY || 0) + deltaY,
-      });
-    };
-    moveStep();
-    moveTimeoutRef.current = setTimeout(() => {
-      moveTimerRef.current = setInterval(moveStep, 50);
-    }, 300);
-  };
-
-  const stopMove = () => {
-    if (moveTimeoutRef.current) clearTimeout(moveTimeoutRef.current);
-    if (moveTimerRef.current) clearInterval(moveTimerRef.current);
-    moveTimeoutRef.current = null;
-    moveTimerRef.current = null;
-  };
   // Load gallery images from localStorage on mount
   useEffect(() => {
     const savedImages = localStorage.getItem("customized_editor_gallery");
@@ -708,7 +679,7 @@ const Branding = ({
   return (
     <div ref={panelRef} className="flex flex-col h-full bg-transparent font-sans">
       {/* Sub-header */}
-      <div className="h-[7.5vh] flex items-center justify-between px-[1.2vw] border-b border-gray-100 flex-shrink-0">
+      <div className="flex items-center justify-between px-[1.2vw] pt-[1.1vw] pb-[0.5vw] flex-shrink-0">
         <div className="flex items-center gap-[0.75vw] text-gray-800">
           <Icon icon="lucide:gem" className="w-[1.2vw] h-[1.2vw] text-black" />
           <h2 className="text-[1vw] font-semibold text-gray-900">Branding</h2>
@@ -733,13 +704,13 @@ const Branding = ({
       `}</style>
 
       <div
-        className="flex-1 overflow-y-auto px-[1.2vw] pt-[1vw] pb-[3vw] flex flex-col gap-[1vw] hide-scrollbar"
+        className="flex-1 overflow-y-auto px-[1.2vw] pt-[0.25vw] pb-[3vw] flex flex-col gap-[0.8vw] hide-scrollbar"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {/* Upload your Logo Header */}
         <div className="mb-[0.5vw]">
-          <div className="flex items-center gap-[0.5vw] mt-[0.5vw]">
-            <span className="text-[0.85vw] font-semibold text-gray-900 whitespace-nowrap mb-[1vw]">
+          <div className="flex items-center gap-[0.5vw]">
+            <span className="text-[0.85vw] font-semibold text-gray-900 whitespace-nowrap mb-[0.75vw]">
               Upload your Logo
             </span>
             <div className="h-[0.0925vw] bg-gray-200 flex-1"> </div>
@@ -825,22 +796,6 @@ const Branding = ({
                     </button>
                   </div>
                 </div>
-              </div>
-
-              {/* Add URL */}
-              <div className="flex flex-col gap-[0.4vw] pt-[0.5vw]">
-                <span className="text-[0.75vw] font-semibold text-gray-700 whitespace-nowrap">
-                  Add URL :
-                </span>
-                <input
-                  type="text"
-                  value={logoSettings?.url || ""}
-                  onChange={(e) =>
-                    onUpdateLogo({ ...logoSettings, url: e.target.value })
-                  }
-                  placeholder="https://"
-                  className="w-full px-[0.8vw] py-[0.45vw] bg-white border border-gray-300 rounded-[0.4vw] text-[0.75vw] focus:ring-[0.0625vw] focus:ring-blue-500 focus:outline-none text-gray-700 shadow-sm"
-                />
               </div>
 
               {/* Opacity Slider */}
@@ -1140,6 +1095,27 @@ const Branding = ({
               )}
             </div>
           </div>
+          {/* Select Image Type Dropdown */}
+          <div className="flex items-center justify-between mb-[0.8vw] px-[0.2vw]">
+            <span className="text-[0.8vw] font-medium text-gray-700">
+              Select the Image type :
+            </span>
+            <select
+              value={watermarkSettings?.type || "Fit"}
+              onChange={(e) =>
+                onUpdateWatermark({
+                  ...watermarkSettings,
+                  type: e.target.value,
+                })
+              }
+              className="px-[0.8vw] py-[0.35vw] bg-white border border-gray-300 rounded-[0.4vw] text-[0.78vw] text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm cursor-pointer"
+            >
+              <option value="Fit">Fit</option>
+              <option value="Fill">Fill</option>
+              <option value="Stretch">Stretch</option>
+            </select>
+          </div>
+
           {watermarkSettings?.src ? (
             <div className="flex flex-col gap-[0.5vw]">
               <div className="flex items-center gap-[1vw]">
@@ -1338,90 +1314,64 @@ const Branding = ({
                 </div>
               </div>
 
-              {/* Right Column: Position D-Pad */}
-              <div className="flex-[1.2] flex flex-col gap-[0.5vw]">
-                <span className="text-[0.85vw] text-gray-800 mb-[0.2vw]">
-                  Position :
-                </span>
-                <div className="flex gap-[0.4vw] items-stretch h-[7.5vw]">
-                  {/* Left */}
-                  <button
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.setPointerCapture(e.pointerId);
-                      startMove(-5, 0);
-                    }}
-                    onPointerUp={(e) => {
-                      stopMove();
-                      e.currentTarget.releasePointerCapture(e.pointerId);
-                    }}
-                    onPointerCancel={stopMove}
-                    onContextMenu={(e) => e.preventDefault()}
-                    className="w-[2vw] bg-white border border-gray-200 rounded-[0.3vw] flex items-center justify-center hover:bg-gray-50 text-gray-500 shadow-sm select-none"
-                    style={{ touchAction: "none" }}
-                  >
-                    <ChevronDown className="w-[1.2vw] h-[1.2vw] rotate-90" />
-                  </button>
-
-                  {/* Center Column */}
-                  <div className="flex-1 flex flex-col gap-[0.4vw]">
-                    <button
-                      onPointerDown={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.setPointerCapture(e.pointerId);
-                        startMove(0, -5);
-                      }}
-                      onPointerUp={(e) => {
-                        stopMove();
-                        e.currentTarget.releasePointerCapture(e.pointerId);
-                      }}
-                      onPointerCancel={stopMove}
-                      onContextMenu={(e) => e.preventDefault()}
-                      className="flex-1 bg-white border border-gray-200 rounded-[0.3vw] flex items-center justify-center hover:bg-gray-50 text-gray-500 shadow-sm select-none"
-                      style={{ touchAction: "none" }}
-                    >
-                      <ChevronDown className="w-[1.2vw] h-[1.2vw] rotate-180" />
-                    </button>
-                    <div className="flex-1 flex items-center justify-center text-[0.75vw] text-gray-400 font-medium">
-                      Move
-                    </div>
-                    <button
-                      onPointerDown={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.setPointerCapture(e.pointerId);
-                        startMove(0, 5);
-                      }}
-                      onPointerUp={(e) => {
-                        stopMove();
-                        e.currentTarget.releasePointerCapture(e.pointerId);
-                      }}
-                      onPointerCancel={stopMove}
-                      onContextMenu={(e) => e.preventDefault()}
-                      className="flex-1 bg-white border border-gray-200 rounded-[0.3vw] flex items-center justify-center hover:bg-gray-50 text-gray-500 shadow-sm select-none"
-                      style={{ touchAction: "none" }}
-                    >
-                      <ChevronDown className="w-[1.2vw] h-[1.2vw]" />
-                    </button>
-                  </div>
-
-                  {/* Right */}
-                  <button
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.setPointerCapture(e.pointerId);
-                      startMove(5, 0);
-                    }}
-                    onPointerUp={(e) => {
-                      stopMove();
-                      e.currentTarget.releasePointerCapture(e.pointerId);
-                    }}
-                    onPointerCancel={stopMove}
-                    onContextMenu={(e) => e.preventDefault()}
-                    className="w-[2vw] bg-white border border-gray-200 rounded-[0.3vw] flex items-center justify-center hover:bg-gray-50 text-gray-500 shadow-sm select-none"
-                    style={{ touchAction: "none" }}
-                  >
-                    <ChevronDown className="w-[1.2vw] h-[1.2vw] -rotate-90" />
-                  </button>
+              {/* Right Column: 3x3 Position Anchor Grid */}
+              <div className="flex-[1.1] flex flex-col gap-[0.45vw]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[0.85vw] text-gray-800">
+                    Position :
+                  </span>
+                  <span className="text-[0.68vw] font-medium text-gray-500">
+                    {watermarkSettings?.type === "Fill" || watermarkSettings?.type === "Stretch"
+                      ? "Full Page"
+                      : watermarkSettings?.position || "Bottom Right"}
+                  </span>
+                </div>
+                <div
+                  className={`grid grid-cols-3 gap-[0.35vw] p-[0.45vw] bg-gray-50 border border-gray-200 rounded-[0.5vw] h-[7.5vw] ${
+                    watermarkSettings?.type === "Fill" || watermarkSettings?.type === "Stretch"
+                      ? "opacity-45 pointer-events-none"
+                      : ""
+                  }`}
+                >
+                  {[
+                    "Top Left",
+                    "Top Center",
+                    "Top Right",
+                    "Middle Left",
+                    "Center",
+                    "Middle Right",
+                    "Bottom Left",
+                    "Bottom Center",
+                    "Bottom Right",
+                  ].map((pos) => {
+                    const isSelected = (watermarkSettings?.position || "Bottom Right") === pos;
+                    return (
+                      <button
+                        key={pos}
+                        type="button"
+                        title={pos}
+                        onClick={() =>
+                          onUpdateWatermark({
+                            ...watermarkSettings,
+                            position: pos,
+                            positionX: 0,
+                            positionY: 0,
+                          })
+                        }
+                        className={`rounded-[0.3vw] flex items-center justify-center border transition-colors cursor-pointer ${
+                          isSelected
+                            ? "bg-[#4D47FF] border-[#4D47FF] text-white shadow-xs"
+                            : "bg-white border-gray-200 hover:border-[#4D47FF]/60 hover:bg-indigo-50/40 text-gray-400"
+                        }`}
+                      >
+                        <span
+                          className={`w-[0.45vw] h-[0.45vw] rounded-full ${
+                            isSelected ? "bg-white" : "bg-gray-300"
+                          }`}
+                        />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1499,13 +1449,16 @@ const Branding = ({
                 ? "Preparing Flipibook"
                 : rawDisplayText;
 
-            const cardColor = isCustom ? (displayPreloader?.textColor || "#1E293B") : "#1E293B";
+            const cardBg = isCustom
+              ? ((!displayPreloader?.bgColor || displayPreloader.bgColor === "#D6E0F4") ? darkBg : displayPreloader.bgColor)
+              : darkBg;
+            const cardColor = isCustom ? (displayPreloader?.textColor || whiteText) : whiteText;
 
             return (
               <div
                 className="relative w-full h-[9.2vw] min-h-[120px] rounded-[1vw] flex flex-col items-center justify-center shadow-md border border-white/10 group overflow-hidden flex-shrink-0"
                 style={{
-                  backgroundColor: isCustom ? (displayPreloader?.bgColor || "#D6E0F4") : "#D6E0F4",
+                  backgroundColor: cardBg,
                   color: cardColor,
                 }}
               >
@@ -1541,20 +1494,20 @@ const Branding = ({
                 </button>
 
                 {/* Badge: Default vs Custom */}
-                <div className="absolute top-[0.7vw] left-[0.8vw] z-[20] flex items-center gap-1 px-[0.4vw] py-[0.1vw] rounded-full bg-black/15 text-[0.58vw] font-medium backdrop-blur-xs">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isCustom ? "bg-indigo-500" : "bg-emerald-500"}`} />
+                <div className="absolute top-[0.7vw] left-[0.8vw] z-[20] flex items-center gap-1 px-[0.45vw] py-[0.12vw] rounded-full bg-white/10 text-white/90 text-[0.58vw] font-medium backdrop-blur-xs">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isCustom ? "bg-indigo-400" : "bg-emerald-400"}`} />
                   <span>{isCustom ? "Custom Preloader" : "Default Preloader"}</span>
                 </div>
 
                 <div className={`flex items-center gap-[0.45vw] px-[1vw] pt-2 ${displayPreloader?.textPosition === "top" ? "flex-col-reverse" : "flex-col"}`}>
                   {!isCustom ? (
-                    /* DEFAULT PRELOADER DISPLAY (Matching Image 1: Dark theme with centered spinner & Preparing Flipbook...) */
+                    /* DEFAULT PRELOADER DISPLAY (Dark theme with centered spinner & Preparing Flipibook) */
                     <div className={`flex items-center justify-center gap-[0.4vw] ${displayPreloader?.textPosition === "top" ? "flex-col-reverse" : "flex-col"}`}>
                       <div className="relative flex items-center justify-center">
                         <div
                           className="w-[1.6vw] h-[1.6vw] border-[2.5px] border-t-transparent rounded-full animate-spin"
                           style={{
-                            borderColor: "#3B3C8A #3B3C8A #3B3C8A transparent",
+                            borderColor: `${defaultSpinner} ${defaultSpinner} ${defaultSpinner} transparent`,
                           }}
                         />
                       </div>
@@ -2697,7 +2650,6 @@ const Branding = ({
             size="small"
             titleText="Add Image"
             buttonText="Add Image"
-            hideImportViaUrl={true}
             onClose={() => setReplaceTarget(null)}
             onReplace={(file) => {
               if (replaceTarget === "logo") {

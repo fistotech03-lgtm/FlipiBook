@@ -2044,13 +2044,25 @@ const PageEditor = () => {
     }
   }, [isPasswordProtected, v_id, currentBook?.share?.shareId]);
 
-  const isPdfProject = pages.some(
-    (p) =>
-      p.html &&
-      (p.html.includes('data-name="PDF Background"') ||
-        p.html.includes('data-type="pdf-vector-layer"') ||
-        p.html.includes("Document Shield")),
-  );
+  const isPdfProject =
+    String(currentBook?.bookType || currentBook?.meta?.bookType || '').toLowerCase() === 'pdf' ||
+    pages.some(
+      (p) =>
+        p.html &&
+        (p.html.includes('data-name="PDF Background"') ||
+          p.html.includes('data-type="pdf-vector-layer"') ||
+          p.html.includes("Document Shield")),
+    );
+
+  useEffect(() => {
+    if (setCurrentBook) {
+      setCurrentBook((prev) => {
+        if (!prev) return prev;
+        if (Boolean(prev.isPdfProject) === isPdfProject) return prev;
+        return { ...prev, isPdfProject };
+      });
+    }
+  }, [isPdfProject, setCurrentBook]);
 
   const selectedElementInteraction = useMemo(() => {
     if (

@@ -421,7 +421,7 @@ const CreatorFlipbookCard = ({ book, creator, onOpenBook, isFavorited: propIsFav
 
             {/* Top Right Floating Action Buttons (Heart + Three-Dots) - Visible on hover */}
             <div
-                className={`absolute top-[0.6vw] right-[0.6vw] flex flex-col items-center gap-[0.35vw] z-30 transition-opacity duration-200 ${isMenuOpen || isFavorited ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                className={`absolute top-[0.6vw] right-[0.6vw] flex flex-col items-center gap-[0.35vw] z-30 transition-opacity duration-200 ${isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Heart Button */}
@@ -438,7 +438,7 @@ const CreatorFlipbookCard = ({ book, creator, onOpenBook, isFavorited: propIsFav
                     className="w-[2vw] h-[2vw] min-w-[30px] min-h-[30px] rounded-full bg-white/95 hover:bg-white shadow-md flex items-center justify-center text-gray-700 hover:text-red-500 hover:scale-105 transition-all cursor-pointer focus:outline-none"
                     title={isFavorited ? "Favorited" : "Add to Favorites"}
                 >
-                    <Icon icon="lucide:heart" className={`w-[1vw] h-[1vw] min-w-[15px] min-h-[15px] transition-colors ${isFavorited ? 'text-red-500 fill-red-500' : 'text-gray-700'}`} />
+                    <Icon icon={isFavorited ? "mdi:heart" : "lucide:heart"} className={`w-[1vw] h-[1vw] min-w-[15px] min-h-[15px] transition-colors ${isFavorited ? 'text-red-500' : 'text-gray-700'}`} />
                 </button>
 
                 {/* Three-Dot Button & Dropdown */}

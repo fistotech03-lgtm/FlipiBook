@@ -30,6 +30,7 @@ import { updateShapeMaskTransform } from '../LeftActionMenu/Elements/utils/shape
 import { hasCustomImageInShape } from '../LeftActionMenu/Elements/utils/imageFramingUtils';
 import { safeSerializeSvg } from '../utils/editorUtils';
 
+
 /**
  * Hook for managing Pen Tool drawing (Vectra session, bezier curves, pencil)
  * and interactive Node Edit Mode (Paper.js paths, anchor points, bezier handles).
@@ -362,17 +363,21 @@ export const usePenNodeEngine = ({
       const pathEl = drawingPathRef.current;
       const pageIdx = drawingPageIndexRef.current !== null ? drawingPageIndexRef.current : activePageIndex;
 
+      let committedEl = pathEl;
       if (pathEl) {
         const comboD = pathToDCombo(vSession.paths);
         if (comboD) {
           pathEl.setAttribute('d', comboD);
+          // A single straight pen line stays a vector path (box selection + path highlight),
+          // it is NOT converted to a <line> element.
         } else if ((!vSession.paths || vSession.paths.size === 0) && (!pathEl.getAttribute('d') || pathEl.getAttribute('d').trim() === '')) {
           if (pathEl.parentNode) pathEl.parentNode.removeChild(pathEl);
+          committedEl = null;
         }
       }
 
-      const targetId = pathEl?.id;
-      const svgEl = pathEl?.ownerSVGElement || drawingSvgRef?.current || document.querySelector(`.page-svg-container[data-page-index="${pageIdx}"] svg`);
+      const targetId = committedEl?.id;
+      const svgEl = committedEl?.ownerSVGElement || drawingSvgRef?.current || document.querySelector(`.page-svg-container[data-page-index="${pageIdx}"] svg`);
 
       vSession.reset();
       drawingPathRef.current = null;
@@ -385,7 +390,7 @@ export const usePenNodeEngine = ({
         if (nodeGroup) nodeGroup.remove();
       });
 
-      if (pathEl && svgEl && updatePageHtml) {
+      if (committedEl && svgEl && updatePageHtml) {
         const cleanHtml = safeSerializeSvg(svgEl) || svgEl.outerHTML;
         updatePageHtml(pageIdx, cleanHtml);
         if (targetId) {
@@ -402,7 +407,7 @@ export const usePenNodeEngine = ({
           setTimeout(() => {
             const freshEl = document.getElementById(targetId);
             if (freshEl) drawOverlayHighlight(freshEl, 'selected');
-            else drawOverlayHighlight(pathEl, 'selected');
+            else drawOverlayHighlight(committedEl, 'selected');
           }, 40);
           setTimeout(() => {
             const freshEl = document.getElementById(targetId);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Lock, Unlock } from 'lucide-react';
+import { Lock, Unlock } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import { getVisualBBox } from '../mainEditor/utils/geometryUtils';
 import { handleScrubHelper } from './FillStrokeProperties';
@@ -182,23 +182,43 @@ const TransformProperties = ({
     });
   };
 
-  // Helper to extract rotation from DOM element matrix
+  // Helper to extract rotation from DOM element matrix (or drawn angle for <line>)
   const getElementRotation = (el) => {
     if (!el) return 0;
     try {
       const transform = el.getAttribute('transform');
+      let domM = new DOMMatrix();
+      let m = [1, 0, 0, 1, 0, 0];
       if (transform) {
-        let m = [1, 0, 0, 1, 0, 0];
         try {
-          const domM = new DOMMatrix(transform);
+          domM = new DOMMatrix(transform);
           m = [domM.a, domM.b, domM.c, domM.d, domM.e, domM.f];
         } catch {
           const match = transform.match(/matrix\(([^)]+)\)/);
           if (match) {
             const parsed = match[1].split(/[\s,]+/).map(parseFloat);
-            if (parsed.length === 6) m = parsed;
+            if (parsed.length === 6) {
+              m = parsed;
+              domM = new DOMMatrix(parsed);
+            }
           }
         }
+      }
+
+      if (el.tagName?.toLowerCase() === 'line') {
+        const x1 = parseFloat(el.getAttribute('x1'));
+        const y1 = parseFloat(el.getAttribute('y1'));
+        const x2 = parseFloat(el.getAttribute('x2'));
+        const y2 = parseFloat(el.getAttribute('y2'));
+        if (![x1, y1, x2, y2].some(isNaN) && (x1 !== x2 || y1 !== y2)) {
+          const p1 = new DOMPoint(x1, y1).matrixTransform(domM);
+          const p2 = new DOMPoint(x2, y2).matrixTransform(domM);
+          const lineAngle = Math.round(Math.atan2(p2.y - p1.y, p2.x - p1.x) * (180 / Math.PI));
+          return ((lineAngle % 360) + 360) % 360;
+        }
+      }
+
+      if (transform) {
         const isFlipH = el.getAttribute('data-flip-h') === 'true';
         const isFlipV = el.getAttribute('data-flip-v') === 'true';
         let angle = Math.round(Math.atan2(m[1], m[0]) * (180 / Math.PI));
@@ -465,40 +485,31 @@ const TransformProperties = ({
 
   // Scrub rotation horizontally with mouse drag
   const handleRotateMouseDown = (e) => {
-    if (isDimensionDisabled) return;
+    if (isDimensionDisabled || e.target.tagName === 'INPUT') return;
     e.stopPropagation();
     e.preventDefault();
-    setIsScrubbingRotate(true);
-    hasRotatedMoved.current = false;
-    dragStartPos.current = { x: e.clientX, y: e.clientY };
-    dragStartAngle.current = liveRotation !== null ? liveRotation : 0;
-    document.body.style.cursor = 'ew-resize';
-  };
-
-  useEffect(() => {
-    if (!isScrubbingRotate) return;
-    const handleMouseMove = (e) => {
-      const deltaX = e.clientX - dragStartPos.current.x;
-      if (Math.abs(deltaX) > 2) hasRotatedMoved.current = true;
-      let newAngle = Math.round(dragStartAngle.current + deltaX);
-      newAngle = ((newAngle % 360) + 360) % 360;
-      setLiveRotation(newAngle);
-      applyRotate(newAngle, false);
-    };
-    const handleMouseUp = () => {
-      setIsScrubbingRotate(false);
-      document.body.style.cursor = 'default';
-      if (hasRotatedMoved.current) {
-        applyRotate(liveRotation, true);
+    const startAngle = liveRotation !== null ? liveRotation : 0;
+    handleScrubHelper(
+      e,
+      startAngle,
+      (val) => {
+        const raw = parseInt(val, 10) || 0;
+        const wrapped = ((raw % 360) + 360) % 360;
+        setLiveRotation(wrapped);
+        applyRotate(wrapped, false);
+      },
+      1,
+      {
+        onEnd: (val, moved) => {
+          if (moved) {
+            const raw = parseInt(val, 10) || 0;
+            const wrapped = ((raw % 360) + 360) % 360;
+            applyRotate(wrapped, true);
+          }
+        }
       }
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isScrubbingRotate, liveRotation]);
+    );
+  };
 
   // Flip handlers
   const handleFlipH = () => {
@@ -531,223 +542,156 @@ const TransformProperties = ({
         <div className="flex-1 h-[1px] bg-gray-200" />
       </div>
 
-      <div className="mt-[1vw] space-y-[0.6vw]">
-        {/* ── Row 1: Position X & Size W ── */}
-        <div className="flex items-center justify-between">
-          {/* Position X */}
-          <div className="flex items-center">
-            <span className="text-[0.82vw] font-medium text-gray-800 w-[3.8vw]">Position</span>
-            <button
-              type="button"
-              disabled={isDimensionDisabled}
-              onClick={handleDecrementX}
-              className={`w-[0.8vw] h-[1.8vw] flex items-center justify-center transition-colors ${
-                isDimensionDisabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-black cursor-pointer'
-              }`}
-            >
-              <ChevronLeft size="0.8vw" />
-            </button>
+      <div className="mt-[1vw] space-y-[0.65vw]">
+        {/* ── Row 1: Position : X and Y ── */}
+        <div className="flex items-center">
+          <span className="text-[0.82vw] font-medium text-gray-800 w-[4.5vw] shrink-0">Position :</span>
+          <div className="flex-1 grid grid-cols-[1fr_1.5vw_1fr] items-center gap-[0.25vw]">
             <div
-              onPointerDown={handleScrubX}
-              title="Drag horizontally to adjust X or type value"
-              className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] cursor-ew-resize select-none transition-colors ${
+              className={`min-w-0 h-[1.85vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] select-none transition-colors ${
                 isDimensionDisabled ? 'bg-gray-100/60 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-[#eaecee]'
               }`}
             >
-              <span className="text-gray-800 font-semibold text-[0.78vw] cursor-ew-resize select-none">X</span>
+              <span
+                onPointerDown={isDimensionDisabled ? undefined : handleScrubX}
+                title={isDimensionDisabled ? undefined : "Drag horizontally to adjust X"}
+                className={`font-semibold text-[0.78vw] select-none pr-[0.25vw] h-full flex items-center ${isDimensionDisabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800 cursor-ew-resize'}`}
+              >
+                X
+              </span>
               <DimensionInput
                 targetId={selectedLayerId}
                 targetAttr="x"
-                className={`w-full text-right outline-none text-[0.8vw] font-medium cursor-text ${
-                  isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 bg-transparent'
+                className={`w-full min-w-0 text-right outline-none text-[0.8vw] font-medium ${
+                  isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 cursor-text bg-transparent'
                 }`}
                 value={convertValue(selectedElementProps?.x || 0)}
                 readOnly={isDimensionDisabled}
                 onChange={(val) => updatePosition(val, 'x')}
               />
             </div>
-            <button
-              type="button"
-              disabled={isDimensionDisabled}
-              onClick={handleIncrementX}
-              className={`w-[0.8vw] h-[1.8vw] flex items-center justify-center transition-colors ${
-                isDimensionDisabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-black cursor-pointer'
+
+            <div />
+
+            <div
+              className={`min-w-0 h-[1.85vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] select-none transition-colors ${
+                isDimensionDisabled ? 'bg-gray-100/60 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-[#eaecee]'
               }`}
             >
-              <ChevronRight size="0.8vw" />
-            </button>
-          </div>
-
-          {/* Size W */}
-          <div className="flex items-center">
-            <div className="flex items-center gap-[0.2vw] w-[3.4vw]">
-              <span className="text-[0.82vw] font-medium text-gray-800">Size</span>
-              <button
-                type="button"
-                onClick={handleToggleAspectLock}
-                className={`p-[0.1vw] rounded transition-colors ${
-                  isAspectLocked ? 'text-gray-900 bg-gray-200/80 hover:bg-gray-300/80' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200'
-                } ${isDimensionDisabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
-                title={isAspectLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
+              <span
+                onPointerDown={isDimensionDisabled ? undefined : handleScrubY}
+                title={isDimensionDisabled ? undefined : "Drag horizontally to adjust Y"}
+                className={`font-semibold text-[0.78vw] select-none pr-[0.25vw] h-full flex items-center ${isDimensionDisabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800 cursor-ew-resize'}`}
               >
-                {isAspectLocked ? (
-                  <Lock size="0.75vw" className="text-gray-900" />
-                ) : (
-                  <Unlock size="0.75vw" className="text-gray-400 hover:text-gray-600" />
-                )}
-              </button>
-            </div>
-            <button
-              type="button"
-              disabled={isDimensionDisabled}
-              onClick={handleDecrementW}
-              className={`w-[0.8vw] h-[1.8vw] flex items-center justify-center transition-colors ${
-                isDimensionDisabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-black cursor-pointer'
-              }`}
-            >
-              <ChevronLeft size="0.8vw" />
-            </button>
-            <div
-              onPointerDown={handleScrubW}
-              title={isAspectLocked ? "Drag horizontally to adjust Width and Height proportionally or type value" : "Drag horizontally to adjust Width or type value"}
-              className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] cursor-ew-resize select-none transition-colors ${
-                isDimensionDisabled ? 'bg-gray-100/60 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-[#eaecee]'
-              }`}
-            >
-              <span className="text-gray-800 font-semibold text-[0.78vw] cursor-ew-resize select-none">W</span>
-              <DimensionInput
-                targetId={selectedLayerId}
-                targetAttr="width"
-                className={`w-full text-right outline-none text-[0.8vw] font-medium cursor-text ${
-                  isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 bg-transparent'
-                }`}
-                value={convertValue(selectedElementProps?.w || flipbookDimensions?.width)}
-                readOnly={isDimensionDisabled}
-                onChange={handleWidthChange}
-              />
-            </div>
-            <button
-              type="button"
-              disabled={isDimensionDisabled}
-              onClick={handleIncrementW}
-              className={`w-[0.8vw] h-[1.8vw] flex items-center justify-center transition-colors ${
-                isDimensionDisabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-black cursor-pointer'
-              }`}
-            >
-              <ChevronRight size="0.8vw" />
-            </button>
-          </div>
-        </div>
-
-        {/* ── Row 2: Position Y & Size H ── */}
-        <div className="flex items-center justify-between">
-          {/* Position Y */}
-          <div className="flex items-center">
-            <div className="w-[3.8vw]" />
-            <button
-              type="button"
-              disabled={isDimensionDisabled}
-              onClick={handleDecrementY}
-              className={`w-[0.8vw] h-[1.8vw] flex items-center justify-center transition-colors ${
-                isDimensionDisabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-black cursor-pointer'
-              }`}
-            >
-              <ChevronLeft size="0.8vw" />
-            </button>
-            <div
-              onPointerDown={handleScrubY}
-              title="Drag horizontally to adjust Y or type value"
-              className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] cursor-ew-resize select-none transition-colors ${
-                isDimensionDisabled ? 'bg-gray-100/60 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-[#eaecee]'
-              }`}
-            >
-              <span className="text-gray-800 font-semibold text-[0.78vw] cursor-ew-resize select-none">Y</span>
+                Y
+              </span>
               <DimensionInput
                 targetId={selectedLayerId}
                 targetAttr="y"
-                className={`w-full text-right outline-none text-[0.8vw] font-medium cursor-text ${
-                  isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 bg-transparent'
+                className={`w-full min-w-0 text-right outline-none text-[0.8vw] font-medium ${
+                  isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 cursor-text bg-transparent'
                 }`}
                 value={convertValue(selectedElementProps?.y || 0)}
                 readOnly={isDimensionDisabled}
                 onChange={(val) => updatePosition(val, 'y')}
               />
             </div>
-            <button
-              type="button"
-              disabled={isDimensionDisabled}
-              onClick={handleIncrementY}
-              className={`w-[0.8vw] h-[1.8vw] flex items-center justify-center transition-colors ${
-                isDimensionDisabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-black cursor-pointer'
-              }`}
-            >
-              <ChevronRight size="0.8vw" />
-            </button>
           </div>
+        </div>
 
-          {/* Size H */}
-          <div className="flex items-center">
-            <div className="w-[3.4vw]" />
-            <button
-              type="button"
-              disabled={isDimensionDisabled}
-              onClick={handleDecrementH}
-              className={`w-[0.8vw] h-[1.8vw] flex items-center justify-center transition-colors ${
-                isDimensionDisabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-black cursor-pointer'
-              }`}
-            >
-              <ChevronLeft size="0.8vw" />
-            </button>
+        {/* ── Row 2: Size : W, Lock, H ── */}
+        <div className="flex items-center">
+          <span className="text-[0.82vw] font-medium text-gray-800 w-[4.5vw] shrink-0">Size :</span>
+          <div className="flex-1 grid grid-cols-[1fr_1.5vw_1fr] items-center gap-[0.25vw]">
             <div
-              onPointerDown={handleScrubH}
-              title={isAspectLocked ? "Drag horizontally to adjust Height and Width proportionally or type value" : "Drag horizontally to adjust Height or type value"}
-              className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] cursor-ew-resize select-none transition-colors ${
+              className={`min-w-0 h-[1.85vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] select-none transition-colors ${
                 isDimensionDisabled ? 'bg-gray-100/60 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-[#eaecee]'
               }`}
             >
-              <span className="text-gray-800 font-semibold text-[0.78vw] cursor-ew-resize select-none">H</span>
+              <span
+                onPointerDown={isDimensionDisabled ? undefined : handleScrubW}
+                title={isDimensionDisabled ? undefined : (isAspectLocked ? "Drag horizontally to adjust Width and Height proportionally" : "Drag horizontally to adjust Width")}
+                className={`font-semibold text-[0.78vw] select-none pr-[0.25vw] h-full flex items-center ${isDimensionDisabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800 cursor-ew-resize'}`}
+              >
+                W
+              </span>
+              <DimensionInput
+                targetId={selectedLayerId}
+                targetAttr="width"
+                className={`w-full min-w-0 text-right outline-none text-[0.8vw] font-medium ${
+                  isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 cursor-text bg-transparent'
+                }`}
+                value={convertValue(selectedElementProps?.w || flipbookDimensions?.width)}
+                readOnly={isDimensionDisabled}
+                onChange={handleWidthChange}
+              />
+            </div>
+
+            <div className="flex items-center justify-center">
+              <button
+                type="button"
+                disabled={isDimensionDisabled}
+                onClick={handleToggleAspectLock}
+                className={`p-[0.2vw] rounded-[0.3vw] transition-colors ${
+                  isAspectLocked ? 'text-gray-900 bg-gray-200/80 hover:bg-gray-300/80' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200'
+                } ${isDimensionDisabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
+                title={isDimensionDisabled ? undefined : (isAspectLocked ? "Unlock aspect ratio" : "Lock aspect ratio")}
+              >
+                {isAspectLocked ? (
+                  <Lock size="0.8vw" className="text-gray-900" />
+                ) : (
+                  <Unlock size="0.8vw" className="text-gray-400 hover:text-gray-600" />
+                )}
+              </button>
+            </div>
+
+            <div
+              className={`min-w-0 h-[1.85vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] select-none transition-colors ${
+                isDimensionDisabled ? 'bg-gray-100/60 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-[#eaecee]'
+              }`}
+            >
+              <span
+                onPointerDown={isDimensionDisabled ? undefined : handleScrubH}
+                title={isDimensionDisabled ? undefined : (isAspectLocked ? "Drag horizontally to adjust Height and Width proportionally" : "Drag horizontally to adjust Height")}
+                className={`font-semibold text-[0.78vw] select-none pr-[0.25vw] h-full flex items-center ${isDimensionDisabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800 cursor-ew-resize'}`}
+              >
+                H
+              </span>
               <DimensionInput
                 targetId={selectedLayerId}
                 targetAttr="height"
-                className={`w-full text-right outline-none text-[0.8vw] font-medium cursor-text ${
-                  isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 bg-transparent'
+                className={`w-full min-w-0 text-right outline-none text-[0.8vw] font-medium ${
+                  isDimensionDisabled ? 'text-gray-400 cursor-not-allowed bg-transparent' : 'text-gray-700 cursor-text bg-transparent'
                 }`}
                 value={convertValue(selectedElementProps?.h || flipbookDimensions?.height)}
                 readOnly={isDimensionDisabled}
                 onChange={handleHeightChange}
               />
             </div>
-            <button
-              type="button"
-              disabled={isDimensionDisabled}
-              onClick={handleIncrementH}
-              className={`w-[0.8vw] h-[1.8vw] flex items-center justify-center transition-colors ${
-                isDimensionDisabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-black cursor-pointer'
-              }`}
-            >
-              <ChevronRight size="0.8vw" />
-            </button>
           </div>
         </div>
 
         {/* ── Row 3: Rotate & Flips ── */}
-        <div className="flex items-center justify-between pt-[0.2vw]">
-          {/* Left: Rotate */}
-          <div className="flex items-center">
-            <span className="text-[0.82vw] font-medium text-gray-800 w-[3.8vw]">Rotate :</span>
-            <div className="w-[0.8vw]" />
+        <div className="flex items-center pt-[0.1vw]">
+          <span className="text-[0.82vw] font-medium text-gray-800 w-[4.5vw] shrink-0">Rotate :</span>
+          <div className="flex-1 grid grid-cols-[1fr_1.5vw_1fr] items-center gap-[0.25vw]">
             <div
-              onMouseDown={handleRotateMouseDown}
-              title="Drag horizontally to rotate or type angle"
-              className={`w-[4.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] cursor-ew-resize ${
+              className={`min-w-0 h-[1.85vw] rounded-[0.35vw] flex items-center justify-between px-[0.5vw] ${
                 isDimensionDisabled ? 'bg-gray-100/60 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-[#eaecee]'
               }`}
             >
-              <Icon icon="icon-park-outline:rotate" width="1.05vw" height="1.05vw" className="text-gray-800 flex-shrink-0" />
+              <span
+                onPointerDown={isDimensionDisabled ? undefined : handleRotateMouseDown}
+                title={isDimensionDisabled ? undefined : "Drag horizontally to rotate"}
+                className={`h-full flex items-center pr-[0.25vw] flex-shrink-0 ${isDimensionDisabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800 cursor-ew-resize'}`}
+              >
+                <Icon icon="icon-park-outline:rotate" width="1.05vw" height="1.05vw" />
+              </span>
               <input
                 type="text"
+                size={4}
                 disabled={isDimensionDisabled}
-                value={isEditingRotation ? localRotation : (liveRotation !== null ? liveRotation : 0)}
+                value={isEditingRotation ? localRotation : `${liveRotation !== null ? liveRotation : 0}°`}
                 onFocus={() => {
                   if (isDimensionDisabled) return;
                   setIsEditingRotation(true);
@@ -765,42 +709,38 @@ const TransformProperties = ({
                     e.target.blur();
                   }
                 }}
-                className="w-full text-right font-medium text-[0.8vw] text-gray-700 bg-transparent outline-none disabled:text-gray-400 cursor-text"
+                className={`w-full min-w-0 text-right font-medium text-[0.8vw] bg-transparent outline-none ${
+                  isDimensionDisabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-text'
+                }`}
               />
             </div>
-            <div className="w-[0.8vw]" />
-          </div>
 
-          {/* Right: Flip Horizontal & Flip Vertical */}
-          <div className="flex items-center">
-            <div className="w-[3.4vw] flex items-center">
+            <div />
+
+            <div className="min-w-0 flex items-center gap-[0.5vw]">
               <button
                 type="button"
                 onClick={handleFlipH}
                 disabled={isDimensionDisabled}
-                title="Flip Horizontal"
-                className={`w-[1.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-center transition-colors ${
+                title={isDimensionDisabled ? undefined : "Flip Horizontal"}
+                className={`w-[1.85vw] h-[1.85vw] rounded-[0.35vw] flex items-center justify-center transition-colors ${
                   isDimensionDisabled ? 'bg-gray-100/60 text-gray-300 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-gray-200 active:bg-gray-300 text-gray-800 cursor-pointer shadow-2xs'
                 }`}
               >
                 <Icon icon="vaadin:flip-h" width="1.05vw" height="1.05vw" />
               </button>
-            </div>
-            <div className="w-[0.8vw]" />
-            <div className="w-[4.8vw] flex items-center">
               <button
                 type="button"
                 onClick={handleFlipV}
                 disabled={isDimensionDisabled}
-                title="Flip Vertical"
-                className={`w-[1.8vw] h-[1.8vw] rounded-[0.35vw] flex items-center justify-center transition-colors ${
+                title={isDimensionDisabled ? undefined : "Flip Vertical"}
+                className={`w-[1.85vw] h-[1.85vw] rounded-[0.35vw] flex items-center justify-center transition-colors ${
                   isDimensionDisabled ? 'bg-gray-100/60 text-gray-300 cursor-not-allowed' : 'bg-[#F1F3F5] hover:bg-gray-200 active:bg-gray-300 text-gray-800 cursor-pointer shadow-2xs'
                 }`}
               >
                 <Icon icon="vaadin:flip-v" width="1.05vw" height="1.05vw" />
               </button>
             </div>
-            <div className="w-[0.8vw]" />
           </div>
         </div>
       </div>

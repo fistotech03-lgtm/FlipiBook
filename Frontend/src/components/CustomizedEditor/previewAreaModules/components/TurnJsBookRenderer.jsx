@@ -74,11 +74,6 @@ const TurnJsBookRenderer = React.memo(({
 
     const isZoomedIn = interactionZoom && interactionZoom.scale > 1;
 
-    const computedShadow = useMemo(() => {
-        if (!shadowActive) return 'none';
-        if (!shadowFilter || shadowFilter === 'none') return 'none';
-        return shadowFilter;
-    }, [shadowActive, shadowFilter]);
 
     return (
         <div
@@ -89,12 +84,13 @@ const TurnJsBookRenderer = React.memo(({
                 opacity: pageOpacity ?? 1,
                 ...zoomStyle,
                 transform: zoomStyle?.transform ? `${zoomStyle.transform} translateZ(0)` : 'translateZ(0)',
-                willChange: 'transform, filter',
+                willChange: 'transform',
                 backfaceVisibility: 'hidden',
                 WebkitBackfaceVisibility: 'hidden',
                 zIndex: isZoomedIn ? 50 : 1,
-                filter: computedShadow,
-                transition: isZoomedIn ? 'filter 0.5s ease, transform 0.3s ease' : 'filter 0.5s ease'
+                // No book drop-shadow: as a filter it was re-blurred on every animation frame (first turn
+                // 15–30fps), and a static box-shadow layer showed on empty halves of the spread.
+                transition: isZoomedIn ? 'transform 0.3s ease' : undefined
             }}
         >
             <FlipBookEngine
@@ -120,6 +116,8 @@ const TurnJsBookRenderer = React.memo(({
                 pageOpacity={pageOpacity}
                 useMouseEvents={settings?.navigation?.dragToTurn ?? true}
                 onBookReady={onBookReady}
+                bookShadow={shadowActive && shadowStyle && shadowStyle !== 'none' ? shadowStyle : 'none'}
+                bookShadowFilter={shadowActive && shadowFilter && shadowFilter !== 'none' ? shadowFilter : 'none'}
             />
 
             {/* Bookmarks rendering */}<div

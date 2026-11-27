@@ -48,7 +48,7 @@ const Switch = ({ enabled, onChange, disabled }) => (
     }}
     className={`w-[2.3vw] h-[1.25vw] rounded-full p-[0.15vw] transition-colors duration-200 cursor-pointer ${
       disabled ? 'opacity-40 cursor-not-allowed' : ''
-    } ${enabled ? 'bg-[#4D47FF]' : 'bg-gray-300'}`}
+    } ${enabled ? 'bg-[#EC5137]' : 'bg-gray-300'}`}
   >
     <div
       className={`w-[0.95vw] h-[0.95vw] bg-white rounded-full shadow-xs transition-transform duration-200 ${
@@ -2109,8 +2109,8 @@ const VideoProperties = ({
         .custom-range-slider { -webkit-appearance: none; width: 100%; background: transparent; position: relative; }
         .custom-range-slider::before { content: ""; position: absolute; top: -0.75vw; bottom: -0.75vw; left: 0; right: 0; cursor: pointer; z-index: 1; }
         .custom-range-slider::-webkit-slider-runnable-track { height: 0.2vw; border-radius: 0.1vw; background: inherit; }
-        .custom-range-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 1vw; width: 1vw; border-radius: 50%; background: #4D47FF; border: 0.02vw solid #ffffff; box-shadow: 0 0.15vw 0.5vw rgba(77,71,255,0.4); margin-top: -0.55vw; cursor: pointer; transition: box-shadow 0.15s ease; position: relative; z-index: 2; }
-        .custom-range-slider::-webkit-slider-thumb:hover { box-shadow: 0 0.15vw 0.75vw rgba(77,71,255,0.6); }
+        .custom-range-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 1vw; width: 1vw; border-radius: 50%; background: #EC5137; border: 0.02vw solid #ffffff; box-shadow: 0 0.15vw 0.5vw rgba(236,81,55,0.4); margin-top: -0.55vw; cursor: pointer; transition: box-shadow 0.15s ease; position: relative; z-index: 2; }
+        .custom-range-slider::-webkit-slider-thumb:hover { box-shadow: 0 0.15vw 0.75vw rgba(236,81,55,0.6); }
         body.is-scrubbing { overflow: hidden !important; }
       `}</style>
 
@@ -2292,7 +2292,7 @@ const VideoProperties = ({
               }}
               onMouseUp={() => debouncedUpdate()}
               className="w-full cursor-pointer custom-range-slider"
-              style={{ backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${opacity}%, #E2E8F0 ${opacity}%, #E2E8F0 100%)` }}
+              style={{ backgroundImage: `linear-gradient(to right, #EC5137 0%, #EC5137 ${opacity}%, #E2E8F0 ${opacity}%, #E2E8F0 100%)` }}
             />
           </div>
           <div className="w-[3.3vw] h-[2vw] rounded-[0.4vw] border border-gray-300 bg-white flex items-center justify-center text-[0.8vw] font-medium text-gray-700 shadow-2xs">
@@ -2445,7 +2445,7 @@ const VideoProperties = ({
                         }}
                         className="w-full cursor-pointer custom-range-slider"
                         style={{
-                          backgroundImage: `linear-gradient(to right, #4D47FF 0%, #4D47FF ${muted ? 0 : defaultVolume}%, #E2E8F0 ${muted ? 0 : defaultVolume}%, #E2E8F0 100%)`
+                          backgroundImage: `linear-gradient(to right, #EC5137 0%, #EC5137 ${muted ? 0 : defaultVolume}%, #E2E8F0 ${muted ? 0 : defaultVolume}%, #E2E8F0 100%)`
                         }}
                       />
                     </div>

@@ -1,29 +1,10 @@
 // Canvas dimensions
-import { CUSTOM_FONT_FAMILIES } from '../customFonts';
+import { FONT_FAMILIES } from '../../config/fonts';
 export const CANVAS_WIDTH = 595;
 export const CANVAS_HEIGHT = 842;
 
 // Font families
-export const fontFamilies = [
-  "Outfit",
-  "Inter",
-  "Poppins",
-  "Roboto",
-  "Montserrat",
-  "Open Sans",
-  "Lato",
-  "Arial",
-  "Times New Roman",
-  "Courier New",
-  "Georgia",
-  "Verdana",
-  "Raleway",
-  "Ubuntu",
-  "Allura",
-  "Parisienne",
-  "Satisfy",
-  ...CUSTOM_FONT_FAMILIES,
-];
+export const fontFamilies = [...FONT_FAMILIES];
 
 // Font weights
 export const fontWeights = [

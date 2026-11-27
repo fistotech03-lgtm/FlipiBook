@@ -264,3 +264,155 @@ export const handleLocalScrub = (e, initialVal, updateFn, sensitivity = 5) => {
   window.addEventListener('pointermove', onMouseMove);
   window.addEventListener('pointerup', onMouseUp);
 };
+
+const _specialGradientCache = new Map();
+const MAX_GRADIENT_CACHE = 64;
+
+const normalizeStopRgba = (stop) => {
+  const rawOp = (stop.opacity !== undefined && stop.opacity !== null) ? Number(stop.opacity) : 1;
+  const alpha = Math.min(1, Math.max(0, rawOp > 1 ? rawOp / 100 : rawOp));
+  const color = String(stop.color || '#000000').trim();
+  if (color.startsWith('#')) {
+    const { r, g, b, a } = hexToRgb(color);
+    const finalA = (stop.opacity !== undefined && stop.opacity !== null) ? alpha : a;
+    return `rgba(${r}, ${g}, ${b}, ${finalA})`;
+  }
+  const rgbMatch = color.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+))?\s*\)/i);
+  if (rgbMatch) {
+    const baseA = rgbMatch[4] !== undefined ? parseFloat(rgbMatch[4]) : 1;
+    const finalA = (stop.opacity !== undefined && stop.opacity !== null) ? alpha : baseA;
+    return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${finalA})`;
+  }
+  return color;
+};
+
+/**
+ * Rasterizes CSS 'angular' (conic-gradient) or 'diamond' gradients onto an offscreen canvas
+ * and returns a PNG data URL for use inside SVG <pattern><image .../></pattern>.
+ */
+export const renderSpecialGradientDataUrl = ({
+  type,
+  stops = [],
+  angle = 0,
+  radius = 100,
+  size = 256,
+}) => {
+  const normType = String(type || '').toLowerCase();
+  if ((normType !== 'angular' && normType !== 'diamond') || !stops.length) return null;
+
+  const sortedStops = [...stops].sort((a, b) => (a.offset ?? 0) - (b.offset ?? 0));
+  const numAngle = parseFloat(angle) || 0;
+  const numRadius = parseFloat(radius) || 100;
+  const cacheKey = `${normType}|${numAngle}|${numRadius}|${size}|${sortedStops.map(s => `${s.color}:${s.offset}:${s.opacity}`).join(',')}`;
+
+  if (_specialGradientCache.has(cacheKey)) {
+    return _specialGradientCache.get(cacheKey);
+  }
+
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  const half = size / 2;
+
+  if (normType === 'angular') {
+    const startAngle = ((numAngle - 90) * Math.PI) / 180;
+    if (typeof ctx.createConicGradient === 'function') {
+      const grad = ctx.createConicGradient(startAngle, half, half);
+      sortedStops.forEach((s) => {
+        const offset = Math.min(1, Math.max(0, (parseFloat(s.offset) || 0) / 100));
+        grad.addColorStop(offset, normalizeStopRgba(s));
+      });
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+    }
+  } else if (normType === 'diamond') {
+    const scale = Math.max(0.01, numRadius / 100);
+    const quadrants = [
+      { x: 0, y: 0, w: half + 1, h: half + 1, x2: half - half * scale, y2: half - half * scale },
+      { x: half, y: 0, w: half, h: half + 1, x2: half + half * scale, y2: half - half * scale },
+      { x: 0, y: half, w: half + 1, h: half, x2: half - half * scale, y2: half + half * scale },
+      { x: half, y: half, w: half, h: half, x2: half + half * scale, y2: half + half * scale },
+    ];
+    quadrants.forEach((q) => {
+      const grad = ctx.createLinearGradient(half, half, q.x2, q.y2);
+      sortedStops.forEach((s) => {
+        const offset = Math.min(1, Math.max(0, (parseFloat(s.offset) || 0) / 100));
+        grad.addColorStop(offset, normalizeStopRgba(s));
+      });
+      ctx.fillStyle = grad;
+      ctx.fillRect(q.x, q.y, q.w, q.h);
+    });
+  }
+
+  const dataUrl = canvas.toDataURL('image/png');
+  if (_specialGradientCache.size >= MAX_GRADIENT_CACHE) {
+    const oldestKey = _specialGradientCache.keys().next().value;
+    _specialGradientCache.delete(oldestKey);
+  }
+  _specialGradientCache.set(cacheKey, dataUrl);
+  return dataUrl;
+};
+
+/**
+ * Creates or updates an SVG <pattern> paint server for 'angular' or 'diamond' gradients.
+ */
+export const createOrUpdateSvgPatternGradient = ({
+  doc = document,
+  defs,
+  gradId,
+  existingEl = null,
+  type,
+  stops,
+  angle = 0,
+  radius = 100,
+}) => {
+  const ownerDoc = doc.ownerDocument || doc;
+  const dataUrl = renderSpecialGradientDataUrl({ type, stops, angle, radius });
+  if (!dataUrl) return null;
+
+  let patternEl = existingEl;
+  if (patternEl && patternEl.tagName?.toLowerCase() !== 'pattern') {
+    patternEl.remove();
+    patternEl = null;
+  }
+
+  if (!patternEl) {
+    patternEl = ownerDoc.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+    patternEl.id = gradId;
+    patternEl.setAttribute('patternUnits', 'objectBoundingBox');
+    patternEl.setAttribute('patternContentUnits', 'objectBoundingBox');
+    patternEl.setAttribute('width', '1');
+    patternEl.setAttribute('height', '1');
+
+    const imgEl = ownerDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+    imgEl.setAttribute('x', '0');
+    imgEl.setAttribute('y', '0');
+    imgEl.setAttribute('width', '1');
+    imgEl.setAttribute('height', '1');
+    imgEl.setAttribute('preserveAspectRatio', 'none');
+    imgEl.setAttribute('href', dataUrl);
+    imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dataUrl);
+    patternEl.appendChild(imgEl);
+
+    if (defs) defs.appendChild(patternEl);
+  } else {
+    let imgEl = patternEl.querySelector('image');
+    if (!imgEl) {
+      imgEl = ownerDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+      imgEl.setAttribute('x', '0');
+      imgEl.setAttribute('y', '0');
+      imgEl.setAttribute('width', '1');
+      imgEl.setAttribute('height', '1');
+      imgEl.setAttribute('preserveAspectRatio', 'none');
+      patternEl.appendChild(imgEl);
+    }
+    imgEl.setAttribute('href', dataUrl);
+    imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dataUrl);
+  }
+
+  return patternEl;
+};

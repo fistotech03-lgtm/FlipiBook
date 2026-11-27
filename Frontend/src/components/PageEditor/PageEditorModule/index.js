@@ -6,6 +6,7 @@
 export * from './svgFilterUtils';
 export * from '../Interaction/interactionValidation';
 export * from './useElementAttributeSync';
+export * from './useHistoryManager';
 export * from './usePageManager';
 export * from './useLayerOperations';
 export * from './useDocumentImport';

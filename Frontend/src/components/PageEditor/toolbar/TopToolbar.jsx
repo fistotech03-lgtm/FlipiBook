@@ -347,7 +347,7 @@ const TopToolbar = ({
                 aria-label="Toggle Trim View"
                 className={`relative w-[1.9vw] h-[1.9vw] flex items-center justify-center rounded-[0.4vw] cursor-pointer transition-all focus:outline-none group ${
                   isTrimView
-                    ? 'bg-[#D1D5DB] text-gray-900 shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)] border border-gray-400/50'
+                    ? 'bg-[#E5E7EB] text-gray-900 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] border border-gray-300/60'
                     : 'bg-white text-gray-500 shadow-xs border border-transparent hover:text-gray-800'
                 }`}
               >
@@ -370,7 +370,7 @@ const TopToolbar = ({
               aria-label="Toggle Auto Save"
               className={`relative w-[1.9vw] h-[1.9vw] flex items-center justify-center rounded-[0.4vw] cursor-pointer transition-all focus:outline-none group ${
                 isAutoSaveEnabled
-                  ? 'bg-[#D1D5DB] text-gray-900 shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)] border border-gray-400/50'
+                  ? 'bg-[#E5E7EB] text-gray-900 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] border border-gray-300/60'
                   : 'bg-white text-gray-500 shadow-xs border border-transparent hover:text-gray-800'
               }`}
             >
@@ -393,7 +393,7 @@ const TopToolbar = ({
                 aria-label="Toggle Ruler"
                 className={`relative w-[1.9vw] h-[1.9vw] flex items-center justify-center rounded-[0.4vw] cursor-pointer transition-all focus:outline-none group ${
                   isRulerEnabled
-                    ? 'bg-[#D1D5DB] text-gray-900 shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)] border border-gray-400/50'
+                    ? 'bg-[#E5E7EB] text-gray-900 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] border border-gray-300/60'
                     : 'bg-white text-gray-500 shadow-xs border border-transparent hover:text-gray-800'
                 }`}
               >

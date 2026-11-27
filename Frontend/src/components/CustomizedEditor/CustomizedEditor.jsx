@@ -11,6 +11,8 @@ import { useDynamicLayoutColors } from './hooks/useDynamicLayoutColors';
 import { useCustomizedAutoSave } from './hooks/useCustomizedAutoSave';
 import { useCustomizedActions } from './hooks/useCustomizedActions';
 import { useCustomizedEditorData } from './hooks/useCustomizedEditorData';
+import { Icon } from '@iconify/react';
+import { executeInlineTranslation, isEditableTextField, TRANSLATE_LANGUAGES } from '../PageEditor/utils/inlineTranslationHelper';
 import { loadWindowFromIDB } from '../../utils/customizedEditor/pageWindowStore';
 import { clearRasterCache } from '../../utils/customizedEditor/pageRasterCache';
 import { getInFlightActivityCount } from '../../utils/storage/saveLockManager';
@@ -178,6 +180,70 @@ const CustomizedEditor = () => {
   const [leadFormSettings, setLeadFormSettings] = useState(() => createDefaultLeadFormSettings(matchingBook, location.state));
   const [visibilitySettings, setVisibilitySettings] = useState(() => createDefaultVisibilitySettings());
   const [shareSettings, setShareSettings] = useState(() => createDefaultShareSettings());
+
+  const [translateContextMenu, setTranslateContextMenu] = useState(null); // { x, y }
+
+  // Track editable text inputs/textareas, right-click translate menu, & handle inline translation in CustomizedEditor
+  useEffect(() => {
+    const captureEditable = (e) => {
+      const target = e?.target;
+      if (isEditableTextField(target)) {
+        window.__lastEditableSelection = {
+          el: target,
+          start: target.selectionStart,
+          end: target.selectionEnd,
+          timestamp: Date.now(),
+        };
+      }
+    };
+    const handleContextMenu = (e) => {
+      const target = e?.target;
+      if (isEditableTextField(target)) {
+        const start = target.selectionStart;
+        const end = target.selectionEnd;
+        const hasSelectedText = typeof start === 'number' && typeof end === 'number' && start !== end && (target.value || '').slice(start, end).trim().length > 0;
+        if (hasSelectedText) {
+          e.preventDefault();
+          window.__lastEditableSelection = {
+            el: target,
+            start,
+            end,
+            timestamp: Date.now(),
+          };
+          const menuWidth = 190;
+          const menuHeight = 48;
+          const x = Math.min(e.clientX, window.innerWidth - menuWidth - 16);
+          const y = Math.min(e.clientY, window.innerHeight - menuHeight - 16);
+          setTranslateContextMenu({ x, y });
+          return;
+        }
+      }
+      setTranslateContextMenu(null);
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setTranslateContextMenu(null);
+    };
+    const handleTriggerInlineTranslate = async (e) => {
+      const { targetLang = 'tam_Taml' } = e?.detail || {};
+      await executeInlineTranslation({ targetLang });
+    };
+    document.addEventListener('focusin', captureEditable, true);
+    document.addEventListener('mouseup', captureEditable, true);
+    document.addEventListener('keyup', captureEditable, true);
+    document.addEventListener('select', captureEditable, true);
+    document.addEventListener('contextmenu', handleContextMenu, true);
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('trigger-inline-translate', handleTriggerInlineTranslate);
+    return () => {
+      document.removeEventListener('focusin', captureEditable, true);
+      document.removeEventListener('mouseup', captureEditable, true);
+      document.removeEventListener('keyup', captureEditable, true);
+      document.removeEventListener('select', captureEditable, true);
+      document.removeEventListener('contextmenu', handleContextMenu, true);
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('trigger-inline-translate', handleTriggerInlineTranslate);
+    };
+  }, []);
 
   // Panel state synchronization
   useEffect(() => {
@@ -725,6 +791,80 @@ const CustomizedEditor = () => {
         return [v.slice(0, i).trim(), v.slice(i + 1).trim()];
       })) : {}}
     >
+      {/* Right-click Translate Selection Context Menu for selected text in editable inputs */}
+      {translateContextMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-[99990]"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setTranslateContextMenu(null);
+            }}
+          />
+          <div
+            onMouseDown={(e) => e.preventDefault()}
+            className="fixed z-[99991] w-[12.5vw] min-w-[175px] bg-white rounded-[0.55vw] shadow-[0_12px_32px_rgba(0,0,0,0.18)] border border-gray-100 p-[0.35vw]"
+            style={{ left: translateContextMenu.x, top: translateContextMenu.y }}
+          >
+            <div className="relative group/translate-root">
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('trigger-inline-translate', {
+                    detail: { targetLang: 'tam_Taml' }
+                  }));
+                  setTranslateContextMenu(null);
+                }}
+                className="w-full flex items-center justify-between px-[0.6vw] py-[0.42vw] text-[0.75vw] font-medium text-gray-700 hover:bg-gray-50 rounded-[0.4vw] text-left cursor-pointer group-hover/translate-root:bg-gray-50"
+              >
+                <div className="flex items-center gap-[0.55vw]">
+                  <Icon icon="bi:translate" className="w-[0.9vw] h-[0.9vw] text-gray-700" />
+                  <span>Translate Selection</span>
+                </div>
+                <Icon icon="mdi:chevron-right" className="w-[0.8vw] h-[0.8vw] text-gray-400" />
+              </button>
+
+              <div
+                onMouseDown={(e) => e.preventDefault()}
+                className={`absolute left-full pl-[0.35vw] hidden group-hover/translate-root:block z-[99992] ${
+                  translateContextMenu.y > (typeof window !== 'undefined' ? window.innerHeight - 280 : 500)
+                    ? 'bottom-0'
+                    : 'top-0'
+                }`}
+              >
+                <div className="w-[11.5vw] min-w-[165px] bg-white rounded-[0.5vw] shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-gray-100 p-[0.3vw] flex flex-col gap-[0.1vw] max-h-[32vh] overflow-y-auto">
+                  <div className="px-[0.4vw] py-[0.2vw] border-b border-gray-100 text-[0.65vw] font-bold text-gray-500">
+                    Translate to:
+                  </div>
+                  {TRANSLATE_LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('trigger-inline-translate', {
+                          detail: { targetLang: lang.code }
+                        }));
+                        setTranslateContextMenu(null);
+                      }}
+                      className={`flex items-center justify-between px-[0.5vw] py-[0.35vw] text-[0.7vw] font-medium rounded-[0.3vw] text-left cursor-pointer transition-colors ${
+                        lang.code === 'tam_Taml'
+                          ? 'bg-gray-100 text-gray-900 font-semibold hover:bg-gray-200/70'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span>{lang.name}</span>
+                      <span className="text-[0.65vw] text-gray-400">{lang.native}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       <style>{`
         :root { ${layoutColorVars} }
       `}</style>

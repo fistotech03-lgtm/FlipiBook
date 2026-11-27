@@ -253,11 +253,6 @@ export const useCustomizedAutoSave = ({
       idbTimerRef.current = null;
     }
 
-    // If auto-save is disabled, do NOT send network requests (only manual save writes to backend)
-    if (!isAutoSaveEnabled) {
-      return;
-    }
-
     // 3. Immediate Exit Network Flush (Keepalive ensures the browser sends the POST even if window/tab terminates)
     if (isExit) {
       if (navigator.onLine && payload) {
@@ -345,8 +340,8 @@ export const useCustomizedAutoSave = ({
       }
     }, 300);
 
-    // Debounced Auto-Save to Backend (1000ms)
-    if (isAutoSaveEnabled && !isLoading) {
+    // Debounced Auto-Save to Backend (1000ms) - Always active in Customized Editor
+    if (!isLoading) {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = setTimeout(() => {
         flushSettings(false);

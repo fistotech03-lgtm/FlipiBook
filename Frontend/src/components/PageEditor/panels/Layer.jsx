@@ -19,7 +19,6 @@ import pageCacheManager from '../utils/PageCacheManager';
 import { parseLayersFromSVG } from '../utils/editorUtils';
 import { useAuth } from '../../../context/AuthContext';
 import { useConfirm } from '../../../context/ConfirmationContext';
-import { queryClient } from '../../../queryClient';
 import CustomScrollbar from '../../CustomScrollbar';
 import { MaskIcon, FlattenIcon } from '../mainEditor/components/editorIcons';
 import { getCachedPageThumbnail, renderPageThumbnail } from '../utils/pageThumbnailRenderer';
@@ -822,30 +821,6 @@ const Layer = ({
 
   const confirm = useConfirm();
 
-  const handleNavigateWithConfirm = async (to) => {
-    queryClient.invalidateQueries({ queryKey: ["flipbook-books"] });
-    queryClient.invalidateQueries({ queryKey: ["flipbook-folders"] });
-    if (hasUnsavedChanges) {
-      if (!isAutoSaveEnabled) {
-        const result = await confirm({
-          title: "Leave Site?",
-          message: "Changes you made may not be saved.",
-          confirmText: "Leave",
-          cancelText: "Stay",
-          type: "danger",
-        });
-        if (!result) return;
-      } else {
-        try {
-          if (onSave) await onSave();
-        } catch (err) {
-          console.warn("[Layer] Auto-save before navigation error:", err);
-        }
-      }
-    }
-    navigate(to);
-  };
-
   const handleGoToCustomize = async () => {
     if (hasUnsavedChanges) {
       if (!isAutoSaveEnabled) {
@@ -1593,45 +1568,8 @@ const Layer = ({
             transition={{ duration: 0.2 }}
             className="flex flex-col px-[0.8vw] pb-[1.5vh] select-none h-full w-[16vw] overflow-hidden"
           >
-            {/* Top Workspace Navigation: My Flipbooks & 3D Editor */}
-            <div className="flex items-center bg-gray-100/90 p-[0.22vw] rounded-[0.55vw] border border-gray-200/70 gap-[0.2vw] mt-[1.2vh] mb-[0.8vh] flex-shrink-0">
-              <button
-                onClick={() => handleNavigateWithConfirm('/my-flipbooks')}
-                className="flex-1 h-[2vw] flex items-center justify-center gap-[0.3vw] px-[0.35vw] rounded-[0.42vw] text-gray-700 hover:bg-white hover:text-gray-900 hover:shadow-xs transition-all cursor-pointer"
-                title="Go to My Flipbooks"
-              >
-                <Icon
-                  icon="boxicons:home-alt"
-                  className="w-[0.95vw] h-[0.95vw] text-[#EC5137] flex-shrink-0"
-                />
-                <span className="font-semibold text-[0.68vw] whitespace-nowrap truncate">
-                  My Flipbooks
-                </span>
-              </button>
-
-              <button
-                onClick={() => handleNavigateWithConfirm('/editor/threed_editor')}
-                className="flex-1 h-[2vw] flex items-center justify-center gap-[0.3vw] px-[0.35vw] rounded-[0.42vw] text-gray-700 hover:bg-white hover:text-gray-900 hover:shadow-xs transition-all cursor-pointer"
-                title="Switch to 3D Editor"
-              >
-                <svg
-                  className="w-[0.95vw] h-[0.95vw] flex-shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M12 2L21.5 7.5L12 13L2.5 7.5L12 2Z" fill="#EC5137" />
-                  <path d="M2.5 7.5L12 13V24L2.5 18.5V7.5Z" fill="#4A3AFF" />
-                  <path d="M21.5 7.5L12 13V24L21.5 18.5V7.5Z" fill="#22C55E" />
-                </svg>
-                <span className="font-semibold text-[0.68vw] whitespace-nowrap truncate">
-                  3D Editor
-                </span>
-              </button>
-            </div>
-
             {/* Sidebar Header: Editable Book Name & Back Button */}
-            <div className="flex items-center justify-between mb-[1.2vh] flex-shrink-0 gap-[0.5vw]">
+            <div className="flex items-center justify-between flex-shrink-0 gap-[0.5vw]" style={{ height: '8vh' }}>
               <div
                 onClick={() => nameInputRef.current?.focus()}
                 title="Click to edit flipbook name"

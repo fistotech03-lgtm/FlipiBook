@@ -1286,8 +1286,8 @@ export const useCanvasPointerEvents = ({
 
     // 2. Selection/Drag Priority
     // If we hit any valid child candidate OR any already-selected element OR the multi-selection gap, 
-    // don't start a marquee. Return early to allow interactjs to handle dragging.
-    if ((hitCandidate && !hitBaseFrame || hitAnySelected || hitMultiSelectionGap) && !e.ctrlKey && selectedSelectToolRef.current !== 'direct') {
+    // don't start a marquee unless user holds Ctrl or Shift to draw a selection box across elements.
+    if ((hitCandidate && !hitBaseFrame || hitAnySelected || hitMultiSelectionGap) && !e.ctrlKey && !e.shiftKey && selectedSelectToolRef.current !== 'direct') {
       return;
     }
 
@@ -1306,7 +1306,7 @@ export const useCanvasPointerEvents = ({
     // Converted flipbooks / Interaction & Animation modules: NEVER start marquee drag-selection
     const isInsideTable = Boolean(e.target?.closest?.('td, th, table, [data-type="table-frame"], [data-type="table"], g[id^="table-"]'));
     const isModuleWithoutMarquee = activeTopTool === 'interaction' || activeTopTool === 'animation' || activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
-    const shouldStartMarquee = !isInsideTable && !isModuleWithoutMarquee && !isConvertedFlipbook && (((e.ctrlKey || e.shiftKey) && !hitSelectedImage) || ((!hitCandidate || hitBaseFrame) && selectedSelectToolRef.current !== 'direct' && !isEditingTextRef.current));
+    const shouldStartMarquee = !isInsideTable && !isModuleWithoutMarquee && (((e.ctrlKey || e.shiftKey) && !hitSelectedImage) || (!isConvertedFlipbook && (!hitCandidate || hitBaseFrame) && selectedSelectToolRef.current !== 'direct' && !isEditingTextRef.current));
 
     if (shouldStartMarquee) {
       const rect = container.getBoundingClientRect();
@@ -1332,7 +1332,9 @@ export const useCanvasPointerEvents = ({
           const isFreeFrameCandidate = isFreeFrame && isInteractiveTool;
           const isShape = el.getAttribute('data-type') === 'shape' && !isFreeFrame;
           const isIcon = el.getAttribute('data-type') === 'icon';
-          return isHotspot || isFreeFrameCandidate || isShape || isIcon;
+          const tag = el.tagName.toLowerCase();
+          const isText = tag === 'text' || tag === 'foreignobject' || el.getAttribute('data-type') === 'text' || el.getAttribute('data-type') === 'group';
+          return isHotspot || isFreeFrameCandidate || isShape || isIcon || isText;
         }
         return true;
       });
@@ -2817,6 +2819,10 @@ export const useCanvasPointerEvents = ({
         }
         const isMultiKey = Boolean(e.shiftKey || e.metaKey || (e.ctrlKey && !e.altKey));
         if (isMultiKey) {
+          if (typeof window !== 'undefined' && window.__interactMultiHandledAt && (Date.now() - window.__interactMultiHandledAt < 300)) {
+            window.__interactMultiHandledAt = 0;
+            return;
+          }
           if (isPageRootElement(clickedEl, svg)) return;
           const currentSet = new Set(multiSelectedIdsRef.current);
           const primaryId = selectedLayerIdRef.current;
@@ -2942,6 +2948,11 @@ export const useCanvasPointerEvents = ({
     // Works at top-level OR inside an entered frame, but does NOT enter frames.
     const isMultiSelectClick = Boolean(e.shiftKey || e.metaKey || (e.ctrlKey && !e.altKey));
     if (isMultiSelectClick) {
+      // Avoid double-toggling when interact.js drag-start just processed this Shift/Ctrl/Cmd press
+      if (typeof window !== 'undefined' && window.__interactMultiHandledAt && (Date.now() - window.__interactMultiHandledAt < 300)) {
+        window.__interactMultiHandledAt = 0;
+        return;
+      }
       // If clicking inside a table cell/element, do not toggle off the table from selection!
       const isInsideTable = Boolean(e.target?.closest?.('td, th, table, [data-type="table-frame"], [data-type="table"], g[id^="table-"]'));
       if (isInsideTable) {
@@ -2973,10 +2984,27 @@ export const useCanvasPointerEvents = ({
 
       // Find the topmost candidate hit at this point
       let hitEl = null;
-      for (let i = candidates.length - 1; i >= 0; i--) {
-        if (hitTest(candidates[i], e.clientX, e.clientY, 4)) {
-          hitEl = candidates[i];
-          break;
+      // If primary selection is a leaf text box inside a group (or clicking directly onto another text box
+      // while multi-selecting), prefer the direct leaf text box so Shift/Ctrl/Cmd+Click pairs sibling words!
+      const primaryIdCheck = selectedLayerIdRef.current;
+      const primaryElCheck = primaryIdCheck ? svg.querySelector(`[id="${primaryIdCheck}"]`) : null;
+      const directLeafText = e.target?.closest?.('text[id], foreignObject[id]');
+      if (
+        directLeafText &&
+        directLeafText.id &&
+        svg.contains(directLeafText) &&
+        !isPageRootElement(directLeafText, svg) &&
+        (primaryElCheck?.tagName?.toLowerCase() === 'text' || primaryElCheck?.tagName?.toLowerCase() === 'foreignobject' || primaryElCheck?.parentElement?.closest('g[id]'))
+      ) {
+        hitEl = directLeafText;
+      }
+
+      if (!hitEl) {
+        for (let i = candidates.length - 1; i >= 0; i--) {
+          if (hitTest(candidates[i], e.clientX, e.clientY, 4)) {
+            hitEl = candidates[i];
+            break;
+          }
         }
       }
 

@@ -135,12 +135,66 @@ function isNonEnglishIndicText(text) {
   return hasIndic && !hasLatin;
 }
 
+export function isEditableTextField(el) {
+  if (!el || !el.isConnected) return false;
+  if (el.readOnly || el.disabled) return false;
+  if (el.tagName === 'TEXTAREA') return true;
+  if (el.tagName === 'INPUT') {
+    const t = (el.type || 'text').toLowerCase();
+    return t === 'text' || t === 'search' || t === 'url' || t === '';
+  }
+  return false;
+}
+
 /**
- * Translates either the currently highlighted text range or the specified layer element.
+ * Proportionally distributes translated words across N ordered phrase fragments.
+ */
+function distributeWordsAcrossBoxes(words, weights) {
+  const n = weights.length;
+  if (n <= 0) return [];
+  if (n === 1) return [words.join(' ')];
+  if (!words || words.length === 0) return Array(n).fill('');
+
+  const m = words.length;
+  if (m < n) {
+    return words.map((w) => w).concat(Array(n - m).fill(''));
+  }
+
+  const totalW = weights.reduce((a, b) => a + b, 0) || n;
+  const counts = [];
+  let remainingWords = m;
+  let remainingW = totalW;
+
+  for (let i = 0; i < n; i++) {
+    if (i === n - 1) {
+      counts.push(remainingWords);
+    } else {
+      const remSlots = n - 1 - i;
+      const maxAllow = remainingWords - remSlots;
+      let ideal = Math.round(remainingWords * (weights[i] / remainingW));
+      ideal = Math.max(1, Math.min(maxAllow, ideal));
+      counts.push(ideal);
+      remainingWords -= ideal;
+      remainingW -= weights[i];
+    }
+  }
+
+  const parts = [];
+  let cursor = 0;
+  for (const c of counts) {
+    parts.push(words.slice(cursor, cursor + c).join(' '));
+    cursor += c;
+  }
+  return parts;
+}
+
+/**
+ * Translates either the currently highlighted text range or the specified layer element(s).
  */
 export async function executeInlineTranslation({
   targetLang = 'tam_Taml',
   layerId = null,
+  layerIds = null,
   activePageIndex = 0,
   saveModifiedPageHtml = null,
   onStart = null,
@@ -157,8 +211,105 @@ export async function executeInlineTranslation({
   let targetElement = null;
   let translatingWrapper = null;
   let spinnerBadge = null;
+  const multiBoxItems = [];
+  const multiClusters = [];
 
   try {
+    // 0. Check if an editable <input> or <textarea> is focused or recently active (e.g. CustomizedEditor fields)
+    const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+    let editableField = null;
+    let fieldSelStart = null;
+    let fieldSelEnd = null;
+
+    if (isEditableTextField(activeEl)) {
+      editableField = activeEl;
+      fieldSelStart = activeEl.selectionStart;
+      fieldSelEnd = activeEl.selectionEnd;
+    } else if (
+      typeof window !== 'undefined' &&
+      window.__lastEditableSelection &&
+      isEditableTextField(window.__lastEditableSelection.el) &&
+      Date.now() - window.__lastEditableSelection.timestamp < 120000
+    ) {
+      editableField = window.__lastEditableSelection.el;
+      fieldSelStart = window.__lastEditableSelection.start;
+      fieldSelEnd = window.__lastEditableSelection.end;
+    }
+
+    if (editableField) {
+      const fullVal = editableField.value || '';
+      const hasSlice =
+        typeof fieldSelStart === 'number' &&
+        typeof fieldSelEnd === 'number' &&
+        fieldSelStart !== fieldSelEnd;
+      const sliceText = hasSlice ? fullVal.slice(fieldSelStart, fieldSelEnd).trim() : fullVal.trim();
+
+      if (!sliceText) {
+        const msg = 'Please enter or select text in the field to translate.';
+        showNoticeBadge(editableField.getBoundingClientRect(), msg);
+        if (onError) onError(msg);
+        return false;
+      }
+      if (isNonEnglishIndicText(sliceText)) {
+        const msg = 'Only English to Indian language translation is enabled. Please select English text.';
+        showNoticeBadge(editableField.getBoundingClientRect(), msg);
+        if (onError) onError(msg);
+        return false;
+      }
+
+      if (onStart) onStart();
+      targetContainer = editableField;
+      editableField.classList.add('translating-element-pulse');
+      const fieldRect = editableField.getBoundingClientRect();
+      spinnerBadge = showSpinnerBadge(
+        fieldRect && (fieldRect.width > 0 || fieldRect.height > 0)
+          ? fieldRect
+          : { left: window.innerWidth / 2, top: window.innerHeight / 2, width: 0, height: 0 },
+        langName
+      );
+
+      const res = await fetch('/api/myflipibook/translate-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: sliceText,
+          src_lang: 'eng_Latn',
+          tgt_lang: targetLang
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Server responded with ${res.status}`);
+      }
+      const data = await res.json();
+      if (!data.success || !data.translatedText) {
+        throw new Error(data.message || 'Translation service did not return translated text');
+      }
+
+      const translatedText = data.translatedText;
+      const fontName = FONT_FOR_LANGUAGE[targetLang];
+      if (fontName) loadGoogleFont(fontName);
+
+      const nextVal = hasSlice
+        ? fullVal.slice(0, fieldSelStart) + translatedText + fullVal.slice(fieldSelEnd)
+        : translatedText;
+
+      const proto = editableField.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+      if (nativeSetter) {
+        nativeSetter.call(editableField, nextVal);
+      } else {
+        editableField.value = nextVal;
+      }
+      editableField.dispatchEvent(new Event('input', { bubbles: true }));
+      editableField.classList.remove('translating-element-pulse');
+      window.__lastEditableSelection = null;
+
+      if (onComplete) onComplete(translatedText);
+      return true;
+    }
+
     // 1. Check if user actively highlighted a range with mouse
     const sel = typeof window !== 'undefined' ? window.getSelection() : null;
     if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
@@ -173,8 +324,10 @@ export async function executeInlineTranslation({
       }
     }
 
-    // 2. If no active DOM range, check window.__lastTextSelection (recent within 2 minutes)
-    if (!textToTranslate && window.__lastTextSelection && window.__lastTextSelection.text) {
+    // 2. If no active DOM range (and NOT explicitly multi-selecting multiple boxes), check window.__lastTextSelection
+    const hasExplicitMulti = (Array.isArray(layerIds) && layerIds.length > 1) ||
+      (typeof window !== 'undefined' && Array.isArray(window.__multiSelectedIds) && window.__multiSelectedIds.length > 1);
+    if (!textToTranslate && !hasExplicitMulti && window.__lastTextSelection && window.__lastTextSelection.text) {
       const saved = window.__lastTextSelection;
       const targetEl = document.getElementById(saved.elementId);
       if (targetEl) {
@@ -185,20 +338,138 @@ export async function executeInlineTranslation({
       }
     }
 
-    // 3. If still no range text, check if a layer is selected and translate its text
+    // 3. If still no range text, check multi-selected boxes / group / single layer
     if (!textToTranslate) {
-      const effectiveId = layerId || (typeof window !== 'undefined' && window.__selectedLayerId);
-      if (effectiveId) {
-        const el = document.getElementById(effectiveId);
-        if (el) {
-          targetElement = el;
-          const textDiv = el.querySelector('div') || el;
-          const str = (textDiv.innerText || el.textContent || '').trim();
-          if (str.length > 0) {
-            textToTranslate = str;
-            targetContainer = textDiv;
+      const candidateIds = Array.isArray(layerIds) && layerIds.length > 0
+        ? layerIds
+        : (typeof window !== 'undefined' && Array.isArray(window.__multiSelectedIds) && window.__multiSelectedIds.length > 1
+          ? window.__multiSelectedIds
+          : (layerId || (typeof window !== 'undefined' && window.__selectedLayerId)
+            ? [layerId || window.__selectedLayerId]
+            : []));
+
+      const leafBoxes = [];
+      const seenLeaf = new Set();
+      for (const cid of candidateIds) {
+        const el = cid ? document.getElementById(cid) : null;
+        if (!el) continue;
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'g') {
+          el.querySelectorAll('foreignObject, text').forEach((child) => {
+            if (!seenLeaf.has(child)) {
+              seenLeaf.add(child);
+              leafBoxes.push(child);
+            }
+          });
+        } else if (tag === 'foreignobject' || tag === 'text') {
+          if (!seenLeaf.has(el)) {
+            seenLeaf.add(el);
+            leafBoxes.push(el);
           }
         }
+      }
+
+      const validLeaves = leafBoxes.map((el) => {
+        const tag = el.tagName.toLowerCase();
+        const containerEl = tag === 'foreignobject' ? (el.querySelector('div') || el) : el;
+        const rawTxt = (tag === 'foreignobject' ? (containerEl.innerText || el.textContent) : el.textContent || '').replace(/\s+/g, ' ').trim();
+        const r = el.getBoundingClientRect();
+        const fs = parseFloat(window.getComputedStyle(containerEl).fontSize) || 14;
+        const groupParent = el.parentElement?.closest('g[id]');
+        const groupId = groupParent ? groupParent.id : '';
+        return { el, tag, containerEl, rawTxt, r, fs, groupId };
+      }).filter((item) => item.rawTxt.length > 0);
+
+      if (validLeaves.length > 1) {
+        // Sort in visual reading order (top-to-bottom row grouping by y, then left-to-right x)
+        const byY = [...validLeaves].sort((a, b) => a.r.top - b.r.top);
+        const rows = [];
+        for (const item of byY) {
+          const prev = rows.length > 0 ? rows[rows.length - 1][0] : null;
+          if (prev && Math.abs(item.r.top - prev.r.top) <= Math.min(item.fs, prev.fs) * 0.55) {
+            rows[rows.length - 1].push(item);
+          } else {
+            rows.push([item]);
+          }
+        }
+        const ordered = [];
+        rows.forEach((row) => {
+          row.sort((a, b) => a.r.left - b.r.left);
+          ordered.push(...row);
+        });
+
+        // Partition into clusters: combine ONLY adjacent short incomplete fragments (<=4 words, no terminal .!? before end)
+        // such as "How We" + "Work" or "WHY" + "CHOOSE" + "US", while keeping independent blocks ("About Us" + paragraph) separate!
+        const wordLeaves = ordered.filter((it) => !/^[?!.,;:]+$/.test(it.rawTxt) && !isNonEnglishIndicText(it.rawTxt) && /[A-Za-z]/.test(it.rawTxt));
+        const punctLeaves = ordered.filter((it) => /^[?!]+$/.test(it.rawTxt));
+        const usedPunct = new Set();
+
+        const isShortFragment = (it) => {
+          const words = it.rawTxt.split(/\s+/).filter(Boolean);
+          return words.length > 0 && words.length <= 4;
+        };
+        const endsSentence = (txt) => /[.!?:;]$/.test(txt.trim());
+
+        let idx = 0;
+        while (idx < wordLeaves.length) {
+          const first = wordLeaves[idx];
+          const cluster = [first];
+          if (isShortFragment(first) && !endsSentence(first.rawTxt)) {
+            let j = idx + 1;
+            while (j < wordLeaves.length && cluster.length < 5) {
+              const prev = cluster[cluster.length - 1];
+              const cand = wordLeaves[j];
+              const sameGroup = Boolean(prev.groupId && cand.groupId && prev.groupId === cand.groupId);
+              const closeVert = Math.abs(cand.r.top - prev.r.bottom) <= 45 && Math.abs(cand.r.left - prev.r.left) <= 180;
+              const sameLine = Math.abs(cand.r.top - prev.r.top) <= Math.min(prev.fs, cand.fs) * 0.55 && (cand.r.left - prev.r.right) <= 120;
+              if (isShortFragment(cand) && (sameGroup || closeVert || sameLine) && cand.rawTxt.toLowerCase() !== prev.rawTxt.toLowerCase()) {
+                cluster.push(cand);
+                j++;
+                if (endsSentence(cand.rawTxt)) break;
+              } else {
+                break;
+              }
+            }
+          }
+
+          let query = cluster.map((it) => it.rawTxt).join(' ').trim();
+          const alphaOnly = query.replace(/[^A-Za-z\s]/g, '').trim();
+          if (alphaOnly && alphaOnly === alphaOnly.toUpperCase() && alphaOnly.split(/\s+/).length >= 2) {
+            query = query.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+          } else if (query === 'US') {
+            query = 'Us';
+          }
+
+          let stripTrailingPunct = '';
+          if (cluster.length >= 1 && !/[?!]$/.test(query)) {
+            const cMaxR = Math.max(...cluster.map((c) => c.r.right));
+            const cMinT = Math.min(...cluster.map((c) => c.r.top));
+            const cMaxB = Math.max(...cluster.map((c) => c.r.bottom));
+            for (const pp of punctLeaves) {
+              if (usedPunct.has(pp)) continue;
+              if (pp.r.left >= cMaxR - 30 && pp.r.left <= cMaxR + 180 && pp.r.top >= cMinT - 40 && pp.r.top <= cMaxB + 50) {
+                query += pp.rawTxt;
+                stripTrailingPunct = pp.rawTxt;
+                usedPunct.add(pp);
+                break;
+              }
+            }
+          }
+
+          multiClusters.push({ items: cluster, query, stripTrailingPunct });
+          multiBoxItems.push(...cluster);
+          idx += cluster.length;
+        }
+
+        if (multiClusters.length > 0) {
+          textToTranslate = multiClusters.map((c) => c.query).join('\n');
+          targetElement = multiBoxItems[0].el;
+          targetContainer = multiBoxItems[0].containerEl;
+        }
+      } else if (validLeaves.length === 1) {
+        targetElement = validLeaves[0].el;
+        targetContainer = validLeaves[0].containerEl;
+        textToTranslate = validLeaves[0].rawTxt;
       }
     }
 
@@ -236,6 +507,13 @@ export async function executeInlineTranslation({
         rangeToReplace.insertNode(wrapper);
         translatingWrapper = wrapper;
       }
+    } else if (multiBoxItems.length > 1) {
+      multiBoxItems.forEach((it) => it.containerEl?.classList.add('translating-element-pulse'));
+      const left = Math.min(...multiBoxItems.map((it) => it.r.left));
+      const top = Math.min(...multiBoxItems.map((it) => it.r.top));
+      const right = Math.max(...multiBoxItems.map((it) => it.r.right));
+      const bottom = Math.max(...multiBoxItems.map((it) => it.r.bottom));
+      rect = { left, top, width: right - left, height: bottom - top };
     } else if (targetContainer) {
       rect = targetContainer.getBoundingClientRect();
       targetContainer.classList.add('translating-element-pulse');
@@ -247,15 +525,15 @@ export async function executeInlineTranslation({
 
     spinnerBadge = showSpinnerBadge(rect, langName);
 
-    // 5. Call Backend Translation API
+    // 5. Call Backend Translation API (using batch texts array when multiple clusters exist)
+    const requestPayload = multiClusters.length > 0
+      ? { texts: multiClusters.map((c) => c.query), src_lang: 'eng_Latn', tgt_lang: targetLang }
+      : { text: textToTranslate, src_lang: 'eng_Latn', tgt_lang: targetLang };
+
     const res = await fetch('/api/myflipibook/translate-text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: textToTranslate,
-        src_lang: 'eng_Latn',
-        tgt_lang: targetLang
-      })
+      body: JSON.stringify(requestPayload)
     });
 
     if (!res.ok) {
@@ -264,11 +542,12 @@ export async function executeInlineTranslation({
     }
 
     const data = await res.json();
-    if (!data.success || !data.translatedText) {
+    const translationsArr = Array.isArray(data.translations) ? data.translations : (data.translatedText ? [data.translatedText] : []);
+    if (!data.success || translationsArr.length === 0) {
       throw new Error(data.message || 'Translation service did not return translated text');
     }
 
-    const translatedText = data.translatedText;
+    const translatedText = translationsArr[0] || '';
 
     // 6. Ensure Google Font for target Indic script is loaded
     const fontName = FONT_FOR_LANGUAGE[targetLang];
@@ -295,9 +574,32 @@ export async function executeInlineTranslation({
       }
     };
 
-    // Helper to replace text inside nested styled leaves without stripping bold/italic/color markup
+    // Helper to replace text inside nested styled leaves (or SVG <text>/<tspan>) without stripping styles
     const replaceTextPreservingLeafStyle = (rootEl, newText) => {
       if (!rootEl) return;
+      if (rootEl.tagName?.toLowerCase() === 'text') {
+        const tspans = Array.from(rootEl.querySelectorAll('tspan'));
+        if (tspans.length > 1) {
+          // Wrap words evenly across existing tspan rows so multi-line SVG <text> stays inside its original box width!
+          const origLines = tspans.map((ts) => (ts.textContent || '').trim()).filter(Boolean);
+          const weights = tspans.map((ts) => Math.max(1, (ts.textContent || '').trim().split(/\s+/).filter(Boolean).length));
+          const words = newText.trim().split(/\s+/).filter(Boolean);
+          const wrappedParts = origLines.length > 1
+            ? distributeWordsAcrossBoxes(words, weights.slice(0, origLines.length))
+            : [newText];
+          tspans.forEach((ts, idx) => {
+            ts.textContent = idx < wrappedParts.length ? wrappedParts[idx] : '';
+            appendIndicFallback(ts);
+          });
+        } else if (tspans.length === 1) {
+          tspans[0].textContent = newText;
+          appendIndicFallback(tspans[0]);
+        } else {
+          rootEl.textContent = newText;
+        }
+        appendIndicFallback(rootEl);
+        return;
+      }
       const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT);
       const textNodes = [];
       let n;
@@ -338,20 +640,53 @@ export async function executeInlineTranslation({
         translatedSpan.style.fontFamily = `'${fontName}', sans-serif`;
       }
       translatingWrapper.replaceWith(translatedSpan);
+    } else if (multiClusters.length > 0) {
+      multiClusters.forEach((clusterObj, cIdx) => {
+        let clusterTrans = (translationsArr[cIdx] || clusterObj.query || '').trim();
+        if (clusterObj.stripTrailingPunct && clusterTrans.endsWith(clusterObj.stripTrailingPunct)) {
+          clusterTrans = clusterTrans.slice(0, -clusterObj.stripTrailingPunct.length).trimEnd();
+        }
+        if (clusterObj.items.length === 1) {
+          const item = clusterObj.items[0];
+          replaceTextPreservingLeafStyle(item.containerEl, clusterTrans);
+          item.containerEl.classList.remove('translating-element-pulse');
+        } else {
+          const words = clusterTrans.split(/\s+/).filter(Boolean);
+          const weights = clusterObj.items.map((it) => {
+            const wc = it.rawTxt.split(/\s+/).filter(Boolean).length;
+            return Math.max(1, wc * 10 + (it.fs >= 24 ? 1 : 0));
+          });
+          const parts = distributeWordsAcrossBoxes(words, weights);
+          clusterObj.items.forEach((it, idx) => {
+            replaceTextPreservingLeafStyle(it.containerEl, parts[idx] ?? '');
+            it.containerEl.classList.remove('translating-element-pulse');
+          });
+        }
+      });
     } else if (targetContainer) {
       replaceTextPreservingLeafStyle(targetContainer, translatedText);
       targetContainer.classList.remove('translating-element-pulse');
     }
 
     // 8. Re-measure text bounding box & trigger autosave
-    const foEl = targetContainer?.closest('foreignObject') || targetElement?.closest('foreignObject');
-    if (foEl) {
-      // Trigger input event to recompute dimensions
-      const div = foEl.querySelector('div') || foEl;
-      div.dispatchEvent(new Event('input', { bubbles: true }));
+    const boxesToMeasure = multiBoxItems.length > 1
+      ? multiBoxItems.map((it) => it.el.closest('foreignObject')).filter(Boolean)
+      : [targetContainer?.closest('foreignObject') || targetElement?.closest('foreignObject')].filter(Boolean);
+
+    if (boxesToMeasure.length > 0) {
+      boxesToMeasure.forEach((foEl) => {
+        const div = foEl.querySelector('div') || foEl;
+        div.dispatchEvent(new Event('input', { bubbles: true }));
+      });
       editCacheManager.scheduleInputMeasurement((el, highlightType) => {
         window.dispatchEvent(new CustomEvent('redraw-selection-highlight', { detail: { element: el, type: highlightType } }));
       });
+    }
+
+    if (multiBoxItems.length > 1) {
+      window.dispatchEvent(new CustomEvent('redraw-selection-highlight', {
+        detail: { element: multiBoxItems[0].el, type: 'selected' }
+      }));
     }
 
     // Find the enclosing SVG to persist changes
@@ -384,6 +719,7 @@ export async function executeInlineTranslation({
     if (targetContainer) {
       targetContainer.classList.remove('translating-element-pulse');
     }
+    multiBoxItems.forEach((it) => it.containerEl?.classList.remove('translating-element-pulse'));
 
     if (spinnerBadge) {
       spinnerBadge.remove();

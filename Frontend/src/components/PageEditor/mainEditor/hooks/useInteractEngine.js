@@ -571,6 +571,9 @@ export const useInteractEngine = ({
                 selectedLayerIdRef.current = elementToDrag.id;
               }
               multiSelectedIdsRef.current = nextSet;
+              if (typeof window !== 'undefined') {
+                window.__interactMultiHandledAt = Date.now();
+              }
               const idToSelect = selectedLayerIdRef.current;
               queueMicrotask(() => {
                 if (setSelectedLayerId) setSelectedLayerId(idToSelect);

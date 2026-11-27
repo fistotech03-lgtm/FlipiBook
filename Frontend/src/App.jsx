@@ -127,6 +127,10 @@ export default function App() {
                 element={<AuthRouteRedirect mode="signup" />}
               />
               <Route
+                path="/onboard"
+                element={<AuthRouteRedirect mode="onboard" />}
+              />
+              <Route
                 path="/forgot-password"
                 element={<AuthRouteRedirect mode="forgot-password" />}
               />

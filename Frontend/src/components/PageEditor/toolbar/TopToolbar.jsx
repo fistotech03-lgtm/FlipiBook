@@ -337,7 +337,7 @@ const TopToolbar = ({
       {/* Right Section: Editor Settings Toggles & Zoom */}
       <div className="flex items-center gap-[0.6vw]">
         {/* Direct Editor Settings Toggle Icons */}
-        <div className="flex items-center bg-[#F3F4F6] p-[0.28vw] rounded-[0.55vw] gap-[0.1vw]">
+        <div className="flex items-center bg-[#F3F4F6] p-[0.28vw] rounded-[0.55vw] gap-[0.25vw]">
           {/* Trim View */}
           {!hideTools && (
             <div className="relative group/tt flex items-center justify-center">
@@ -345,16 +345,13 @@ const TopToolbar = ({
                 onClick={handleTrimViewToggle}
                 tabIndex={-1}
                 aria-label="Toggle Trim View"
-                className={`relative w-[1.9vw] h-[1.9vw] flex items-center justify-center rounded-[0.4vw] cursor-pointer transition-all group ${
+                className={`relative w-[1.9vw] h-[1.9vw] flex items-center justify-center rounded-[0.4vw] cursor-pointer transition-all focus:outline-none group ${
                   isTrimView
-                    ? 'bg-white shadow-sm text-gray-900'
-                    : 'text-gray-400 hover:bg-white/70 hover:text-gray-700'
+                    ? 'bg-[#E5E7EB] text-gray-900 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] border border-gray-300/60'
+                    : 'bg-white text-gray-500 shadow-xs border border-transparent hover:text-gray-800'
                 }`}
               >
-                <Scissors size="0.95vw" strokeWidth={2.2} className="group-hover:scale-110 transition-transform" />
-                {isTrimView && (
-                  <span className="absolute top-[0.22vw] right-[0.22vw] w-[0.3vw] h-[0.3vw] rounded-full bg-emerald-500" />
-                )}
+                <Scissors size="0.95vw" strokeWidth={2.2} className="group-hover:scale-105 transition-transform" />
               </button>
               <div className="absolute left-1/2 -translate-x-1/2 top-full mt-[0.35vw] hidden group-hover/tt:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap">
                 <div className="w-0 h-0 border-x-[0.3vw] border-x-transparent border-b-[0.3vw] border-b-gray-900/90" />
@@ -371,16 +368,13 @@ const TopToolbar = ({
               onClick={handleAutoSaveToggle}
               tabIndex={-1}
               aria-label="Toggle Auto Save"
-              className={`relative w-[1.9vw] h-[1.9vw] flex items-center justify-center rounded-[0.4vw] cursor-pointer transition-all group ${
+              className={`relative w-[1.9vw] h-[1.9vw] flex items-center justify-center rounded-[0.4vw] cursor-pointer transition-all focus:outline-none group ${
                 isAutoSaveEnabled
-                  ? 'bg-white shadow-sm text-gray-900'
-                  : 'text-gray-400 hover:bg-white/70 hover:text-gray-700'
+                  ? 'bg-[#E5E7EB] text-gray-900 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] border border-gray-300/60'
+                  : 'bg-white text-gray-500 shadow-xs border border-transparent hover:text-gray-800'
               }`}
             >
-              <Save size="0.95vw" strokeWidth={2.2} className="group-hover:scale-110 transition-transform" />
-              {isAutoSaveEnabled && (
-                <span className="absolute top-[0.22vw] right-[0.22vw] w-[0.3vw] h-[0.3vw] rounded-full bg-emerald-500" />
-              )}
+              <Save size="0.95vw" strokeWidth={2.2} className="group-hover:scale-105 transition-transform" />
             </button>
             <div className="absolute left-1/2 -translate-x-1/2 top-full mt-[0.35vw] hidden group-hover/tt:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap">
               <div className="w-0 h-0 border-x-[0.3vw] border-x-transparent border-b-[0.3vw] border-b-gray-900/90" />
@@ -397,16 +391,13 @@ const TopToolbar = ({
                 onClick={handleRulerToggle}
                 tabIndex={-1}
                 aria-label="Toggle Ruler"
-                className={`relative w-[1.9vw] h-[1.9vw] flex items-center justify-center rounded-[0.4vw] cursor-pointer transition-all group ${
+                className={`relative w-[1.9vw] h-[1.9vw] flex items-center justify-center rounded-[0.4vw] cursor-pointer transition-all focus:outline-none group ${
                   isRulerEnabled
-                    ? 'bg-white shadow-sm text-gray-900'
-                    : 'text-gray-400 hover:bg-white/70 hover:text-gray-700'
+                    ? 'bg-[#E5E7EB] text-gray-900 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] border border-gray-300/60'
+                    : 'bg-white text-gray-500 shadow-xs border border-transparent hover:text-gray-800'
                 }`}
               >
-                <Ruler size="0.95vw" strokeWidth={2.2} className="group-hover:scale-110 transition-transform" />
-                {isRulerEnabled && (
-                  <span className="absolute top-[0.22vw] right-[0.22vw] w-[0.3vw] h-[0.3vw] rounded-full bg-emerald-500" />
-                )}
+                <Ruler size="0.95vw" strokeWidth={2.2} className="group-hover:scale-105 transition-transform" />
               </button>
               <div className="absolute left-1/2 -translate-x-1/2 top-full mt-[0.35vw] hidden group-hover/tt:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap">
                 <div className="w-0 h-0 border-x-[0.3vw] border-x-transparent border-b-[0.3vw] border-b-gray-900/90" />

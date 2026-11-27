@@ -1733,10 +1733,17 @@ const Layer = ({
             transition={{ duration: 0.2 }}
             className="flex flex-col px-[0.8vw] pb-[1.5vh] select-none h-full w-[16vw] overflow-hidden"
           >
-            {/* Sidebar Header */}
-            <div className="flex items-center justify-between px-[0.2vw] flex-shrink-0" style={{ height: '8vh', gap: '0.8vw' }}>
-              <div className={`flex-1 min-w-0 flex items-center bg-[#F1F3F4] px-[0.6vw] py-[0.5vh] rounded-[0.5vw] border transition-all ${isNameDuplicate ? 'border-red-500 bg-red-50' : 'border-transparent focus-within:border-[#EC5137] focus-within:bg-white'
-                }`}>
+            {/* Sidebar Header: Editable Book Name & Back Button */}
+            <div className="flex items-center justify-between flex-shrink-0 gap-[0.5vw]" style={{ height: '8vh' }}>
+              <div
+                onClick={() => nameInputRef.current?.focus()}
+                title="Click to edit flipbook name"
+                className={`group/name flex-1 min-w-0 flex items-center gap-[0.35vw] bg-[#F1F3F4] hover:bg-gray-200/70 px-[0.55vw] py-[0.5vh] rounded-[0.5vw] border transition-all cursor-text ${
+                  isNameDuplicate
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-gray-200/80 hover:border-gray-300 focus-within:border-[#EC5137] focus-within:bg-white focus-within:shadow-2xs'
+                }`}
+              >
                 <input
                   ref={nameInputRef}
                   type="text"
@@ -1776,16 +1783,24 @@ const Layer = ({
                       }
                     }
                   }}
-                  className={`w-full bg-transparent border-none outline-none text-[0.75vw] font-bold truncate ${isNameDuplicate ? 'text-red-600 placeholder-red-300' : 'text-[#374151] placeholder-gray-400'
-                    }`}
+                  className={`w-full bg-transparent border-none outline-none text-[0.75vw] font-bold truncate ${
+                    isNameDuplicate ? 'text-red-600 placeholder-red-300' : 'text-[#374151] placeholder-gray-400'
+                  }`}
                   placeholder="Flipbook Name..."
                 />
+                <Edit2
+                  size="0.72vw"
+                  className="text-gray-400 group-hover/name:text-gray-600 group-focus-within/name:text-[#EC5137] flex-shrink-0 transition-colors"
+                />
               </div>
+
               <button
                 onClick={() => setIsVisible(false)}
-                className="text-[#374151] hover:bg-gray-100 p-[0.4vw] rounded-full transition-colors flex items-center justify-center cursor-pointer"
+                title="Collapse sidebar"
+                aria-label="Go back / Collapse sidebar"
+                className="group/back flex-shrink-0 bg-gray-100 hover:bg-gray-200/80 border border-gray-200/80 text-[#374151] hover:text-gray-900 p-[0.42vw] rounded-[0.45vw] transition-all flex items-center justify-center cursor-pointer shadow-2xs"
               >
-                <ArrowLeft size="1.2vw" strokeWidth={2.5} />
+                <ArrowLeft size="1.05vw" strokeWidth={2.4} className="group-hover/back:-translate-x-[0.12vw] transition-transform" />
               </button>
             </div>
 

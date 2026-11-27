@@ -332,8 +332,8 @@ const Sidebar = ({
       <div className="px-[1vw] py-[0.75vw] shrink-0 border-b border-gray-100">
         {isLoading ? (
           <div className="flex flex-col gap-[0.4vw] animate-pulse">
-            <div className="h-[0.9vw] bg-gray-200 rounded-[0.25vw] w-3/4"></div>
-            <div className="h-[0.7vw] bg-gray-200 rounded-[0.2vw] w-1/3 mt-[0.1vw]"></div>
+            <div className="h-[0.9vw] bg-gray-200/75 rounded-[0.25vw] w-3/4"></div>
+            <div className="h-[0.7vw] bg-gray-100 rounded-[0.2vw] w-1/3 mt-[0.1vw]"></div>
           </div>
         ) : (
           <div className="flex flex-col justify-center min-w-0">
@@ -398,9 +398,9 @@ const Sidebar = ({
           <div className="flex flex-col">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
               <div key={n} className="flex flex-col px-[0.75vw] py-[0.25vw]">
-                <div className="w-full flex items-center gap-[1vw] p-[0.75vw] rounded-[0.75vw] bg-[#1e2738] border border-[#2c3749] animate-pulse">
-                  <div className="w-[1.25vw] h-[1.25vw] bg-[#2c3749] rounded-[0.35vw] shrink-0" />
-                  <div className="h-[0.85vw] bg-[#2c3749] rounded-[0.35vw] flex-1" />
+                <div className="w-full flex items-center gap-[1vw] p-[0.75vw] rounded-[0.75vw] bg-gray-100/70 border border-gray-200/60 animate-pulse">
+                  <div className="w-[1.25vw] h-[1.25vw] bg-gray-200/80 rounded-[0.35vw] shrink-0" />
+                  <div className="h-[0.85vw] bg-gray-200/80 rounded-[0.35vw] flex-1" />
                 </div>
               </div>
             ))}

@@ -655,16 +655,23 @@ const MainEditor = ({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.__selectedLayerId = selectedLayerId;
+      window.__multiSelectedIds = multiSelectedIds ? Array.from(multiSelectedIds) : [];
     }
-  }, [selectedLayerId]);
+  }, [selectedLayerId, multiSelectedIds]);
 
   useEffect(() => {
     const handleTriggerInlineTranslate = async (e) => {
       if (isPdfMode) return;
-      const { targetLang = 'tam_Taml', layerId = null } = e?.detail || {};
+      const { targetLang = 'tam_Taml', layerId = null, layerIds = null } = e?.detail || {};
+      const activeIds = Array.isArray(layerIds) && layerIds.length > 0
+        ? layerIds
+        : (multiSelectedIds && multiSelectedIds.size > 1
+          ? Array.from(multiSelectedIds)
+          : (layerId || selectedLayerId ? [layerId || selectedLayerId] : []));
       await executeInlineTranslation({
         targetLang,
         layerId: layerId || selectedLayerId,
+        layerIds: activeIds,
         activePageIndex,
         saveModifiedPageHtml,
         onComplete: (translatedText) => {
@@ -677,7 +684,7 @@ const MainEditor = ({
     };
     window.addEventListener('trigger-inline-translate', handleTriggerInlineTranslate);
     return () => window.removeEventListener('trigger-inline-translate', handleTriggerInlineTranslate);
-  }, [isPdfMode, activePageIndex, selectedLayerId, saveModifiedPageHtml]);
+  }, [isPdfMode, activePageIndex, selectedLayerId, multiSelectedIds, saveModifiedPageHtml]);
 
   const computedCanvaBackground = useMemo(() => {
     if (isPopupEditor) return 'transparent';

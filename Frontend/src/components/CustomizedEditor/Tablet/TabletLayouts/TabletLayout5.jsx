@@ -77,11 +77,16 @@ const getLayoutColorRgba = (tokenId, defaultRgb, defaultOpacity) => {
 const ToolbarBtn = ({ icon, label, onClick, color }) => (
     <button
         onClick={onClick}
-        className="flex items-center justify-center p-[0.5cqw] rounded-full transition-transform hover:scale-110 active:scale-95"
-        title={label}
+        className="flex items-center justify-center p-[0.5cqw] rounded-full transition-transform hover:scale-110 active:scale-95 relative group"
         style={{ color: color || 'white' }}
     >
         <Icon icon={icon} className="w-[2cqw] h-[2cqw]" />
+        {label && (
+            <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                {label}
+                <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+            </div>
+        )}
     </button>
 );
 
@@ -451,9 +456,9 @@ const TabletLayout5 = ({
                 >
                     {/* Playback Controls */}
                     <div className="flex items-center gap-[1cqw] mr-[2cqw] shrink-0">
-                        <ToolbarBtn icon="ph:skip-back" onClick={() => onPageClick(0)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
-                        <ToolbarBtn icon={isAutoFlipping ? 'ph:pause-fill' : 'ph:play-fill'} onClick={() => setIsPlaying?.(!isAutoFlipping)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
-                        <ToolbarBtn icon="ph:skip-forward" onClick={() => onPageClick(pagesCount - 1)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
+                        <ToolbarBtn icon="ph:skip-back" label="First" onClick={() => onPageClick(0)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
+                        <ToolbarBtn icon={isAutoFlipping ? 'ph:pause-fill' : 'ph:play-fill'} label={isAutoFlipping ? 'Pause' : 'Play'} onClick={() => setIsPlaying?.(!isAutoFlipping)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
+                        <ToolbarBtn icon="ph:skip-forward" label="Last" onClick={() => onPageClick(pagesCount - 1)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
                     </div>
 
                     {/* Progress Bar */}
@@ -473,20 +478,20 @@ const TabletLayout5 = ({
                     {/* Tools Icons */}
                     <div className="flex items-center gap-[1cqw] shrink-0">
                         {(settings?.navigation?.tableOfContents ?? true) && (
-                            <ToolbarBtn icon="fluent:text-bullet-list-24-filled" onClick={() => setShowTOCMemo(!showTOC)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
+                            <ToolbarBtn icon="fluent:text-bullet-list-24-filled" label="TOC" onClick={() => setShowTOCMemo(!showTOC)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
                         )}
                         {(settings?.navigation?.pageThumbnails ?? true) && (
-                            <ToolbarBtn icon="ph:squares-four-fill" onClick={() => setShowThumbnailBarMemo(!showThumbnailBar)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
+                            <ToolbarBtn icon="ph:squares-four-fill" label="Thumbnails" onClick={() => setShowThumbnailBarMemo(!showThumbnailBar)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
                         )}
                         {(settings?.interaction?.gallery ?? true) && (
-                            <ToolbarBtn icon="clarity:image-gallery-solid" onClick={() => setShowGalleryPopupMemo(!showGalleryPopup)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
+                            <ToolbarBtn icon="clarity:image-gallery-solid" label="Gallery" onClick={() => setShowGalleryPopupMemo(!showGalleryPopup)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
                         )}
                         {(settings?.media?.backgroundAudio ?? true) && (
-                            <ToolbarBtn icon={isMuted ? "solar:music-notes-bold-duotone" : "solar:music-notes-bold"} onClick={(e) => { e.stopPropagation(); setShowSoundPopupMemo?.(!showSoundPopup); }} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
+                            <ToolbarBtn icon={isMuted ? "solar:music-notes-bold-duotone" : "solar:music-notes-bold"} label="Sound" onClick={(e) => { e.stopPropagation(); setShowSoundPopupMemo?.(!showSoundPopup); }} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
                         )}
 
                         {(settings?.shareExport?.share ?? true) && (
-                            <ToolbarBtn icon="mage:share-fill" onClick={() => {
+                            <ToolbarBtn icon="mage:share-fill" label="Share" onClick={() => {
                                 setShowTOCMemo?.(false);
                                 setShowThumbnailBarMemo?.(false);
                                 setShowGalleryPopupMemo?.(false);
@@ -497,10 +502,10 @@ const TabletLayout5 = ({
                             }} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
                         )}
                         {(settings?.shareExport?.download ?? true) && (
-                            <ToolbarBtn icon="meteor-icons:download" onClick={() => setShowExportPopupMemo?.(true)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
+                            <ToolbarBtn icon="meteor-icons:download" label="Download" onClick={() => setShowExportPopupMemo?.(true)} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
                         )}
                         {(settings?.viewing?.fullScreen ?? true) && (
-                            <ToolbarBtn icon={isFullscreen ? "mingcute:fullscreen-exit-fill" : "lucide:fullscreen"} onClick={handleFullScreen} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
+                            <ToolbarBtn icon={isFullscreen ? "mingcute:fullscreen-exit-fill" : "lucide:fullscreen"} label="Fullscreen" onClick={handleFullScreen} color={getLayoutColor('toolbar-text-main', '#FFFFFF')} />
                         )}
                     </div>
                 </div>
@@ -512,24 +517,36 @@ const TabletLayout5 = ({
                             className="rounded-full flex items-center gap-[1cqw] px-[1.5cqw] py-[0.8cqh] shadow-md border border-white/10"
                             style={{ backgroundColor: pillBgColor }}
                         >
-                            <button onClick={() => setCurrentZoom?.(Math.max(0.5, (currentZoom || 1) - 0.1))} className="hover:scale-110 active:scale-95">
+                            <button onClick={() => setCurrentZoom?.(Math.max(0.5, (currentZoom || 1) - 0.1))} className="hover:scale-110 active:scale-95 relative group">
                                 <Icon icon="ph:magnifying-glass-minus-bold" className="w-[1.6cqw] h-[1.6cqw]" style={{ color: iconColor }} />
+                                <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                                    Zoom Out
+                                    <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                                </div>
                             </button>
                             <span className="text-[1.5cqw] font-bold select-none min-w-[4cqw] text-center" style={{ color: iconColor }}>
                                 {Math.round((currentZoom || 1) * 100)}%
                             </span>
-                            <button onClick={() => setCurrentZoom?.(Math.min(3, (currentZoom || 1) + 0.1))} className="hover:scale-110 active:scale-95">
+                            <button onClick={() => setCurrentZoom?.(Math.min(3, (currentZoom || 1) + 0.1))} className="hover:scale-110 active:scale-95 relative group">
                                 <Icon icon="ph:magnifying-glass-plus-bold" className="w-[1.6cqw] h-[1.6cqw]" style={{ color: iconColor }} />
+                                <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                                    Zoom In
+                                    <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                                </div>
                             </button>
                             <button
                                 onClick={() => setCurrentZoom?.(1)}
-                                className="text-[1.4cqw] font-bold px-[1cqw] py-[0.5cqh] rounded-full shadow-sm"
+                                className="text-[1.4cqw] font-bold px-[1cqw] py-[0.5cqh] rounded-full shadow-sm relative group"
                                 style={{
                                     backgroundColor: getLayoutColor('toolbar-bg', '#555555'),
                                     color: '#FFFFFF'
                                 }}
                             >
                                 Reset
+                                <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                                    Reset
+                                    <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                                </div>
                             </button>
                         </div>
                     )}

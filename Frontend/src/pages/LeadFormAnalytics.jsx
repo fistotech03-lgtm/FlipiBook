@@ -163,6 +163,16 @@ export default function LeadFormAnalytics() {
     endDate: new Date()
   });
   const [searchLeadQuery, setSearchLeadQuery] = useState('');
+  const [tableSortBy, setTableSortBy] = useState('newest');
+  const [isTableSortOpen, setIsTableSortOpen] = useState(false);
+  const tableSortRef = useRef(null);
+
+  const tableSortOptions = useMemo(() => [
+    { label: 'Date (Newest)', value: 'newest' },
+    { label: 'Date (Oldest)', value: 'oldest' },
+    { label: 'Name (A–Z)', value: 'name_asc' },
+    { label: 'Status', value: 'status' },
+  ], []);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
 
@@ -237,6 +247,17 @@ export default function LeadFormAnalytics() {
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
+
+  useEffect(() => {
+    if (!isTableSortOpen) return;
+    const handleOutside = (e) => {
+      if (tableSortRef.current && !tableSortRef.current.contains(e.target)) {
+        setIsTableSortOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [isTableSortOpen]);
 
   // Close note context menu when clicking outside
   useEffect(() => {
@@ -355,23 +376,13 @@ export default function LeadFormAnalytics() {
       timestamp: now.toISOString()
     };
 
-    const newNoteObj = activityDetails.trim()
-      ? {
-          noteId: 'n-' + Date.now(),
-          text: `[${resolvedType}] ${activityDetails.trim()}`,
-          createdAt: now.toISOString()
-        }
-      : null;
-
     setLeads(prev =>
       prev.map(l => {
         if (l.leadId === targetLeadId || l._id === targetLeadId) {
           const currentTimeline = Array.isArray(l.timeline) ? l.timeline : [];
-          const currentNotes = Array.isArray(l.internalNotes) ? l.internalNotes : [];
           return {
             ...l,
-            timeline: [...currentTimeline, newTimelineItem],
-            internalNotes: newNoteObj ? [...currentNotes, newNoteObj] : currentNotes
+            timeline: [...currentTimeline, newTimelineItem]
           };
         }
         return l;
@@ -380,26 +391,24 @@ export default function LeadFormAnalytics() {
 
     setSelectedLead(prev => {
       const currentTimeline = Array.isArray(prev.timeline) ? prev.timeline : [];
-      const currentNotes = Array.isArray(prev.internalNotes) ? prev.internalNotes : [];
       return {
         ...prev,
-        timeline: [...currentTimeline, newTimelineItem],
-        internalNotes: newNoteObj ? [...currentNotes, newNoteObj] : currentNotes
+        timeline: [...currentTimeline, newTimelineItem]
       };
     });
 
     setIsActivityModalOpen(false);
     setActivityDetails('');
-    setActivityType('Note');
-    if (toast?.success) {
-      toast.success('Activity saved successfully!');
-    }
-
-    if (newNoteObj) {
-      try {
-        await customizedEditorApi.addLeadNote(targetLeadId, newNoteObj.text);
-      } catch (err) {
-        console.warn('Could not persist activity note to backend:', err);
+    setActivityType('');
+    try {
+      await customizedEditorApi.addLeadActivity(targetLeadId, newTimelineItem);
+      if (toast?.success) {
+        toast.success('Activity saved successfully!');
+      }
+    } catch (err) {
+      console.error('Failed to save activity:', err);
+      if (toast?.error) {
+        toast.error('Failed to save activity');
       }
     }
   };
@@ -574,8 +583,22 @@ export default function LeadFormAnalytics() {
       });
     }
 
-    return result;
-  }, [dateAndStatusFilteredLeads, selectedBookId, searchLeadQuery]);
+    return result.sort((a, b) => {
+      if (tableSortBy === 'oldest') {
+        return new Date(a.submittedAt || a.createdAt || 0) - new Date(b.submittedAt || b.createdAt || 0);
+      }
+      if (tableSortBy === 'name_asc') {
+        const nameA = (extractLeadDetails(a).name || '').toLowerCase();
+        const nameB = (extractLeadDetails(b).name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      }
+      if (tableSortBy === 'status') {
+        return (a.status || 'New').localeCompare(b.status || 'New');
+      }
+      // newest (default)
+      return new Date(b.submittedAt || b.createdAt || 0) - new Date(a.submittedAt || a.createdAt || 0);
+    });
+  }, [dateAndStatusFilteredLeads, selectedBookId, searchLeadQuery, tableSortBy]);
 
   // Compute stat card metrics dynamically from filteredLeads and calculate real percentage change vs previous period
   const stats = useMemo(() => {
@@ -1603,6 +1626,7 @@ export default function LeadFormAnalytics() {
                   <AnalyticsDatePicker
                     startDate={customRange.startDate}
                     endDate={customRange.endDate}
+                    defaultOpen={true}
                     onChange={({ startDate, endDate }) => {
                       setCustomRange({ startDate, endDate });
                       setCurrentPage(1);
@@ -1631,7 +1655,7 @@ export default function LeadFormAnalytics() {
                 <h3 className="text-[1.2vw] font-medium text-slate-900 leading-tight">
                   Total Leads <span className="text-[#EF5335]">({filteredLeads.length})</span>
                 </h3>
-                <p className="text-[0.82vw] text-slate-400 mt-[0.1vw]">
+                <p className="text-[0.88vw] text-slate-500 mt-[0.1vw]">
                   Review date-wise form activity and submission performance.
                 </p>
               </div>
@@ -1667,15 +1691,54 @@ export default function LeadFormAnalytics() {
                   )}
                 </div>
 
-                {/* Download file button */}
-                <button
-                  type="button"
-                  onClick={handleExportCSV}
-                  className="inline-flex items-center gap-[0.35vw] px-[0.9vw] py-[0.5vw] text-[0.9vw] font-medium text-[#EC5137] bg-[#FFF5F2] hover:bg-[#FEE2E2] rounded-[0.45vw] transition-colors cursor-pointer"
-                >
-                  <Icon icon="bi:download" className="w-[0.95vw] h-[0.95vw] text-[#EC5137]" />
-                  <span>Download file</span>
-                </button>
+                {/* Sort Table Dropdown */}
+                <div className="relative" ref={tableSortRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsTableSortOpen((prev) => !prev)}
+                    className={`inline-flex items-center gap-[0.45vw] px-[0.9vw] py-[0.5vw] text-[0.9vw] font-medium bg-white border rounded-[0.45vw] transition-colors cursor-pointer ${
+                      isTableSortOpen
+                        ? 'border-[#EC5137] ring-2 ring-[#EC5137]/20 text-slate-800'
+                        : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon icon="iconoir:sort" className="w-[1vw] h-[1vw] text-[#EC5137]" />
+                    <span>{tableSortOptions.find((o) => o.value === tableSortBy)?.label || 'Date (Newest)'}</span>
+                    <Icon icon="icon-park-outline:down" className="w-[0.8vw] h-[0.8vw] text-slate-400" />
+                  </button>
+
+                  {isTableSortOpen && (
+                    <div className="absolute right-0 mt-[0.35vw] w-[11vw] min-w-[165px] bg-white border border-slate-200 rounded-[0.55vw] shadow-lg py-[0.3vw] z-50">
+                      <div className="px-[0.75vw] py-[0.25vw] text-[0.72vw] font-semibold tracking-wider uppercase text-slate-400">
+                        SORT TABLE
+                      </div>
+                      {tableSortOptions.map((opt) => {
+                        const isCurrent = tableSortBy === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => {
+                              setTableSortBy(opt.value);
+                              setIsTableSortOpen(false);
+                              setCurrentPage(1);
+                            }}
+                            className={`w-full text-left px-[0.75vw] py-[0.42vw] text-[0.84vw] transition-colors flex items-center justify-between cursor-pointer ${
+                              isCurrent
+                                ? 'bg-orange-50/60 text-[#EC5137] font-medium'
+                                : 'text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span>{opt.label}</span>
+                            {isCurrent && (
+                              <Icon icon="solar:check-read-linear" className="w-[0.85vw] h-[0.85vw] text-[#EC5137]" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1961,7 +2024,12 @@ export default function LeadFormAnalytics() {
 
                     {drawerStatusOpen && (
                       <div className="absolute top-full left-0 mt-[0.2vw] w-full bg-white border border-slate-200 rounded-[0.4vw] shadow-xl py-[0.3vw] z-50">
-                        {STATUS_MENU_OPTIONS.map((item) => (
+                        {STATUS_MENU_OPTIONS.filter((item) => {
+                          if (item.label === 'New' && (selectedLead.status || 'New').toLowerCase() !== 'new') {
+                            return false;
+                          }
+                          return true;
+                        }).map((item) => (
                           <button
                             key={item.label}
                             type="button"
@@ -2141,9 +2209,10 @@ export default function LeadFormAnalytics() {
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => {
+                                      onClick={async () => {
                                         const trimmed = editingNoteText.trim();
                                         if (!trimmed) return;
+                                        const leadId = selectedLead.leadId || selectedLead._id;
                                         const updateNotes = (notes = []) =>
                                           notes.map((n, i) =>
                                             (n.noteId || n._id || i) === noteKey ? { ...n, text: trimmed } : n
@@ -2153,13 +2222,20 @@ export default function LeadFormAnalytics() {
                                         );
                                         setLeads((prev) =>
                                           prev.map((l) =>
-                                            (l.leadId || l._id) === (selectedLead.leadId || selectedLead._id)
+                                            (l.leadId || l._id) === leadId
                                               ? { ...l, internalNotes: updateNotes(l.internalNotes) }
                                               : l
                                           )
                                         );
                                         setEditingNoteId(null);
                                         setEditingNoteText('');
+                                        try {
+                                          await customizedEditorApi.updateLeadNote(leadId, noteKey, trimmed);
+                                          toast.success('Note updated');
+                                        } catch (err) {
+                                          console.error('Failed to update note:', err);
+                                          toast.error('Failed to update note');
+                                        }
                                       }}
                                       className="px-[0.65vw] py-[0.22vw] text-[0.68vw] font-medium bg-[#EC5137] text-white rounded-[0.3vw] hover:opacity-90 cursor-pointer"
                                     >
@@ -2201,7 +2277,8 @@ export default function LeadFormAnalytics() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => {
+                                    onClick={async () => {
+                                      const leadId = selectedLead.leadId || selectedLead._id;
                                       const filterNotes = (notes = []) =>
                                         notes.filter((n, i) => (n.noteId || n._id || i) !== noteKey);
                                       setSelectedLead((prev) =>
@@ -2209,12 +2286,19 @@ export default function LeadFormAnalytics() {
                                       );
                                       setLeads((prev) =>
                                         prev.map((l) =>
-                                          (l.leadId || l._id) === (selectedLead.leadId || selectedLead._id)
+                                          (l.leadId || l._id) === leadId
                                             ? { ...l, internalNotes: filterNotes(l.internalNotes) }
                                             : l
                                         )
                                       );
                                       setActiveNoteMenuId(null);
+                                      try {
+                                        await customizedEditorApi.deleteLeadNote(leadId, noteKey);
+                                        toast.success('Note deleted');
+                                      } catch (err) {
+                                        console.error('Failed to delete note:', err);
+                                        toast.error('Failed to delete note');
+                                      }
                                     }}
                                     className="w-full text-left px-[0.72vw] py-[0.38vw] text-[0.78vw] text-red-600 hover:bg-red-50 flex items-center gap-[0.4vw] cursor-pointer"
                                   >

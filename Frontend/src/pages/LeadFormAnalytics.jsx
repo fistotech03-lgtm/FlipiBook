@@ -106,7 +106,7 @@ export default function LeadFormAnalytics() {
   const [refreshing, setRefreshing] = useState(false);
 
   const sidebarSortOptions = useMemo(() => [
-    { label: 'Most viewed', value: 'views' },
+    { label: 'Most leads', value: 'leads' },
     { label: 'Alphabetical', value: 'name' },
     { label: 'Date (Newest)', value: 'newest' },
     { label: 'Date (Oldest)', value: 'oldest' },
@@ -174,7 +174,7 @@ export default function LeadFormAnalytics() {
   const [drawerStatusOpen, setDrawerStatusOpen] = useState(false);
   const [statusChangeConfirm, setStatusChangeConfirm] = useState(null); // { leadId, newStatus, currentStatus }
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
-  const [activityType, setActivityType] = useState('Note');
+  const [activityType, setActivityType] = useState('');
   const [activityDetails, setActivityDetails] = useState('');
   const [isActivityTypeDropdownOpen, setIsActivityTypeDropdownOpen] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
@@ -238,6 +238,18 @@ export default function LeadFormAnalytics() {
     fetchLeads();
   }, [fetchLeads]);
 
+  // Close note context menu when clicking outside
+  useEffect(() => {
+    if (!activeNoteMenuId) return;
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.note-menu-container')) {
+        setActiveNoteMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeNoteMenuId]);
+
   // Keep selectedLead in sync with leads list
   useEffect(() => {
     if (selectedLead) {
@@ -274,7 +286,7 @@ export default function LeadFormAnalytics() {
   // Perform confirmed status update
   const confirmStatusUpdate = async () => {
     if (!statusChangeConfirm) return;
-    const { leadId, newStatus } = statusChangeConfirm;
+    const { leadId, newStatus, currentStatus } = statusChangeConfirm;
     setStatusChangeConfirm(null);
 
     // Briefly highlight the updated row for 3 seconds
@@ -288,7 +300,7 @@ export default function LeadFormAnalytics() {
     const dateFormatted = formatShortDate(now);
     const newTimelineItem = {
       title: 'Status Updated',
-      subtitle: `${newStatus} • ${dateFormatted}, ${timeStr}`,
+      subtitle: `${currentStatus} → ${newStatus} • ${dateFormatted}, ${timeStr}`,
       timestamp: now.toISOString()
     };
 
@@ -474,34 +486,6 @@ export default function LeadFormAnalytics() {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  // Filter & sort flipbooks list for sidebar
-  const filteredFlipbooks = useMemo(() => {
-    const q = booksSearch.trim().toLowerCase();
-    const list = q
-      ? flipbooks.filter(b => (b.title || b.bookName || '').toLowerCase().includes(q))
-      : [...flipbooks];
-
-    return list.sort((a, b) => {
-      if (sidebarSortBy === 'views') {
-        const viewsA = a.viewsCount ?? a.views ?? 0;
-        const viewsB = b.viewsCount ?? b.views ?? 0;
-        return viewsB - viewsA;
-      }
-      if (sidebarSortBy === 'name') {
-        const nameA = (a.title || a.bookName || '').toLowerCase();
-        const nameB = (b.title || b.bookName || '').toLowerCase();
-        return nameA.localeCompare(nameB);
-      }
-      if (sidebarSortBy === 'newest') {
-        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      }
-      if (sidebarSortBy === 'oldest') {
-        return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
-      }
-      return 0;
-    });
-  }, [flipbooks, booksSearch, sidebarSortBy]);
-
   // Leads filtered by status & date range (used for sidebar counts and as base for filteredLeads)
   const dateAndStatusFilteredLeads = useMemo(() => {
     let result = [...leads];
@@ -540,6 +524,34 @@ export default function LeadFormAnalytics() {
     return counts;
   }, [dateAndStatusFilteredLeads]);
 
+  // Filter & sort flipbooks list for sidebar
+  const filteredFlipbooks = useMemo(() => {
+    const q = booksSearch.trim().toLowerCase();
+    const list = q
+      ? flipbooks.filter(b => (b.title || b.bookName || '').toLowerCase().includes(q))
+      : [...flipbooks];
+
+    return list.sort((a, b) => {
+      if (sidebarSortBy === 'leads') {
+        const leadsA = leadsPerBook[a.v_id || a._id] || 0;
+        const leadsB = leadsPerBook[b.v_id || b._id] || 0;
+        return leadsB - leadsA;
+      }
+      if (sidebarSortBy === 'name') {
+        const nameA = (a.title || a.bookName || '').toLowerCase();
+        const nameB = (b.title || b.bookName || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      }
+      if (sidebarSortBy === 'newest') {
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      }
+      if (sidebarSortBy === 'oldest') {
+        return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+      }
+      return 0;
+    });
+  }, [flipbooks, booksSearch, sidebarSortBy, leadsPerBook]);
+
   // Filter leads based on selected book and search
   const filteredLeads = useMemo(() => {
     let result = [...dateAndStatusFilteredLeads];
@@ -554,6 +566,7 @@ export default function LeadFormAnalytics() {
         const details = extractLeadDetails(l);
         return (
           details.name.toLowerCase().includes(q) ||
+          ((!selectedBookId || selectedBookId === 'all') && (l.flipbookName || '').toLowerCase().includes(q)) ||
           details.email.toLowerCase().includes(q) ||
           details.phone.toLowerCase().includes(q) ||
           details.message.toLowerCase().includes(q)
@@ -731,6 +744,7 @@ export default function LeadFormAnalytics() {
     if (filteredLeads.length === 0) return;
 
     const columns = [
+      { header: 'S.No', key: 'sno', width: 8, align: 'center' },
       { header: 'Lead Name', key: 'name', width: 22, align: 'left' },
       { header: 'Email Address', key: 'email', width: 28, align: 'left' },
       { header: 'Phone Number', key: 'phone', width: 18, align: 'left' },
@@ -740,13 +754,14 @@ export default function LeadFormAnalytics() {
       { header: 'Message / Notes', key: 'message', width: 40, align: 'left' }
     ];
 
-    const data = filteredLeads.map(l => {
-      const d = l.leadData || {};
+    const data = filteredLeads.map((l, idx) => {
+      const d = extractLeadDetails(l);
       const dateStr = new Date(l.submittedAt || l.createdAt || Date.now()).toLocaleString();
       return {
-        name: d.name || d.fullName || 'Anonymous',
+        sno: idx + 1,
+        name: d.name !== '-' ? d.name : 'Anonymous',
         email: d.email || l.userEmail || '-',
-        phone: d.phoneNumber || d.phone || '-',
+        phone: d.phone || '-',
         status: l.status || 'New',
         flipbook: l.flipbookName || 'Flipbook',
         date: dateStr,
@@ -760,11 +775,15 @@ export default function LeadFormAnalytics() {
       return acc;
     }, {});
 
+    const selectedBookObj = selectedBookId && selectedBookId !== 'all'
+      ? flipbooks.find(b => (b.v_id || b._id) === selectedBookId)
+      : null;
+
     const metadata = [
-      { label: 'Flipbook Filter', value: selectedBook?.title || 'All Flipbooks' },
+      { label: 'Flipbook Filter', value: selectedBookObj?.title || selectedBookObj?.bookName || 'All Flipbooks' },
       { label: 'Status Filter', value: statusFilter },
       { label: 'Date Range', value: typeof dateRange === 'number' ? `Last ${dateRange} Days` : dateRange },
-      { label: 'Search Keyword', value: searchQuery || 'None' },
+      { label: 'Search Keyword', value: searchLeadQuery || 'None' },
       { label: 'Total Leads in Export', value: filteredLeads.length },
       { label: 'Export Date', value: new Date().toLocaleString() }
     ];
@@ -845,34 +864,34 @@ export default function LeadFormAnalytics() {
     const s = (status || 'New').toLowerCase();
     if (s === 'contacted') {
       return (
-        <span className="inline-block px-[0.7vw] py-[0.18vw] rounded-full text-[0.68vw] font-semibold bg-[#FEF3C7] text-[#D97706]">
+        <span className="inline-block px-[0.8vw] py-[0.22vw] rounded-full text-[0.82vw] font-semibold bg-[#FEF3C7] text-[#D97706]">
           Contacted
         </span>
       );
     }
     if (s === 'qualified') {
       return (
-        <span className="inline-block px-[0.7vw] py-[0.18vw] rounded-full text-[0.68vw] font-semibold bg-[#E0F2FE] text-[#0284C7]">
+        <span className="inline-block px-[0.8vw] py-[0.22vw] rounded-full text-[0.82vw] font-semibold bg-[#E0F2FE] text-[#0284C7]">
           Qualified
         </span>
       );
     }
     if (s === 'converted') {
       return (
-        <span className="inline-block px-[0.7vw] py-[0.18vw] rounded-full text-[0.68vw] font-semibold bg-[#DCFCE7] text-[#16A34A]">
+        <span className="inline-block px-[0.8vw] py-[0.22vw] rounded-full text-[0.82vw] font-semibold bg-[#DCFCE7] text-[#16A34A]">
           Converted
         </span>
       );
     }
     if (s === 'lost') {
       return (
-        <span className="inline-block px-[0.7vw] py-[0.18vw] rounded-full text-[0.68vw] font-semibold bg-slate-100 text-slate-600">
+        <span className="inline-block px-[0.8vw] py-[0.22vw] rounded-full text-[0.82vw] font-semibold bg-slate-100 text-slate-600">
           Lost
         </span>
       );
     }
     return (
-      <span className="inline-block px-[0.7vw] py-[0.18vw] rounded-full text-[0.68vw] font-semibold bg-[#FEE2E2] text-[#EF4444]">
+      <span className="inline-block px-[0.8vw] py-[0.22vw] rounded-full text-[0.82vw] font-semibold bg-[#FEE2E2] text-[#EF4444]">
         New
       </span>
     );
@@ -927,7 +946,7 @@ export default function LeadFormAnalytics() {
                 value={booksSearch}
                 onChange={(e) => setBooksSearch(e.target.value)}
                 placeholder="Search Flipbooks..."
-                className="w-full pl-[2.1vw] pr-[1.8vw] py-[0.55vw] text-[0.76vw] bg-white border border-slate-300/80 rounded-[0.55vw] placeholder-slate-400 focus:outline-none focus:border-[#4A3AFF] transition-colors"
+                className="w-full pl-[2.1vw] pr-[1.8vw] py-[0.6vw] text-[0.86vw] bg-white border border-slate-400 rounded-[0.55vw] placeholder-slate-500 focus:outline-none focus:border-[#EC5137] transition-colors"
               />
               {booksSearch && (
                 <button
@@ -948,11 +967,11 @@ export default function LeadFormAnalytics() {
                 onKeyDown={handleSidebarSortKeyDown}
                 aria-haspopup="listbox"
                 aria-expanded={isSidebarSortOpen}
-                className={`p-[0.55vw] rounded-[0.55vw] border border-slate-300/80 bg-white hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-center shrink-0 ${
-                  isSidebarSortOpen ? 'border-[#EC5137] ring-2 ring-[#EC5137]/20 text-[#EC5137]' : 'text-[#666666]'
+                className={`p-[0.6vw] rounded-[0.55vw] border border-slate-400 bg-white hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-center shrink-0 ${
+                  isSidebarSortOpen ? 'border-[#EC5137] ring-2 ring-[#EC5137]/20 text-[#EC5137]' : 'text-[#444444]'
                 }`}
               >
-                <Icon icon="iconoir:sort" className="w-[0.95vw] h-[0.95vw]" />
+                <Icon icon="iconoir:sort" className="w-[1.1vw] h-[1.1vw]" />
               </button>
 
               {isSidebarSortOpen && (
@@ -961,7 +980,7 @@ export default function LeadFormAnalytics() {
                   onMouseLeave={() => setFocusedSidebarSortIndex(-1)}
                   className="absolute right-0 mt-[0.35vw] w-[10.5vw] min-w-[155px] bg-white border border-slate-200 rounded-[0.55vw] shadow-lg py-[0.3vw] z-50 animate-in fade-in zoom-in-95 duration-100"
                 >
-                  <div className="px-[0.75vw] py-[0.25vw] text-[0.62vw] font-semibold tracking-wider uppercase text-slate-400">
+                  <div className="px-[0.75vw] py-[0.25vw] text-[0.72vw] font-semibold tracking-wider uppercase text-slate-500">
                     Sort By
                   </div>
                   {sidebarSortOptions.map((opt, idx) => {
@@ -980,7 +999,7 @@ export default function LeadFormAnalytics() {
                         }}
                         onMouseEnter={() => setFocusedSidebarSortIndex(idx)}
                         onMouseLeave={() => setFocusedSidebarSortIndex(-1)}
-                        className={`w-full text-left px-[0.75vw] py-[0.38vw] text-[0.72vw] font-normal transition-colors flex items-center justify-between cursor-pointer ${
+                        className={`w-full text-left px-[0.75vw] py-[0.42vw] text-[0.84vw] font-normal transition-colors flex items-center justify-between cursor-pointer ${
                           isFocused ? 'bg-orange-50/80 text-[#EC5137]' : isCurrent ? 'bg-orange-50/50 text-[#EC5137]' : 'text-slate-700 hover:bg-slate-50'
                         }`}
                       >
@@ -1022,10 +1041,10 @@ export default function LeadFormAnalytics() {
                   <Icon icon="solar:book-bookmark-minimalistic-linear" className="w-[1.45vw] h-[1.45vw]" />
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-[0.85vw] font-medium text-[#111827] truncate leading-snug">
+                  <h4 className="text-[0.9vw] font-medium text-[#111827] truncate leading-snug">
                     All Flipbooks
                   </h4>
-                  <p className="text-[0.68vw] text-slate-500 truncate mt-[0.25vw]">
+                  <p className="text-[0.78vw] text-slate-500 truncate mt-[0.25vw]">
                     Total Leads : {dateAndStatusFilteredLeads.length.toLocaleString()}
                   </p>
                 </div>
@@ -1079,10 +1098,10 @@ export default function LeadFormAnalytics() {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <h4 className="text-[0.85vw] font-medium text-[#111827] truncate leading-snug">
+                      <h4 className="text-[0.9vw] font-medium text-[#111827] truncate leading-snug">
                         {book.title || book.bookName || 'Untitled'}
                       </h4>
-                      <p className="text-[0.68vw] text-slate-500 truncate mt-[0.25vw]">
+                      <p className="text-[0.78vw] text-slate-500 truncate mt-[0.25vw]">
                         {viewsCount.toLocaleString()} Views &nbsp; {dateDisplay}
                       </p>
                     </div>
@@ -1107,7 +1126,7 @@ export default function LeadFormAnalytics() {
               <h1 className="text-[1.6vw] font-semibold text-slate-900 leading-tight">
                 Lead Form Analytics
               </h1>
-              <p className="text-[0.75vw] text-slate-500 mt-[0.2vw]">
+              <p className="text-[0.9vw] text-slate-500 mt-[0.2vw]">
                 Monitor lead form engagement across all your flipbooks.
               </p>
             </div>
@@ -1115,20 +1134,20 @@ export default function LeadFormAnalytics() {
               <button
                 type="button"
                 onClick={handleRefresh}
-                className="inline-flex items-center gap-[0.4vw] px-[0.9vw] py-[0.48vw] text-[0.75vw] font-medium text-slate-700 bg-white border border-slate-200 rounded-[0.55vw] hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-2xs cursor-pointer"
+                className="inline-flex items-center gap-[0.4vw] px-[0.95vw] py-[0.5vw] text-[0.88vw] font-medium text-slate-700 bg-white border border-slate-200 rounded-[0.55vw] hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-2xs cursor-pointer"
               >
                 <Icon
                   icon="solar:restart-linear"
-                  className={`w-[0.9vw] h-[0.9vw] text-slate-500 ${refreshing ? 'animate-spin' : ''}`}
+                  className={`w-[1vw] h-[1vw] text-slate-500 ${refreshing ? 'animate-spin' : ''}`}
                 />
                 <span>Refresh</span>
               </button>
               <button
                 type="button"
                 onClick={handleExportCSV}
-                className="inline-flex items-center gap-[0.4vw] px-[0.9vw] py-[0.48vw] text-[0.75vw] font-medium text-slate-700 bg-white border border-slate-200 rounded-[0.55vw] hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-2xs cursor-pointer"
+                className="inline-flex items-center gap-[0.4vw] px-[0.95vw] py-[0.5vw] text-[0.88vw] font-medium text-slate-700 bg-white border border-slate-200 rounded-[0.55vw] hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-2xs cursor-pointer"
               >
-                <Icon icon="solar:download-minimalistic-linear" className="w-[0.9vw] h-[0.9vw] text-slate-500" />
+                <Icon icon="solar:download-minimalistic-linear" className="w-[1vw] h-[1vw] text-slate-500" />
                 <span>Download file</span>
               </button>
             </div>
@@ -1162,7 +1181,7 @@ export default function LeadFormAnalytics() {
                     />
                     <span>{stats.changes.total.formatted}</span>
                   </span>
-                  <p className="text-[0.68vw] text-slate-400 mt-[0.02vw]">{stats.periodLabel}</p>
+                  <p className="text-[0.78vw] text-slate-400 mt-[0.02vw] whitespace-nowrap">{stats.periodLabel}</p>
                 </div>
                 <svg className="w-[5.8vw] h-[2.2vw] overflow-visible" viewBox="0 0 100 45" fill="none">
                   <path d={stats.sparklines.total.areaD} fill="url(#gradPurpleExact)" />
@@ -1210,7 +1229,7 @@ export default function LeadFormAnalytics() {
                     />
                     <span>{stats.changes.newCount.formatted}</span>
                   </span>
-                  <p className="text-[0.68vw] text-slate-400 mt-[0.02vw]">{stats.periodLabel}</p>
+                  <p className="text-[0.78vw] text-slate-400 mt-[0.02vw] whitespace-nowrap">{stats.periodLabel}</p>
                 </div>
                 <svg className="w-[5.8vw] h-[2.2vw] overflow-visible" viewBox="0 0 100 45" fill="none">
                   <path d={stats.sparklines.newCount.areaD} fill="url(#gradRedExact)" />
@@ -1258,7 +1277,7 @@ export default function LeadFormAnalytics() {
                     />
                     <span>{stats.changes.contacted.formatted}</span>
                   </span>
-                  <p className="text-[0.68vw] text-slate-400 mt-[0.02vw]">{stats.periodLabel}</p>
+                  <p className="text-[0.78vw] text-slate-400 mt-[0.02vw] whitespace-nowrap">{stats.periodLabel}</p>
                 </div>
                 <svg className="w-[5.8vw] h-[2.2vw] overflow-visible" viewBox="0 0 100 45" fill="none">
                   <path d={stats.sparklines.contacted.areaD} fill="url(#gradAmberExact)" />
@@ -1306,7 +1325,7 @@ export default function LeadFormAnalytics() {
                     />
                     <span>{stats.changes.qualified.formatted}</span>
                   </span>
-                  <p className="text-[0.68vw] text-slate-400 mt-[0.02vw]">{stats.periodLabel}</p>
+                  <p className="text-[0.78vw] text-slate-400 mt-[0.02vw] whitespace-nowrap">{stats.periodLabel}</p>
                 </div>
                 <svg className="w-[5.8vw] h-[2.2vw] overflow-visible" viewBox="0 0 100 45" fill="none">
                   <path d={stats.sparklines.qualified.areaD} fill="url(#gradBlueExact)" />
@@ -1354,7 +1373,7 @@ export default function LeadFormAnalytics() {
                     />
                     <span>{stats.changes.converted.formatted}</span>
                   </span>
-                  <p className="text-[0.68vw] text-slate-400 mt-[0.02vw]">{stats.periodLabel}</p>
+                  <p className="text-[0.78vw] text-slate-400 mt-[0.02vw] whitespace-nowrap">{stats.periodLabel}</p>
                 </div>
                 <svg className="w-[5.8vw] h-[2.2vw] overflow-visible" viewBox="0 0 100 45" fill="none">
                   <path d={stats.sparklines.converted.areaD} fill="url(#gradGreenExact)" />
@@ -1609,10 +1628,10 @@ export default function LeadFormAnalytics() {
             {/* Table Header and Controls */}
             <div className="flex items-center justify-between pb-[0.4vw]">
               <div>
-                <h3 className="text-[1.05vw] font-medium text-slate-900 leading-tight">
+                <h3 className="text-[1.2vw] font-medium text-slate-900 leading-tight">
                   Total Leads <span className="text-[#EF5335]">({filteredLeads.length})</span>
                 </h3>
-                <p className="text-[0.68vw] text-slate-400 mt-[0.1vw]">
+                <p className="text-[0.82vw] text-slate-400 mt-[0.1vw]">
                   Review date-wise form activity and submission performance.
                 </p>
               </div>
@@ -1621,7 +1640,7 @@ export default function LeadFormAnalytics() {
                 <div className="relative flex items-center">
                   <Icon
                     icon="lineicons:search-2"
-                    className="absolute left-[0.6vw] w-[0.85vw] h-[0.85vw] text-[#EC5137] pointer-events-none"
+                    className="absolute left-[0.65vw] w-[1.05vw] h-[1.05vw] text-[#EC5137] pointer-events-none"
                   />
                   <input
                     type="text"
@@ -1631,7 +1650,7 @@ export default function LeadFormAnalytics() {
                       setCurrentPage(1);
                     }}
                     placeholder="Search Leads..."
-                    className="w-[14vw] pl-[1.8vw] pr-[1.8vw] py-[0.42vw] text-[0.72vw] bg-white border border-[#D9D9D9] rounded-[0.45vw] focus:outline-none focus:border-[#4A3AFF] transition-colors"
+                    className="w-[17vw] pl-[2vw] pr-[2vw] py-[0.5vw] text-[0.9vw] bg-white border border-slate-300 rounded-[0.45vw] focus:outline-none focus:border-[#EC5137] transition-colors"
                   />
                   {searchLeadQuery && (
                     <button
@@ -1643,7 +1662,7 @@ export default function LeadFormAnalytics() {
                       className="absolute right-[0.5vw] text-slate-400 hover:text-slate-600 cursor-pointer flex items-center justify-center p-[0.15vw]"
                       title="Clear search"
                     >
-                      <Icon icon="solar:close-circle-bold" className="w-[0.8vw] h-[0.8vw]" />
+                      <Icon icon="solar:close-circle-bold" className="w-[1.05vw] h-[1.05vw]" />
                     </button>
                   )}
                 </div>
@@ -1652,9 +1671,9 @@ export default function LeadFormAnalytics() {
                 <button
                   type="button"
                   onClick={handleExportCSV}
-                  className="inline-flex items-center gap-[0.3vw] px-[0.75vw] py-[0.38vw] text-[0.72vw] font-medium text-[#EC5137] bg-[#FFF5F2] hover:bg-[#FEE2E2] rounded-[0.4vw] transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-[0.35vw] px-[0.9vw] py-[0.5vw] text-[0.9vw] font-medium text-[#EC5137] bg-[#FFF5F2] hover:bg-[#FEE2E2] rounded-[0.45vw] transition-colors cursor-pointer"
                 >
-                  <Icon icon="bi:download" className="w-[0.8vw] h-[0.8vw] text-[#EC5137]" />
+                  <Icon icon="bi:download" className="w-[0.95vw] h-[0.95vw] text-[#EC5137]" />
                   <span>Download file</span>
                 </button>
               </div>
@@ -1662,10 +1681,14 @@ export default function LeadFormAnalytics() {
 
             {/* Table */}
             <div className="overflow-x-auto rounded-[0.75vw] border border-[#E5E7EB]">
-              <table className="w-full text-left text-[0.76vw]">
+              <table className="w-full text-left text-[0.88vw] [&_th]:border-r [&_th]:border-[#E5E7EB] [&_th:last-child]:border-r-0 [&_td]:border-r [&_td]:border-[#E5E7EB] [&_td:last-child]:border-r-0">
                 <thead>
-                  <tr className="bg-[#F7F8FA] border-b border-[#E5E7EB] text-[#111827] font-medium text-[0.78vw]">
+                  <tr className="bg-[#F7F8FA] border-b border-[#E5E7EB] text-[#111827] font-medium text-[0.9vw]">
+                    <th className="py-[0.75vw] px-[0.9vw] text-center w-[4vw]">S.No</th>
                     <th className="py-[0.75vw] px-[0.9vw]">Name</th>
+                    {(!selectedBookId || selectedBookId === 'all') && (
+                      <th className="py-[0.75vw] px-[0.9vw] min-w-[13vw] whitespace-nowrap">Book Name</th>
+                    )}
                     <th className="py-[0.75vw] px-[0.9vw]">Email</th>
                     <th className="py-[0.75vw] px-[0.9vw]">Phone Number</th>
                     <th className="py-[0.75vw] px-[0.9vw] w-[30%]">Message</th>
@@ -1675,7 +1698,7 @@ export default function LeadFormAnalytics() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E5E7EB]">
-                  {paginatedLeads.map((lead) => {
+                  {paginatedLeads.map((lead, idx) => {
                     const details = extractLeadDetails(lead);
                     const name = details.name;
                     const email = details.email;
@@ -1692,7 +1715,7 @@ export default function LeadFormAnalytics() {
                     return (
                       <tr
                         key={leadKey}
-                        className={`lead-row-clickable transition-all duration-500 cursor-pointer ${
+                        className={`lead-row-clickable transition-all duration-500 ${
                           isRowHighlighted
                             ? 'bg-amber-100/70 ring-1 ring-amber-300'
                             : isRowSelected
@@ -1700,10 +1723,16 @@ export default function LeadFormAnalytics() {
                             : 'hover:bg-slate-50/70'
                         }`}
                       >
+                        {/* S.No */}
+                        <td
+                          className="py-[0.65vw] px-[0.8vw] text-center text-slate-500 font-medium"
+                        >
+                          {startIndex + idx + 1}
+                        </td>
+
                         {/* Name with Avatar - Clickable */}
                         <td
                           className="py-[0.65vw] px-[0.8vw]"
-                          onClick={() => setSelectedLead(lead)}
                         >
                           <div className="flex items-center gap-[0.55vw]">
                             <div
@@ -1719,10 +1748,18 @@ export default function LeadFormAnalytics() {
                           </div>
                         </td>
 
+                        {/* Book Name (shown when All Flipbooks is selected) */}
+                        {(!selectedBookId || selectedBookId === 'all') && (
+                          <td
+                            className="py-[0.65vw] px-[0.8vw] text-slate-700 font-medium"
+                          >
+                            {lead.flipbookName || '-'}
+                          </td>
+                        )}
+
                         {/* Email */}
                         <td
                           className="py-[0.65vw] px-[0.8vw] text-slate-600"
-                          onClick={() => setSelectedLead(lead)}
                         >
                           {email}
                         </td>
@@ -1730,7 +1767,6 @@ export default function LeadFormAnalytics() {
                         {/* Phone */}
                         <td
                           className="py-[0.65vw] px-[0.8vw] text-slate-600"
-                          onClick={() => setSelectedLead(lead)}
                         >
                           {phone}
                         </td>
@@ -1738,7 +1774,6 @@ export default function LeadFormAnalytics() {
                         {/* Message */}
                         <td
                           className="py-[0.65vw] px-[0.8vw] text-slate-600 max-w-[20vw] truncate"
-                          onClick={() => setSelectedLead(lead)}
                         >
                           {message}
                         </td>
@@ -1746,7 +1781,6 @@ export default function LeadFormAnalytics() {
                         {/* Status */}
                         <td
                           className="py-[0.65vw] px-[0.8vw] text-center"
-                          onClick={() => setSelectedLead(lead)}
                         >
                           {renderStatusBadge(status)}
                         </td>
@@ -1754,10 +1788,9 @@ export default function LeadFormAnalytics() {
                         {/* Date & Time */}
                         <td
                           className="py-[0.65vw] px-[0.8vw] text-slate-600 whitespace-nowrap"
-                          onClick={() => setSelectedLead(lead)}
                         >
                           <div className="font-medium">{datePart}</div>
-                          <div className="text-[0.6vw] text-slate-400">{timePart}</div>
+                          <div className="text-[0.82vw] text-slate-500">{timePart}</div>
                         </td>
 
                         {/* Action Menu (Triple dots) */}
@@ -1790,7 +1823,7 @@ export default function LeadFormAnalytics() {
             </div>
 
             {/* Pagination Controls */}
-            <div className="flex items-center justify-between text-[0.72vw] text-slate-500 pt-[0.4vw] border-t border-[#F3F3F3]">
+            <div className="flex items-center justify-between text-[0.84vw] text-slate-500 pt-[0.4vw] border-t border-[#F3F3F3]">
               <span>
                 Showing {filteredLeads.length > 0 ? startIndex + 1 : 0}–
                 {Math.min(startIndex + pageSize, filteredLeads.length)} of {filteredLeads.length} Leads
@@ -1801,7 +1834,7 @@ export default function LeadFormAnalytics() {
                     type="button"
                     disabled={safeCurrentPage <= 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className={`w-[1.6vw] h-[1.6vw] rounded-[0.3vw] flex items-center justify-center text-[0.7vw] font-medium transition-colors ${
+                    className={`w-[1.6vw] h-[1.6vw] rounded-[0.3vw] flex items-center justify-center text-[0.82vw] font-medium transition-colors ${
                       safeCurrentPage <= 1
                         ? 'text-slate-300 cursor-not-allowed bg-slate-50'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer'
@@ -1816,7 +1849,7 @@ export default function LeadFormAnalytics() {
                       type="button"
                       disabled={page === '...'}
                       onClick={() => typeof page === 'number' && setCurrentPage(page)}
-                      className={`w-[1.6vw] h-[1.6vw] rounded-[0.3vw] flex items-center justify-center text-[0.7vw] font-medium transition-colors ${
+                      className={`w-[1.6vw] h-[1.6vw] rounded-[0.3vw] flex items-center justify-center text-[0.82vw] font-medium transition-colors ${
                         page === '...'
                           ? 'cursor-default text-slate-400'
                           : safeCurrentPage === page
@@ -1831,7 +1864,7 @@ export default function LeadFormAnalytics() {
                     type="button"
                     disabled={safeCurrentPage >= totalPages}
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    className={`w-[1.6vw] h-[1.6vw] rounded-[0.3vw] flex items-center justify-center text-[0.7vw] font-medium transition-colors ${
+                    className={`w-[1.6vw] h-[1.6vw] rounded-[0.3vw] flex items-center justify-center text-[0.82vw] font-medium transition-colors ${
                       safeCurrentPage >= totalPages
                         ? 'text-slate-300 cursor-not-allowed bg-slate-50'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer'
@@ -1890,12 +1923,12 @@ export default function LeadFormAnalytics() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-[0.45vw]">
-                        <h3 className="text-[0.92vw] font-semibold text-slate-800 truncate leading-tight">
+                        <h3 className="text-[1.05vw] font-semibold text-slate-800 truncate leading-tight">
                           {drawerDetails.name}
                         </h3>
                         <span className="shrink-0">{renderStatusBadge(selectedLead.status)}</span>
                       </div>
-                      <p className="text-[0.68vw] text-slate-500 truncate mt-[0.1vw]">
+                      <p className="text-[0.8vw] text-slate-500 truncate mt-[0.1vw]">
                         {drawerDetails.email}
                       </p>
                     </div>
@@ -1918,7 +1951,7 @@ export default function LeadFormAnalytics() {
                     <button
                       type="button"
                       onClick={() => setDrawerStatusOpen(!drawerStatusOpen)}
-                      className={`w-full flex items-center justify-between px-[0.8vw] py-[0.5vw] rounded-[0.4vw] text-[0.8vw] font-medium transition-colors shadow-xs cursor-pointer ${getStatusButtonBg(
+                      className={`w-full flex items-center justify-between px-[0.8vw] py-[0.5vw] rounded-[0.4vw] text-[0.9vw] font-medium transition-colors shadow-xs cursor-pointer ${getStatusButtonBg(
                         selectedLead.status
                       )}`}
                     >
@@ -1935,7 +1968,7 @@ export default function LeadFormAnalytics() {
                             onClick={() =>
                               requestStatusUpdate(selectedLead.leadId || selectedLead._id, item.label)
                             }
-                            className={`w-full text-left px-[0.85vw] py-[0.5vw] text-[0.8vw] flex items-center gap-[0.5vw] hover:bg-slate-50 transition-colors ${
+                            className={`w-full text-left px-[0.85vw] py-[0.5vw] text-[0.8vw] flex items-center gap-[0.5vw] hover:bg-slate-50 transition-colors cursor-pointer ${
                               (selectedLead.status || 'New').toLowerCase() === item.label.toLowerCase()
                                 ? 'text-[#F05338] font-semibold bg-orange-50/50'
                                 : 'text-slate-700'
@@ -1954,10 +1987,10 @@ export default function LeadFormAnalytics() {
                     type="button"
                     onClick={() => {
                       setIsActivityModalOpen(true);
-                      setActivityType('Note');
+                      setActivityType('');
                       setActivityDetails('');
                     }}
-                    className="w-full flex items-center justify-center gap-[0.3vw] px-[0.8vw] py-[0.5vw] rounded-[0.4vw] text-[0.8vw] font-medium text-[#555555] bg-[#F3F3F3] hover:bg-slate-200 transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-center gap-[0.3vw] px-[0.8vw] py-[0.5vw] rounded-[0.4vw] text-[0.9vw] font-medium text-[#555555] bg-[#F3F3F3] hover:bg-slate-200 transition-colors cursor-pointer"
                   >
                     <Icon icon="ci:add-plus" className="w-[0.85vw] h-[0.85vw] text-[#000000]" />
                     <span>Add Activity</span>
@@ -1968,27 +2001,27 @@ export default function LeadFormAnalytics() {
                 <div className="flex-1 overflow-y-auto p-[1.2vw] space-y-[1.2vw]">
                   {/* Section 1: Lead Form Preview */}
                   <div>
-                    <h4 className="text-[0.9vw] font-medium text-[#111827] mb-[0.65vw]">
+                    <h4 className="text-[1.02vw] font-medium text-[#111827] mb-[0.65vw]">
                       Lead Form Preview
                     </h4>
-                    <div className="space-y-[0.45vw] text-[0.8vw]">
+                    <div className="space-y-[0.45vw] text-[0.9vw]">
                       <div className="flex items-center gap-[0.5vw]">
                         <Icon icon="boxicons:form" className="w-[0.95vw] h-[0.95vw] text-[#EF4444]" />
-                        <span className="text-[#888888] font-normal w-[5.5vw]">Form Name</span>
+                        <span className="text-[#555555] font-normal w-[5.5vw]">Form Name</span>
                         <span className="text-slate-800 font-normal truncate">
                           {selectedLead.formName || '-'}
                         </span>
                       </div>
                       <div className="flex items-center gap-[0.5vw]">
                         <Icon icon="basil:book-open-outline" className="w-[0.95vw] h-[0.95vw] text-[#EF4444]" />
-                        <span className="text-[#888888] font-normal w-[5.5vw]">Flipbook</span>
+                        <span className="text-[#555555] font-normal w-[5.5vw]">Flipbook</span>
                         <span className="text-slate-800 font-normal truncate">
                           {selectedLead.flipbookName || '-'}
                         </span>
                       </div>
                       <div className="flex items-center gap-[0.5vw]">
                         <Icon icon="ic:outline-calendar-month" className="w-[0.95vw] h-[0.95vw] text-[#EF4444]" />
-                        <span className="text-[#888888] font-normal w-[5.5vw]">Date</span>
+                        <span className="text-[#555555] font-normal w-[5.5vw]">Date</span>
                         <span className="text-slate-800 font-normal">
                           {selectedLead.submittedAt || selectedLead.createdAt ? (
                             `${new Date(selectedLead.submittedAt || selectedLead.createdAt).toLocaleDateString('en-US', {
@@ -2009,27 +2042,27 @@ export default function LeadFormAnalytics() {
 
                   {/* Section 2: Contact Information */}
                   <div className="pt-[0.4vw] border-t border-[#F3F3F3]">
-                    <h4 className="text-[0.9vw] font-medium text-[#111827] mb-[0.65vw]">
+                    <h4 className="text-[1.02vw] font-medium text-[#111827] mb-[0.65vw]">
                       Contact Information
                     </h4>
-                    <div className="space-y-[0.45vw] text-[0.8vw]">
+                    <div className="space-y-[0.45vw] text-[0.9vw]">
                       <div className="flex items-center gap-[0.5vw]">
                         <Icon icon="boxicons:user" className="w-[0.85vw] h-[0.85vw] text-slate-500" />
-                        <span className="text-[#888888] font-normal w-[5.5vw]">Full Name</span>
+                        <span className="text-[#555555] font-normal w-[5.5vw]">Full Name</span>
                         <span className="text-slate-800 font-normal">
                           {drawerDetails.name}
                         </span>
                       </div>
                       <div className="flex items-center gap-[0.5vw]">
                         <Icon icon="codicon:mail" className="w-[0.85vw] h-[0.85vw] text-slate-500" />
-                        <span className="text-[#888888] font-normal w-[5.5vw]">Email</span>
+                        <span className="text-[#555555] font-normal w-[5.5vw]">Email</span>
                         <span className="text-slate-800 font-normal">
                           {drawerDetails.email}
                         </span>
                       </div>
                       <div className="flex items-center gap-[0.5vw]">
                         <Icon icon="doodle-icons:call" className="w-[0.85vw] h-[0.85vw] text-slate-500" />
-                        <span className="text-[#888888] font-normal w-[5.5vw]">Phone</span>
+                        <span className="text-[#555555] font-normal w-[5.5vw]">Phone</span>
                         <span className="text-slate-800 font-normal">
                           {drawerDetails.phone}
                         </span>
@@ -2040,13 +2073,13 @@ export default function LeadFormAnalytics() {
                   {/* Section 3: Lead Form Details - Only rendered or shown with actual values / '-' */}
                   {(drawerDetails.category !== '-' || drawerDetails.product !== '-' || drawerDetails.message !== '-') && (
                     <div className="pt-[0.4vw] border-t border-[#F3F3F3]">
-                      <h4 className="text-[0.9vw] font-medium text-[#111827] mb-[0.65vw]">
+                      <h4 className="text-[1.02vw] font-medium text-[#111827] mb-[0.65vw]">
                         Lead Form Details
                       </h4>
-                      <div className="space-y-[0.5vw] text-[0.72vw]">
+                      <div className="space-y-[0.5vw] text-[0.88vw]">
                         {drawerDetails.category !== '-' && (
                           <div className="flex items-start gap-[0.5vw]">
-                            <span className="text-[#888888] font-normal w-[5.5vw]">Category</span>
+                            <span className="text-[#555555] font-normal w-[5.5vw]">Category</span>
                             <span className="text-slate-800 font-normal">
                               {drawerDetails.category}
                             </span>
@@ -2054,7 +2087,7 @@ export default function LeadFormAnalytics() {
                         )}
                         {drawerDetails.product !== '-' && (
                           <div className="flex items-start gap-[0.5vw]">
-                            <span className="text-[#888888] font-normal w-[5.5vw]">Product</span>
+                            <span className="text-[#555555] font-normal w-[5.5vw]">Product</span>
                             <span className="text-slate-800 font-normal">
                               {drawerDetails.product}
                             </span>
@@ -2062,7 +2095,7 @@ export default function LeadFormAnalytics() {
                         )}
                         {drawerDetails.message !== '-' && (
                           <div className="flex items-start gap-[0.5vw]">
-                            <span className="text-[#888888] font-normal w-[5.5vw]">Description</span>
+                            <span className="text-[#555555] font-normal w-[5.5vw]">Description</span>
                             <span className="text-slate-800 font-normal flex-1">
                               {drawerDetails.message}
                             </span>
@@ -2074,7 +2107,7 @@ export default function LeadFormAnalytics() {
 
                 {/* Section 4: Internal Notes */}
                 <div className="pt-[0.4vw] border-t border-[#F3F3F3]">
-                  <h4 className="text-[0.9vw] font-medium text-[#111827] mb-[0.65vw]">
+                  <h4 className="text-[1.02vw] font-medium text-[#111827] mb-[0.65vw]">
                     Internal Notes
                   </h4>
                   <div className="space-y-[0.4vw]">
@@ -2085,7 +2118,7 @@ export default function LeadFormAnalytics() {
                         const isMenuOpen = activeNoteMenuId === noteKey;
                         return (
                           <div key={noteKey} className="relative flex items-start gap-[0.45vw]">
-                            <div className="flex-1 px-[0.75vw] py-[0.55vw] bg-[#F3F4F6] rounded-[0.45vw] text-[0.76vw] text-[#4B5563]">
+                            <div className="flex-1 px-[0.75vw] py-[0.55vw] bg-[#F3F4F6] rounded-[0.45vw] text-[0.88vw] text-[#4B5563]">
                               {isEditing ? (
                                 <div className="space-y-[0.4vw]">
                                   <textarea
@@ -2139,7 +2172,7 @@ export default function LeadFormAnalytics() {
                               )}
                             </div>
 
-                            <div className="relative shrink-0">
+                            <div className="relative shrink-0 note-menu-container">
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -2153,7 +2186,7 @@ export default function LeadFormAnalytics() {
                               </button>
 
                               {isMenuOpen && (
-                                <div className="absolute right-0 mt-[0.25vw] w-[6.5vw] min-w-[95px] bg-white border border-slate-200 rounded-[0.45vw] shadow-lg py-[0.25vw] z-50">
+                                <div className="absolute right-0 mt-[0.25vw] w-[7.2vw] min-w-[105px] bg-white border border-slate-200 rounded-[0.45vw] shadow-lg py-[0.25vw] z-50">
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -2161,9 +2194,9 @@ export default function LeadFormAnalytics() {
                                       setEditingNoteText(note.text || '');
                                       setActiveNoteMenuId(null);
                                     }}
-                                    className="w-full text-left px-[0.65vw] py-[0.32vw] text-[0.72vw] text-slate-700 hover:bg-slate-50 flex items-center gap-[0.35vw] cursor-pointer"
+                                    className="w-full text-left px-[0.72vw] py-[0.38vw] text-[0.78vw] text-slate-700 hover:bg-slate-50 flex items-center gap-[0.4vw] cursor-pointer"
                                   >
-                                    <Icon icon="solar:pen-linear" className="w-[0.75vw] h-[0.75vw] text-slate-500" />
+                                    <Icon icon="solar:pen-linear" className="w-[0.82vw] h-[0.82vw] text-slate-500" />
                                     <span>Edit</span>
                                   </button>
                                   <button
@@ -2183,9 +2216,9 @@ export default function LeadFormAnalytics() {
                                       );
                                       setActiveNoteMenuId(null);
                                     }}
-                                    className="w-full text-left px-[0.65vw] py-[0.32vw] text-[0.72vw] text-red-600 hover:bg-red-50 flex items-center gap-[0.35vw] cursor-pointer"
+                                    className="w-full text-left px-[0.72vw] py-[0.38vw] text-[0.78vw] text-red-600 hover:bg-red-50 flex items-center gap-[0.4vw] cursor-pointer"
                                   >
-                                    <Icon icon="solar:trash-bin-minimalistic-linear" className="w-[0.75vw] h-[0.75vw]" />
+                                    <Icon icon="solar:trash-bin-minimalistic-linear" className="w-[0.82vw] h-[0.82vw]" />
                                     <span>Delete</span>
                                   </button>
                                 </div>
@@ -2206,9 +2239,9 @@ export default function LeadFormAnalytics() {
                         setNewNoteText('');
                         setIsAddingNote(true);
                       }}
-                      className="w-full py-[0.48vw] text-[0.78vw] font-medium text-[#F05338] bg-[#FFF5F2] hover:bg-[#FEE2E2] rounded-[0.4vw] transition-colors flex items-center justify-center gap-[0.3vw] cursor-pointer"
+                      className="w-full py-[0.58vw] text-[0.88vw] font-medium text-[#F05338] bg-[#FFE8E2] hover:bg-[#FFD9CF] rounded-[0.4vw] transition-colors flex items-center justify-center gap-[0.35vw] cursor-pointer"
                     >
-                      <Icon icon="solar:add-circle-linear" className="w-[0.8vw] h-[0.8vw]" />
+                      <Icon icon="solar:add-circle-linear" className="w-[0.95vw] h-[0.95vw]" />
                       <span>Add Notes</span>
                     </button>
                   </div>
@@ -2221,7 +2254,7 @@ export default function LeadFormAnalytics() {
                   </h4>
                   <div className="relative pl-[1.35vw] space-y-[1vw]">
                     {/* Vertical connecting line */}
-                    <div className="absolute left-[0.4vw] top-[0.45vw] bottom-[0.45vw] w-[2px] bg-[#EF5335]/80" />
+                    <div className="absolute left-[0.425vw] -translate-x-1/2 top-[0.45vw] bottom-[0.45vw] w-[2px] bg-[#EF5335]/80" />
 
                     {(() => {
                       const timelineList = getFullTimeline(selectedLead);
@@ -2238,7 +2271,7 @@ export default function LeadFormAnalytics() {
                               <div className="text-[0.82vw] font-normal text-[#374151] leading-snug">
                                 {item.title}
                               </div>
-                              <div className="text-[0.68vw] text-[#888888] mt-[0.15vw]">
+                              <div className="text-[0.8vw] text-[#555555] mt-[0.15vw]">
                                 {item.subtitle}
                               </div>
                             </div>
@@ -2263,39 +2296,32 @@ export default function LeadFormAnalytics() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
                 transition={{ duration: 0.15 }}
-                className="w-[28vw] min-w-[360px] max-w-[460px] bg-white rounded-[1vw] shadow-2xl p-[1.4vw] flex flex-col gap-[1vw] relative border border-slate-100"
+                className="w-[400px] max-w-[92vw] bg-white rounded-xl shadow-2xl px-5 py-3.5 flex flex-col gap-3 relative border border-slate-200"
               >
-                {/* Header: Red Icon + Title + horizontal rule + Close button */}
-                <div className="flex items-center justify-between pb-[0.2vw]">
-                  <div className="flex items-center gap-[0.7vw] flex-1">
-                    <div className="w-[2.4vw] h-[2.4vw] rounded-[0.6vw] bg-[#FDEEE9] flex items-center justify-center text-[#E54833] shrink-0">
-                      <Icon icon="carbon:activity" className="w-[1.4vw] h-[1.4vw]" />
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#FDEEE9] flex items-center justify-center text-[#E54833] shrink-0">
+                      <Icon icon="carbon:activity" className="w-4.5 h-4.5" />
                     </div>
-                    <div className="flex-1 flex items-center gap-[0.8vw]">
-                      <h3 className="text-[1.1vw] font-bold text-slate-900 whitespace-nowrap">
-                        Add Activity
-                      </h3>
-                      <div className="flex-1 h-[1px] bg-slate-200" />
-                    </div>
+                    <h3 className="text-base font-semibold text-slate-900">
+                      Add Activity
+                    </h3>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => setIsActivityModalOpen(false)}
-                    className="p-[0.3vw] text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors cursor-pointer shrink-0 ml-[0.6vw]"
+                    className="p-1 text-[#9c9c9c] hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
                     aria-label="Close"
                   >
-                    <Icon icon="iconoir:cancel" className="w-[1.2vw] h-[1.2vw]" />
+                    <Icon icon="iconoir:cancel" className="w-5 h-5" />
                   </button>
                 </div>
 
-                <p className="text-[0.72vw] text-slate-400 -mt-[0.6vw]">
-                  Record an interaction with this lead.
-                </p>
-
                 {/* Field 1: Activity Type Free Text Input */}
                 <div>
-                  <label className="block text-[0.78vw] font-medium text-slate-800 mb-[0.35vw]">
+                  <label className="block text-xs font-medium text-slate-800 mb-1">
                     Activity Type
                   </label>
                   <input
@@ -2303,30 +2329,30 @@ export default function LeadFormAnalytics() {
                     value={activityType}
                     onChange={(e) => setActivityType(e.target.value)}
                     placeholder="e.g. Note, Call, Meeting, Follow-up..."
-                    className="w-full px-[0.85vw] py-[0.55vw] text-[0.78vw] bg-white border border-slate-200 rounded-[0.5vw] text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#E54833] transition-colors"
+                    className="w-full px-3 py-2 text-sm bg-white border border-[#9c9c9c] rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#E54833] transition-colors"
                   />
                 </div>
 
                 {/* Field 2: Details Textarea */}
                 <div>
-                  <label className="block text-[0.78vw] font-medium text-slate-800 mb-[0.35vw]">
+                  <label className="block text-xs font-medium text-slate-800 mb-1">
                     Details
                   </label>
                   <textarea
                     value={activityDetails}
                     onChange={(e) => setActivityDetails(e.target.value)}
                     placeholder="Describe the activity..."
-                    rows={4}
-                    className="w-full p-[0.75vw] text-[0.78vw] bg-white border border-slate-200 rounded-[0.5vw] placeholder-slate-400 focus:outline-none focus:border-[#E54833] transition-colors resize-none"
+                    rows={3}
+                    className="w-full p-3 text-sm bg-white border border-[#9c9c9c] rounded-lg placeholder-slate-400 focus:outline-none focus:border-[#E54833] transition-colors resize-none"
                   />
                 </div>
 
                 {/* Bottom Action Buttons: Cancel & Save Activity */}
-                <div className="flex items-center justify-end gap-[0.6vw] pt-[0.4vw]">
+                <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setIsActivityModalOpen(false)}
-                    className="flex items-center gap-[0.3vw] px-[1vw] py-[0.5vw] text-[0.78vw] font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-[0.45vw] transition-colors cursor-pointer"
+                    className="flex items-center gap-[0.3vw] px-[1vw] py-[0.5vw] text-[0.88vw] font-medium text-slate-600 bg-white border border-[#9c9c9c] hover:bg-slate-50 rounded-[0.45vw] transition-colors cursor-pointer"
                   >
                     <Icon icon="iconoir:cancel" className="w-[0.85vw] h-[0.85vw] text-slate-500" />
                     <span>Cancel</span>
@@ -2335,7 +2361,7 @@ export default function LeadFormAnalytics() {
                   <button
                     type="button"
                     onClick={handleSaveActivity}
-                    className="flex items-center gap-[0.35vw] px-[1.1vw] py-[0.5vw] text-[0.78vw] font-semibold text-white bg-[#E54833] hover:bg-[#d63e2a] rounded-[0.45vw] shadow-sm transition-colors cursor-pointer"
+                    className="flex items-center gap-[0.35vw] px-[1.1vw] py-[0.5vw] text-[0.88vw] font-semibold text-white bg-[#E54833] hover:bg-[#d63e2a] rounded-[0.45vw] shadow-sm transition-colors cursor-pointer"
                   >
                     <Icon icon="charm:tick" className="w-[0.9vw] h-[0.9vw] text-white" />
                     <span>Save Activity</span>
@@ -2355,20 +2381,17 @@ export default function LeadFormAnalytics() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
                 transition={{ duration: 0.15 }}
-                className="w-[30vw] min-w-[380px] max-w-[480px] bg-white rounded-[1vw] shadow-2xl p-[1.4vw] flex flex-col gap-[1vw] relative border border-slate-100"
+                className="w-[400px] max-w-[92vw] bg-white rounded-xl shadow-2xl px-5 py-3.5 flex flex-col gap-3 relative border border-slate-200"
               >
-                {/* Header: Note Icon + Title + horizontal rule + Close button */}
-                <div className="flex items-center justify-between pb-[0.2vw]">
-                  <div className="flex items-center gap-[0.7vw] flex-1">
-                    <div className="w-[2.4vw] h-[2.4vw] rounded-[0.6vw] bg-[#FDEEE9] flex items-center justify-center text-[#E54833] shrink-0">
-                      <Icon icon="fluent:notepad-edit-16-regular" className="w-[1.4vw] h-[1.4vw]" />
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#FDEEE9] flex items-center justify-center text-[#E54833] shrink-0">
+                      <Icon icon="fluent:notepad-edit-16-regular" className="w-4.5 h-4.5" />
                     </div>
-                    <div className="flex-1 flex items-center gap-[0.8vw]">
-                      <h3 className="text-[1.1vw] font-bold text-slate-900 whitespace-nowrap">
-                        Add Notes
-                      </h3>
-                      <div className="flex-1 h-[1px] bg-slate-200" />
-                    </div>
+                    <h3 className="text-base font-semibold text-slate-900">
+                      Add Notes
+                    </h3>
                   </div>
 
                   <button
@@ -2377,43 +2400,36 @@ export default function LeadFormAnalytics() {
                       setIsAddingNote(false);
                       setNewNoteText('');
                     }}
-                    className="p-[0.3vw] text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors cursor-pointer shrink-0 ml-[0.6vw]"
+                    className="p-1 text-[#9c9c9c] hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
                     aria-label="Close"
                   >
-                    <Icon icon="iconoir:cancel" className="w-[1.2vw] h-[1.2vw]" />
+                    <Icon icon="iconoir:cancel" className="w-5 h-5" />
                   </button>
                 </div>
 
-                <p className="text-[0.72vw] text-slate-400 -mt-[0.6vw]">
-                  Record internal information about this lead.
-                </p>
-
                 {/* Field: Note Textarea */}
                 <div>
-                  <label className="block text-[0.78vw] font-medium text-slate-800 mb-[0.35vw]">
+                  <label className="block text-xs font-medium text-slate-800 mb-1">
                     Enter New Note
                   </label>
                   <textarea
                     value={newNoteText}
                     onChange={(e) => setNewNoteText(e.target.value)}
                     placeholder="Enter internal note..."
-                    rows={4}
-                    className="w-full p-[0.75vw] text-[0.78vw] bg-white border border-slate-200 rounded-[0.5vw] placeholder-slate-400 focus:outline-none focus:border-[#E54833] transition-colors resize-none"
+                    rows={3}
+                    className="w-full p-3 text-sm bg-white border border-[#9c9c9c] rounded-lg placeholder-slate-400 focus:outline-none focus:border-[#E54833] transition-colors resize-none"
                   />
-                  <p className="text-[0.65vw] text-slate-400 mt-[0.3vw]">
-                    Only you can see this note.
-                  </p>
                 </div>
 
                 {/* Bottom Action Buttons: Cancel & Save Note */}
-                <div className="flex items-center justify-end gap-[0.6vw] pt-[0.4vw]">
+                <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       setIsAddingNote(false);
                       setNewNoteText('');
                     }}
-                    className="flex items-center gap-[0.3vw] px-[1vw] py-[0.5vw] text-[0.78vw] font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-[0.45vw] transition-colors cursor-pointer"
+                    className="flex items-center gap-[0.3vw] px-[1vw] py-[0.5vw] text-[0.88vw] font-medium text-slate-600 bg-white border border-[#9c9c9c] hover:bg-slate-50 rounded-[0.45vw] transition-colors cursor-pointer"
                   >
                     <Icon icon="iconoir:cancel" className="w-[0.85vw] h-[0.85vw] text-slate-500" />
                     <span>Cancel</span>
@@ -2423,7 +2439,7 @@ export default function LeadFormAnalytics() {
                     type="button"
                     disabled={!newNoteText.trim()}
                     onClick={handleSaveNote}
-                    className={`flex items-center gap-[0.35vw] px-[1.1vw] py-[0.5vw] text-[0.78vw] font-semibold text-white rounded-[0.45vw] shadow-sm transition-colors ${
+                    className={`flex items-center gap-[0.35vw] px-[1.1vw] py-[0.5vw] text-[0.88vw] font-semibold text-white rounded-[0.45vw] shadow-sm transition-colors ${
                       newNoteText.trim()
                         ? 'bg-[#E54833] hover:bg-[#d63e2a] cursor-pointer'
                         : 'bg-slate-300 cursor-not-allowed'
@@ -2447,39 +2463,32 @@ export default function LeadFormAnalytics() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
                 transition={{ duration: 0.15 }}
-                className="w-[28vw] min-w-[360px] max-w-[460px] bg-white rounded-[1vw] shadow-2xl p-[1.4vw] flex flex-col gap-[1vw] relative border border-slate-100"
+                className="w-[380px] max-w-[92vw] bg-white rounded-xl shadow-2xl p-5 flex flex-col gap-3 relative border border-slate-100"
               >
-                {/* Header: Amber Alert Icon + Title + horizontal rule + Close button */}
-                <div className="flex items-center justify-between pb-[0.2vw]">
-                  <div className="flex items-center gap-[0.7vw] flex-1">
-                    <div className="w-[2.4vw] h-[2.4vw] rounded-[0.6vw] bg-amber-50 flex items-center justify-center text-amber-500 shrink-0">
-                      <Icon icon="mingcute:alert-line" className="w-[1.4vw] h-[1.4vw]" />
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500 shrink-0">
+                      <Icon icon="mingcute:alert-line" className="w-4.5 h-4.5" />
                     </div>
-                    <div className="flex-1 flex items-center gap-[0.8vw]">
-                      <h3 className="text-[1.1vw] font-bold text-slate-900 whitespace-nowrap">
-                        Confirm Status Change
-                      </h3>
-                      <div className="flex-1 h-[1px] bg-slate-200" />
-                    </div>
+                    <h3 className="text-base font-semibold text-slate-900">
+                      Confirm Status Change
+                    </h3>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => setStatusChangeConfirm(null)}
-                    className="p-[0.3vw] text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors cursor-pointer shrink-0 ml-[0.6vw]"
+                    className="p-1 text-[#9c9c9c] hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
                     aria-label="Close"
                   >
-                    <Icon icon="iconoir:cancel" className="w-[1.2vw] h-[1.2vw]" />
+                    <Icon icon="iconoir:cancel" className="w-5 h-5" />
                   </button>
                 </div>
 
-                <p className="text-[0.72vw] text-slate-400 -mt-[0.6vw]">
-                  This update will be logged in the activity timeline.
-                </p>
-
-                {/* Question Box */}
-                <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-[0.5vw] p-[0.9vw] text-[0.78vw] text-slate-600 leading-relaxed">
-                  Are you sure you want to change this lead status from{' '}
+                {/* Message */}
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Change lead status from{' '}
                   <span className="font-semibold text-slate-900">
                     {statusChangeConfirm.currentStatus}
                   </span>{' '}
@@ -2488,26 +2497,24 @@ export default function LeadFormAnalytics() {
                     {statusChangeConfirm.newStatus}
                   </span>
                   ?
-                </div>
+                </p>
 
-                {/* Bottom Action Buttons: Cancel & Confirm */}
-                <div className="flex items-center justify-end gap-[0.6vw] pt-[0.2vw]">
+                {/* Bottom Action Buttons */}
+                <div className="flex items-center justify-end gap-2 pt-1">
                   <button
                     type="button"
                     onClick={() => setStatusChangeConfirm(null)}
-                    className="flex items-center gap-[0.3vw] px-[1vw] py-[0.5vw] text-[0.78vw] font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-[0.45vw] transition-colors cursor-pointer"
+                    className="px-3.5 py-1.5 text-sm font-medium text-slate-600 bg-white border border-[#9c9c9c] hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                   >
-                    <Icon icon="iconoir:cancel" className="w-[0.85vw] h-[0.85vw] text-slate-500" />
-                    <span>Cancel</span>
+                    Cancel
                   </button>
 
                   <button
                     type="button"
                     onClick={confirmStatusUpdate}
-                    className="flex items-center gap-[0.35vw] px-[1.1vw] py-[0.5vw] text-[0.78vw] font-semibold text-white bg-[#E54833] hover:bg-[#d63e2a] rounded-[0.45vw] shadow-sm transition-colors cursor-pointer"
+                    className="px-4 py-1.5 text-sm font-semibold text-white bg-[#E54833] hover:bg-[#d63e2a] rounded-lg shadow-sm transition-colors cursor-pointer"
                   >
-                    <Icon icon="charm:tick" className="w-[0.9vw] h-[0.9vw] text-white" />
-                    <span>Confirm</span>
+                    Confirm
                   </button>
                 </div>
               </motion.div>

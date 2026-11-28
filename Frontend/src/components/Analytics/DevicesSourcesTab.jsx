@@ -172,6 +172,8 @@ export default function DevicesSourcesTab({ analyticsData = {}, summary = {}, lo
       if (osName) browserPlatformMap.get(bName).add(osName);
     });
 
+    if (totalViews === 0) return [];
+
     if (rawBrowsers.length > 0) {
       return rawBrowsers.map((b) => {
         const bName = b.browser || 'Chrome';

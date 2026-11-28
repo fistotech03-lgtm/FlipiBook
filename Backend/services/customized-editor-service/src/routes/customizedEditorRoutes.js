@@ -160,6 +160,9 @@ router.post(['/submit-lead', '/public/submit-lead'], optionalAuth, controller.su
 router.get(['/leads', '/get-leads'], authenticateUser, controller.getLeads);
 router.patch('/leads/:leadId/status', authenticateUser, controller.updateLeadStatus);
 router.post('/leads/:leadId/notes', authenticateUser, controller.addLeadNote);
+router.patch('/leads/:leadId/notes/:noteId', authenticateUser, controller.updateLeadNote);
+router.delete('/leads/:leadId/notes/:noteId', authenticateUser, controller.deleteLeadNote);
+router.post('/leads/:leadId/activity', authenticateUser, controller.addLeadActivity);
 router.delete('/leads/:leadId', authenticateUser, controller.deleteLead);
 
 // ==========================================

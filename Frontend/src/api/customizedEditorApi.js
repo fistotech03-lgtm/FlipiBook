@@ -35,6 +35,9 @@ export const customizedEditorApi = {
   getLeads: (params) => api.get('/api/customized-editor/leads', { params }),
   updateLeadStatus: (leadId, status) => api.patch(`/api/customized-editor/leads/${leadId}/status`, { status }),
   addLeadNote: (leadId, text) => api.post(`/api/customized-editor/leads/${leadId}/notes`, { text }),
+  updateLeadNote: (leadId, noteId, text) => api.patch(`/api/customized-editor/leads/${leadId}/notes/${noteId}`, { text }),
+  deleteLeadNote: (leadId, noteId) => api.delete(`/api/customized-editor/leads/${leadId}/notes/${noteId}`),
+  addLeadActivity: (leadId, payload) => api.post(`/api/customized-editor/leads/${leadId}/activity`, payload),
   deleteLead: (leadId) => api.delete(`/api/customized-editor/leads/${leadId}`),
 
   // Visibility & Credential Protection

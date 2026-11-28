@@ -29,6 +29,10 @@ export default function FlipbookActionMenu({
     }
     if (!book) return null;
 
+    const isPdfBook =
+        Boolean(book?.isPdfProject) ||
+        String(book?.bookType || book?.meta?.bookType || '').toLowerCase() === 'pdf';
+
     return (
         <>
             <div className="fixed inset-0 z-[100]" onClick={(e) => { e.stopPropagation(); setActiveBookMenu(null); }}></div>
@@ -40,7 +44,8 @@ export default function FlipbookActionMenu({
                     transform: menuPosition.isDropup ? 'translate(-100%, -100%)' : 'translate(-100%, 0)'
                 }}
             >
-                {/* Translate to Indian Language Option */}
+                {/* Translate to Indian Language Option - Hidden for PDF books */}
+                {!isPdfBook && (
                 <button
                     onClick={() => {
                         setActiveBookMenu(null);
@@ -51,6 +56,7 @@ export default function FlipbookActionMenu({
                     <Languages size="0.9vw" className="text-[#ea543a] group-hover:text-white transition-colors" />
                     <span>Translate Book</span>
                 </button>
+                )}
 
                 {/* Share Option */}
                 <button

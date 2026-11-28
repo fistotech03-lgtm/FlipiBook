@@ -203,8 +203,9 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
         }
 
         // If layoutColors is the global container (indexed by layout ID)
-        if (layoutColors[7] && Array.isArray(layoutColors[7])) {
-            const colorObj = layoutColors[7].find(c => c.id === id);
+        const currentLayoutList = layoutColors[6] || layoutColors['6'];
+        if (currentLayoutList && Array.isArray(currentLayoutList)) {
+            const colorObj = currentLayoutList.find(c => c.id === id);
             return colorObj ? colorObj.hex : `var(--${id}, ${defaultColor})`;
         }
 
@@ -217,13 +218,14 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
         // If layoutColors is an array directly for this layout
         if (Array.isArray(layoutColors)) {
             const colorObj = layoutColors.find(c => c.id === id);
-            return colorObj ? colorObj.opacity / 100 : defaultOpacity;
+            return colorObj && colorObj.opacity !== undefined ? colorObj.opacity / 100 : defaultOpacity;
         }
 
         // If layoutColors is the global container (indexed by layout ID)
-        if (layoutColors[7] && Array.isArray(layoutColors[7])) {
-            const colorObj = layoutColors[7].find(c => c.id === id);
-            return colorObj ? colorObj.opacity / 100 : defaultOpacity;
+        const currentLayoutList = layoutColors[6] || layoutColors['6'];
+        if (currentLayoutList && Array.isArray(currentLayoutList)) {
+            const colorObj = currentLayoutList.find(c => c.id === id);
+            return colorObj && colorObj.opacity !== undefined ? colorObj.opacity / 100 : defaultOpacity;
         }
 
         return defaultOpacity;
@@ -231,13 +233,14 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
 
     const getLayoutColorAlpha = (tokenId, defaultRgb, alpha) => {
         const color = getLayoutColor(tokenId, null);
+        const effectiveAlpha = alpha !== undefined ? (getLayoutOpacity(tokenId, 1) * alpha) : getLayoutOpacity(tokenId, 1);
         if (color && typeof color === 'string' && color.startsWith('#')) {
             const r = parseInt(color.slice(1, 3), 16) || 0;
             const g = parseInt(color.slice(3, 5), 16) || 0;
             const b = parseInt(color.slice(5, 7), 16) || 0;
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            return `rgba(${r}, ${g}, ${b}, ${effectiveAlpha})`;
         }
-        return `rgba(var(--${tokenId}-rgb, ${defaultRgb}), ${alpha})`;
+        return `rgba(var(--${tokenId}-rgb, ${defaultRgb}), ${effectiveAlpha})`;
     };
 
     const [showThumbnails, setShowThumbnails] = useState(false);
@@ -382,21 +385,20 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                     {settings?.interaction?.search !== false && !isPdfProject && (
                         <div className="relative">
                             <div
-                                className={`flex items-center rounded-[0.4vw] ${isTablet ? 'px-[0.6vw] py-[0.4vh] w-[11vw]' : 'px-[0.8vw] py-[0.5vw] shadow-sm w-[15vw]'} border relative overflow-hidden`}
+                                className={`flex items-center rounded-[0.4vw] ${isTablet ? 'px-[0.6vw] py-[0.4vh] w-[11vw]' : 'px-[0.8vw] py-[0.5vw] shadow-sm w-[15vw]'} border relative overflow-hidden backdrop-blur-md`}
                                 style={{
-                                    borderColor: 'rgba(0,0,0,0.08)'
+                                    borderColor: 'rgba(255,255,255,0.2)'
                                 }}
                             >
                                 <div className="absolute inset-0 -z-10" style={{
-                                    backgroundColor: getLayoutColor('search-bg-v2', '#FFFFFF'),
-                                    opacity: getLayoutOpacity('search-bg-v2', 1)
+                                    backgroundColor: getLayoutColorAlpha('search-bg-v2', '102, 102, 102', 0.6)
                                 }} />
                                 <Icon
                                     icon="lucide:search"
                                     className={`${isTablet ? 'w-[0.9vw] h-[0.9vw]' : 'w-[1.1vw] h-[1.1vw]'}`}
                                     style={{
-                                        color: getLayoutColor('search-text-v2', '#555555'),
-                                        opacity: getLayoutOpacity('search-text-v2', 1) * 0.6
+                                        color: getLayoutColor('toolbar-text-main', '#FFFFFF'),
+                                        opacity: 0.8
                                     }}
                                 />
                                 <input
@@ -447,10 +449,9 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                                         }
                                     }}
                                     placeholder="Quick Search..."
-                                    className={`bg-transparent border-0 outline-none focus:ring-0 ${isTablet ? 'text-[0.75vw]' : 'text-[0.85vw]'} ml-[0.6vw] w-full font-medium`}
+                                    className={`bg-transparent border-0 outline-none focus:ring-0 ${isTablet ? 'text-[0.75vw]' : 'text-[0.85vw]'} ml-[0.6vw] w-full font-medium ${getLayoutColor('toolbar-text-main', '#FFFFFF')?.toLowerCase() === '#ffffff' ? 'placeholder:text-white/60' : 'placeholder:text-black/50'}`}
                                     style={{
-                                        color: getLayoutColor('search-text-v2', '#2D2D2D'),
-                                        opacity: getLayoutOpacity('search-text-v2', 1)
+                                        color: getLayoutColor('toolbar-text-main', '#FFFFFF')
                                     }}
                                 />
                             </div>
@@ -521,10 +522,9 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                 <AnimatePresence>
                     {showTOC && (
                         <motion.div
-                            className={`absolute ${isTablet ? 'left-[4vw] top-[5vh] w-[16vw]' : 'left-[5.5vw] top-[6vh] w-[18vw]'} bottom-0 rounded-t-[1.5vw] z-[60] flex flex-col shadow-[-10px_0px_40px_rgba(0,0,0,0.15)] overflow-hidden border-t-[0.1vw] border-l-[0.1vw] border-r-[0.1vw] backdrop-blur-xl`}
+                            className={`absolute ${isTablet ? 'left-[4.5vw] top-[5vh] w-[16vw]' : 'left-[7.2vw] top-[6vh] w-[18vw]'} bottom-0 rounded-t-[1.5vw] z-[60] flex flex-col shadow-[-10px_0px_40px_rgba(0,0,0,0.15)] overflow-hidden border-t-[0.1vw] border-l-[0.1vw] border-r-[0.1vw] backdrop-blur-md`}
                             style={{
-                                backgroundColor: `rgba(var(--toc-bg-rgb, 255, 255, 255), var(--toc-bg-opacity, 0.6))`,
-                                opacity: 1,
+                                backgroundColor: getLayoutColorAlpha('toc-bg', '85, 85, 85', 0.6),
                                 borderColor: getLayoutColorAlpha('toc-text', '85, 85, 85', 0.3) // 30% opacity of theme text color
                             }}
                             onClick={(e) => e.stopPropagation()}
@@ -534,8 +534,8 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                             transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
                         >
                             <div className={`${isTablet ? 'h-[7vh]' : 'h-[8vh]'} flex items-center justify-between px-[1.5vw] border-b shrink-0`} style={{ borderColor: getLayoutColorAlpha('toc-text', '85, 85, 85', 0.2) }}> {/* 20% opacity underline */}
-                                <span className={`${isTablet ? 'text-[0.85vw]' : 'text-[1.1vw]'} font-bold`} style={{ color: getLayoutColor('toc-text', '#555555') }}>Table of Contents</span>
-                                <button onClick={() => { setShowTOCMemo?.(false); setTocSearchQuery(''); }} className="transition-colors" style={{ color: getLayoutColor('toc-icon', '#555555'), opacity: 0.6 }}>
+                                <span className={`${isTablet ? 'text-[0.85vw]' : 'text-[1.1vw]'} font-bold`} style={{ color: getLayoutColor('toc-text', '#555555'), opacity: getLayoutOpacity('toc-text', 1) }}>Table of Contents</span>
+                                <button onClick={() => { setShowTOCMemo?.(false); setTocSearchQuery(''); }} className="transition-colors" style={{ color: getLayoutColor('toc-icon', '#555555'), opacity: getLayoutOpacity('toc-icon', 0.6) * 0.6 }}>
                                     <Icon icon="lucide:x" className={`${isTablet ? 'w-[1.2vw] h-[1.2vw]' : 'w-[1.4vw] h-[1.4vw]'}`} />
                                 </button>
                             </div>
@@ -550,17 +550,17 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                                             borderColor: 'rgba(0,0,0,0.05)'
                                         }}
                                     >
-                                        <Icon icon="lucide:search" className="w-[1vw] h-[1vw]" style={{ color: getLayoutColor('toc-icon', '#555555'), opacity: 0.4 }} />
+                                        <Icon icon="lucide:search" className="w-[1vw] h-[1vw]" style={{ color: getLayoutColor('toc-icon', '#555555'), opacity: getLayoutOpacity('toc-icon', 0.4) * 0.4 }} />
                                         <input
                                             type="text" autoComplete="off" spellCheck="false" autoCorrect="off"
                                             value={tocSearchQuery}
                                             onChange={(e) => setTocSearchQuery(e.target.value)}
                                             placeholder="Search in TOC..."
                                             className={`bg-transparent border-0 outline-none focus:ring-0 ${isTablet ? 'text-[0.75vw]' : 'text-[0.85vw]'} ml-[0.5vw] w-full font-sans`}
-                                            style={{ color: getLayoutColor('toc-text', '#555555') }}
+                                            style={{ color: getLayoutColor('toc-text', '#555555'), opacity: getLayoutOpacity('toc-text', 1) }}
                                         />
                                         {tocSearchQuery && (
-                                            <button onClick={() => setTocSearchQuery('')} style={{ color: getLayoutColor('toc-icon', '#555555'), opacity: 0.4 }}>
+                                            <button onClick={() => setTocSearchQuery('')} style={{ color: getLayoutColor('toc-icon', '#555555'), opacity: getLayoutOpacity('toc-icon', 0.4) * 0.4 }}>
                                                 <Icon icon="lucide:x" className="w-[0.8vw] h-[0.8vw]" />
                                             </button>
                                         )}
@@ -583,7 +583,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                                                     <div key={idx} className="flex flex-col mb-[0.8vh]">
                                                         <div
                                                             className={`flex items-center justify-between ${isTablet ? 'py-[0.5vh] px-[0.6vw]' : 'py-[0.8vh] px-[0.8vw]'} hover:bg-white/10 rounded-[0.5vw] cursor-pointer transition-all group`}
-                                                            style={{ color: getLayoutColor('toc-text', '#555555') }}
+                                                            style={{ color: getLayoutColor('toc-text', '#555555'), opacity: getLayoutOpacity('toc-text', 1) }}
                                                             onClick={() => { onPageClick(item.page - 1); setShowTOCMemo?.(false); setTocSearchQuery(''); }}
                                                         >
                                                             <div className="flex items-center gap-[0.4vw] truncate pr-[0.5vw]">
@@ -612,7 +612,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                                                                         <div
                                                                             key={sIdx}
                                                                             className="flex items-center justify-between py-[0.6vh] px-[0.8vw] hover:bg-white/10 rounded-[0.5vw] cursor-pointer transition-all group"
-                                                                            style={{ color: getLayoutColor('toc-text', '#555555') }}
+                                                                            style={{ color: getLayoutColor('toc-text', '#555555'), opacity: getLayoutOpacity('toc-text', 1) }}
                                                                             onClick={() => {
                                                                                 const p = parseInt(String(sub.page || '').replace(/\D/g, ''), 10);
                                                                                 if (!isNaN(p) && p >= 1) onPageClick(p - 1);
@@ -646,8 +646,8 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                                         </div>
                                     ) : (
                                         <div className="flex flex-col items-center justify-center py-[10vh] opacity-30 select-none">
-                                            <Icon icon="ph:list-bullets-bold" className="w-[3vw] h-[3vw] mb-[1.5vh]" style={{ color: getLayoutColor('toc-icon', '#555555') }} />
-                                            <span className="text-[0.9vw] font-bold" style={{ color: getLayoutColor('toc-text', '#555555') }}>No Table of Contents</span>
+                                            <Icon icon="ph:list-bullets-bold" className="w-[3vw] h-[3vw] mb-[1.5vh]" style={{ color: getLayoutColor('toc-icon', '#555555'), opacity: getLayoutOpacity('toc-icon', 1) }} />
+                                            <span className="text-[0.9vw] font-bold" style={{ color: getLayoutColor('toc-text', '#555555'), opacity: getLayoutOpacity('toc-text', 1) }}>No Table of Contents</span>
                                         </div>
                                     )}
                                 </div>
@@ -660,10 +660,9 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                 <AnimatePresence>
                     {(settings?.navigation?.pageThumbnails ?? true) && showThumbnails && (
                         <motion.div
-                            className={`absolute ${isTablet ? 'left-[4vw] top-[5vh] w-[17vw]' : 'left-[5.5vw] top-[6vh] w-[19vw]'} bottom-0 rounded-t-[1.5vw] z-[60] flex flex-col shadow-[-10px_0px_40px_rgba(0,0,0,0.15)] overflow-hidden border-t-[0.1vw] border-l-[0.1vw] border-r-[0.1vw] backdrop-blur-xl`}
+                            className={`absolute ${isTablet ? 'left-[4.5vw] top-[5vh] w-[17vw]' : 'left-[7.2vw] top-[6vh] w-[19vw]'} bottom-0 rounded-t-[1.5vw] z-[60] flex flex-col shadow-[-10px_0px_40px_rgba(0,0,0,0.15)] overflow-hidden border-t-[0.1vw] border-l-[0.1vw] border-r-[0.1vw] backdrop-blur-md`}
                             style={{
-                                backgroundColor: `rgba(var(--toc-bg-rgb, 255, 255, 255), var(--toc-bg-opacity, 0.6))`,
-                                opacity: 1,
+                                backgroundColor: getLayoutColorAlpha('toc-bg', '85, 85, 85', 0.6),
                                 borderColor: getLayoutColorAlpha('toc-text', '85, 85, 85', 0.3) // 30% opacity of theme text color
                             }}
                             onClick={(e) => e.stopPropagation()}
@@ -673,8 +672,8 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                             transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
                         >
                             <div className={`${isTablet ? 'h-[6vh]' : 'h-[6.5vh]'} flex items-center justify-between px-[1.5vw] border-b-[0.1vw] shrink-0`} style={{ borderColor: getLayoutColorAlpha('toc-text', '85, 85, 85', 0.2) }}>
-                                <span className={`${isTablet ? 'text-[1vw]' : 'text-[1.2vw]'} font-bold`} style={{ color: getLayoutColor('toc-text', '#555555') }}>Thumbnails</span>
-                                <button onClick={() => setShowThumbnails(false)} className="transition-colors" style={{ color: getLayoutColor('toc-icon', '#555555'), opacity: 0.8 }}>
+                                <span className={`${isTablet ? 'text-[1vw]' : 'text-[1.2vw]'} font-bold`} style={{ color: getLayoutColor('toc-text', '#555555'), opacity: getLayoutOpacity('toc-text', 1) }}>Thumbnails</span>
+                                <button onClick={() => setShowThumbnails(false)} className="transition-colors" style={{ color: getLayoutColor('toc-icon', '#555555'), opacity: getLayoutOpacity('toc-icon', 0.8) * 0.8 }}>
                                     <Icon icon="lucide:x" className={`${isTablet ? 'w-[1vw] h-[1vw]' : 'w-[1.2vw] h-[1.2vw]'}`} />
                                 </button>
                             </div>
@@ -805,7 +804,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                 <AnimatePresence>
                     {showBookmarks && (
                         <motion.div
-                            className={`absolute ${isTablet ? 'left-[3.1vw] top-[5vh] w-[16vw]' : 'left-[4.5vw] top-[6vh] w-[18vw]'} bottom-0 rounded-t-[1.5vw] z-[60] flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.15)] overflow-hidden border-t-[0.1vw] border-l-[0.1vw] border-r-[0.1vw]`}
+                            className={`absolute ${isTablet ? 'left-[4.5vw] top-[5vh] w-[16vw]' : 'left-[7.2vw] top-[6vh] w-[18vw]'} bottom-0 rounded-t-[1.5vw] z-[60] flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.15)] overflow-hidden border-t-[0.1vw] border-l-[0.1vw] border-r-[0.1vw]`}
                             style={{
                                 backgroundColor: getLayoutColor('toc-bg', 'rgba(255,255,255,0.4)'),
                                 opacity: getLayoutOpacity('toc-bg', 1),
@@ -818,8 +817,8 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                             transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
                         >
                             <div className={`${isTablet ? 'h-[7vh]' : 'h-[8vh]'} flex items-center justify-between px-[1.5vw] border-b shrink-0`} style={{ borderColor: 'rgba(0,0,0,0.05)' }}>
-                                <span className={`${isTablet ? 'text-[1vw]' : 'text-[1.4vw]'} font-bold`} style={{ color: getLayoutColor('toc-text', '#555555') }}>Bookmarks</span>
-                                <button onClick={() => setShowBookmarks(false)} className="transition-colors" style={{ color: getLayoutColor('toc-icon', '#555555'), opacity: 0.6 }}>
+                                <span className={`${isTablet ? 'text-[1vw]' : 'text-[1.4vw]'} font-bold`} style={{ color: getLayoutColor('toc-text', '#555555'), opacity: getLayoutOpacity('toc-text', 1) }}>Bookmarks</span>
+                                <button onClick={() => setShowBookmarks(false)} className="transition-colors" style={{ color: getLayoutColor('toc-icon', '#555555'), opacity: getLayoutOpacity('toc-icon', 0.6) * 0.6 }}>
                                     <Icon icon="lucide:x" className={`${isTablet ? 'w-[1.2vw] h-[1.2vw]' : 'w-[1.4vw] h-[1.4vw]'}`} />
                                 </button>
                             </div>
@@ -993,7 +992,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                 })()}
 
                 <div
-                    className={`absolute ${isTablet ? `left-[1.5vw] ${settings?.toolbar?.addTextBelowIcons ? 'w-[3.2vw]' : 'w-[2.4vw]'} py-[1.2vh] gap-[1.8vh] rounded-[0.5vw]` : `left-[2vw] ${settings?.toolbar?.addTextBelowIcons ? 'w-[3.3vw]' : 'w-[2.8vw]'} py-[1.8vh] gap-[2.1vh] rounded-[0.7vw]`} top-[38%] -translate-y-1/2 flex flex-col z-[100] shadow-2xl items-center overflow-visible transition-all duration-500 ease-in-out ${isFullscreen ? (!isCanvasHovered ? 'pointer-events-auto' : 'pointer-events-none') : 'pointer-events-auto'}`}
+                    className={`absolute ${isTablet ? `left-[2vw] ${settings?.toolbar?.addTextBelowIcons ? 'w-[3.2vw]' : 'w-[2.4vw]'} py-[1.2vh] gap-[1.8vh] rounded-[0.5vw]` : `left-[3.6vw] ${settings?.toolbar?.addTextBelowIcons ? 'w-[3.3vw]' : 'w-[2.8vw]'} py-[1.8vh] gap-[2.1vh] rounded-[0.7vw]`} top-[38%] -translate-y-1/2 flex flex-col z-[100] shadow-2xl items-center overflow-visible transition-all duration-500 ease-in-out ${isFullscreen ? (!isCanvasHovered ? 'pointer-events-auto' : 'pointer-events-none') : 'pointer-events-auto'}`}
                     style={{
                         opacity: isFullscreen && isCanvasHovered ? 0 : 1
                     }}
@@ -1140,39 +1139,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                             </div>
                         </button>
                     )}
-                    {(settings?.brandingProfile?.profile ?? true) && (
-                        <button
-                            onClick={() => {
-                                closeAll();
-                                setShowProfilePopup?.(true);
-                            }}
-                            className={`group relative flex flex-col items-center gap-[0.2vh] transition-all opacity-90 hover:opacity-100`}
-                            style={{
-                                color: getLayoutColor('toolbar-text-main', '#FFFFFF'),
-                                opacity: getLayoutOpacity('toolbar-text-main', 1)
-                            }}
-                        >
-                            <Icon icon="fluent:person-24-filled" width={isTablet ? '1.1vw' : '1.3vw'} height={isTablet ? '1.1vw' : '1.3vw'} className="transition-transform group-hover:scale-110" />
-                            {settings?.toolbar?.addTextBelowIcons && <span className={`${isTablet ? 'text-[0.35vw]' : 'text-[0.45vw]'} font-semibold leading-tight text-center mt-[0.2vh]`} style={{ fontFamily: settings?.toolbar?.textProperties?.font || 'inherit' }}>Profile</span>}
-                            <div className={`absolute left-[calc(100%+1vw)] top-1/2 -translate-y-1/2 hidden ${!settings?.toolbar?.addTextBelowIcons ? 'group-hover:block' : ''} whitespace-nowrap pointer-events-none z-[9999]`}
-                                style={{
-                                    background: 'rgba(10, 10, 12, 0.55)',
-                                    backdropFilter: 'blur(30px)',
-                                    WebkitBackdropFilter: 'blur(30px)',
-                                    transform: 'translateZ(0)',
-                                    isolation: 'isolate',
-                                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                                    color: '#ffffff',
-                                    padding: '0.25vw 0.5vw',
-                                    borderRadius: '0.3vw',
-                                    fontSize: isTablet ? '0.55vw' : '0.65vw',
-                                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)'
-                                }}>
-                                Profile
-                                <div className="absolute top-1/2 -translate-y-1/2 -left-[0.3vw] w-0 h-0 border-solid border-t-transparent border-b-transparent border-r-[0.35vw] border-t-[0.35vw] border-b-[0.35vw]" style={{ borderRightColor: 'rgba(10, 10, 12, 0.55)' }}></div>
-                            </div>
-                        </button>
-                    )}
+
                     {(settings?.shareExport?.share ?? true) && (
                         <button
                             onClick={handleShare}

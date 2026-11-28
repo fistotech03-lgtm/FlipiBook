@@ -197,7 +197,7 @@ const MobileLayout4 = (props) => {
             '--toolbar-search-text': activeLayout?.toolbarSearchText || '#575C9C',
             '--toolbar-search-placeholder': activeLayout?.toolbarSearchPlaceholder || '#575C9C',
             '--toolbar-search-icon': activeLayout?.toolbarSearchIcon || '#575C9C',
-            '--page-bg': activeLayout?.pageBg || '#BDC3D9',
+            '--page-bg': activeLayout?.pageBg || '#DADBE8',
             '--progress-bar-bg': activeLayout?.progressBarBg || '#FFFFFF',
             '--progress-bar-fill': activeLayout?.progressBarFill || '#575C9C',
             '--play-button-bg': activeLayout?.playButtonBg || '#FFFFFF',
@@ -269,12 +269,12 @@ const MobileLayout4 = (props) => {
     );
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden select-none relative bg-[#BDC3D9]">
+        <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: props.backgroundSettings?.color || getLayoutColor('page-bg', '#DADBE8') }}>
             {/* Notch Spacer - fills the area near the hardware notch with a dark status bar color */}
-            {!isPhysicalMobile && <div className="shrink-0 h-10 z-50 bg-[#0B0F4E]" />}
+            {!isPhysicalMobile && <div className="shrink-0 h-10 z-50 bg-[#1e1e24]" />}
 
             {/* Header */}
-            <header className="z-50 px-4 pt-0 pb-3 flex flex-col gap-3 shadow-sm relative shrink-0" style={{ backgroundColor: getLayoutColor('toolbar-bg', '#575C9C') }}>
+            <header className="z-50 px-4 pt-0 pb-3 flex flex-col gap-3 shadow-sm relative shrink-0" style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555') }}>
                 {showSuggestions && recommendations.length > 0 && <div className="fixed inset-0 z-[15] bg-transparent" onClick={() => setShowSuggestions(false)} />}
 
                 {/* Top Row: Book Title & Logo */}
@@ -460,7 +460,7 @@ const MobileLayout4 = (props) => {
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.2 }}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 z-[160] w-[10%] max-w-[40px] flex flex-col items-center justify-center gap-7 py-7 shadow-2xl rounded-lg"
-                                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#575C9C') }}
+                                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555') }}
                                 >
                                     {/* Thumbnail Button with Popup (Grid Icon) */}
                                     <div className="relative flex items-center justify-center w-full">
@@ -483,9 +483,6 @@ const MobileLayout4 = (props) => {
                                             <Icon icon="solar:music-notes-bold" className="w-[18px] h-[18px]" />
                                         </button>
                                     )}
-                                    <button onClick={() => { setShowLocalProfile(true); setShowMoreMenu(false); setShowBookmarkOptions(false); setShowNotesOptions(false); }} className="hover:scale-110 active:scale-95 transition-transform p-1" style={{ color: getLayoutColor('toolbar-icon', '#FFFFFF') }}>
-                                        <Icon icon="fluent:person-24-filled" className="w-[18px] h-[18px]" />
-                                    </button>
                                     <button onClick={() => { handleShare(); setShowMoreMenu(false); setShowBookmarkOptions(false); setShowNotesOptions(false); }} className="hover:scale-110 active:scale-95 transition-transform p-1" style={{ color: getLayoutColor('toolbar-icon', '#FFFFFF') }}>
                                         <Icon icon="mage:share-fill" className="w-[17px] h-[17px]" />
                                     </button>
@@ -850,7 +847,7 @@ const MobileLayout4 = (props) => {
                     {/* Navigation Arrows inside the main container */}
                     <button
                         className="absolute left-[2%] top-1/2 -translate-y-1/2 z-20 flex items-center justify-center p-1 active:scale-90 transition-transform"
-                        style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}
+                        style={{ color: getLayoutColor('toolbar-bg', '#555555') }}
                         onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
                     >
                         <Icon icon="ph:caret-left-light" strokeWidth="4" className="w-8 h-8 opacity-70" />
@@ -858,7 +855,7 @@ const MobileLayout4 = (props) => {
 
                     <button
                         className="absolute right-[2%] top-1/2 -translate-y-1/2 z-20 flex items-center justify-center p-1 active:scale-90 transition-transform"
-                        style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}
+                        style={{ color: getLayoutColor('toolbar-bg', '#555555') }}
                         onClick={() => bookRef.current?.pageFlip()?.flipNext()}
                     >
                         <Icon icon="ph:caret-right-light" strokeWidth="4" className="w-8 h-8 opacity-70" />
@@ -873,7 +870,7 @@ const MobileLayout4 = (props) => {
                 </div>
 
                 {/* Footer */}
-                <footer className="z-50 shrink-0 flex flex-col pt-2 pb-8 relative" style={{ backgroundColor: getLayoutColor('toolbar-bg', '#575C9C') }}>
+                <footer className="z-50 shrink-0 flex flex-col pt-2 pb-8 relative" style={{ backgroundColor: getLayoutColor('bottom-toolbar-bg', getLayoutColor('toolbar-bg', '#555555')) }}>
 
                     {/* Top row: Page indicator pills (right-aligned) */}
                     <div className="flex items-center justify-end px-4 mb-2 gap-1.5">

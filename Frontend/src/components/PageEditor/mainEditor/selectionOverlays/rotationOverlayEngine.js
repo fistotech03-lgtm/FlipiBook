@@ -220,7 +220,7 @@ export const createRotationOverlayEngine = ({
     rotHandle.style.top = '0px';
     rotHandle.style.transformOrigin = '0 0';
     rotHandle.style.transition = 'none';
-    rotHandle.style.transform = `translate3d(${rotX}px, ${rotY}px, 0) rotate(${iconRotation.toFixed(1)}deg) scale(${(1 / zoomScale).toFixed(3)}) translate(-50%, -50%)`;
+    rotHandle.style.transform = `translate3d(${rotX}px, ${rotY}px, 0) rotate(${iconRotation.toFixed(1)}deg) scale(var(--fbe-inv-zoom, ${(1 / zoomScale).toFixed(3)})) translate(-50%, -50%)`;
 
     // Only show when actively hovered outside corner or actively rotating
     if (show || isRotatingRef.current || window.__isRotatingActive) {
@@ -345,7 +345,7 @@ export const createRotationOverlayEngine = ({
         badge.style.left = '0px';
         badge.style.top = '0px';
         badge.style.transformOrigin = '0 0';
-        badge.style.transform = `translate3d(${curCornerX.toFixed(2)}px, ${curCornerY.toFixed(2)}px, 0) scale(${(1 / zoomScale).toFixed(3)}) translate(-50%, -50%)`;
+        badge.style.transform = `translate3d(${curCornerX.toFixed(2)}px, ${curCornerY.toFixed(2)}px, 0) scale(var(--fbe-inv-zoom, ${(1 / zoomScale).toFixed(3)})) translate(-50%, -50%)`;
         badge.innerText = `${((angle % 360) + 360) % 360}°`;
 
         if (rotHandle) {
@@ -355,7 +355,7 @@ export const createRotationOverlayEngine = ({
           rotHandle.style.top = '0px';
           rotHandle.style.transformOrigin = '0 0';
           rotHandle.style.transition = 'none';
-          rotHandle.style.transform = `translate3d(${curRotX}px, ${curRotY}px, 0) rotate(${angle.toFixed(1)}deg) scale(${(1 / zoomScale).toFixed(3)}) translate(-50%, -50%)`;
+          rotHandle.style.transform = `translate3d(${curRotX}px, ${curRotY}px, 0) rotate(${angle.toFixed(1)}deg) scale(var(--fbe-inv-zoom, ${(1 / zoomScale).toFixed(3)})) translate(-50%, -50%)`;
         }
       };
 

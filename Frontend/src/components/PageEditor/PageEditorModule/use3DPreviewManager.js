@@ -24,12 +24,28 @@ export const use3DPreviewManager = ({
 
   const [is3DModalOpen, setIs3DModalOpen] = useState(false);
   const [current3DItem, setCurrent3DItem] = useState(null);
-  const [shadowStrength, setShadowStrength] = useState(1);
-  const [shadowSoftness, setShadowSoftness] = useState(1);
+  const [shadowStrength, setShadowStrength] = useState(80);
+  const [shadowSoftness, setShadowSoftness] = useState(80);
+  const [lightIntensity, setLightIntensity] = useState(1);
+  const [addShadow, setAddShadow] = useState(true);
   const [autoRotate, setAutoRotate] = useState(false);
   const [autoRotateSpeed, setAutoRotateSpeed] = useState(1);
   const [lockMaxZoom, setLockMaxZoom] = useState(false);
   const [maxZoom, setMaxZoom] = useState(2);
+  const [limitHorizontalRotation, setLimitHorizontalRotation] = useState(false);
+  const [leftRotationLimit, setLeftRotationLimit] = useState(180);
+  const [rightRotationLimit, setRightRotationLimit] = useState(180);
+  const [limitVerticalRotation, setLimitVerticalRotation] = useState(false);
+  const [upperViewLimit, setUpperViewLimit] = useState(180);
+  const [lowerViewLimit, setLowerViewLimit] = useState(180);
+  const [limitZoom, setLimitZoom] = useState(false);
+  const [limitZoomIn, setLimitZoomIn] = useState(80);
+  const [limitZoomOut, setLimitZoomOut] = useState(80);
+  const [enablePan, setEnablePan] = useState(true);
+  const [initialRotation, setInitialRotation] = useState({ x: 0, y: 0, z: 0 });
+  const [modelScale, setModelScale] = useState(1);
+  const [arHorizontalSurface, setArHorizontalSurface] = useState(true);
+  const [arVerticalSurface, setArVerticalSurface] = useState(true);
   const [bgType, setBgType] = useState('transparent');
   const [bgColor, setBgColor] = useState('#ffffff');
   const [customBg, setCustomBg] = useState(null);
@@ -98,7 +114,11 @@ export const use3DPreviewManager = ({
   useEffect(() => {
     if (!is3DModalOpen && current3DItem) {
       const configObj = {
-        shadowStrength, shadowSoftness, autoRotate, autoRotateSpeed, lockMaxZoom, maxZoom,
+        shadowStrength, shadowSoftness, lightIntensity, addShadow, autoRotate, autoRotateSpeed, lockMaxZoom, maxZoom,
+        limitHorizontalRotation, leftRotationLimit, rightRotationLimit,
+        limitVerticalRotation, upperViewLimit, lowerViewLimit,
+        limitZoom, limitZoomIn, limitZoomOut, enablePan,
+        initialRotation, modelScale, arHorizontalSurface, arVerticalSurface,
         bgType, bgColor, customBg, enableAR,
         qrText, qrColor, qrBgType, qrBgColor, qrLevel, qrDotType, qrCornerSquareType, qrCornerDotType, qrLogo,
         topText, bottomText
@@ -220,10 +240,26 @@ export const use3DPreviewManager = ({
     preview3DDataUrl,
     shadowStrength, setShadowStrength,
     shadowSoftness, setShadowSoftness,
+    lightIntensity, setLightIntensity,
+    addShadow, setAddShadow,
     autoRotate, setAutoRotate,
     autoRotateSpeed, setAutoRotateSpeed,
     lockMaxZoom, setLockMaxZoom,
     maxZoom, setMaxZoom,
+    limitHorizontalRotation, setLimitHorizontalRotation,
+    leftRotationLimit, setLeftRotationLimit,
+    rightRotationLimit, setRightRotationLimit,
+    limitVerticalRotation, setLimitVerticalRotation,
+    upperViewLimit, setUpperViewLimit,
+    lowerViewLimit, setLowerViewLimit,
+    limitZoom, setLimitZoom,
+    limitZoomIn, setLimitZoomIn,
+    limitZoomOut, setLimitZoomOut,
+    enablePan, setEnablePan,
+    initialRotation, setInitialRotation,
+    modelScale, setModelScale,
+    arHorizontalSurface, setArHorizontalSurface,
+    arVerticalSurface, setArVerticalSurface,
     bgType, setBgType,
     bgColor, setBgColor,
     customBg, setCustomBg,

@@ -194,7 +194,7 @@ const MobileLayout6 = (props) => {
             '--toolbar-search-text': activeLayout?.toolbarSearchText || '#575C9C',
             '--toolbar-search-placeholder': activeLayout?.toolbarSearchPlaceholder || '#575C9C',
             '--toolbar-search-icon': activeLayout?.toolbarSearchIcon || '#575C9C',
-            '--page-bg': activeLayout?.pageBg || '#BDC3D9',
+            '--page-bg': activeLayout?.pageBg || '#DADBE8',
             '--progress-bar-bg': activeLayout?.progressBarBg || '#FFFFFF',
             '--progress-bar-fill': activeLayout?.progressBarFill || '#575C9C',
             '--play-button-bg': activeLayout?.playButtonBg || '#FFFFFF',
@@ -238,14 +238,14 @@ const MobileLayout6 = (props) => {
     );
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: getLayoutColor('page-bg', '#BDC3D9') }}>
+        <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: getLayoutColor('page-bg', '#DADBE8') }}>
             {renderPopups()}
 
             {/* Background Overlay */}
             <div className="absolute inset-0 z-0" style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', 1), opacity: 0.15 }} />
 
             {/* Notch Spacer */}
-            {!isPhysicalMobile && <div className="absolute top-0 left-0 right-0 h-10 z-[60] bg-[#0B0F4E] pointer-events-none" />}
+            {!isPhysicalMobile && <div className="absolute top-0 left-0 right-0 h-10 z-[60] bg-[#1e1e24] pointer-events-none" />}
 
             {/* Header */}
             <header className={`absolute ${!isPhysicalMobile ? 'top-10' : 'top-2'} left-2 right-2 z-50 px-2 py-2 flex flex-col gap-3 pointer-events-none`}>
@@ -388,12 +388,7 @@ const MobileLayout6 = (props) => {
                                 <Icon icon="solar:music-notes-bold" className="w-[18px] h-[18px]" />
                             </button>
                         )}
-                        <button onClick={() => {
-                            setShowProfilePopup(true);
-                            setShowThumbnails(false); setLocalShowTOC(false); setShowSoundPopup(false);
-                        }} className="hover:scale-110 active:scale-95 transition-transform p-1" style={{ color: getLayoutColor('toolbar-icon', '#FFFFFF') }}>
-                            <Icon icon="fluent:person-24-filled" className="w-[18px] h-[18px]" />
-                        </button>
+
                         <button onClick={() => handleShare()} className="hover:scale-110 active:scale-95 transition-transform p-1" style={{ color: getLayoutColor('toolbar-icon', '#FFFFFF') }}>
                             <Icon icon="mage:share-fill" className="w-[17px] h-[17px]" />
                         </button>
@@ -411,14 +406,14 @@ const MobileLayout6 = (props) => {
                     {/* Navigation Arrows */}
                     <button
                         className="absolute left-[2%] top-1/2 -translate-y-1/2 z-20 flex items-center justify-center p-1 active:scale-90 transition-transform"
-                        style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}
+                        style={{ color: getLayoutColor('toolbar-bg', '#555555') }}
                         onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
                     >
                         <Icon icon="ph:caret-left-light" strokeWidth="4" className="w-8 h-8 opacity-70" />
                     </button>
                     <button
                         className="absolute right-[2%] top-1/2 -translate-y-1/2 z-20 flex items-center justify-center p-1 active:scale-90 transition-transform"
-                        style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}
+                        style={{ color: getLayoutColor('toolbar-bg', '#555555') }}
                         onClick={() => bookRef.current?.pageFlip()?.flipNext()}
                     >
                         <Icon icon="ph:caret-right-light" strokeWidth="4" className="w-8 h-8 opacity-70" />

@@ -299,7 +299,7 @@ const calculateRawVisualBBox = (el) => {
       if (hasStroke) {
         const dataSw = parseFloat(strokeEl.getAttribute('data-stroke-width'));
         const attrSw = parseFloat(strokeEl.getAttribute('stroke-width') || strokeEl.style?.strokeWidth || '0');
-        const strokePos = (strokeEl.getAttribute('data-stroke-position') || 'Outside').toLowerCase();
+        const strokePos = (strokeEl.getAttribute('data-stroke-position') || 'Inside').toLowerCase();
 
         let outerStrokePx = 0;
         if (strokePos === 'outside') {

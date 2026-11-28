@@ -74,15 +74,40 @@ const getLayoutColorRgba = (tokenId, defaultRgb, defaultOpacity) => {
     return `rgba(var(--${tokenId}-rgb, ${defaultRgb}), var(--${tokenId}-opacity, ${defaultOpacity}))`;
 };
 
-const ToolbarBtn = ({ icon, label, onClick, bg, color }) => (
-    <button
-        onClick={onClick}
-        className="flex items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95 shadow-sm"
-        title={label}
-        style={{ backgroundColor: bg || '#555555', color: color || 'white', width: '3cqw', height: '3cqw' }}
-    >
-        <Icon icon={icon} className="w-[1.6cqw] h-[1.6cqw]" />
-    </button>
+const ToolbarBtn = ({ id, icon, label, onClick, bg, color }) => (
+    <div className="relative group flex items-center justify-center">
+        <button
+            id={id}
+            onClick={onClick}
+            className="flex items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95 shadow-sm"
+            style={{ backgroundColor: bg || '#555555', color: color || 'white', width: '3cqw', height: '3cqw' }}
+        >
+            <Icon icon={icon} className="w-[1.6cqw] h-[1.6cqw]" />
+        </button>
+        {label && (
+            <div
+                className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]"
+                style={{
+                    background: 'rgba(10, 10, 12, 0.65)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#ffffff',
+                    padding: '0.3cqw 0.8cqw',
+                    borderRadius: '0.4cqw',
+                    fontSize: '0.85cqw',
+                    fontWeight: 600,
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)'
+                }}
+            >
+                {label}
+                <div
+                    className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]"
+                    style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }}
+                />
+            </div>
+        )}
+    </div>
 );
 
 const TabletLayout8 = ({
@@ -341,7 +366,9 @@ const TabletLayout8 = ({
                     <div className="flex items-center gap-[1.5cqw]">
                         {(settings?.navigation?.tableOfContents ?? true) && (
                             <ToolbarBtn 
+                                id="layout8-tablet-toc-btn"
                                 icon="fluent:text-bullet-list-24-filled" 
+                                label="TOC"
                                 onClick={() => setShowTOCMemo(!showTOC)} 
                                 bg={showTOC ? secondaryColor : primaryColor}
                                 color={showTOC ? primaryColor : secondaryColor}
@@ -349,24 +376,40 @@ const TabletLayout8 = ({
                         )}
                         {(settings?.navigation?.pageThumbnails ?? true) && (
                             <ToolbarBtn 
+                                id="layout8-tablet-thumbnails-btn"
                                 icon="ph:squares-four-fill" 
+                                label="Thumbnails"
                                 onClick={() => setShowThumbnailBarMemo(!showThumbnailBar)} 
                                 bg={showThumbnailBar ? secondaryColor : primaryColor}
                                 color={showThumbnailBar ? primaryColor : secondaryColor}
                             />
                         )}
-                        <ToolbarBtn icon={isAutoFlipping ? 'ph:pause-fill' : 'ph:play-fill'} onClick={() => setIsPlaying?.(!isAutoFlipping)} bg={primaryColor} />
+                        <ToolbarBtn 
+                            icon={isAutoFlipping ? 'ph:pause-fill' : 'ph:play-fill'} 
+                            label={isAutoFlipping ? 'Pause' : 'Auto Play'}
+                            onClick={() => setIsPlaying?.(!isAutoFlipping)} 
+                            bg={primaryColor} 
+                        />
                         {(settings?.interaction?.gallery ?? true) && (
-                            <ToolbarBtn icon="clarity:image-gallery-solid" onClick={() => setShowGalleryPopupMemo(!showGalleryPopup)} bg={primaryColor} />
-                        )}
-                        {(settings?.media?.backgroundAudio ?? true) && (
                             <ToolbarBtn 
-                                icon={isMuted ? "solar:music-notes-bold-duotone" : "solar:music-notes-bold"} 
-                                onClick={(e) => { e.stopPropagation(); setShowSoundPopupMemo?.(!showSoundPopup); }} 
-                                bg={showSoundPopup ? secondaryColor : primaryColor}
-                                color={showSoundPopup ? primaryColor : secondaryColor}
+                                icon="clarity:image-gallery-solid" 
+                                label="Gallery"
+                                onClick={() => setShowGalleryPopupMemo(!showGalleryPopup)} 
+                                bg={primaryColor} 
                             />
                         )}
+                        <div className="relative" id="layout8-sound-icon-anchor">
+                            {(settings?.media?.backgroundAudio ?? true) && (
+                                <ToolbarBtn 
+                                    id="layout8-tablet-sound-btn"
+                                    icon={isMuted ? "solar:music-notes-bold-duotone" : "solar:music-notes-bold"} 
+                                    label="Sound"
+                                    onClick={(e) => { e.stopPropagation(); setShowSoundPopupMemo?.(!showSoundPopup); }} 
+                                    bg={showSoundPopup ? secondaryColor : primaryColor}
+                                    color={showSoundPopup ? primaryColor : secondaryColor}
+                                />
+                            )}
+                        </div>
                     </div>
 
                     {/* Divider */}
@@ -377,6 +420,7 @@ const TabletLayout8 = ({
                         <div className="flex items-center gap-[1.5cqw]">
                             <ToolbarBtn 
                                 icon="ph:magnifying-glass-minus-bold" 
+                                label="Zoom Out"
                                 onClick={() => setCurrentZoom?.(Math.max(0.5, (currentZoom || 1) - 0.1))} 
                                 bg={primaryColor} 
                             />
@@ -385,6 +429,7 @@ const TabletLayout8 = ({
                             </span>
                             <ToolbarBtn 
                                 icon="ph:magnifying-glass-plus-bold" 
+                                label="Zoom In"
                                 onClick={() => setCurrentZoom?.(Math.min(3, (currentZoom || 1) + 0.1))} 
                                 bg={primaryColor} 
                             />
@@ -403,25 +448,38 @@ const TabletLayout8 = ({
 
                     {/* Block 3: Actions */}
                     <div className="flex items-center gap-[1.5cqw]">
-                        {(settings?.brandingProfile?.profile ?? true) && (
-                            <ToolbarBtn icon="fluent:person-24-filled" onClick={() => setShowProfilePopup(!showProfilePopup)} bg={primaryColor} />
-                        )}
+
                         {(settings?.shareExport?.share ?? true) && (
-                            <ToolbarBtn icon="mage:share-fill" onClick={() => {
-                                setShowTOCMemo?.(false);
-                                setShowThumbnailBarMemo?.(false);
-                                setShowGalleryPopupMemo?.(false);
-                                setShowSoundPopupMemo?.(false);
-                                setShowProfilePopup?.(false);
-                                setShowExportPopupMemo?.(false);
-                                setIsShareOpen(true);
-                            }} bg={primaryColor} />
+                            <ToolbarBtn 
+                                icon="mage:share-fill" 
+                                label="Share"
+                                onClick={() => {
+                                    setShowTOCMemo?.(false);
+                                    setShowThumbnailBarMemo?.(false);
+                                    setShowGalleryPopupMemo?.(false);
+                                    setShowSoundPopupMemo?.(false);
+                                    setShowProfilePopup?.(false);
+                                    setShowExportPopupMemo?.(false);
+                                    setIsShareOpen(true);
+                                }} 
+                                bg={primaryColor} 
+                            />
                         )}
                         {(settings?.shareExport?.download ?? true) && (
-                            <ToolbarBtn icon="meteor-icons:download" onClick={() => setShowExportPopupMemo?.(true)} bg={primaryColor} />
+                            <ToolbarBtn 
+                                icon="meteor-icons:download" 
+                                label="Download"
+                                onClick={() => setShowExportPopupMemo?.(true)} 
+                                bg={primaryColor} 
+                            />
                         )}
                         {(settings?.viewing?.fullScreen ?? true) && (
-                            <ToolbarBtn icon={isFullscreen ? "mingcute:fullscreen-exit-fill" : "lucide:fullscreen"} onClick={handleFullScreen} bg={primaryColor} />
+                            <ToolbarBtn 
+                                icon={isFullscreen ? "mingcute:fullscreen-exit-fill" : "lucide:fullscreen"} 
+                                label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                                onClick={handleFullScreen} 
+                                bg={primaryColor} 
+                            />
                         )}
                     </div>
 
@@ -433,17 +491,6 @@ const TabletLayout8 = ({
 
             {/* Main Content Area */}
             <div className="flex-1 flex items-center justify-center relative p-[4cqw] pt-[8cqh] pb-[10cqh]">
-
-                {/* Popups */}
-                {showTOC && (
-                    <TabletTableOfContentsPopup
-                        variant="layout8"
-                        onClose={() => setShowTOCMemo?.(false)} 
-                        onNavigate={onPageClick} 
-                        settings={settings}
-                        layoutColors={settings?.layoutColors}
-                    />
-                )}
 
                 {showProfilePopup && (
                     <TabletProfilePopup
@@ -545,6 +592,17 @@ const TabletLayout8 = ({
                 <div className="flex-1 pointer-events-none"></div>
             </div>
 
+            {/* Popups at root level for accurate coordinate alignment */}
+            {showTOC && (
+                <TabletTableOfContentsPopup
+                    variant="layout8"
+                    onClose={() => setShowTOCMemo?.(false)} 
+                    onNavigate={onPageClick} 
+                    settings={settings}
+                    layoutColors={settings?.layoutColors}
+                />
+            )}
+
             {/* Thumbnail Bar */}
             {showThumbnailBar && (
                 <>
@@ -555,43 +613,53 @@ const TabletLayout8 = ({
                     />
                     <div
                         id="layout8-thumb-panel"
-                        className="absolute w-max max-w-[70cqw] z-[150] pointer-events-auto"
+                        className="absolute w-[68cqw] h-[16cqw] z-[150] pointer-events-auto flex flex-col"
                         style={{
-                            top: '5cqw',
-                            left: '53%',
-                            transform: 'translateX(-50%)'
+                            top: '0.8cqh',
+                            left: '50%',
+                            transform: 'translateX(-55.0%)'
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Connector Tab for Thumbnail Icon */}
-                        <div className="absolute bottom-[98%] w-[5cqw] h-[3.4cqw] z-0" style={{ left: '25%', transform: 'translateX(-50%)' }}>
-                            <svg width="100%" height="100%" viewBox="0 0 113 67" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path
-                                    d="M24.8182 33.0909C24.8182 14.8153 39.6335 0 57.9091 0C76.1847 0 91 14.8153 91 33.0909V41.7377C91.0109 60.2573 94.967 66.6391 113 67H0C18.7515 67 24.8182 52.7213 24.8182 41.7377V33.0909Z"
-                                    fill={getLayoutColor('dropdown-bg', '#5C5898')}
-                                    fillOpacity="1"
-                                />
+                        {/* SVG Background Layer */}
+                        <div className="absolute inset-0 z-0 pointer-events-none drop-shadow-2xl">
+                            <svg width="100%" height="100%" viewBox="0 0 780 195" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                                <defs>
+                                    <clipPath id="tablet-thumb-shape-clip" clipPathUnits="objectBoundingBox">
+                                        <path transform="scale(0.00128205, 0.005128205)" d="M0 87C0 75.9543 8.95431 67 20 67H760C771.046 67 780 75.9543 780 87V175C780 186.046 771.046 195 760 195H20C8.9543 195 0 186.046 0 175V87Z" />
+                                        <path transform="scale(0.00128205, 0.005128205) translate(235.54, 67) scale(0.85, 0.9) translate(-361.9, -67)" d="M328.818 33.0909C328.818 14.8153 343.633 0 361.909 0C380.185 0 395 14.8153 395 33.0909V41.7377C395.011 60.2573 398.967 66.6391 417 67H304C322.752 67 328.818 52.7213 328.818 41.7377V33.0909Z" />
+                                    </clipPath>
+                                </defs>
+                                <path d="M0 87C0 75.9543 8.95431 67 20 67H760C771.046 67 780 75.9543 780 87V175C780 186.046 771.046 195 760 195H20C8.9543 195 0 186.046 0 175V87Z" fill={getLayoutColor('dropdown-bg', primaryColor)} />
+                                <path transform="translate(235.54, 67) scale(0.85, 0.9) translate(-361.9, -67)" d="M328.818 33.0909C328.818 14.8153 343.633 0 361.909 0C380.185 0 395 14.8153 395 33.0909V41.7377C395.011 60.2573 398.967 66.6391 417 67H304C322.752 67 328.818 52.7213 328.818 41.7377V33.0909Z" fill={getLayoutColor('dropdown-bg', primaryColor)} />
                             </svg>
                         </div>
 
+                        {/* Content Layer */}
                         <div
-                            className="w-full h-[12cqw] rounded-[1.2cqw] flex items-center relative px-[1cqw] shadow-2xl backdrop-blur-md"
-                            style={{ backgroundColor: getLayoutColor('dropdown-bg', '#5C5898') }}
+                            className="relative z-10 w-full h-full flex items-center pt-[5.6cqw] pb-[0.4cqw] px-[1.5cqw]"
+                            style={{ 
+                                clipPath: 'url(#tablet-thumb-shape-clip)', 
+                                WebkitClipPath: 'url(#tablet-thumb-shape-clip)' 
+                            }}
                         >
-                            {canScrollLeft && (
+                            {/* Left Arrow */}
+                            {spreads.length > 5 && (
                                 <button
-                                    className="w-[4cqw] h-[8cqw] flex items-center justify-center hover:scale-110 transition-all shrink-0 z-10"
-                                    onClick={(e) => { e.stopPropagation(); scroll('left'); }}
+                                    onClick={() => scroll('left')}
+                                    className={`z-10 transition-opacity p-[0.5cqw] ${canScrollLeft ? 'opacity-100 hover:opacity-80 cursor-pointer' : 'opacity-30 cursor-default'}`}
+                                    disabled={!canScrollLeft}
                                     style={{ color: getLayoutColor('dropdown-text', '#FFFFFF') }}
                                 >
-                                    <Icon icon="lucide:arrow-left" className="w-[2cqw] h-[2cqw]" />
+                                    <Icon icon="lucide:arrow-left" className="w-[1.6cqw] h-[1.6cqw]" />
                                 </button>
                             )}
 
+                            {/* Scrollable thumbnail row - Showing Double Spreads */}
                             <div
                                 ref={scrollRef}
                                 onScroll={checkScroll}
-                                className="flex-1 flex gap-[1.5cqw] px-[1cqw] items-center overflow-x-auto custom-scrollbar h-full py-[0.5cqw]"
+                                className="flex-1 flex gap-[1.2cqw] px-[0.8cqw] items-center overflow-x-auto h-full"
                                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                             >
                                 {spreads.map((spread, idx) => {
@@ -600,7 +668,6 @@ const TabletLayout8 = ({
                                     return (
                                         <div
                                             key={idx}
-                                            className="flex-shrink-0 flex flex-col items-center cursor-pointer group py-[0.5cqw]"
                                             onClick={() => {
                                                 if (bookRef?.current?.pageFlip) {
                                                     bookRef.current.pageFlip().turnToPage(spread.indices[0]);
@@ -609,37 +676,34 @@ const TabletLayout8 = ({
                                                 }
                                                 setShowThumbnailBarMemo(false);
                                             }}
+                                            className="flex-shrink-0 flex flex-col items-center cursor-pointer group py-[0.2cqw]"
                                         >
                                             <div
-                                                className="rounded-[0.5cqw] overflow-hidden transition-all duration-300 bg-white shadow-lg flex flex-col items-center px-[0.3cqw] pt-[0.3cqw] pb-[0.2cqw]"
+                                                className="rounded-[0.5cqw] overflow-hidden transition-all duration-300 bg-white shadow-lg flex flex-col items-center justify-center px-[0.3cqw] pt-[0.3cqw] pb-[0.2cqw]"
                                                 style={{
-                                                    width: '9cqw',
-                                                    height: '7cqw',
-                                                    border: isSelected ? `0.2cqw solid ${getLayoutColor('dropdown-bg', '#5C5898')}` : 'none',
+                                                    border: isSelected ? `0.18cqw solid ${getLayoutColor('dropdown-bg', primaryColor)}` : 'none',
                                                     transform: isSelected ? 'scale(1.04)' : 'scale(1)'
                                                 }}
                                             >
-                                                <div className="flex w-full flex-1 gap-[0.1cqw] items-center justify-center overflow-hidden">
+                                                {/* Pages Spread container */}
+                                                <div className="flex w-full gap-0 items-center justify-center overflow-hidden bg-gray-50 rounded-[0.1cqw]" style={{ height: '5.5cqw' }}>
                                                     {spread.pages.map((page, pIdx) => (
-                                                        <div key={`${idx}-${pIdx}`} className="w-[48%] h-[85%] overflow-hidden bg-white shadow-sm flex items-center justify-center rounded-[0.1cqw]">
+                                                        <div key={`${idx}-${pIdx}`} className="bg-white overflow-hidden relative flex items-center justify-center border-0" style={{ width: '4cqw', height: '100%' }}>
                                                             <PageThumbnail
-                                                                html={page.html || page.content}
+                                                                html={page.html || page.content || ''}
                                                                 index={spread.indices[pIdx]}
-                                                                scale={0.06}
+                                                                scale={0.07}
                                                             />
                                                         </div>
                                                     ))}
                                                     {spread.pages.length === 1 && idx === spreads.length - 1 && (
-                                                        <div className="w-[48%] h-[85%] bg-gray-50 rounded-[0.1cqw]" />
+                                                        <div className="bg-gray-50" style={{ width: '4cqw', height: '100%' }} />
                                                     )}
                                                 </div>
 
-                                                <div className="w-full text-center mt-auto pb-[0.1cqw]">
-                                                    <span 
-                                                        className="text-[0.9cqw] font-medium"
-                                                        style={{ color: isSelected ? getLayoutColor('dropdown-bg', '#5C5898') : '#666666' }}
-                                                    >
-                                                        Page {spread.indices[0] + 1}{spread.indices.length > 1 ? `-${spread.indices[1] + 1}` : ''}
+                                                <div className="w-full flex justify-center py-[0.1cqw] mt-[0.2cqw]">
+                                                    <span className="text-[0.8cqw] font-bold tracking-tight text-[#555555]">
+                                                        {spread.label}
                                                     </span>
                                                 </div>
                                             </div>
@@ -648,13 +712,15 @@ const TabletLayout8 = ({
                                 })}
                             </div>
 
-                            {canScrollRight && (
+                            {/* Right Arrow */}
+                            {spreads.length > 5 && (
                                 <button
-                                    className="w-[4cqw] h-[8cqw] flex items-center justify-center hover:scale-110 transition-all shrink-0 z-10"
-                                    onClick={(e) => { e.stopPropagation(); scroll('right'); }}
+                                    onClick={() => scroll('right')}
+                                    className={`z-10 transition-opacity p-[0.5cqw] ${canScrollRight ? 'opacity-100 hover:opacity-80 cursor-pointer' : 'opacity-30 cursor-default'}`}
+                                    disabled={!canScrollRight}
                                     style={{ color: getLayoutColor('dropdown-text', '#FFFFFF') }}
                                 >
-                                    <Icon icon="lucide:arrow-right" className="w-[2cqw] h-[2cqw]" />
+                                    <Icon icon="lucide:arrow-right" className="w-[1.6cqw] h-[1.6cqw]" />
                                 </button>
                             )}
                         </div>

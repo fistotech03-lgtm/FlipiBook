@@ -64,9 +64,6 @@ export default function TranslateBookModal({
               <div>
                 <h3 className="text-[1vw] font-bold text-gray-900 flex items-center gap-[0.4vw]">
                   Translate to Indian Language
-                  <span className="px-[0.4vw] py-[0.1vw] text-[0.6vw] font-semibold bg-orange-100 text-[#ea543a] rounded-full">
-                    AI4Bharat
-                  </span>
                 </h3>
                 <p className="text-[0.7vw] text-gray-500">
                   Translates all pages and creates a new cloned flipbook

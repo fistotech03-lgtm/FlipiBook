@@ -6,6 +6,9 @@ export const CUR_PEN_EXTEND = `url("data:image/svg+xml;charset=utf-8,%3Csvg xmln
 export const CUR_SNAP = `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M12 2v7M12 15v7M2 12h7M15 12h7' stroke='black' stroke-width='2.6'/%3E%3Cpath d='M12 2v7M12 15v7M2 12h7M15 12h7' stroke='white' stroke-width='1.2'/%3E%3Ccircle cx='12' cy='12' r='2.4' fill='none' stroke='black' stroke-width='2.2'/%3E%3Ccircle cx='12' cy='12' r='2.4' fill='none' stroke='%23FF5C87' stroke-width='1.2'/%3E%3C/svg%3E") 12 12, crosshair`;
 export const SHAPE_CURSOR = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M12 2V22M2 12H22' stroke='%236366F1' stroke-width='2' stroke-linecap='round'/></svg>") 12 12, crosshair`;
 export const TYPE_CURSOR = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 15 15'><path fill='%23000' d='M10.5 1a.5.5 0 0 1 0 1c-.922 0-1.54.23-1.92.563C8.206 2.89 8 3.366 8 4v3h1.25a.5.5 0 0 1 0 1H8v3c0 .634.207 1.11.58 1.437c.38.333.998.563 1.92.563a.5.5 0 0 1 0 1c-1.078 0-1.96-.27-2.58-.812a2.6 2.6 0 0 1-.42-.47q-.177.256-.42.47C6.46 13.73 5.577 14 4.5 14a.5.5 0 0 1 0-1c.922 0 1.54-.23 1.92-.563c.373-.326.58-.803.58-1.437V8H5.75a.5.5 0 0 1 0-1H7V4c0-.634-.207-1.11-.58-1.437C6.04 2.23 5.423 2 4.5 2a.5.5 0 0 1 0-1c1.078 0 1.96.27 2.58.812q.243.213.42.468q.177-.255.42-.468C8.54 1.27 9.423 1 10.5 1' /></svg>") 7 7, text`;
+// Text tool armed (Figma style): a "+" — drag to draw a text box, or click to type at a point.
+// (While editing text, TYPE_CURSOR / I-beam is still used.)
+export const TEXT_TOOL_CURSOR = `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M12 3v18M3 12h18' stroke='white' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M12 3v18M3 12h18' stroke='%23111827' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, crosshair`;
 export const DIRECT_CURSOR = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="-20 -20 300 300"><path d="M238.448 92.6028L0 0L90.103 241.348C90.7404 243.045 91.8924 244.501 93.3985 245.514C94.9045 246.526 96.6895 247.045 98.5048 246.997C100.32 246.949 102.075 246.337 103.525 245.246C104.976 244.156 106.049 242.641 106.596 240.913L130.069 164.711L209.652 242.219C211.287 243.841 213.498 244.751 215.804 244.751C218.109 244.751 220.321 243.841 221.956 242.219L242.462 221.753C244.088 220.122 245 217.914 245 215.614C245 213.313 244.088 211.106 242.462 209.474L163.141 132.315L238.448 109.062C240.163 108.47 241.65 107.359 242.703 105.884C243.755 104.409 244.321 102.643 244.321 100.833C244.321 99.0218 243.755 97.256 242.703 95.781C241.65 94.306 240.163 93.195 238.448 92.6028Z" fill="black" transform="rotate(18, 0, 0)"/></svg>') 1 1, auto`;
 
 // Global style to ensure injected SVGs always fill their container perfectly
@@ -170,6 +173,14 @@ export const svgGlobalStyles = `
   /* Scrollable text: box > .flipbook-text-outer > .flipbook-text-viewport > .flipbook-text-scrollbar.
      Every wrapper must fill the box, otherwise the scroller's height:100% resolves to auto,
      it grows with the text and never scrolls (box just clips the rest). */
+  /* Non-scrollable text boxes never clip or scroll: text typed past a Fixed box flows OUT below it
+     (Figma-style) instead of the box scrolling to the caret and hiding the first lines. */
+  .page-svg-container svg foreignObject[data-type="text"]:not([data-scrollable="true"]),
+  .page-svg-container svg foreignObject[data-sizing-mode]:not([data-scrollable="true"]),
+  .page-svg-container svg foreignObject[data-type="text"]:not([data-scrollable="true"]) > div,
+  .page-svg-container svg foreignObject[data-sizing-mode]:not([data-scrollable="true"]) > div {
+    overflow: visible !important;
+  }
   .page-svg-container svg foreignObject[data-scrollable="true"] > div,
   .page-svg-container svg foreignObject[data-scrollable="true"] .flipbook-text-viewport {
     box-sizing: border-box !important;
@@ -237,8 +248,25 @@ export const svgGlobalStyles = `
   #vector-studio-type-router {
     user-select: text !important;
     -webkit-user-select: text !important;
-    cursor: ${TYPE_CURSOR} !important;
     outline: none;
+  }
+  /* While editing: normal arrow on the page, I-beam only inside the text being edited */
+  .page-svg-container.text-editing-mode,
+  .page-svg-container.text-editing-mode * {
+    cursor: default !important;
+  }
+  .page-svg-container svg [contenteditable="true"],
+  .page-svg-container svg [contenteditable="true"] *,
+  .page-svg-container svg foreignObject[data-editing="true"],
+  .page-svg-container svg foreignObject[data-editing="true"] *,
+  .page-svg-container svg text[data-editing="true"],
+  .page-svg-container svg text[data-editing="true"] *,
+  .page-svg-container.text-editing-mode [contenteditable="true"],
+  .page-svg-container.text-editing-mode [contenteditable="true"] *,
+  .page-svg-container.text-editing-mode foreignObject[data-editing="true"],
+  .page-svg-container.text-editing-mode foreignObject[data-editing="true"] *,
+  #vector-studio-type-router {
+    cursor: ${TYPE_CURSOR} !important;
   }
 
   div.text-edit-box {
@@ -314,11 +342,12 @@ export const svgGlobalStyles = `
     cursor: ${SHAPE_CURSOR} !important;
   }
 
-  /* 10c. Type Tool Cursor */
+  /* 10c. Type Tool Cursor — "+" while the Text tool is armed (drag = Fixed box, click = Auto width) */
+  .page-svg-container.type-mode,
   .page-svg-container.type-mode svg,
   .page-svg-container.type-mode svg *,
   .page-svg-container.type-mode svg [data-name="Overlay"] {
-    cursor: ${TYPE_CURSOR} !important;
+    cursor: ${TEXT_TOOL_CURSOR} !important;
   }
 
   /* 10d. Node Edit Mode Cursor (Direct Selection Arrow) */

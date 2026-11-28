@@ -1175,20 +1175,7 @@ const Grid5Layout = ({
                         </div>
                         {/* Profile */}
                         <div className="relative">
-                            {(settings?.brandingProfile?.profile ?? true) && renderToolbarBtn(
-                                <Icon icon="fluent:person-24-filled" className={`${isMobileLandscape ? 'w-[0.75vw] h-[0.75vw]' : isTablet ? 'w-[1.1vw] h-[1.1vw]' : (isSidebarOpen ? 'w-[1.15vw] h-[1.15vw]' : 'w-[1.3vw] h-[1.3vw]')}`} />,
-                                'Profile',
-                                (e) => {
-                                    e.stopPropagation();
-                                    setShowProfilePopup(!showProfilePopup);
-                                    setShowTOCMemo?.(false);
-                                    setShowThumbnails(false);
-                                    setShowBookmarkLocal(false);
 
-                                    setShowSoundPopupMemo(false);
-                                },
-                                { color: getLayoutColorRgba('toolbar-text-main', '255, 255, 255', 1), opacity: showProfilePopup ? 0.7 : 1 }
-                            )}
 
                             {/* Profile Popup */}
                             {showProfilePopup && (

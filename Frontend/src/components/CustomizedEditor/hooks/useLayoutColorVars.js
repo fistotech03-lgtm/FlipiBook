@@ -26,7 +26,7 @@ export const useLayoutColorVars = (layoutSettings, layoutColors = {}) => {
     const vars = mergedColors
       .map((c, i) => {
         const hex = c.hex || '#ffffff';
-        const op = 0.4 + (Math.max(0, Math.min(1, (c.opacity ?? 100) / 100)) * 0.6);
+        const op = c.opacity !== undefined ? Math.max(0, Math.min(1, c.opacity / 100)) : 1;
         const r = parseInt(hex.slice(1, 3), 16) || 0;
         const g = parseInt(hex.slice(3, 5), 16) || 0;
         const b = parseInt(hex.slice(5, 7), 16) || 0;

@@ -31,12 +31,21 @@ export const createDefaultLogoSettings = (currentBook, locationState) => {
 export const createDefaultWatermarkSettings = (currentBook, locationState) => {
   const cb = currentBook?.Customized_Settings?.Branding || currentBook?.settings?.Branding || currentBook?.settings || {};
   const w = cb.watermarkSettings || cb.watermark || locationState?.watermarkSettings || locationState?.watermark;
-  if (w && typeof w === 'object') return { ...w, src: w.src || '' };
-  return {
+  const base = (w && typeof w === 'object') ? { ...w, src: w.src || '' } : {
     src: '',
     opacity: 64,
     position: 'Bottom Right'
   };
+  if (!base.platformWatermark) {
+    base.platformWatermark = {
+      src: '',
+      opacity: 100,
+      name: '',
+      size: '',
+      resolution: ''
+    };
+  }
+  return base;
 };
 
 export const createDefaultPreloaderSettings = (currentBook, locationState) => {

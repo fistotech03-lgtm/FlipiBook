@@ -4,19 +4,33 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, useGLTF, Environment, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { CustomQRCode } from './Model3DEditor';
-import ColorPicker from '../../Color';
-import Hotspot3DOverlay from '../../ThreedEditor/Components/Hotspot3DOverlay';
+import ColorPicker from '../../../Color';
+import Hotspot3DOverlay from '../../../ThreedEditor/Components/Hotspot3DOverlay';
 import axios from 'axios';
-import { resolveUploadsPath } from '../../../utils/assets/assetUtils';
+import { resolveUploadsPath } from '../../../../utils/assets/assetUtils';
 
 const ModelScene = ({ 
   url, 
   autoRotate = true, 
   autoRotateSpeed = 1.5, 
-  shadowStrength = 35, 
-  shadowSoftness = 35, 
+  shadowStrength = 80, 
+  shadowSoftness = 80, 
+  lightIntensity = 1,
+  addShadow = true,
   lockMaxZoom = true, 
   maxZoom = 4.5, 
+  limitHorizontalRotation = false,
+  leftRotationLimit = 180,
+  rightRotationLimit = 180,
+  limitVerticalRotation = false,
+  upperViewLimit = 180,
+  lowerViewLimit = 180,
+  limitZoom = false,
+  limitZoomIn = 80,
+  limitZoomOut = 80,
+  enablePan = true,
+  initialRotation = { x: 0, y: 0, z: 0 },
+  modelScale = 1,
   hotspots = [], 
   activeHotspotId = null, 
   onHotspotClick 
@@ -301,6 +315,7 @@ const ModelScene = ({
 
   const numShadowStrength = Number(shadowStrength) || 0;
   const numShadowSoftness = Number(shadowSoftness) || 0;
+  const numLightIntensity = lightIntensity !== undefined && lightIntensity !== null ? Number(lightIntensity) : 1;
   const numAutoRotateSpeed = Number(autoRotateSpeed) || 1.5;
   const numMaxZoom = Number(maxZoom) || 4.5;
 
@@ -309,21 +324,34 @@ const ModelScene = ({
     return (normTransform.radius / Math.sin(fovRad)) * 1.35;
   }, [normTransform.radius, camera.fov]);
 
-  const minZoomDist = lockMaxZoom ? Math.max(0.1, baseDist / Math.max(1, numMaxZoom)) : 0.1;
-  const maxZoomDist = lockMaxZoom ? Math.max(baseDist, baseDist * Math.max(1, numMaxZoom)) : 500;
+  const minZoomDist = limitZoom
+    ? Math.max(0.1, baseDist * (1.2 - (Number(limitZoomIn ?? 80) / 100)))
+    : (lockMaxZoom ? Math.max(0.1, baseDist / Math.max(1, numMaxZoom)) : 0.1);
+  const maxZoomDist = limitZoom
+    ? Math.max(baseDist, baseDist * (1 + (Number(limitZoomOut ?? 80) / 100) * 3))
+    : (lockMaxZoom ? Math.max(baseDist, baseDist * Math.max(1, numMaxZoom)) : 500);
+  const minAzimuth = limitHorizontalRotation ? -((Number(leftRotationLimit ?? 180) * Math.PI) / 180) : -Infinity;
+  const maxAzimuth = limitHorizontalRotation ? ((Number(rightRotationLimit ?? 180) * Math.PI) / 180) : Infinity;
+  const minPolar = limitVerticalRotation ? Math.max(0, ((180 - Number(upperViewLimit ?? 180)) / 180) * (Math.PI / 2)) : 0;
+  const maxPolar = limitVerticalRotation ? Math.min(Math.PI, Math.PI / 2 + (Number(lowerViewLimit ?? 180) / 180) * (Math.PI / 2)) : Math.PI;
 
   return (
     <>
-      <Environment preset="city" />
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[10, 10, 10]} intensity={1} />
-      <directionalLight position={[-10, -10, -10]} intensity={0.3} />
+      <Environment preset="city" environmentIntensity={numLightIntensity} />
+      <ambientLight intensity={0.7 * numLightIntensity} />
+      <directionalLight position={[10, 10, 10]} intensity={1 * numLightIntensity} />
+      <directionalLight position={[-10, -10, -10]} intensity={0.3 * numLightIntensity} />
 
       {/* 3D Model with exact ThreedEditor normalization */}
       <group
         ref={sceneWrapperRef}
-        scale={normTransform.scale}
+        scale={normTransform.scale * (Number(modelScale) || 1)}
         position={normTransform.position}
+        rotation={[
+          ((Number(initialRotation?.x) || 0) * Math.PI) / 180,
+          ((Number(initialRotation?.y) || 0) * Math.PI) / 180,
+          ((Number(initialRotation?.z) || 0) * Math.PI) / 180,
+        ]}
       >
         <primitive object={scene} />
       </group>
@@ -338,7 +366,7 @@ const ModelScene = ({
         />
       )}
 
-      {numShadowStrength > 0 && (
+      {addShadow && numShadowStrength > 0 && (
         <ContactShadows
           position={[0, -0.01, 0]}
           opacity={numShadowStrength / 100}
@@ -354,11 +382,15 @@ const ModelScene = ({
         ref={controlsRef}
         makeDefault 
         enableZoom={true} 
-        enablePan={true} 
+        enablePan={enablePan} 
         autoRotate={autoRotate && !activeHotspotId} 
         autoRotateSpeed={numAutoRotateSpeed} 
         minDistance={minZoomDist}
         maxDistance={maxZoomDist}
+        minAzimuthAngle={minAzimuth}
+        maxAzimuthAngle={maxAzimuth}
+        minPolarAngle={minPolar}
+        maxPolarAngle={maxPolar}
       />
     </>
   );
@@ -368,10 +400,24 @@ const GlbModelViewer = React.memo(({
   url, 
   autoRotate = true, 
   autoRotateSpeed = 1.5,
-  shadowStrength = 35,
-  shadowSoftness = 35,
+  shadowStrength = 80,
+  shadowSoftness = 80,
+  lightIntensity = 1,
+  addShadow = true,
   lockMaxZoom = true,
   maxZoom = 4.5,
+  limitHorizontalRotation = false,
+  leftRotationLimit = 180,
+  rightRotationLimit = 180,
+  limitVerticalRotation = false,
+  upperViewLimit = 180,
+  lowerViewLimit = 180,
+  limitZoom = false,
+  limitZoomIn = 80,
+  limitZoomOut = 80,
+  enablePan = true,
+  initialRotation = { x: 0, y: 0, z: 0 },
+  modelScale = 1,
   hotspots = [],
   activeHotspotId = null,
   onHotspotClick
@@ -418,8 +464,22 @@ const GlbModelViewer = React.memo(({
           autoRotateSpeed={autoRotateSpeed}
           shadowStrength={shadowStrength}
           shadowSoftness={shadowSoftness}
+          lightIntensity={lightIntensity}
+          addShadow={addShadow}
           lockMaxZoom={lockMaxZoom}
           maxZoom={maxZoom}
+          limitHorizontalRotation={limitHorizontalRotation}
+          leftRotationLimit={leftRotationLimit}
+          rightRotationLimit={rightRotationLimit}
+          limitVerticalRotation={limitVerticalRotation}
+          upperViewLimit={upperViewLimit}
+          lowerViewLimit={lowerViewLimit}
+          limitZoom={limitZoom}
+          limitZoomIn={limitZoomIn}
+          limitZoomOut={limitZoomOut}
+          enablePan={enablePan}
+          initialRotation={initialRotation}
+          modelScale={modelScale}
           hotspots={hotspots}
           activeHotspotId={activeHotspotId}
           onHotspotClick={onHotspotClick}
@@ -429,7 +489,7 @@ const GlbModelViewer = React.memo(({
   );
 });
 
-import { usePageEditorState } from '../../../store/hooks';
+import { usePageEditorState } from '../../../../store/hooks';
 
 const Model3DPreviewModal = (props) => { 
   const redux = usePageEditorState();
@@ -438,10 +498,24 @@ const Model3DPreviewModal = (props) => {
   const dataUrl = props.dataUrl !== undefined ? props.dataUrl : redux.preview3DDataUrl;
   const shadowStrength = props.shadowStrength !== undefined ? props.shadowStrength : redux.shadowStrength;
   const shadowSoftness = props.shadowSoftness !== undefined ? props.shadowSoftness : redux.shadowSoftness;
+  const lightIntensity = props.lightIntensity !== undefined ? props.lightIntensity : (redux.lightIntensity ?? 1);
+  const addShadow = props.addShadow !== undefined ? props.addShadow : (redux.addShadow ?? true);
   const autoRotate = props.autoRotate !== undefined ? props.autoRotate : redux.autoRotate;
   const autoRotateSpeed = props.autoRotateSpeed !== undefined ? props.autoRotateSpeed : redux.autoRotateSpeed;
   const lockMaxZoom = props.lockMaxZoom !== undefined ? props.lockMaxZoom : redux.lockMaxZoom;
   const maxZoom = props.maxZoom !== undefined ? props.maxZoom : redux.maxZoom;
+  const limitHorizontalRotation = props.limitHorizontalRotation !== undefined ? props.limitHorizontalRotation : (redux.limitHorizontalRotation ?? false);
+  const leftRotationLimit = props.leftRotationLimit !== undefined ? props.leftRotationLimit : (redux.leftRotationLimit ?? 180);
+  const rightRotationLimit = props.rightRotationLimit !== undefined ? props.rightRotationLimit : (redux.rightRotationLimit ?? 180);
+  const limitVerticalRotation = props.limitVerticalRotation !== undefined ? props.limitVerticalRotation : (redux.limitVerticalRotation ?? false);
+  const upperViewLimit = props.upperViewLimit !== undefined ? props.upperViewLimit : (redux.upperViewLimit ?? 180);
+  const lowerViewLimit = props.lowerViewLimit !== undefined ? props.lowerViewLimit : (redux.lowerViewLimit ?? 180);
+  const limitZoom = props.limitZoom !== undefined ? props.limitZoom : (redux.limitZoom ?? false);
+  const limitZoomIn = props.limitZoomIn !== undefined ? props.limitZoomIn : (redux.limitZoomIn ?? 80);
+  const limitZoomOut = props.limitZoomOut !== undefined ? props.limitZoomOut : (redux.limitZoomOut ?? 80);
+  const enablePan = props.enablePan !== undefined ? props.enablePan : (redux.enablePan ?? true);
+  const initialRotation = props.initialRotation !== undefined ? props.initialRotation : (redux.initialRotation ?? { x: 0, y: 0, z: 0 });
+  const modelScale = props.modelScale !== undefined ? props.modelScale : (redux.modelScale ?? 1);
   const bgType = props.bgType !== undefined ? props.bgType : redux.bgType;
   const initialBgColor = props.bgColor !== undefined ? props.bgColor : (redux.bgColor || '#ffffff');
   const customBg = props.customBg !== undefined ? props.customBg : redux.customBg;
@@ -616,8 +690,22 @@ const Model3DPreviewModal = (props) => {
               autoRotateSpeed={autoRotateSpeed} 
               shadowStrength={shadowStrength} 
               shadowSoftness={shadowSoftness} 
+              lightIntensity={lightIntensity}
+              addShadow={addShadow}
               lockMaxZoom={lockMaxZoom} 
               maxZoom={maxZoom} 
+              limitHorizontalRotation={limitHorizontalRotation}
+              leftRotationLimit={leftRotationLimit}
+              rightRotationLimit={rightRotationLimit}
+              limitVerticalRotation={limitVerticalRotation}
+              upperViewLimit={upperViewLimit}
+              lowerViewLimit={lowerViewLimit}
+              limitZoom={limitZoom}
+              limitZoomIn={limitZoomIn}
+              limitZoomOut={limitZoomOut}
+              enablePan={enablePan}
+              initialRotation={initialRotation}
+              modelScale={modelScale}
               hotspots={localHotspots}
               activeHotspotId={activeHotspotId}
               onHotspotClick={handleHotspotClick}

@@ -783,16 +783,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                         {/* Divider */}
                         <div className="w-[1px] h-[2vh] bg-white mx-[0.2vw] opacity-40" />
 
-                        {/* Profile */}
-                        {(settings?.brandingProfile?.profile ?? true) && (
-                            <ToolbarBtn toolbarProps={toolbarProps}
-                                id="layout8-profile-btn"
-                                icon="fluent:person-24-filled"
-                                label="Profile"
-                                onClick={(e) => { e.stopPropagation(); handleMenuClick(setShowProfilePopup, showProfilePopup, e, 'profile'); }}
-                                isActive={showProfilePopup}
-                            />
-                        )}
+
                         {/* Share */}
                         {(settings?.shareExport?.share ?? true) && (
                             <ToolbarBtn toolbarProps={toolbarProps}
@@ -894,8 +885,8 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                                             <path transform="scale(0.00128205, 0.005128205) translate(235.54, 67) scale(0.85, 0.9) translate(-361.9, -67)" d="M328.818 33.0909C328.818 14.8153 343.633 0 361.909 0C380.185 0 395 14.8153 395 33.0909V41.7377C395.011 60.2573 398.967 66.6391 417 67H304C322.752 67 328.818 52.7213 328.818 41.7377V33.0909Z" />
                                         </clipPath>
                                     </defs>
-                                    <path d="M0 87C0 75.9543 8.95431 67 20 67H760C771.046 67 780 75.9543 780 87V175C780 186.046 771.046 195 760 195H20C8.9543 195 0 186.046 0 175V87Z" fill={getLayoutColor('dropdown-bg', primaryColor)} fillOpacity="0.8"/>
-                                    <path transform="translate(235.54, 67) scale(0.85, 0.9) translate(-361.9, -67)" d="M328.818 33.0909C328.818 14.8153 343.633 0 361.909 0C380.185 0 395 14.8153 395 33.0909V41.7377C395.011 60.2573 398.967 66.6391 417 67H304C322.752 67 328.818 52.7213 328.818 41.7377V33.0909Z" fill={getLayoutColor('dropdown-bg', primaryColor)} fillOpacity="0.8"/>
+                                    <path d="M0 87C0 75.9543 8.95431 67 20 67H760C771.046 67 780 75.9543 780 87V175C780 186.046 771.046 195 760 195H20C8.9543 195 0 186.046 0 175V87Z" fill={getLayoutColor('thumbnail-outer-v2', getLayoutColor('dropdown-bg', primaryColor))} fillOpacity={getLayoutOpacity('thumbnail-outer-v2', getLayoutOpacity('dropdown-bg', 0.8))}/>
+                                    <path transform="translate(235.54, 67) scale(0.85, 0.9) translate(-361.9, -67)" d="M328.818 33.0909C328.818 14.8153 343.633 0 361.909 0C380.185 0 395 14.8153 395 33.0909V41.7377C395.011 60.2573 398.967 66.6391 417 67H304C322.752 67 328.818 52.7213 328.818 41.7377V33.0909Z" fill={getLayoutColor('thumbnail-outer-v2', getLayoutColor('dropdown-bg', primaryColor))} fillOpacity={getLayoutOpacity('thumbnail-outer-v2', getLayoutOpacity('dropdown-bg', 0.8))}/>
                                 </svg>
                             </div>
 

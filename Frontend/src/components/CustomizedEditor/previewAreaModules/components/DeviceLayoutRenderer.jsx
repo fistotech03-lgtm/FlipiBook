@@ -235,6 +235,10 @@ const DeviceLayoutRenderer = ({
                                     setShowSoundPopupMemo={setShowSoundPopup}
                                     showProfilePopup={showProfilePopup}
                                     setShowProfilePopupMemo={setShowProfilePopup}
+                                    showGalleryPopup={showGalleryPopup}
+                                    setShowGalleryPopupMemo={setShowGalleryPopupMemo}
+                                    isAutoFlipping={isAutoFlipping}
+                                    setIsPlaying={setIsPlaying}
                                     setShowAddNotesPopupMemo={setShowAddNotesPopupMemo}
                                     setShowNotesViewerMemo={setShowNotesViewerMemo}
                                     setShowAddBookmarkPopupMemo={setShowAddBookmarkPopupMemo}
@@ -281,6 +285,10 @@ const DeviceLayoutRenderer = ({
                                     setShowSoundPopupMemo={setShowSoundPopup}
                                     showProfilePopup={showProfilePopup}
                                     setShowProfilePopupMemo={setShowProfilePopup}
+                                    showGalleryPopup={showGalleryPopup}
+                                    setShowGalleryPopupMemo={setShowGalleryPopupMemo}
+                                    isAutoFlipping={isAutoFlipping}
+                                    setIsPlaying={setIsPlaying}
                                     handleDownload={handleDownload}
                                     currentBook={currentBook}
                                     activeLayout={activeLayout}
@@ -309,10 +317,16 @@ const DeviceLayoutRenderer = ({
                                     setShowThumbnailBarMemo={setShowThumbnailBarMemo}
                                     showGalleryPopup={showGalleryPopup}
                                     setShowGalleryPopupMemo={setShowGalleryPopupMemo}
+                                    isAutoFlipping={isAutoFlipping}
+                                    setIsPlaying={setIsPlaying}
                                     showSoundPopup={showSoundPopup}
                                     setShowSoundPopupMemo={setShowSoundPopup}
                                     showProfilePopup={showProfilePopup}
                                     setShowProfilePopupMemo={setShowProfilePopup}
+                                    showGalleryPopup={showGalleryPopup}
+                                    setShowGalleryPopupMemo={setShowGalleryPopupMemo}
+                                    isAutoFlipping={isAutoFlipping}
+                                    setIsPlaying={setIsPlaying}
                                     showExportPopup={showExportPopup}
                                     setShowExportPopupMemo={setShowExportPopup}
                                     currentBook={currentBook}
@@ -324,6 +338,61 @@ const DeviceLayoutRenderer = ({
                                         bookmarkSpacing={5}
                                     />
                                 </TabletLayout3>
+                            ) : activeDevice === 'Tablet' && Number(activeLayout) === 6 ? (
+                                <TabletLayout6
+                                    settings={settings}
+                                    bookName={bookName}
+                                    searchQuery={searchQuery}
+                                    setSearchQuery={setSearchQuery}
+                                    handleQuickSearch={handleQuickSearch}
+                                    setShowThumbnailBarMemo={setShowThumbnailBarMemo}
+                                    setShowTOCMemo={setShowTOCMemo}
+                                    setShowAddNotesPopupMemo={setShowAddNotesPopupMemo}
+                                    setShowAddBookmarkPopupMemo={setShowAddBookmarkPopupMemo}
+                                    setShowViewBookmarkPopup={setShowViewBookmarkPopup}
+                                    setShowNotesViewerMemo={setShowNotesViewerMemo}
+                                    bookRef={bookRef}
+                                    pages={pages}
+                                    setIsPlaying={setIsPlaying}
+                                    isAutoFlipping={isAutoFlipping}
+                                    currentBook={currentBook}
+                                    handleDownload={handleDownload}
+                                    handleFullScreen={handleFullScreen}
+                                    setShowProfilePopup={setShowProfilePopup}
+                                    showProfilePopup={showProfilePopup}
+                                    showGalleryPopup={showGalleryPopup}
+                                    setShowGalleryPopupMemo={setShowGalleryPopupMemo}
+                                    currentPage={currentPage}
+                                    pagesCount={pages?.length || 0}
+                                    currentZoom={currentZoom}
+                                    setCurrentZoom={setCurrentZoom}
+                                    onPageClick={onPageClick}
+                                    bookmarks={layout6Bookmarks}
+                                    notes={layout6Notes}
+                                    onAddNote={onAddNote}
+                                    onDeleteBookmark={onDeleteBookmark}
+                                    onUpdateBookmark={onUpdateBookmark}
+                                    profileSettings={profileSettings}
+                                    isSidebarOpen={isSidebarOpen}
+                                    backgroundSettings={layoutBackgroundSettings}
+                                    backgroundStyle={layoutBackgroundStyle}
+                                    isMuted={isMuted}
+                                    onToggleAudio={handleToggleAudio}
+                                    offset={isSinglePage ? 0 : offset}
+                                    isFullscreen={isFullscreen}
+                                    showSoundPopup={showSoundPopup}
+                                    setShowSoundPopupMemo={setShowSoundPopupMemo}
+                                    showTOC={showTOC}
+                                    showThumbnailBar={showThumbnailBar}
+                                    activeLayout={activeLayout}
+                                    layoutColors={layoutColors}
+                                >
+                                    <TurnJsBookRenderer
+                                        {...bookRendererProps}
+                                        bookmarks={layout6Bookmarks}
+                                        bookmarkSpacing={5}
+                                    />
+                                </TabletLayout6>
                             ) : activeDevice === 'Tablet' && Number(activeLayout) === 8 ? (
                                 <TabletLayout8
                                     backgroundSettings={layoutBackgroundSettings}
@@ -527,7 +596,8 @@ const DeviceLayoutRenderer = ({
                                         handleFullScreen={handleFullScreen}
                                         setShowProfilePopup={setShowProfilePopup}
                                         showProfilePopup={showProfilePopup}
-                                        logoSettings={logoSettings}
+                                        showGalleryPopup={showGalleryPopup}
+                                        setShowGalleryPopupMemo={setShowGalleryPopupMemo}
                                         currentPage={currentPage}
                                         pagesCount={pages.length}
                                         currentZoom={currentZoom}
@@ -585,7 +655,8 @@ const DeviceLayoutRenderer = ({
                                         handleFullScreen={handleFullScreen}
                                         setShowProfilePopup={setShowProfilePopup}
                                         showProfilePopup={showProfilePopup}
-                                        logoSettings={logoSettings}
+                                        showGalleryPopup={showGalleryPopup}
+                                        setShowGalleryPopupMemo={setShowGalleryPopupMemo}
                                         currentPage={currentPage}
                                         pagesCount={pages.length}
                                         currentZoom={currentZoom}
@@ -647,7 +718,8 @@ const DeviceLayoutRenderer = ({
                                         handleFullScreen={handleFullScreen}
                                         setShowProfilePopup={setShowProfilePopup}
                                         showProfilePopup={showProfilePopup}
-                                        logoSettings={logoSettings}
+                                        showGalleryPopup={showGalleryPopup}
+                                        setShowGalleryPopupMemo={setShowGalleryPopupMemo}
                                         currentPage={currentPage}
                                         pagesCount={pages.length}
                                         currentZoom={currentZoom}
@@ -677,6 +749,7 @@ const DeviceLayoutRenderer = ({
                                         setShowSoundPopupMemo={setShowSoundPopupMemo}
                                         showTOC={showTOC}
                                         showThumbnailBar={showThumbnailBar}
+                                        layoutColors={layoutColors}
                                     >
                                         <TurnJsBookRenderer
                                             {...bookRendererProps}
@@ -708,7 +781,8 @@ const DeviceLayoutRenderer = ({
                                         handleFullScreen={handleFullScreen}
                                         setShowProfilePopup={setShowProfilePopup}
                                         showProfilePopup={showProfilePopup}
-                                        logoSettings={logoSettings}
+                                        showGalleryPopup={showGalleryPopup}
+                                        setShowGalleryPopupMemo={setShowGalleryPopupMemo}
                                         currentPage={currentPage}
                                         pagesCount={pages.length}
                                         currentZoom={currentZoom}
@@ -735,6 +809,7 @@ const DeviceLayoutRenderer = ({
                                         setShowSoundPopupMemo={setShowSoundPopupMemo}
                                         showTOC={showTOC}
                                         showThumbnailBar={showThumbnailBar}
+                                        layoutColors={layoutColors}
                                     >
                                         <TurnJsBookRenderer
                                             {...bookRendererProps}
@@ -766,7 +841,8 @@ const DeviceLayoutRenderer = ({
                                         handleFullScreen={handleFullScreen}
                                         setShowProfilePopup={setShowProfilePopup}
                                         showProfilePopup={showProfilePopup}
-                                        logoSettings={logoSettings}
+                                        showGalleryPopup={showGalleryPopup}
+                                        setShowGalleryPopupMemo={setShowGalleryPopupMemo}
                                         currentPage={currentPage}
                                         pagesCount={pages.length}
                                         currentZoom={currentZoom}
@@ -791,6 +867,7 @@ const DeviceLayoutRenderer = ({
                                         showTOC={showTOC}
                                         showThumbnailBar={showThumbnailBar}
                                         activeLayout={activeLayout}
+                                        layoutColors={layoutColors}
                                     >
                                         <TurnJsBookRenderer
                                             {...bookRendererProps}
@@ -820,7 +897,8 @@ const DeviceLayoutRenderer = ({
                                         handleFullScreen={handleFullScreen}
                                         setShowProfilePopup={setShowProfilePopup}
                                         showProfilePopup={showProfilePopup}
-                                        logoSettings={logoSettings}
+                                        showGalleryPopup={showGalleryPopup}
+                                        setShowGalleryPopupMemo={setShowGalleryPopupMemo}
                                         currentPage={currentPage}
                                         pagesCount={pages.length}
                                         currentZoom={currentZoom}
@@ -849,6 +927,7 @@ const DeviceLayoutRenderer = ({
                                         setShowSoundPopupMemo={setShowSoundPopupMemo}
                                         showTOC={showTOC}
                                         showThumbnailBar={showThumbnailBar}
+                                        layoutColors={layoutColors}
                                     >
                                         <TurnJsBookRenderer
                                             {...bookRendererProps}
@@ -880,7 +959,8 @@ const DeviceLayoutRenderer = ({
                                         handleFullScreen={handleFullScreen}
                                         setShowProfilePopup={setShowProfilePopup}
                                         showProfilePopup={showProfilePopup}
-                                        logoSettings={logoSettings}
+                                        showGalleryPopup={showGalleryPopup}
+                                        setShowGalleryPopupMemo={setShowGalleryPopupMemo}
                                         currentPage={currentPage}
                                         pagesCount={pages.length}
                                         currentZoom={currentZoom}
@@ -933,7 +1013,8 @@ const DeviceLayoutRenderer = ({
                                         handleFullScreen={handleFullScreen}
                                         setShowProfilePopup={setShowProfilePopup}
                                         showProfilePopup={showProfilePopup}
-                                        logoSettings={logoSettings}
+                                        showGalleryPopup={showGalleryPopup}
+                                        setShowGalleryPopupMemo={setShowGalleryPopupMemo}
                                         currentPage={currentPage}
                                         pagesCount={pages.length}
                                         currentZoom={currentZoom}
@@ -994,7 +1075,8 @@ const DeviceLayoutRenderer = ({
                                         handleFullScreen={handleFullScreen}
                                         setShowProfilePopup={setShowProfilePopup}
                                         showProfilePopup={showProfilePopup}
-                                        logoSettings={logoSettings}
+                                        showGalleryPopup={showGalleryPopup}
+                                        setShowGalleryPopupMemo={setShowGalleryPopupMemo}
                                         currentPage={currentPage}
                                         pagesCount={pages.length}
                                         currentZoom={currentZoom}
@@ -1024,6 +1106,7 @@ const DeviceLayoutRenderer = ({
                                         setShowSoundPopupMemo={setShowSoundPopupMemo}
                                         showTOC={showTOC}
                                         showThumbnailBar={showThumbnailBar}
+                                        layoutColors={layoutColors}
                                     >
                                         <TurnJsBookRenderer
                                             {...bookRendererProps}
@@ -1053,7 +1136,8 @@ const DeviceLayoutRenderer = ({
                                         handleFullScreen={handleFullScreen}
                                         setShowProfilePopup={setShowProfilePopup}
                                         showProfilePopup={showProfilePopup}
-                                        logoSettings={logoSettings}
+                                        showGalleryPopup={showGalleryPopup}
+                                        setShowGalleryPopupMemo={setShowGalleryPopupMemo}
                                         currentPage={currentPage}
                                         pagesCount={pages.length}
                                         currentZoom={currentZoom}

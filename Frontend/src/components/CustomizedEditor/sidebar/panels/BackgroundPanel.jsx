@@ -457,67 +457,67 @@ const BackgroundSection = ({
   const handleImageReplace = async (file) => {
     if (!file) return;
 
-    const uploadedUrl = await uploadCustomizedAsset(file, 'Image');
-    if (uploadedUrl) {
-      const newImageData = { id: Date.now(), url: uploadedUrl };
-      setUploadedImages((prev) => [newImageData, ...prev]);
-      setLocalGallerySelected(newImageData);
-      const newBgSettings = {
-        ...backgroundSettings,
-        style: 'Image',
-        image: uploadedUrl,
-        fit: backgroundSettings.fit || 'Cover',
-        reactBitType: null
-      };
-      onUpdateBackground(newBgSettings);
+    // 1. Instant local preview using Object URL (zero wait time for user)
+    const localPreviewUrl = URL.createObjectURL(file);
+    const initialImageData = { id: Date.now(), url: localPreviewUrl };
+    setUploadedImages((prev) => [initialImageData, ...prev]);
+    setLocalGallerySelected(initialImageData);
+    onUpdateBackground({
+      ...backgroundSettings,
+      style: 'Image',
+      image: localPreviewUrl,
+      fit: backgroundSettings.fit || 'Cover',
+      reactBitType: null
+    });
 
-      if (v_id) {
-        try {
-          const userEmail = user?.emailId || user?.email;
-          const userId = user?.userId || user?._id || user?.id;
-          const customUserId = user?.userID;
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-          axios.post(`${backendUrl}/api/flipbook/background`, {
-            action: 'save',
-            userId,
-            customUserId,
-            emailId: userEmail,
-            v_id: v_id,
-            folderName: folder || 'My_Flipbooks',
-            bookName: flipbookName || v_id || 'Untitled Document',
-            backgroundSettings: newBgSettings
-          }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate bg save warning:', err));
+    // 2. Upload to server asynchronously in background
+    uploadCustomizedAsset(file, 'Image').then((uploadedUrl) => {
+      if (uploadedUrl) {
+        setUploadedImages((prev) =>
+          prev.map((img) => (img.url === localPreviewUrl ? { ...img, url: uploadedUrl } : img))
+        );
+        const finalBgSettings = {
+          ...settingsRef.current,
+          style: 'Image',
+          image: uploadedUrl,
+          fit: settingsRef.current.fit || 'Cover',
+          reactBitType: null
+        };
+        onUpdateBackground(finalBgSettings);
 
-          axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-            userID: customUserId || user?.userID,
-            emailId: userEmail,
-            v_id: v_id,
-            folderName: folder || 'My_Flipbooks',
-            bookName: flipbookName || v_id || 'Untitled Document',
-            Background: newBgSettings
-          }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
-        } catch (e) {
-          console.error('[BackgroundSection] Error auto-saving to DB:', e);
+        if (v_id) {
+          try {
+            const userEmail = user?.emailId || user?.email;
+            const userId = user?.userId || user?._id || user?.id;
+            const customUserId = user?.userID;
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+            axios.post(`${backendUrl}/api/flipbook/background`, {
+              action: 'save',
+              userId,
+              customUserId,
+              emailId: userEmail,
+              v_id: v_id,
+              folderName: folder || 'My_Flipbooks',
+              bookName: flipbookName || v_id || 'Untitled Document',
+              backgroundSettings: finalBgSettings
+            }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate bg save warning:', err));
+
+            axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+              userID: customUserId || user?.userID,
+              emailId: userEmail,
+              v_id: v_id,
+              folderName: folder || 'My_Flipbooks',
+              bookName: flipbookName || v_id || 'Untitled Document',
+              Background: finalBgSettings
+            }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
+          } catch (e) {
+            console.error('[BackgroundSection] Error auto-saving to DB:', e);
+          }
         }
       }
-
-      return uploadedUrl;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const newImageData = { id: Date.now(), url: event.target.result };
-      setUploadedImages((prev) => [newImageData, ...prev]);
-      setLocalGallerySelected(newImageData);
-      onUpdateBackground({
-        ...backgroundSettings,
-        style: 'Image',
-        image: event.target.result,
-        fit: backgroundSettings.fit || 'Cover',
-        reactBitType: null
-      });
-    };
-    reader.readAsDataURL(file);
+    }).catch(err => {
+      console.warn('[BackgroundSection] Background image upload error:', err);
+    });
   };
 
   const handleModalFileUpload = async (e) => {
@@ -567,60 +567,61 @@ const BackgroundSection = ({
   const handleVideoReplace = async (file) => {
     if (!file) return;
 
-    const uploadedUrl = await uploadCustomizedAsset(file, 'Video');
-    if (uploadedUrl) {
-      const newBgSettings = {
-        ...backgroundSettings,
-        style: 'Video',
-        video: uploadedUrl,
-        fit: backgroundSettings.fit || 'Fill',
-        reactBitType: null
-      };
-      onUpdateBackground(newBgSettings);
+    // 1. Instant local preview using Object URL (zero wait time for video playback)
+    const localVideoUrl = URL.createObjectURL(file);
+    onUpdateBackground({
+      ...backgroundSettings,
+      style: 'Video',
+      video: localVideoUrl,
+      fit: backgroundSettings.fit || 'Fill',
+      reactBitType: null
+    });
 
-      if (v_id) {
-        try {
-          const userEmail = user?.emailId || user?.email;
-          const userId = user?.userId || user?._id || user?.id;
-          const customUserId = user?.userID;
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-          axios.post(`${backendUrl}/api/flipbook/background`, {
-            action: 'save',
-            userId,
-            customUserId,
-            emailId: userEmail,
-            v_id: v_id,
-            folderName: folder || 'My_Flipbooks',
-            bookName: flipbookName || v_id || 'Untitled Document',
-            backgroundSettings: newBgSettings
-          }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate bg video save warning:', err));
+    // 2. Upload video asynchronously in background
+    uploadCustomizedAsset(file, 'Video').then((uploadedUrl) => {
+      if (uploadedUrl) {
+        const finalBgSettings = {
+          ...settingsRef.current,
+          style: 'Video',
+          video: uploadedUrl,
+          fit: settingsRef.current.fit || 'Fill',
+          reactBitType: null
+        };
+        onUpdateBackground(finalBgSettings);
 
-          axios.post(`${backendUrl}/api/flipbook/update-settings`, {
-            userID: customUserId || user?.userID,
-            emailId: userEmail,
-            v_id: v_id,
-            folderName: folder || 'My_Flipbooks',
-            bookName: flipbookName || v_id || 'Untitled Document',
-            Background: newBgSettings
-          }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
-        } catch (e) {
-          console.error('[BackgroundSection] Error auto-saving video to DB:', e);
+        if (v_id) {
+          try {
+            const userEmail = user?.emailId || user?.email;
+            const userId = user?.userId || user?._id || user?.id;
+            const customUserId = user?.userID;
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+            axios.post(`${backendUrl}/api/flipbook/background`, {
+              action: 'save',
+              userId,
+              customUserId,
+              emailId: userEmail,
+              v_id: v_id,
+              folderName: folder || 'My_Flipbooks',
+              bookName: flipbookName || v_id || 'Untitled Document',
+              backgroundSettings: finalBgSettings
+            }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate bg video save warning:', err));
+
+            axios.post(`${backendUrl}/api/flipbook/update-settings`, {
+              userID: customUserId || user?.userID,
+              emailId: userEmail,
+              v_id: v_id,
+              folderName: folder || 'My_Flipbooks',
+              bookName: flipbookName || v_id || 'Untitled Document',
+              Background: finalBgSettings
+            }, { withCredentials: true }).catch(err => console.warn('[BackgroundSection] Immediate update-settings warning:', err));
+          } catch (e) {
+            console.error('[BackgroundSection] Error auto-saving video to DB:', e);
+          }
         }
       }
-      return uploadedUrl;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      onUpdateBackground({
-        ...backgroundSettings,
-        style: 'Video',
-        video: event.target.result,
-        fit: backgroundSettings.fit || 'Fill',
-        reactBitType: null
-      });
-    };
-    reader.readAsDataURL(file);
+    }).catch(err => {
+      console.warn('[BackgroundSection] Background video upload error:', err);
+    });
   };
 
   const saveBackgroundToDB = useCallback(async (newBgSettings) => {

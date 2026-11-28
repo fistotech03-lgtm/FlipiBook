@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import ColorPicker from '../../Color';
+import { handleScrubHelper } from '../utils/scrubValue';
 import { ChevronLeft, ChevronRight, AlignLeft, AlignCenter, AlignRight, AlignJustify, Bold, Italic, List, ListOrdered, Minus, ChevronDown, PencilLine } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
@@ -201,58 +202,39 @@ const TooltipCustomization = ({
 
   const handleDragStart = (e, settingKey, inputEl = null) => {
     e.preventDefault();
-    const startX = e.clientX;
     const startVal = settings[settingKey] || 0;
     const startSettings = settings;
-    let hasMoved = false;
 
-    document.body.style.cursor = 'ew-resize';
-    document.body.style.userSelect = 'none';
+    handleScrubHelper(
+      e,
+      startVal,
+      (val) => {
+        const newVal = Math.max(10, parseInt(val, 10) || 10);
+        setSettings({ ...startSettings, [settingKey]: newVal });
+      },
+      1,
+      {
+        onEnd: (val, moved) => {
+          if (!moved && inputEl) {
+            inputEl.focus();
+            inputEl.select();
+            return;
+          }
+          const finalVal = Math.max(10, parseInt(val, 10) || 10);
+          const nextSettings = { ...startSettings, [settingKey]: finalVal };
+          setSettings(nextSettings);
 
-    const handleMouseMove = (moveEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      if (Math.abs(deltaX) > 3) {
-        hasMoved = true;
-      }
-
-      const newVal = Math.max(10, startVal + deltaX);
-      const nextSettings = { ...startSettings, [settingKey]: newVal };
-
-      // Update local state smoothly during drag
-      setSettings(nextSettings);
-    };
-
-    const handleMouseUp = (moveEvent) => {
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-
-      if (!hasMoved && inputEl) {
-        inputEl.focus();
-        inputEl.select();
-        return;
-      }
-
-      const deltaX = moveEvent.clientX - startX;
-      const finalVal = Math.max(10, startVal + deltaX);
-      const nextSettings = { ...startSettings, [settingKey]: finalVal };
-
-      setSettings(nextSettings);
-
-      // Update canvas only when drag ends, delay slightly to let cursor repaint
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = setTimeout(() => {
-        if (updateElementAttribute && selectedLayerId) {
-          updateElementAttribute(activePageIndex, selectedLayerId, {
-            'data-tooltip-settings': JSON.stringify(nextSettings)
-          });
+          if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+          debounceTimerRef.current = setTimeout(() => {
+            if (updateElementAttribute && selectedLayerId) {
+              updateElementAttribute(activePageIndex, selectedLayerId, {
+                'data-tooltip-settings': JSON.stringify(nextSettings)
+              });
+            }
+          }, 50);
         }
-      }, 50);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+      }
+    );
   };
 
   const applyListFormatting = (text, listType) => {
@@ -901,7 +883,7 @@ const TooltipCustomization = ({
               <div className="flex-1 h-[2vw] border border-gray-300 rounded-[0.4vw] bg-white flex items-center justify-between px-[0.7vw] shadow-2xs hover:border-gray-400 focus-within:border-[#EC5137] transition-colors">
                 <input
                   type="text"
-                  className="w-[5vw] text-[0.8vw] font-mono text-gray-700 outline-none uppercase bg-transparent"
+                  className="w-[5vw] text-[0.8vw] text-gray-700 outline-none uppercase bg-transparent"
                   value={settings.textColor}
                   onChange={(e) => updateSetting('textColor', e.target.value)}
                 />
@@ -925,7 +907,7 @@ const TooltipCustomization = ({
               <div className="flex-1 h-[2vw] border border-gray-300 rounded-[0.4vw] bg-white flex items-center justify-between px-[0.7vw] shadow-2xs hover:border-gray-400 focus-within:border-[#EC5137] transition-colors">
                 <input
                   type="text"
-                  className="w-[5vw] text-[0.8vw] font-mono text-gray-700 outline-none uppercase bg-transparent"
+                  className="w-[5vw] text-[0.8vw] text-gray-700 outline-none uppercase bg-transparent"
                   value={settings.bgColor}
                   onChange={(e) => updateSetting('bgColor', e.target.value)}
                 />

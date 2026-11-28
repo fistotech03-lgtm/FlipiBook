@@ -283,14 +283,14 @@ const quantizeAndDitherPNG = (rgbaData, width, height, maxColors = 256) => {
  * @returns {Promise<Blob>}
  */
 export async function convertAndCompressImage(file, targetFormat, compressionPreset, onProgress) {
-  onProgress?.(15, `Reading image file: ${file.name}`);
+  onProgress?.(15, `Reading image file: ${file?.name || 'image'}`);
 
   const fmt = (targetFormat || 'WEBP').toUpperCase();
   const isOriginalPreset = compressionPreset?.includes('Original');
 
   // If the file is already in the target format and the user asked for "Original Quality (Format Only)",
   // return the original untouched file directly to prevent re-encoding bloat.
-  const currentExt = file.name.split('.').pop()?.toUpperCase();
+  const currentExt = file?.name ? file.name.split('.').pop()?.toUpperCase() : '';
   const isSameFormat =
     (fmt === 'JPG' && (currentExt === 'JPG' || currentExt === 'JPEG')) ||
     (fmt === 'JPEG' && (currentExt === 'JPG' || currentExt === 'JPEG')) ||

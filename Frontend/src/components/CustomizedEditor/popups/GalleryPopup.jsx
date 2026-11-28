@@ -125,7 +125,7 @@ const GalleryPopup = ({ onClose, settings = {}, popupSettings = {}, isTablet, is
         onClick={onClose}
       >
         <div
-          className={`relative w-full shadow-2xl flex flex-col items-center justify-center ${isMobile ? 'w-[95%] h-[55%] rounded-[16px]' : isTablet ? 'max-w-[50vw] h-[55vh] rounded-[0.4vw]' : 'max-w-[85vw] h-[75vh] rounded-[0.5vw]'}`}
+          className={`relative w-full shadow-2xl flex flex-col items-center justify-center ${isMobile ? 'w-[95%] h-[55%] rounded-[16px]' : isTablet ? 'w-[90%] max-w-[680px] h-[55vh] min-h-[340px] rounded-[12px]' : 'max-w-[85vw] h-[75vh] rounded-[0.5vw]'}`}
           style={{
             backgroundColor: popupBgColor,
             backdropFilter: 'blur(12px)',
@@ -155,7 +155,7 @@ const GalleryPopup = ({ onClose, settings = {}, popupSettings = {}, isTablet, is
     >
       {/* The White Box */}
       <div
-        className={`relative w-full shadow-2xl flex flex-col overflow-hidden ${isMobile ? 'w-[95%] h-[55%] rounded-[16px]' : isTablet ? 'max-w-[50vw] h-[55vh] rounded-[0.4vw]' : 'max-w-[85vw] h-[75vh] rounded-[0.5vw]'}`}
+        className={`relative w-full shadow-2xl flex flex-col overflow-hidden ${isMobile ? 'w-[95%] h-[55%] rounded-[16px]' : isTablet ? 'w-[90%] max-w-[680px] h-[55vh] min-h-[340px] rounded-[12px]' : 'max-w-[85vw] h-[75vh] rounded-[0.5vw]'}`}
         style={{
           backgroundColor: popupBgColor,
           backdropFilter: 'blur(12px)',
@@ -269,8 +269,8 @@ const GalleryPopup = ({ onClose, settings = {}, popupSettings = {}, isTablet, is
                     transform,
                     zIndex,
                     opacity,
-                    width: isMobile ? '75%' : isTablet ? '20vw' : '30vw',
-                    height: isMobile ? '40%' : isTablet ? '30vh' : '40vh',
+                    width: isMobile ? '75%' : isTablet ? 'min(28vw, 320px)' : '30vw',
+                    height: isMobile ? '40%' : isTablet ? 'min(32vh, 220px)' : '40vh',
                     pointerEvents: isCurrent ? 'auto' : 'none'
                   }}
                 >

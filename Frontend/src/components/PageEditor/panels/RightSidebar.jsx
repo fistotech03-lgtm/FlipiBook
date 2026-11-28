@@ -262,6 +262,58 @@ const RightSidebar = ({
 
     const tag = (selectedElementProps.tagName || el.tagName || '').toLowerCase();
 
+    // Text foreignObject width adjustment: update box width (don't stretch font) and switch auto-width -> auto-height
+    if (
+      tag === 'foreignobject' &&
+      targetWidth !== null &&
+      !isNaN(targetWidth) &&
+      targetWidth > 0 &&
+      targetHeight === null &&
+      (el.getAttribute('data-type') === 'text' || el.firstElementChild?.tagName?.toLowerCase() === 'div')
+    ) {
+      const div = el.firstElementChild;
+      const unscaledW = Math.max(10, targetWidth / scaleX);
+      const currentMode = el.getAttribute('data-sizing-mode') || 'auto-width';
+      const nextMode = currentMode === 'auto-width' ? 'auto-height' : currentMode;
+
+      el.setAttribute('width', unscaledW.toString());
+      const attrsToUpdate = { width: unscaledW.toString() };
+
+      if (div) {
+        if (currentMode === 'auto-width') {
+          el.setAttribute('data-sizing-mode', 'auto-height');
+          el.setAttribute('data-auto-wrap', 'true');
+          div.style.setProperty('white-space', 'pre-wrap', 'important');
+          div.style.setProperty('overflow-wrap', 'break-word', 'important');
+          div.style.setProperty('word-break', 'break-word', 'important');
+          div.style.setProperty('width', '100%', 'important');
+          attrsToUpdate['data-sizing-mode'] = 'auto-height';
+          attrsToUpdate['data-auto-wrap'] = 'true';
+        }
+
+        if (nextMode === 'auto-height') {
+          const oldH = div.style.height;
+          const oldMinH = div.style.minHeight;
+          div.style.setProperty('height', 'auto', 'important');
+          div.style.setProperty('min-height', '0px', 'important');
+          const newH = Math.max(10, div.scrollHeight + 4);
+          div.style.setProperty('height', oldH || '100%', 'important');
+          div.style.setProperty('min-height', oldMinH || '100%', 'important');
+          el.setAttribute('height', newH.toString());
+          attrsToUpdate.height = newH.toString();
+        }
+      }
+
+      updateElementAttribute(activePageIndex, selectedLayerId, attrsToUpdate);
+      if (currentMode === 'auto-width') {
+        window.dispatchEvent(new CustomEvent('text-sizing-mode-changed', {
+          detail: { elementId: el.id, mode: 'auto-height' }
+        }));
+      }
+      window.dispatchEvent(new CustomEvent('force-update-selection-box', { detail: { elementId: el.id } }));
+      return;
+    }
+
     if (tag === 'line') {
       const x1 = parseFloat(el.getAttribute('x1')) || 0;
       const y1 = parseFloat(el.getAttribute('y1')) || 0;
@@ -917,35 +969,7 @@ const RightSidebar = ({
       )}
 
       <div className={`flex-1 flex flex-col overflow-hidden bg-white ${pages[activePageIndex]?.isHidden ? 'opacity-50 pointer-events-none' : ''}`}>
-        {is3DModalOpen ? (
-          <CustomScrollbar
-            color="#d1d5db"
-            hoverColor="#9ca3af"
-            width="0.12vw"
-            className="flex-1 flex flex-col"
-          >
-            <Model3DEditor
-              onClose={() => setIs3DModalOpen(false)}
-              shadowStrength={shadowStrength} setShadowStrength={setShadowStrength}
-              shadowSoftness={shadowSoftness} setShadowSoftness={setShadowSoftness}
-              autoRotate={autoRotate} setAutoRotate={setAutoRotate}
-              autoRotateSpeed={autoRotateSpeed} setAutoRotateSpeed={setAutoRotateSpeed}
-              lockMaxZoom={lockMaxZoom} setLockMaxZoom={setLockMaxZoom}
-              maxZoom={maxZoom} setMaxZoom={setMaxZoom}
-              bgType={bgType} setBgType={setBgType}
-              bgColor={bgColor} setBgColor={setBgColor}
-              customBg={customBg} setCustomBg={setCustomBg}
-              enableAR={enableAR} setEnableAR={setEnableAR}
-              qrText={qrText} setQrText={setQrText} qrColor={qrColor} setQrColor={setQrColor} qrBgType={qrBgType} setQrBgType={setQrBgType} qrBgColor={qrBgColor} setQrBgColor={setQrBgColor} qrLevel={qrLevel} setQrLevel={setQrLevel} qrDotType={qrDotType} setQrDotType={setQrDotType} qrCornerSquareType={qrCornerSquareType} setQrCornerSquareType={setQrCornerSquareType} qrCornerDotType={qrCornerDotType} setQrCornerDotType={setQrCornerDotType} qrLogo={qrLogo} setQrLogo={setQrLogo}
-              topText={topText} setTopText={setTopText} bottomText={bottomText} setBottomText={setBottomText}
-              dataUrl={preview3DDataUrl}
-              vId={current3DVId}
-              hotspots={hotspots}
-              activeHotspotId={activeHotspotId}
-              onHotspotClick={onHotspotClick}
-            />
-          </CustomScrollbar>
-        ) : activeTopTool === 'editor' ? (
+        {activeTopTool === 'editor' ? (
           activeMainTool === 'upload' ? (
             <UploadProperties
               activePageIndex={activePageIndex}

@@ -175,7 +175,7 @@ export default function ColorPallet({ color = "#000000", onChange, opacity, onOp
               ref={hexInputRef}
               value={(color || "").replace("#", "").toLowerCase()}
               onChange={(e) => onChange && onChange(`#${e.target.value}`)}
-              className={`w-full ${smallMode ? 'text-[0.6vw]' : 'text-[0.7vw]'} font-bold text-gray-600 outline-none lowercase font-mono bg-transparent`}
+              className={`w-full ${smallMode ? 'text-[0.6vw]' : 'text-[0.7vw]'} font-bold text-gray-600 outline-none lowercase bg-transparent`}
               maxLength={6}
             />
             <button

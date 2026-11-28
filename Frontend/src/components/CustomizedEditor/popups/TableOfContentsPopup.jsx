@@ -16,7 +16,26 @@ const isLightColor = (hex) => {
 const TableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage, settings = {}, activeLayout, isTablet, isMobile, isLandscape, isSidebarOpen, isEditor, layoutColors, isMobileLandscape, isFullscreen, isMobilePortraitOverride, addTextBelowIcons = false }) => {
     // TOC page numbers are authored in the editor (no transparent sheets) → convert to book pages
     const toBookIndex = useContext(PageNumberingContext);
-    const onNavigate = onNavigateEditorPage ? (editorIndex) => onNavigateEditorPage(toBookIndex(editorIndex)) : undefined;
+    const onNavigate = onNavigateEditorPage ? (editorIndex) => {
+        let rawNum = editorIndex;
+        if (typeof rawNum === 'string') {
+            rawNum = parseInt(rawNum.replace(/\D/g, ''), 10);
+        }
+        if (isNaN(rawNum) || rawNum === null || rawNum === undefined) return;
+        const validEditorIndex = Math.max(0, rawNum);
+        const bookIdx = toBookIndex ? toBookIndex(validEditorIndex) : validEditorIndex;
+        onNavigateEditorPage(bookIdx);
+    } : undefined;
+
+    const handleNavigate = (rawPage) => {
+        if (!onNavigate) return;
+        const pageNum = parseInt(String(rawPage ?? '').replace(/\D/g, ''), 10);
+        if (isNaN(pageNum) || pageNum <= 0) {
+            onNavigate(0);
+            return;
+        }
+        onNavigate(pageNum - 1);
+    };
     const speakText = (text) => {
         if ('speechSynthesis' in window && text) {
             window.speechSynthesis.cancel();
@@ -91,9 +110,21 @@ const TableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage, setti
             const c = layoutColorsArray.find(x => x && x.id === id);
             if (c) return hexToRgba(c.hex, c.opacity ?? 100);
         }
+        if (layoutColors?.popupColor?.primary && ['toc-bg', 'dropdown-bg', 'thumbnail-outer-v2', 'thumbnail-inner-v2', 'toc-overlay'].includes(id)) {
+            return layoutColors.popupColor.primary;
+        }
+        if (layoutColors?.popupColor?.secondary && ['toc-text', 'dropdown-text', 'dropdown-icon', 'toc-icon'].includes(id)) {
+            return layoutColors.popupColor.secondary;
+        }
         return `var(--${id}, ${defaultColor})`;
     };
-    const getLayoutOpacity = (id, defaultOpacity) => `var(--${id}-opacity, ${defaultOpacity})`;
+    const getLayoutOpacity = (id, defaultOpacity) => {
+        if (layoutColorsArray && layoutColorsArray.length > 0) {
+            const c = layoutColorsArray.find(x => x && x.id === id);
+            if (c && c.opacity !== undefined) return String(c.opacity / 100);
+        }
+        return `var(--${id}-opacity, ${defaultOpacity})`;
+    };
     const getLayoutColorRgba = (id, defaultRgb, defaultOpacity) =>
         `rgba(var(--${id}-rgb, ${defaultRgb}), var(--${id}-opacity, ${defaultOpacity}))`;
 
@@ -194,15 +225,15 @@ const TableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage, setti
                 <>
                     <div className="fixed inset-0 z-[2000] pointer-events-auto bg-transparent" onClick={onClose} />
                     <div
-                        className={`absolute top-[105px] left-[15px] z-[2100] pointer-events-auto origin-top-left`}
+                        className={`absolute top-[96px] left-[18px] z-[2100] pointer-events-auto origin-top-left`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className={`relative w-[150px] min-h-[160px] h-fit max-h-[60vh] flex flex-col group`}>
-                            {/* SVG Background (Knob on left for TOC) */}
+                            {/* SVG Background (Connector knob at top-left matching first toolbar icon) */}
                             <div className="absolute inset-0 z-0 pointer-events-none drop-shadow-xl">
-                                <svg width="100%" height="100%" viewBox="0 0 250 600" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                                <svg width="100%" height="100%" viewBox="0 0 150 360" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
                                     <path
-                                        d="M0 35C0 15 15 0 35 0C55 0 70 15 70 35V100C70 120 75 135 90 135H230C241.05 135 250 143.95 250 155V580C250 591.05 241.05 600 230 600H20C8.95 600 0 591.05 0 580V35Z"
+                                        d="M32 16C32 7.16344 24.8366 0 16 0C7.16344 0 0 7.16344 0 16V344C0 352.837 7.16344 360 16 360H134C142.837 360 150 352.837 150 344V44C150 35.1634 142.837 28 134 28H44C37.3726 28 32 22.6274 32 16Z"
                                         fill={getLayoutColor('toc-bg', '#555555')}
                                         fillOpacity={getLayoutOpacity('toc-bg', '0.95')}
                                     />
@@ -210,7 +241,7 @@ const TableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage, setti
                             </div>
 
                             {/* Content Layer */}
-                            <div className="relative z-10 flex flex-col flex-1 pt-[70px] px-[8px] pb-[12px]">
+                            <div className="relative z-10 flex flex-col flex-1 pt-[36px] px-[8px] pb-[12px]">
                                 {/* Search Bar */}
                                 {addSearch && (
                                     <div className="relative mb-[10px]">
@@ -531,8 +562,8 @@ const TableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage, setti
     if (isMobile && !isLandscape && isLayout7) {
         return (
             <>
-                <div className="fixed inset-0 z-[1000] pointer-events-auto" onClick={onClose} />
-                <div className="fixed bottom-[190px] left-[16px] z-[1001] pointer-events-auto w-[170px]">
+                <div className="absolute inset-0 z-[1000] pointer-events-auto" onClick={onClose} />
+                <div className="absolute bottom-[180px] left-[16px] z-[1001] pointer-events-auto w-[220px]">
                     <div className="bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col border border-gray-100 animate-in fade-in zoom-in-95 duration-200 origin-bottom-left">
                         {/* Header */}
                         <div
@@ -739,10 +770,10 @@ const TableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage, setti
         if (activeLayout === 2 || activeLayout === 'Layout2') {
             const isNativeFullscreen = !!document.fullscreenElement;
             if (!isEditor || isNativeFullscreen) {
-                return { top: '8.5vh', left: 'calc(50% - 11vw)', transform: 'translateX(-50%)' };
+                return { top: '8.5vh', left: 'calc(50% - 15vw)', transform: 'translateX(-50%)' };
             }
-            const leftPos = isSidebarOpen ? 'calc(50% + 8vw)' : 'calc(50% - 4.5vw)';
-            return isTablet ? { top: '15.5vh', left: 'calc(50% - 9vw)', transform: 'translateX(-50%)' } : { top: '15.5vh', left: leftPos, transform: 'translateX(-50%)' };
+            const leftPos = isSidebarOpen ? 'calc(50% + 2vw)' : 'calc(50% - 10vw)';
+            return isTablet ? { top: '15.5vh', left: 'calc(50% - 13vw)', transform: 'translateX(-50%)' } : { top: '15.5vh', left: leftPos, transform: 'translateX(-50%)' };
         }
         if (activeLayout === 3 || activeLayout === 'Layout3') {
             if (isMobilePortraitOverride) {
@@ -822,7 +853,7 @@ const TableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage, setti
                                         <React.Fragment key={heading.id}>
                                             <div
                                                 className="flex items-center justify-between px-[0.6vw] py-[0.4vw] hover:bg-white/10 rounded-md transition-colors cursor-pointer group"
-                                                onClick={() => { speakText(heading.title); onNavigate && onNavigate(heading.page - 1); }}
+                                                onClick={() => { speakText(heading.title); handleNavigate(heading.page); }}
                                             >
                                                 <div className="flex items-center gap-2 truncate flex-1 min-w-0">
                                                     <span className="text-[0.85vw] font-bold truncate" style={{ color: getLayoutColor('toc-text', '#FFFFFF'), opacity: 'var(--toc-text-opacity, 1)' }}>
@@ -840,7 +871,7 @@ const TableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage, setti
                                                 <div
                                                     key={sub.id}
                                                     className="flex items-center justify-between px-[0.6vw] py-[0.3vw] ml-[1.2vw] hover:bg-white/10 rounded-md transition-colors cursor-pointer group"
-                                                    onClick={() => { speakText(sub.title); onNavigate && onNavigate(sub.page - 1); }}
+                                                    onClick={() => { speakText(sub.title); handleNavigate(sub.page); }}
                                                 >
                                                     <div className="flex items-center gap-2 truncate flex-1 min-w-0">
                                                         <span className="text-[0.78vw] font-semibold truncate" style={{ color: getLayoutColor('toc-text', '#FFFFFF'), opacity: 'calc(var(--toc-text-opacity, 1) * 0.9)' }}>

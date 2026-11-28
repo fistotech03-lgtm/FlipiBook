@@ -10,7 +10,7 @@ import {
   PENCIL_CURSOR,
   PEN_CURSOR,
   SHAPE_CURSOR,
-  TYPE_CURSOR,
+  TEXT_TOOL_CURSOR,
   svgGlobalStyles
 } from '../utils/constants';
 import { normalizeForeignObjectNamespaces, healTableElementNode } from '../../LeftActionMenu/Elements/utils/tableElementUtils';
@@ -123,14 +123,20 @@ export const CanvasViewport = ({
     return clean;
   };
 
-  // Promote the zoom layer only during an active zoom/pan gesture, then let it re-render crisp
+  // Promote the zoom layer only during a pan gesture (pure translate keeps the bitmap sharp).
+  // Never during zoom: a promoted layer is scaled as a bitmap and looks blurry until re-rasterised.
   useEffect(() => {
     const el = zoomContainerRef?.current;
     if (!el) return undefined;
     el.style.willChange = 'transform';
     const t = setTimeout(() => { el.style.willChange = 'auto'; }, 150);
     return () => clearTimeout(t);
-  }, [zoom, pan.x, pan.y]);
+  }, [pan.x, pan.y]);
+
+  useEffect(() => {
+    const el = zoomContainerRef?.current;
+    if (el) el.style.willChange = 'auto';
+  }, [zoom]);
 
   return (
           <div
@@ -144,6 +150,7 @@ export const CanvasViewport = ({
               // switched on only while zooming/panning (effect below) and dropped right after, so the
               // browser re-renders crisp at the current zoom.
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom / 100})`,
+              '--fbe-inv-zoom': 100 / (zoom || 100),
               cursor: isSpaceDown
                 ? 'grab'
                 : (activeMainTool === 'shapes'
@@ -151,7 +158,7 @@ export const CanvasViewport = ({
                     : (activeMainTool === 'pen'
                         ? (selectedPenTool === 'pencil' ? PENCIL_CURSOR : PEN_CURSOR)
                         : (activeMainTool === 'type'
-                            ? TYPE_CURSOR
+                            ? TEXT_TOOL_CURSOR
                             : (activeMainTool === 'hand' ? 'grab' : undefined)))),
             }}
           >
@@ -214,7 +221,7 @@ export const CanvasViewport = ({
                         return (
                           <div
                             className={`absolute inset-0 w-full h-full overflow-visible flex items-center justify-center ${isPopupEditor ? 'bg-transparent' : 'bg-white'}`}
-                            style={{ cursor: (isEditingTextRef?.current ? TYPE_CURSOR : (isPencilActive ? PENCIL_CURSOR : (isPenToolActive ? PEN_CURSOR : (isShapeActive ? SHAPE_CURSOR : (isTypeActive ? TYPE_CURSOR : 'default'))))) }}
+                            style={{ cursor: (isEditingTextRef?.current ? 'default' : (isPencilActive ? PENCIL_CURSOR : (isPenToolActive ? PEN_CURSOR : (isShapeActive ? SHAPE_CURSOR : (isTypeActive ? TEXT_TOOL_CURSOR : 'default'))))) }}
                           >
                             {pageHtml && (
                               <div
@@ -232,16 +239,23 @@ export const CanvasViewport = ({
                                       // Fast path: Direct innerHTML swap is hardware accelerated and avoids recursive syncDOM freezes
                                       // unless actively editing inline text where DOM input focus must be preserved.
                                       const isTextEditing = isEditingTextRef?.current;
-                                      // Same page with live map/embed iframes: patch in place (keyed by id) so the
-                                      // iframes are never detached — avoids reload/glitch on delete, undo, redo.
-                                      const hasLiveFrames = el.__lastPageIndex === displayIndex && !!el.querySelector('foreignObject iframe');
+                                      // Same page: patch in place (keyed by id). Only changed nodes/attributes are
+                                      // touched, so other text boxes, images and live iframes are never rebuilt —
+                                      // a full innerHTML swap re-created every text on each property change (glitch).
+                                      // Full swap only for the first render / a page switch, or if patching fails.
+                                      const isSamePage = el.__lastPageIndex === displayIndex && el.childNodes.length > 0;
                                       if (el.__lastPageIndex !== displayIndex || !isTextEditing) {
-                                        if (hasLiveFrames) {
-                                          const parsed = new DOMParser().parseFromString(newHtml, 'text/html');
-                                          syncChildrenKeyed(el, parsed.body);
-                                        } else {
-                                          el.innerHTML = newHtml;
+                                        let patched = false;
+                                        if (isSamePage) {
+                                          try {
+                                            const parsed = new DOMParser().parseFromString(newHtml, 'text/html');
+                                            syncChildrenKeyed(el, parsed.body);
+                                            patched = true;
+                                          } catch (err) {
+                                            console.warn('[canvas] in-place patch failed, full re-render', err);
+                                          }
                                         }
+                                        if (!patched) el.innerHTML = newHtml;
                                         el.__lastPageIndex = displayIndex;
                                         el.__lastHtml = newHtml;
                                         // Auto-heal any path.audio-fill-layer into rect.audio-fill-layer
@@ -622,29 +636,6 @@ export const CanvasViewport = ({
                                   strokeLinejoin="miter"
                                 />
                               </svg>
-                            )}
-
-                            {isPageEmpty && (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none bg-transparent opacity-60">
-                                <div className="text-center text-[#B0B5C1] text-[0.85vw] font-normal leading-snug mb-[0.8vw]">
-                                  Ready-made templates<br />are available for a quicker start
-                                </div>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onOpenTemplateModal(displayIndex);
-                                  }}
-                                  className="text-[#5145F6] hover:text-[#3B2DD6] text-[0.85vw] font-medium mb-[0.8vw] pointer-events-auto cursor-pointer underline underline-offset-4 decoration-1"
-                                >
-                                  Add Templates
-                                </button>
-                                <div className="text-[#B0B5C1] text-[0.85vw] mb-[0.8vw] font-normal">
-                                  (or)
-                                </div>
-                                <div className="text-[#D1D5DB] text-[0.85vw] font-normal">
-                                  Create your own Design
-                                </div>
-                              </div>
                             )}
                           </div>
                         );

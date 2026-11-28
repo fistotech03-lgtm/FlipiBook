@@ -23,6 +23,10 @@ coverage/
 .turbo/
 tmp/
 temp/
+__pycache__/
+*/__pycache__/
+*.py[cod]
+*$py.class
 
 # Uploads & Local File Storage (ignored from Git)
 storage/

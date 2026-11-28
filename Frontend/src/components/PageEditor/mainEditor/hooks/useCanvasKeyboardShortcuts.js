@@ -233,14 +233,60 @@ export const useCanvasKeyboardShortcuts = ({
         const svg = activeContainer?.querySelector('svg');
         if (!svg) return;
 
-        const selectable = getAllSelectablePageElements(svg);
-        const ids = selectable.map(el => el.id).filter(Boolean);
-        if (ids.length > 0) {
-          const newSet = new Set(ids);
+        const isVisibleTextBox = (el) => {
+          if (!el || !el.id) return false;
+          if (el.getAttribute('data-hidden') === 'true' || el.getAttribute('data-locked') === 'true') return false;
+          const tag = el.tagName.toLowerCase();
+          if (tag === 'text') return Boolean((el.textContent || '').trim());
+          if (tag === 'foreignobject') return Boolean((el.innerText || el.textContent || '').trim());
+          return false;
+        };
+
+        const currentSelected = selectedLayerIdRef?.current ? svg.querySelector(`[id="${selectedLayerIdRef.current}"]`) : null;
+        const currentMulti = multiSelectedIdsRef?.current || new Set();
+        let targetIds = null;
+
+        // If user already selected a text box (or a group containing text boxes), Ctrl+A first selects
+        // companion text boxes in that group (e.g. "How We" + "Work"), then all text boxes on the page.
+        if (currentSelected) {
+          const isCurrentText = isVisibleTextBox(currentSelected);
+          let groupEl = isCurrentText ? currentSelected.parentElement?.closest('g[id]') : (currentSelected.tagName.toLowerCase() === 'g' ? currentSelected : null);
+          while (groupEl && groupEl !== svg) {
+            if (groupEl.getAttribute('data-name') === 'Group' && groupEl.parentElement?.closest('g[id]') && groupEl.parentElement.closest('g[id]') !== svg) {
+              const outer = groupEl.parentElement.closest('g[id]');
+              const outerTexts = Array.from(outer.querySelectorAll('text[id], foreignObject[id]')).filter(isVisibleTextBox).map(el => el.id);
+              if (outerTexts.length >= 2 && outerTexts.some(id => !currentMulti.has(id))) {
+                targetIds = outerTexts;
+                break;
+              }
+            }
+            const groupTexts = Array.from(groupEl.querySelectorAll('text[id], foreignObject[id]')).filter(isVisibleTextBox).map(el => el.id);
+            if (groupTexts.length >= 2 && groupTexts.some(id => !currentMulti.has(id))) {
+              targetIds = groupTexts;
+              break;
+            }
+            groupEl = groupEl.parentElement?.closest('g[id]');
+          }
+
+          if (!targetIds && isCurrentText) {
+            const allPageTexts = Array.from(svg.querySelectorAll('text[id], foreignObject[id]')).filter(isVisibleTextBox).map(el => el.id);
+            if (allPageTexts.length > 0 && allPageTexts.some(id => !currentMulti.has(id))) {
+              targetIds = allPageTexts;
+            }
+          }
+        }
+
+        if (!targetIds) {
+          const selectable = getAllSelectablePageElements(svg);
+          targetIds = selectable.map(el => el.id).filter(Boolean);
+        }
+
+        if (targetIds.length > 0) {
+          const newSet = new Set(targetIds);
           if (setMultiSelectedIds) setMultiSelectedIds(newSet);
           if (multiSelectedIdsRef) multiSelectedIdsRef.current = newSet;
-          if (setSelectedLayerId) setSelectedLayerId(ids[ids.length - 1]);
-          if (selectedLayerIdRef) selectedLayerIdRef.current = ids[ids.length - 1];
+          if (setSelectedLayerId) setSelectedLayerId(targetIds[targetIds.length - 1]);
+          if (selectedLayerIdRef) selectedLayerIdRef.current = targetIds[targetIds.length - 1];
           if (drawMultiSelectionHighlight) {
             drawMultiSelectionHighlight(newSet, 'selected');
           }

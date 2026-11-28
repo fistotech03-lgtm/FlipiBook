@@ -662,7 +662,7 @@ const Grid4Layout = ({
                     ref={buttonsRef}
                     onMouseMove={(e) => setSidebarMousePos({ x: e.clientX, y: e.clientY })}
                     onMouseLeave={() => setSidebarMousePos(null)}
-                    className={`${isMobileLandscape ? 'w-[10vw] items-end pr-[1.5vw] gap-[3.5vh]' : isFullscreen ? 'w-[3.6vw] items-center gap-[2vh]' : (!isBigBars ? 'w-[3.5vw] items-center gap-[2.2vh]' : 'w-[4.2vw] items-center gap-[2.5vh]')} flex flex-col ${isFullscreen ? 'justify-center pb-[18vh]' : 'pt-[4vh] pb-[2vh]'} border-r border-white/5 shadow-xl z-[1000] shrink-0 transition-all duration-500 ${isFullscreen ? `absolute left-0 top-0 bottom-0 ${(!isCanvasHovered || showThumbnails || showTOC || showProfilePopup || showSoundPopup) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}` : 'relative'}`} style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555') }}>
+                    className={`${isMobileLandscape ? 'w-[10vw] items-end pr-[1.5vw]' : isFullscreen ? 'w-[3.6vw] items-center py-[15vh]' : (!isBigBars ? 'w-[3.5vw] items-center py-[4vh]' : 'w-[4.2vw] items-center py-[4vh]')} flex flex-col justify-evenly border-r border-white/5 shadow-xl z-[1000] shrink-0 transition-all duration-500 ${isFullscreen ? `absolute left-0 top-0 bottom-0 ${(!isCanvasHovered || showThumbnails || showTOC || showProfilePopup || showSoundPopup) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}` : 'relative'}`} style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555') }}>
 
                     {(settings?.navigation?.tableOfContents ?? true) && renderSidebarBtn(
                         <Icon icon="fluent:text-bullet-list-24-filled" className={`${isMobileLandscape ? 'w-[2.4vw] h-[2.4vw]' : (isFullscreen && typeof document !== 'undefined' && !!document.fullscreenElement) ? ('w-[1.35vw] h-[1.35vw]') : ('w-[1.2vw] h-[1.2vw]')}`} />,
@@ -715,17 +715,7 @@ const Grid4Layout = ({
                         { color: isMuted ? getLayoutColorRgba('toolbar-icon', '255, 255, 255', '0.3') : getLayoutColor('toolbar-icon', '#FFFFFF') }
                     )}
 
-                    {(settings?.brandingProfile?.profile ?? true) && renderSidebarBtn(
-                        <Icon icon="fluent:person-24-filled" className={`${isMobileLandscape ? 'w-[2.4vw] h-[2.4vw]' : (isFullscreen && typeof document !== 'undefined' && !!document.fullscreenElement) ? ('w-[1.35vw] h-[1.35vw]') : ('w-[1.2vw] h-[1.2vw]')}`} />,
-                        "Profile",
-                        () => {
-                            setShowProfilePopup(!showProfilePopup);
-                            setShowTOCMemo?.(false);
-                            setShowThumbnails(false);
-                            setShowSoundPopupMemo?.(false);
-                        },
-                        { color: getLayoutColor('toolbar-icon', '#FFFFFF') }
-                    )}
+
 
                     {(settings?.shareExport?.share ?? true) && renderSidebarBtn(
                         <Icon icon="mage:share-fill" className={`${isMobileLandscape ? 'w-[2.4vw] h-[2.4vw]' : (isFullscreen && typeof document !== 'undefined' && !!document.fullscreenElement) ? ('w-[1.35vw] h-[1.35vw]') : ('w-[1.2vw] h-[1.2vw]')}`} />,
@@ -771,7 +761,7 @@ const Grid4Layout = ({
 
                 {/* Vertical Thumbnail Sidebar Integration */}
                 {(settings?.navigation?.pageThumbnails ?? true) && showThumbnails && (
-                    <div className={`absolute ${isMobileLandscape ? 'left-[7.5vw] w-[14vw]' : !isBigBars ? 'left-[3.5vw] w-[14vw]' : 'left-[4.2vw] w-[11vw]'} ${isFullscreen ? (isBigBars ? 'top-[7.5vh] bottom-[7.5vh]' : 'top-[6.5vh] bottom-[6.5vh]') : 'top-0 h-full'} bg-white z-30 border-r border-gray-200`}>
+                    <div className={`absolute ${isMobileLandscape ? 'left-[10vw] w-[14vw]' : isFullscreen ? 'left-[3.6vw] w-[14vw] top-[6vh] bottom-[6vh]' : (!isBigBars ? 'left-[3.5vw] w-[14vw] top-0 bottom-0' : 'left-[4.2vw] w-[14vw] top-0 bottom-0')} bg-white z-30 border-r border-gray-200`}>
                         <div ref={sidebarContentRef} className="flex flex-col h-full animate-in slide-in-from-left duration-300"
                             style={{ backgroundColor: `rgba(var(--dropdown-bg-rgb, 255, 255, 255), calc(0.4 + var(--dropdown-bg-opacity, 1) * 0.6))` }}
                         >
@@ -865,7 +855,7 @@ const Grid4Layout = ({
 
                 {/* Vertical Table of Contents Sidebar */}
                 {showTOC && (
-                    <div className={`absolute ${isMobileLandscape ? 'left-[7.5vw] w-[14vw]' : !isBigBars ? 'left-[3.5vw] w-[14vw]' : 'left-[4.2vw] w-[11vw]'} ${isFullscreen ? (isBigBars ? 'top-[7.5vh] bottom-[7.5vh]' : 'top-[6.5vh] bottom-[6.5vh]') : 'top-0 h-full'} bg-white z-30 border-r border-gray-200`}>
+                    <div className={`absolute ${isMobileLandscape ? 'left-[10vw] w-[14vw]' : isFullscreen ? 'left-[3.6vw] w-[14vw] top-[6vh] bottom-[6vh]' : (!isBigBars ? 'left-[3.5vw] w-[14vw] top-0 bottom-0' : 'left-[4.2vw] w-[14vw] top-0 bottom-0')} bg-white z-30 border-r border-gray-200`}>
                         <div ref={sidebarContentRef} className="flex flex-col h-full animate-in slide-in-from-left duration-300"
                             style={{ backgroundColor: `rgba(var(--toc-bg-rgb, 255, 255, 255), calc(0.4 + var(--toc-bg-opacity, 1) * 0.6))` }}
                         >
@@ -999,7 +989,7 @@ const Grid4Layout = ({
 
                 {/* Vertical Profile Sidebar */}
                 {showProfilePopup && (
-                    <div className={`absolute ${isMobileLandscape ? 'left-[7.5vw] w-[16vw]' : !isBigBars ? 'left-[3.5vw] w-[13vw]' : 'left-[4.2vw] w-[11.5vw]'} ${isFullscreen ? (isBigBars ? 'top-[7.5vh] bottom-[7.5vh]' : 'top-[6.5vh] bottom-[6.5vh]') : 'top-0 h-full'} bg-white z-30 border-r border-gray-200`}>
+                    <div className={`absolute ${isMobileLandscape ? 'left-[10vw] w-[16vw]' : isFullscreen ? 'left-[3.6vw] w-[14vw] top-[6vh] bottom-[6vh]' : (!isBigBars ? 'left-[3.5vw] w-[14vw] top-0 bottom-0' : 'left-[4.2vw] w-[14vw] top-0 bottom-0')} bg-white z-30 border-r border-gray-200`}>
                         <div ref={sidebarContentRef} className="flex flex-col h-full animate-in slide-in-from-left duration-300"
                             style={{ backgroundColor: getLayoutColor('dropdown-bg', '#FFFFFF') }}
                         >

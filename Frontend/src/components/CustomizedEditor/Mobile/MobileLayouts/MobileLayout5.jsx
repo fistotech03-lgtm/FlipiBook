@@ -256,14 +256,14 @@ const MobileLayout5 = (props) => {
             '--toolbar-search-text': activeLayout?.toolbarSearchText || '#575C9C',
             '--toolbar-search-placeholder': activeLayout?.toolbarSearchPlaceholder || '#575C9C',
             '--toolbar-search-icon': activeLayout?.toolbarSearchIcon || '#575C9C',
-            '--page-bg': activeLayout?.pageBg || '#BDC3D9',
+            '--page-bg': activeLayout?.pageBg || '#DADBE8',
             '--progress-bar-bg': activeLayout?.progressBarBg || '#FFFFFF',
             '--progress-bar-fill': activeLayout?.progressBarFill || '#575C9C',
             '--play-button-bg': activeLayout?.playButtonBg || '#FFFFFF',
             '--play-button-icon': activeLayout?.playButtonIcon || '#575C9C',
             '--play-button-border': activeLayout?.playButtonBorder || '#FFFFFF',
             '--accent-color': '#575C9C',
-            '--header-blue': '#0B0F4E',
+            '--header-blue': '#1e1e24',
         };
     }, [activeLayout]);
 
@@ -556,13 +556,13 @@ const MobileLayout5 = (props) => {
 
     return (
         <div className="flex flex-col h-full w-full overflow-hidden select-none relative">
-            {/* Portrait Mobile Layout 5 - Matching Screenshot */}
-            <div className="flex flex-col h-full w-full overflow-hidden select-none relative bg-[#BDC3D9]">
+            {/* Portrait Mobile Layout 5 */}
+            <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: props.backgroundSettings?.color || getLayoutColor('page-bg', '#DADBE8') }}>
                 {/* Top dark blue bar */}
-                {!isPhysicalMobile && <div className="h-12 w-full shrink-0" style={{ backgroundColor: '#0B0F4E' }} />}
+                {!isPhysicalMobile && <div className="h-12 w-full shrink-0" style={{ backgroundColor: '#1e1e24' }} />}
 
                 {/* Light Layout Header */}
-                <header className="z-50 px-5 pt-4 pb-2 flex flex-col gap-3 relative shrink-0" style={{ backgroundColor: '#BDC3D9' }}>
+                <header className="z-50 px-5 pt-4 pb-2 flex flex-col gap-3 relative shrink-0" style={{ backgroundColor: props.backgroundSettings?.color || getLayoutColor('page-bg', '#DADBE8') }}>
                     <div className="flex items-center justify-between">
                         <span className="text-[#575C9C] text-[15px] font-semibold truncate flex-1 opacity-80">{/* bookName hidden */}</span>
                         <div className="flex items-center">
@@ -816,7 +816,7 @@ const MobileLayout5 = (props) => {
                         </AnimatePresence>
 
                         {/* Main Icon Toolbar - Capsule shape */}
-                        <div className="bg-[#575C9C] rounded-full px-5 h-[34px] flex items-center justify-between shadow-xl">
+                        <div className="rounded-full px-5 h-[34px] flex items-center justify-between shadow-xl" style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555') }}>
                             <button onClick={(e) => {
                                 e.stopPropagation();
                                 const nextState = !showThumbnailBar;
@@ -895,7 +895,7 @@ const MobileLayout5 = (props) => {
 
                         {/* Play and Progress Bar Row - Matching Screenshot UI */}
                         <div className="flex items-center gap-2 px-1">
-                            <div className="flex-1 bg-[#575C9C] h-[34px] rounded-full px-5 flex items-center gap-4 shadow-xl">
+                            <div className="flex-1 h-[34px] rounded-full px-5 flex items-center gap-4 shadow-xl" style={{ backgroundColor: getLayoutColor('bottom-toolbar-bg', getLayoutColor('toolbar-bg', '#555555')) }}>
                                 <div className="flex items-center gap-3 shrink-0">
                                     <button
                                         onClick={() => onPageClick(0)}
@@ -932,7 +932,8 @@ const MobileLayout5 = (props) => {
 
                             <button
                                 onClick={() => handleFullScreen()}
-                                className="w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0 bg-[#575C9C] text-white active:scale-95 transition-all shadow-xl"
+                                className="w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0 text-white active:scale-95 transition-all shadow-xl"
+                                style={{ backgroundColor: getLayoutColor('bottom-toolbar-bg', getLayoutColor('toolbar-bg', '#555555')) }}
                             >
                                 <Icon icon="lucide:fullscreen" className="w-4 h-4" />
                             </button>

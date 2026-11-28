@@ -756,7 +756,8 @@ const Layout6 = ({
         className="animate-in fade-in slide-in-from-bottom-2 duration-200"
         onClick={(e) => e.stopPropagation()}
         style={{
-            backgroundColor: getLayoutColorRgba('dropdown-bg', '87, 92, 156', '0.8'),
+            backgroundColor: getLayoutColorRgba('dropdown-bg', '87, 92, 156', isTablet ? '0.6' : '0.8'),
+            opacity: isTablet ? 0.6 : undefined,
             backdropFilter: 'blur(12px)',
             width: isMobile ? '160px' : (isTablet ? '152px' : '11.5vw'),
             borderRadius: isMobile ? '12px' : (isTablet ? '8px' : '0.6vw'),
@@ -924,12 +925,12 @@ const Layout8 = ({
                     <clipPath id="sound-shape-clip" clipPathUnits="objectBoundingBox">
                         <path
                             transform="scale(0.004, 0.0037037)"
-                            d="M0 82 C0 75.37 5.37 70 12 70 H155 C170 70 175 60 175 40 V30 C175 10 192.5 0 212.5 0 C232.5 0 250 10 250 30 V258 C250 264.63 243.37 270 238 270 H12 C5.37 270 0 263.37 0 258 V82 Z"
+                            d="M0 98 C0 89.163 7.163 82 16 82 H142 C164.255 82 171.455 64.525 171.455 51.082 V40.499 C171.455 18.132 189.038 0 210.727 0 C232.417 0 250 18.132 250 40.499 V254 C250 262.837 242.837 270 234 270 H16 C7.163 270 0 262.837 0 254 Z"
                         />
                     </clipPath>
                 </defs>
                 <path
-                    d="M0 82 C0 75.37 5.37 70 12 70 H155 C170 70 175 60 175 40 V30 C175 10 192.5 0 212.5 0 C232.5 0 250 10 250 30 V258 C250 264.63 243.37 270 238 270 H12 C5.37 270 0 263.37 0 258 V82 Z"
+                    d="M0 98 C0 89.163 7.163 82 16 82 H142 C164.255 82 171.455 64.525 171.455 51.082 V40.499 C171.455 18.132 189.038 0 210.727 0 C232.417 0 250 18.132 250 40.499 V254 C250 262.837 242.837 270 234 270 H16 C7.163 270 0 262.837 0 254 Z"
                     fill={getLayoutColorRgba('dropdown-bg', '87, 92, 156', 1)}
                     fillOpacity="0.6"
                     stroke="rgba(255,255,255,0.1)"
@@ -939,7 +940,7 @@ const Layout8 = ({
         </div>
 
         <div
-            className="w-full h-full relative z-10 backdrop-blur-md flex flex-col justify-center gap-[0.5vw] pt-[3.6vw] px-[0.8vw]"
+            className="w-full h-full relative z-10 backdrop-blur-md flex flex-col justify-center gap-[0.5vw] pt-[4.2vw] px-[0.8vw]"
             style={{ clipPath: 'url(#sound-shape-clip)', WebkitClipPath: 'url(#sound-shape-clip)' }}
         >
             <div className={isTablet ? "flex items-center gap-[5px] mb-[3px]" : "flex items-center gap-[0.5vw] mb-[0.3vw]"}>
@@ -1457,7 +1458,7 @@ const Sound = ({
                     position: 'fixed',
                     left: `${anchorPos.left}px`,
                     top: `${anchorPos.top}px`,
-                    transform: `translateX(calc(-100% + ${isTablet ? '22px' : '1.5vw'})) translateY(calc(-9% + ${addTextBelowIcons ? '0.8vw' : '0vw'}))`,
+                    transform: `translateX(calc(-100% + ${isTablet ? '22px' : '1.5vw'})) translateY(calc(-4% + ${addTextBelowIcons ? '0.8vw' : '0vw'}))`,
                     zIndex: 90
                 };
             }
@@ -1470,7 +1471,11 @@ const Sound = ({
         if (isMobile) return 'top-[150px] right-[16px]';
         if (layout === 2) return isTablet ? 'top-[8.5vh] left-[calc(50%_-_48px)] -translate-x-1/2' : 'top-[8.5vh] left-[calc(50%_-_4.5vw)] -translate-x-1/2';
         if (layout === 3) return 'top-[7.5vh] left-[calc(50%_+_0.2vw)] -translate-x-1/2';
-        if (layout === 4) return isTablet ? 'top-[34vh] left-[48px]' : 'top-[34vh] left-[4.2vw]';
+        if (layout === 4) {
+            const isFull = isFullscreen && !!document.fullscreenElement;
+            if (isFull) return 'top-[49vh] left-[4.2vw] -translate-y-1/2';
+            return isTablet ? 'top-[42vh] left-[48px] -translate-y-1/2' : 'top-[44vh] left-[4.2vw] -translate-y-1/2';
+        }
         if (layout === 5) {
             if (isFullscreen && document.fullscreenElement) return `bottom-[4.2vw] left-[calc(50%_+_19.7vw)] -translate-x-1/2`;
             return isSidebarOpen ? `bottom-[4.2vw] left-[calc(50%_+_2.2vw)] -translate-x-1/2` : `bottom-[4.2vw] left-[calc(50%_+_12.2vw)] -translate-x-1/2`;
@@ -1697,7 +1702,7 @@ const Sound = ({
             );
         }
 
-        if (isTablet && [1, 2, 3, 4, 5, 7, 8, 9].includes(layout)) {
+        if (isTablet && [1, 2, 3, 4, 5, 6, 7, 8, 9].includes(layout)) {
             const anchor = document.getElementById('tablet-sound-portal');
             if (anchor) {
                 return ReactDOM.createPortal(
@@ -1709,6 +1714,22 @@ const Sound = ({
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <TabletLayoutSound {...commonProps} />
+                            </div>
+                        ) : layout == 6 ? (
+                            <div
+                                className="absolute pointer-events-auto"
+                                style={{ top: '50%', left: '7cqw', transform: 'translateY(-50%)' }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <Layout6 {...commonProps} isTablet={true} />
+                            </div>
+                        ) : layout == 7 ? (
+                            <div
+                                className="absolute pointer-events-auto"
+                                style={{ bottom: '9%', right: '35cqw' }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <Layout7 {...commonProps} isTablet={true} />
                             </div>
                         ) : (
                             <TabletLayoutSound {...commonProps} />

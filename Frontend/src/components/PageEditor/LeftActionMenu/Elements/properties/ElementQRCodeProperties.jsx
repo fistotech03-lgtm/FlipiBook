@@ -15,7 +15,8 @@ import {
   Loader2
 } from 'lucide-react';
 import { renderQRWithFrame, generateStyledQRImage, drawRoundRect, loadImg, FONT_WEIGHT_MAP } from '../utils/qrFrameRenderer';
-import Color, { handleScrubHelper } from '../../../properties/FillStrokeProperties';
+import Color from '../../../properties/FillStrokeProperties';
+import { ScrubPercentInput } from '../../../properties/controls/propertiesShared';
 import Effect from '../../../properties/controls/Effect';
 import ColorPicker from '../../../../Color';
 import MediaGalleryPopup from '../../../modals/MediaGalleryPopup';
@@ -365,7 +366,7 @@ const CustomSelect = ({ value, onChange, options, category, placeholder = 'Selec
         type="button"
         onClick={toggleOpen}
         className={`w-full h-[2vw] min-h-[30px] flex items-center justify-between bg-white border ${
-          isOpen ? 'border-[#4D47FF] ring-1 ring-[#4D47FF] shadow-xs' : 'border-gray-300 hover:border-gray-400'
+          isOpen ? 'border-[#EC5137] ring-1 ring-[#EC5137] shadow-xs' : 'border-gray-300 hover:border-gray-400'
         } rounded-[0.4vw] px-[0.6vw] text-[0.8vw] text-gray-800 transition-colors cursor-pointer shadow-2xs font-medium`}
       >
         <div className="flex items-center gap-[0.4vw] min-w-0">
@@ -377,7 +378,7 @@ const CustomSelect = ({ value, onChange, options, category, placeholder = 'Selec
         <ChevronDown
           size="0.8vw"
           className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ml-[0.3vw] ${
-            isOpen ? 'rotate-180 text-[#4D47FF]' : ''
+            isOpen ? 'rotate-180 text-[#EC5137]' : ''
           }`}
         />
       </button>
@@ -398,17 +399,17 @@ const CustomSelect = ({ value, onChange, options, category, placeholder = 'Selec
                   }}
                   className={`px-[0.8vw] py-[0.4vw] text-[0.8vw] font-medium transition-colors text-left flex items-center justify-between cursor-pointer ${
                     isSelected
-                      ? 'text-[#4D47FF] bg-gray-50 font-semibold'
+                      ? 'text-[#EC5137] bg-gray-50 font-semibold'
                       : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
                   <div className="flex items-center gap-[0.45vw] min-w-0">
                     {category && (
-                      <TypeIcon category={category} value={opt.value} className={`w-[0.9vw] h-[0.9vw] shrink-0 ${isSelected ? 'text-[#4D47FF]' : 'text-gray-500'}`} />
+                      <TypeIcon category={category} value={opt.value} className={`w-[0.9vw] h-[0.9vw] shrink-0 ${isSelected ? 'text-[#EC5137]' : 'text-gray-500'}`} />
                     )}
                     <span className="truncate">{opt.label}</span>
                   </div>
-                  {isSelected && <Check size="0.8vw" className="text-[#4D47FF] flex-shrink-0 ml-[0.3vw]" />}
+                  {isSelected && <Check size="0.8vw" className="text-[#EC5137] flex-shrink-0 ml-[0.3vw]" />}
                 </button>
               );
             })}
@@ -459,7 +460,7 @@ const FillColorCard = ({
         {/* Swatch */}
         <div
           className={`w-[3.6vw] h-[2.1vw] rounded-[0.45vw] border ${
-            isPickerActive ? 'border-[#4D47FF] ring-2 ring-[#4D47FF]/20' : 'border-gray-300'
+            isPickerActive ? 'border-[#EC5137] ring-2 ring-[#EC5137]/20' : 'border-gray-300'
           } shadow-2xs cursor-pointer flex-shrink-0 relative overflow-hidden transition-transform hover:scale-105`}
           onClick={onPickerToggle}
           title={`Change ${label || 'color'}`}
@@ -476,7 +477,7 @@ const FillColorCard = ({
         </div>
 
         {/* Input box */}
-        <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 focus-within:border-[#4D47FF] transition-colors shadow-2xs">
+        <div className="flex-1 h-[2.1vw] rounded-[0.45vw] border border-gray-300 bg-white flex items-center justify-between px-[0.75vw] hover:border-gray-400 focus-within:border-[#EC5137] transition-colors shadow-2xs">
           <input
             type="text"
             value={displayHex}
@@ -489,24 +490,15 @@ const FillColorCard = ({
                 onColorChange(finalVal);
               }
             }}
-            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
             maxLength={8}
           />
-          <div
-            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-100 rounded text-gray-500"
-            onPointerDown={(e) => {
-              if (!onOpacityChange) return;
-              const currentPct = Math.round(Number(opacity) || 100);
-              handleScrubHelper(e, currentPct, (val) => {
-                const num = parseInt(val, 10);
-                const clamped = Math.min(Math.max(isNaN(num) ? 100 : num, 0), 100);
-                onOpacityChange(clamped);
-              });
-            }}
-            title="Drag horizontally to scrub opacity"
-          >
-            <span className="text-[0.72vw] font-medium">{Math.round(Number(opacity) || 100)}%</span>
-          </div>
+          <ScrubPercentInput
+            value={Math.round(Number(opacity) || 100)}
+            onChange={(clamped) => onOpacityChange && onOpacityChange(clamped)}
+            className="flex items-center select-none px-[0.2vw] text-gray-500"
+            textClassName="text-[0.72vw] font-medium text-gray-600"
+          />
         </div>
       </div>
     </div>
@@ -1506,7 +1498,7 @@ const ElementQRCodeProperties = ({
           <div className={`flex border rounded-[0.4vw] overflow-hidden transition-all bg-white shadow-2xs ${
             urlError
               ? 'border-red-500 ring-1 ring-red-500/40 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500'
-              : 'border-gray-300 focus-within:border-[#4D47FF] focus-within:ring-1 focus-within:ring-[#4D47FF]'
+              : 'border-gray-300 focus-within:border-[#EC5137] focus-within:ring-1 focus-within:ring-[#EC5137]'
           }`}>
             <input
               ref={urlInputRef}
@@ -1531,7 +1523,7 @@ const ElementQRCodeProperties = ({
                     setTimeout(() => setCopiedUrl(false), 1500);
                   }
                 }}
-                className="px-[0.6vw] py-[0.45vw] flex items-center justify-center text-gray-500 hover:text-[#4D47FF] transition-colors cursor-pointer"
+                className="px-[0.6vw] py-[0.45vw] flex items-center justify-center text-gray-500 hover:text-[#EC5137] transition-colors cursor-pointer"
                 title={copiedUrl ? 'Copied!' : 'Copy Link'}
               >
                 {copiedUrl ? (
@@ -1550,7 +1542,7 @@ const ElementQRCodeProperties = ({
                 }}
                 disabled={!url}
                 className={`px-[0.6vw] py-[0.45vw] flex items-center justify-center border-l border-gray-200 transition-colors ${
-                  url ? 'text-gray-500 hover:text-[#4D47FF] cursor-pointer' : 'text-gray-300 cursor-not-allowed'
+                  url ? 'text-gray-500 hover:text-[#EC5137] cursor-pointer' : 'text-gray-300 cursor-not-allowed'
                 }`}
                 title="Test Link (Open in New Tab)"
               >
@@ -1609,7 +1601,7 @@ const ElementQRCodeProperties = ({
               <ChevronDown
                 size="0.8vw"
                 className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ml-[0.2vw] ${
-                  isDimensionOpen ? 'rotate-180 text-[#4D47FF]' : ''
+                  isDimensionOpen ? 'rotate-180 text-[#EC5137]' : ''
                 }`}
               />
             </button>
@@ -1630,12 +1622,12 @@ const ElementQRCodeProperties = ({
                       }}
                       className={`px-[0.8vw] py-[0.4vw] text-[0.8vw] font-medium transition-colors text-left flex items-center justify-between cursor-pointer ${
                         isSelected
-                          ? 'text-[#4D47FF] bg-gray-50 font-semibold'
+                          ? 'text-[#EC5137] bg-gray-50 font-semibold'
                           : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                       }`}
                     >
                       <span>{opt.label}</span>
-                      {isSelected && <Check size="0.8vw" className="text-[#4D47FF]" />}
+                      {isSelected && <Check size="0.8vw" className="text-[#EC5137]" />}
                     </button>
                   );
                 })}
@@ -1652,7 +1644,7 @@ const ElementQRCodeProperties = ({
                           max="4096"
                           value={customWidth}
                           onChange={(e) => setCustomWidth(parseInt(e.target.value) || 256)}
-                          className="w-full h-[1.7vw] min-h-[22px] bg-white border border-gray-200 rounded-[0.3vw] px-[0.3vw] text-[0.7vw] font-medium text-gray-800 outline-none focus:border-[#4D47FF]"
+                          className="w-full h-[1.7vw] min-h-[22px] bg-white border border-gray-200 rounded-[0.3vw] px-[0.3vw] text-[0.7vw] font-medium text-gray-800 outline-none focus:border-[#EC5137]"
                         />
                       </div>
                       <span className="text-gray-400 text-[0.7vw] mt-[0.7vw]">×</span>
@@ -1664,14 +1656,14 @@ const ElementQRCodeProperties = ({
                           max="4096"
                           value={customHeight}
                           onChange={(e) => setCustomHeight(parseInt(e.target.value) || 256)}
-                          className="w-full h-[1.7vw] min-h-[22px] bg-white border border-gray-200 rounded-[0.3vw] px-[0.3vw] text-[0.7vw] font-medium text-gray-800 outline-none focus:border-[#4D47FF]"
+                          className="w-full h-[1.7vw] min-h-[22px] bg-white border border-gray-200 rounded-[0.3vw] px-[0.3vw] text-[0.7vw] font-medium text-gray-800 outline-none focus:border-[#EC5137]"
                         />
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setIsDimensionOpen(false)}
-                      className="w-full mt-[0.15vw] py-[0.25vw] bg-[#4D47FF] hover:bg-[#3D37E6] text-white rounded-[0.35vw] text-[0.68vw] font-medium transition-colors cursor-pointer"
+                      className="w-full mt-[0.15vw] py-[0.25vw] bg-[#EC5137] hover:bg-[#d8442c] text-white rounded-[0.35vw] text-[0.68vw] font-medium transition-colors cursor-pointer"
                     >
                       Apply
                     </button>
@@ -1691,7 +1683,7 @@ const ElementQRCodeProperties = ({
                 setIsDownloadOpen(!isDownloadOpen);
                 setIsDimensionOpen(false);
               }}
-              className={`w-full h-[2vw] min-h-[30px] px-[0.7vw] flex items-center justify-between bg-[#4D47FF] hover:bg-[#3D37E6] text-white rounded-[0.4vw] text-[0.8vw] font-medium cursor-pointer transition-all shadow-2xs ${
+              className={`w-full h-[2vw] min-h-[30px] px-[0.7vw] flex items-center justify-between bg-[#EC5137] hover:bg-[#d8442c] text-white rounded-[0.4vw] text-[0.8vw] font-medium cursor-pointer transition-all shadow-2xs ${
                 isDownloading ? 'opacity-60 cursor-not-allowed' : ''
               }`}
               title="Download QR Code"
@@ -1714,9 +1706,9 @@ const ElementQRCodeProperties = ({
                 <button
                   type="button"
                   onClick={() => handleDownloadQR('jpeg')}
-                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#4D47FF] hover:bg-gray-50 rounded-[0.4vw] text-gray-800 hover:text-[#4D47FF] text-[0.76vw] font-medium cursor-pointer transition-all group"
+                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#EC5137] hover:bg-gray-50 rounded-[0.4vw] text-gray-800 hover:text-[#EC5137] text-[0.76vw] font-medium cursor-pointer transition-all group"
                 >
-                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#4D47FF] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#EC5137] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="18" height="18" rx="3" ry="3" />
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <polyline points="21 15 16 10 5 21" />
@@ -1728,9 +1720,9 @@ const ElementQRCodeProperties = ({
                 <button
                   type="button"
                   onClick={() => handleDownloadQR('png')}
-                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#4D47FF] hover:bg-gray-50 rounded-[0.4vw] text-gray-800 hover:text-[#4D47FF] text-[0.76vw] font-medium cursor-pointer transition-all group"
+                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#EC5137] hover:bg-gray-50 rounded-[0.4vw] text-gray-800 hover:text-[#EC5137] text-[0.76vw] font-medium cursor-pointer transition-all group"
                 >
-                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#4D47FF] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#EC5137] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="18" height="18" rx="3" ry="3" />
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <polyline points="21 15 16 10 5 21" />
@@ -1742,9 +1734,9 @@ const ElementQRCodeProperties = ({
                 <button
                   type="button"
                   onClick={() => handleDownloadQR('svg')}
-                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#4D47FF] hover:bg-gray-50 rounded-[0.4vw] text-gray-800 hover:text-[#4D47FF] text-[0.76vw] font-medium cursor-pointer transition-all group"
+                  className="w-full h-[2.2vw] min-h-[30px] px-[0.6vw] flex items-center gap-[0.5vw] bg-white border border-gray-200 hover:border-[#EC5137] hover:bg-gray-50 rounded-[0.4vw] text-gray-800 hover:text-[#EC5137] text-[0.76vw] font-medium cursor-pointer transition-all group"
                 >
-                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#4D47FF] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" className="w-[1vw] h-[1vw] text-gray-500 group-hover:text-[#EC5137] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                     <rect x="1" y="1" width="4" height="4" />
                     <rect x="19" y="1" width="4" height="4" />
@@ -1831,7 +1823,7 @@ const ElementQRCodeProperties = ({
             <ElementToggle
               checked={hasLogo}
               onChange={(checked) => handleChange('hasLogo', checked)}
-              activeColor="#4D47FF"
+              activeColor="#EC5137"
             />
           </div>
         </div>
@@ -1846,7 +1838,7 @@ const ElementQRCodeProperties = ({
                   type="button"
                   onClick={() => setLogoTab('upload')}
                   className={`px-[0.7vw] py-[0.3vw] text-[0.75vw] font-medium rounded-[0.3vw] transition-colors cursor-pointer ${
-                    logoTab === 'upload' ? 'bg-[#4D47FF] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                    logoTab === 'upload' ? 'bg-[#EC5137] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   Upload
@@ -1855,7 +1847,7 @@ const ElementQRCodeProperties = ({
                   type="button"
                   onClick={() => setLogoTab('predefined')}
                   className={`px-[0.7vw] py-[0.3vw] text-[0.75vw] font-medium rounded-[0.3vw] transition-colors cursor-pointer ${
-                    logoTab === 'predefined' ? 'bg-[#4D47FF] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                    logoTab === 'predefined' ? 'bg-[#EC5137] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   Predefined
@@ -1874,9 +1866,9 @@ const ElementQRCodeProperties = ({
                       onChange={handleLogoUpload}
                     />
                     {isCompressingLogo ? (
-                      <div className="border border-dashed border-indigo-400 bg-indigo-50/30 rounded-[0.5vw] p-[1.2vw] flex flex-col items-center justify-center">
-                        <Loader2 className="w-[1.4vw] h-[1.4vw] text-[#4D47FF] animate-spin mb-[0.3vw]" />
-                        <span className="text-[0.78vw] text-[#4D47FF] font-semibold">
+                      <div className="border border-dashed border-[#EC5137]/60 bg-orange-50/40 rounded-[0.5vw] p-[1.2vw] flex flex-col items-center justify-center">
+                        <Loader2 className="w-[1.4vw] h-[1.4vw] text-[#EC5137] animate-spin mb-[0.3vw]" />
+                        <span className="text-[0.78vw] text-[#EC5137] font-semibold">
                           Compressing logo...
                         </span>
                       </div>
@@ -1911,7 +1903,7 @@ const ElementQRCodeProperties = ({
                               e.stopPropagation();
                               setShowReplaceModal(true);
                             }}
-                            className="p-[0.3vw] text-gray-500 hover:text-[#4D47FF] hover:bg-gray-100 rounded-[0.35vw] transition-colors cursor-pointer"
+                            className="p-[0.3vw] text-gray-500 hover:text-[#EC5137] hover:bg-gray-100 rounded-[0.35vw] transition-colors cursor-pointer"
                             title="Replace Logo"
                           >
                             <ArrowRightLeft size="0.9vw" />
@@ -1933,10 +1925,10 @@ const ElementQRCodeProperties = ({
                       <>
                         <div
                           onClick={() => fileInputRef.current?.click()}
-                          className="border border-dashed border-gray-300 hover:border-[#4D47FF] rounded-[0.5vw] p-[0.8vw] flex flex-col items-center justify-center cursor-pointer transition-colors group bg-white hover:bg-indigo-50/20"
+                          className="border border-dashed border-gray-300 hover:border-[#EC5137] rounded-[0.5vw] p-[0.8vw] flex flex-col items-center justify-center cursor-pointer transition-colors group bg-white hover:bg-orange-50/30"
                         >
-                          <Upload className="w-[1vw] h-[1vw] text-gray-400 group-hover:text-[#4D47FF] transition-colors mb-[0.3vw]" />
-                          <span className="text-[0.78vw] text-gray-800 font-medium group-hover:text-[#4D47FF] transition-colors">
+                          <Upload className="w-[1vw] h-[1vw] text-gray-400 group-hover:text-[#EC5137] transition-colors mb-[0.3vw]" />
+                          <span className="text-[0.78vw] text-gray-800 font-medium group-hover:text-[#EC5137] transition-colors">
                             Upload Logo
                           </span>
                         </div>
@@ -1955,8 +1947,8 @@ const ElementQRCodeProperties = ({
                           onClick={() => setIsMediaGalleryOpen(true)}
                           className="w-full h-[2.2vw] rounded-[0.4vw] border border-gray-300 bg-white hover:bg-gray-50 hover:border-gray-400 flex items-center justify-center gap-[0.5vw] cursor-pointer transition-all shadow-2xs group"
                         >
-                          <ImageIcon className="w-[1vw] h-[1vw] text-gray-700 group-hover:text-[#4D47FF] transition-colors" />
-                          <span className="text-[0.8vw] font-medium text-gray-800 group-hover:text-[#4D47FF] transition-colors">
+                          <ImageIcon className="w-[1vw] h-[1vw] text-gray-700 group-hover:text-[#EC5137] transition-colors" />
+                          <span className="text-[0.8vw] font-medium text-gray-800 group-hover:text-[#EC5137] transition-colors">
                             Choose from Image Gallery
                           </span>
                         </button>
@@ -1972,8 +1964,8 @@ const ElementQRCodeProperties = ({
                       type="button"
                       onClick={() => handleChange('logoSrc', item.src)}
                       title={item.name}
-                      className={`p-[0.3vw] rounded-[0.3vw] border flex items-center justify-center hover:border-[#4D47FF] transition-colors cursor-pointer ${
-                        logoSrc === item.src ? 'border-[#4D47FF] bg-indigo-50/50' : 'border-gray-200'
+                      className={`p-[0.3vw] rounded-[0.3vw] border flex items-center justify-center hover:border-[#EC5137] transition-colors cursor-pointer ${
+                        logoSrc === item.src ? 'border-[#EC5137] bg-orange-50/60' : 'border-gray-200'
                       }`}
                     >
                       <img src={item.src} alt={item.name} className="w-[1.4vw] h-[1.4vw] object-contain" />
@@ -2054,7 +2046,7 @@ const ElementQRCodeProperties = ({
               maxLength={30}
               onChange={(e) => handleChange('text', e.target.value.slice(0, 30))}
               placeholder="Scan Me"
-              className="w-full h-[2.1vw] min-h-[30px] bg-white border border-gray-300 rounded-[0.45vw] px-[0.75vw] pr-[2vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#4D47FF] shadow-2xs font-medium"
+              className="w-full h-[2.1vw] min-h-[30px] bg-white border border-gray-300 rounded-[0.45vw] px-[0.75vw] pr-[2vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#EC5137] shadow-2xs font-medium"
             />
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.6vw] text-gray-400">
               <Pencil className="w-[0.85vw] h-[0.85vw]" />

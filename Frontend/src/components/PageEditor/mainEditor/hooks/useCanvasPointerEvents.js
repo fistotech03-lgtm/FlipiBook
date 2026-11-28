@@ -11,7 +11,8 @@ import {
   getLocalPoint,
   clearOverlayType
 } from '../utils/geometryUtils';
-import { clearSmartGuides } from '../utils/smartGuides';
+import { clearSmartGuides, initSmartGuides, computeResizeSmartGuides, collectResizeGuideLines, renderSmartGuides, getBoxInSvg } from '../utils/smartGuides';
+import { snapLineEnd, showLineAngleGuide, clearLineAngleGuide } from '../utils/lineAngleGuide';
 import { getTopLevelFrames, getDirectChildFrames, hitTest, isPageRootElement, getAllSelectablePageElements } from '../utils/frameHierarchyUtils';
 import { useInlineTextEditor } from './useInlineTextEditor';
 import { resolveGroupTarget, findGroupAtPoint } from '../utils/hitTargetResolver';
@@ -19,6 +20,25 @@ import editCacheManager from '../../utils/EditCacheManager';
 import { updateShapeMaskTransform } from '../../LeftActionMenu/Elements/utils/shapeMaskUtils';
 import { drawShapeImageAdjustOverlay } from '../../penTool/penOverlayEngine';
 import { hasCustomImageInShape } from '../../LeftActionMenu/Elements/utils/imageFramingUtils';
+
+// Page container for a pointer event. `currentTarget` is the page div for canvas listeners but
+// `window` for the global mousemove/up listeners (no .closest) — fall back to the event target,
+// then to the given / active page.
+const getEventPageContainer = (e, pageIndex) => {
+  const ct = e?.currentTarget;
+  if (ct && typeof ct.closest === 'function') {
+    const c = ct.classList?.contains('page-svg-container') ? ct : ct.closest('.page-svg-container');
+    if (c) return c;
+  }
+  const t = e?.target;
+  const fromTarget = t && typeof t.closest === 'function' ? t.closest('.page-svg-container') : null;
+  if (fromTarget) return fromTarget;
+  if (pageIndex !== undefined && pageIndex !== null) {
+    return document.querySelector(`.page-svg-container[data-page-index="${pageIndex}"]`);
+  }
+  return document.querySelector('.page-svg-container');
+};
+
 
 /**
  * Hook managing canvas pointer interactions:
@@ -800,23 +820,73 @@ export const useCanvasPointerEvents = ({
 
 
 
-    // ── Creation Tool: Text (Type) Tool ─────────────────────────────────────────
+    // ── Creation Tool: Text (Type) Tool — Figma style ───────────────────────────
+    //  • drag  → draws a box; on release a FIXED-size text box of that size (text wraps inside)
+    //  • click → AUTO-WIDTH text at the point
+    // Either way the new text starts empty with a caret (empty text is removed if left unedited).
     if (activeMainTool === 'type') {
-      let parentEl = resolveTargetParentForCreation(svg, e.clientX, e.clientY);
+      const parentEl = resolveTargetParentForCreation(svg, e.clientX, e.clientY);
       if (!parentEl) return;
 
-      const pt = getLocalPoint(svg, parentEl, e.clientX, e.clientY);
+      const startPt = getLocalPoint(svg, parentEl, e.clientX, e.clientY);
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const DRAG_THRESHOLD = 4; // px — below this it's a click
 
-      if (parentEl) {
+      // Rubber-band box shown while dragging (fixed-positioned: independent of canvas zoom/scroll)
+      const band = document.createElement('div');
+      band.setAttribute('data-text-draw-band', 'true');
+      // Same look as the editor's hover / selection box (1px #5255CA, no fill) → hands over seamlessly
+      band.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;box-sizing:border-box;border:1px solid #5255CA;background:transparent;pointer-events:none;z-index:2147483646;display:none;';
+      document.body.appendChild(band);
+      // While drawing, hide other elements' hover boxes so only the box being drawn is visible
+      if (!document.getElementById('pe-text-drawing-style')) {
+        const st = document.createElement('style');
+        st.id = 'pe-text-drawing-style';
+        st.textContent = 'body.pe-text-drawing [id^="highlight-overlay-"] [id*="hover"] { display: none !important; }';
+        document.head.appendChild(st);
+      }
+      document.body.classList.add('pe-text-drawing');
+
+      const onMove = (ev) => {
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) { band.style.display = 'none'; return; }
+        band.style.display = 'block';
+        band.style.left = `${Math.min(startX, ev.clientX)}px`;
+        band.style.top = `${Math.min(startY, ev.clientY)}px`;
+        band.style.width = `${Math.abs(dx)}px`;
+        band.style.height = `${Math.abs(dy)}px`;
+      };
+      const onUp = (ev) => {
+        window.removeEventListener('mousemove', onMove, true);
+        window.removeEventListener('mouseup', onUp, true);
+        document.body.classList.remove('pe-text-drawing');
+        const dragged = Math.abs(ev.clientX - startX) >= DRAG_THRESHOLD || Math.abs(ev.clientY - startY) >= DRAG_THRESHOLD;
+        const endPt = dragged ? getLocalPoint(svg, parentEl, ev.clientX, ev.clientY) : null;
+        if (!dragged) band.remove();
+        // Dragged: keep the drawn box on screen until the new text's selection box replaces it (no gap)
+        createTextElement(parentEl, startPt, endPt, dragged ? band : null);
+      };
+      window.addEventListener('mousemove', onMove, true);
+      window.addEventListener('mouseup', onUp, true);
+
+      const createTextElement = (parentEl, p1, p2, drawnBand = null) => {
         const id = `text-${Math.random().toString(36).substr(2, 9)}`;
         const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
         const ptToMmScale = 0.2645833333333333;
+        const isFixed = Boolean(p2);
+        // Box in the parent's local units → foreignObject units (it is scaled by ptToMmScale)
+        const left = isFixed ? Math.min(p1.x, p2.x) : p1.x;
+        const top = isFixed ? Math.min(p1.y, p2.y) : p1.y;
+        const boxW = isFixed ? Math.max(Math.abs(p2.x - p1.x) / ptToMmScale, 40) : 190;
+        const boxH = isFixed ? Math.max(Math.abs(p2.y - p1.y) / ptToMmScale, 38) : 38;
+
         fo.setAttribute('id', id);
-        // Scale the local x,y,width,height inversely so it renders at the mouse cursor
-        fo.setAttribute('x', pt.x / ptToMmScale);
-        fo.setAttribute('y', pt.y / ptToMmScale);
-        fo.setAttribute('width', '190');
-        fo.setAttribute('height', '38');
+        fo.setAttribute('x', left / ptToMmScale);
+        fo.setAttribute('y', top / ptToMmScale);
+        fo.setAttribute('width', String(boxW));
+        fo.setAttribute('height', String(boxH));
         fo.setAttribute('transform', `matrix(${ptToMmScale} 0 0 ${ptToMmScale} 0 0)`);
         fo.setAttribute('fill', '#000000');
         fo.setAttribute('stroke', 'none');
@@ -826,12 +896,12 @@ export const useCanvasPointerEvents = ({
         fo.setAttribute('font-weight', 'normal');
         fo.setAttribute('data-font-weight', 'normal');
         fo.setAttribute('letter-spacing', '0');
-        fo.setAttribute('data-auto-wrap', 'false');
-        fo.setAttribute('data-sizing-mode', 'auto-width');
+        fo.setAttribute('data-auto-wrap', isFixed ? 'true' : 'false');
+        fo.setAttribute('data-sizing-mode', isFixed ? 'fixed' : 'auto-width');
         fo.setAttribute('data-type', 'text');
 
         const div = document.createElement('div');
-        div.style.width = 'max-content'; // Allows scrollWidth to perfectly match text
+        div.style.width = isFixed ? '100%' : 'max-content'; // auto-width: scrollWidth matches the text
         div.style.height = '100%';
         div.style.minHeight = '100%';
         div.style.display = 'block'; // keep styled runs inline (no flex column)
@@ -845,9 +915,17 @@ export const useCanvasPointerEvents = ({
         div.style.textAlign = 'left';
         div.style.lineHeight = '1.2';
         div.style.letterSpacing = '0px';
-        div.style.wordBreak = 'normal';
-        div.style.overflowWrap = 'normal';
-        div.style.whiteSpace = 'pre'; // 'pre' ensures text never automatically wraps or breaks down unless user presses Enter
+        if (isFixed) {
+          // Same setup as Text Properties → Fixed: wraps inside the drawn box, starts at the top
+          div.style.setProperty('white-space', 'pre-wrap', 'important');
+          div.style.setProperty('overflow-wrap', 'break-word', 'important');
+          div.style.setProperty('word-break', 'normal');
+          div.style.setProperty('overflow', 'visible', 'important');
+        } else {
+          div.style.wordBreak = 'normal';
+          div.style.overflowWrap = 'normal';
+          div.style.whiteSpace = 'pre'; // never wraps unless the user presses Enter
+        }
         div.style.padding = '0px';
         div.style.margin = '0';
         div.style.boxSizing = 'border-box';
@@ -856,7 +934,7 @@ export const useCanvasPointerEvents = ({
         div.style.userSelect = 'none';
         div.style.pointerEvents = 'none';
 
-        div.innerText = 'Type your text';
+        div.innerText = ''; // starts empty with a caret (Figma); removed on exit if nothing typed
         fo.appendChild(div);
 
         parentEl.appendChild(fo);
@@ -882,19 +960,61 @@ export const useCanvasPointerEvents = ({
             multiSelectedIdsRef.current = new Set([id]);
           }
 
-          // Highlight it instantly
+          // Highlight it instantly and put the caret in it
           const mountedText = container.querySelector(`[id="${id}"]`);
           if (mountedText) {
+            // Click-created text (Figma): only a blinking caret until the first character is typed —
+            // no selection box yet. A dragged box (fixed) shows its box immediately.
+            if (!isFixed) {
+              if (!document.getElementById('pe-text-caret-only-style')) {
+                const st = document.createElement('style');
+                st.id = 'pe-text-caret-only-style';
+                st.textContent = 'body.pe-text-caret-only [id^="highlight-overlay-"], body.pe-text-caret-only [id^="overlay-poly-"], body.pe-text-caret-only [id^="overlay-path-"], body.pe-text-caret-only .resize-handle { opacity: 0 !important; transition: none !important; }';
+                document.head.appendChild(st);
+              }
+              document.body.classList.add('pe-text-caret-only');
+            }
             drawOverlayHighlight(mountedText, 'selected');
-            // Enter edit mode immediately for newly created text and fully select it
             enterTextEditMode(mountedText, null, null, true);
+            // Selection box is drawn now — remove the drag box in the same frame
+            if (drawnBand) requestAnimationFrame(() => drawnBand.remove());
+            if (!isFixed) {
+              const editDiv = mountedText.querySelector('[contenteditable="true"]') || mountedText.firstElementChild;
+              const showBox = () => {
+                document.body.classList.remove('pe-text-caret-only');
+                if (editDiv) {
+                  editDiv.removeEventListener('input', onFirstInput);
+                  editDiv.removeEventListener('focusout', showBox);
+                }
+              };
+              const onFirstInput = () => {
+                if (!(editDiv?.innerText || '').trim()) return; // still empty → keep caret only
+                showBox();
+                if (mountedText.isConnected) {
+                  drawOverlayHighlight(mountedText, 'selected');
+                  window.dispatchEvent(new CustomEvent('force-update-selection-box', { detail: { elementId: id } }));
+                }
+              };
+              if (editDiv) {
+                editDiv.addEventListener('input', onFirstInput);
+                editDiv.addEventListener('focusout', showBox); // left without typing → empty text is removed; restore boxes
+              } else {
+                showBox();
+              }
+              // Safety net: never leave selection boxes hidden
+              setTimeout(() => { if (!editDiv || !editDiv.isConnected) showBox(); }, 30000);
+            }
           }
 
+          if (drawnBand && drawnBand.isConnected) requestAnimationFrame(() => drawnBand.remove()); // safety
           suppressClickRef.current = false;
         }, 100);
 
         suppressClickRef.current = true;
-      }
+      };
+
+      suppressClickRef.current = true;
+      e.stopPropagation();
       return;
     }
 
@@ -1089,7 +1209,7 @@ export const useCanvasPointerEvents = ({
             shape.setAttribute('data-fill-color', '#d0ccff');
             shape.setAttribute('data-stroke-color', 'none');
             shape.setAttribute('data-stroke-width', '0');
-            shape.setAttribute('data-stroke-position', 'Outside');
+            shape.setAttribute('data-stroke-position', 'Inside');
             shape.setAttribute('paint-order', 'stroke fill');
             shape.style.paintOrder = 'stroke fill';
             shape.setAttribute('vector-effect', 'non-scaling-stroke');
@@ -1171,7 +1291,7 @@ export const useCanvasPointerEvents = ({
 
     let hitMultiSelectionGap = false;
     if (currentMultiIds.size > 1 && !hitAnySelected) {
-      const pageContainer = e.currentTarget.closest('.page-svg-container');
+      const pageContainer = getEventPageContainer(e, pageIndex);
       const multiPoly = pageContainer?.querySelector('.selection-overlay-layer #overlay-poly-selected-multi-selection-bounds') || pageContainer?.querySelector('.selection-overlay-layer #overlay-poly-selected-multi');
       if (multiPoly) {
         const polyRect = multiPoly.getBoundingClientRect();
@@ -1186,8 +1306,8 @@ export const useCanvasPointerEvents = ({
 
     // 2. Selection/Drag Priority
     // If we hit any valid child candidate OR any already-selected element OR the multi-selection gap, 
-    // don't start a marquee. Return early to allow interactjs to handle dragging.
-    if ((hitCandidate && !hitBaseFrame || hitAnySelected || hitMultiSelectionGap) && !e.ctrlKey && selectedSelectToolRef.current !== 'direct') {
+    // don't start a marquee unless user holds Ctrl or Shift to draw a selection box across elements.
+    if ((hitCandidate && !hitBaseFrame || hitAnySelected || hitMultiSelectionGap) && !e.ctrlKey && !e.shiftKey && selectedSelectToolRef.current !== 'direct') {
       return;
     }
 
@@ -1206,7 +1326,7 @@ export const useCanvasPointerEvents = ({
     // Converted flipbooks / Interaction & Animation modules: NEVER start marquee drag-selection
     const isInsideTable = Boolean(e.target?.closest?.('td, th, table, [data-type="table-frame"], [data-type="table"], g[id^="table-"]'));
     const isModuleWithoutMarquee = activeTopTool === 'interaction' || activeTopTool === 'animation' || activeTopToolRef.current === 'interaction' || activeTopToolRef.current === 'animation';
-    const shouldStartMarquee = !isInsideTable && !isModuleWithoutMarquee && !isConvertedFlipbook && (((e.ctrlKey || e.shiftKey) && !hitSelectedImage) || ((!hitCandidate || hitBaseFrame) && selectedSelectToolRef.current !== 'direct' && !isEditingTextRef.current));
+    const shouldStartMarquee = !isInsideTable && !isModuleWithoutMarquee && (((e.ctrlKey || e.shiftKey) && !hitSelectedImage) || (!isConvertedFlipbook && (!hitCandidate || hitBaseFrame) && selectedSelectToolRef.current !== 'direct' && !isEditingTextRef.current));
 
     if (shouldStartMarquee) {
       const rect = container.getBoundingClientRect();
@@ -1232,7 +1352,9 @@ export const useCanvasPointerEvents = ({
           const isFreeFrameCandidate = isFreeFrame && isInteractiveTool;
           const isShape = el.getAttribute('data-type') === 'shape' && !isFreeFrame;
           const isIcon = el.getAttribute('data-type') === 'icon';
-          return isHotspot || isFreeFrameCandidate || isShape || isIcon;
+          const tag = el.tagName.toLowerCase();
+          const isText = tag === 'text' || tag === 'foreignobject' || el.getAttribute('data-type') === 'text' || el.getAttribute('data-type') === 'group';
+          return isHotspot || isFreeFrameCandidate || isShape || isIcon || isText;
         }
         return true;
       });
@@ -1458,7 +1580,7 @@ export const useCanvasPointerEvents = ({
 
     // ── Freehand Pencil Update (During Drag) ──────────
     if (isFreehandDrawingRef.current && drawingPathRef.current) {
-      const svg = drawingSvgRef.current || (e.currentTarget.closest('.page-svg-container')?.querySelector('svg'));
+      const svg = drawingSvgRef.current || (getEventPageContainer(e, pageIndex)?.querySelector('svg'));
       if (!svg) return;
       const pt = getLocalPoint(svg, drawingPathRef.current.parentElement, e.clientX, e.clientY);
 
@@ -1475,8 +1597,8 @@ export const useCanvasPointerEvents = ({
     // ── Vectra Pen Tool Update & Hover Preview ──────────
     const currentPenTool = selectedPenToolRef?.current || selectedPenTool || 'pen';
     if (activeMainTool === 'pen' && currentPenTool === 'pen') {
-      const pageContainer = e.currentTarget.closest('.page-svg-container');
-      const svg = drawingSvgRef.current || (pageContainer?.querySelector('svg')) || e.currentTarget.querySelector('svg');
+      const pageContainer = getEventPageContainer(e, pageIndex);
+      const svg = drawingSvgRef.current || (pageContainer?.querySelector('svg')) || e.currentTarget?.querySelector?.('svg');
       if (svg) {
         const parentEl = drawingPathRef.current?.parentElement || resolveTargetParentForCreation(svg, e.clientX, e.clientY);
         if (parentEl) {
@@ -1516,97 +1638,191 @@ export const useCanvasPointerEvents = ({
     // ── Shapes Drawing Update ────────────────────────────────────────────────
     if (drawingShapeRef.current) {
       const svg = drawingSvgRef.current;
-      const pt = getSvgPoint(svg, e.clientX, e.clientY);
+      const shape = drawingShapeRef.current;
+      let pt = getLocalPoint(svg, shape.parentElement || svg, e.clientX, e.clientY);
       const start = shapeStartPointRef.current;
 
+      // Smart guides while drawing (page edges / centre + other elements), cached once per shape.
+      // Ctrl/Cmd = no snapping. The Line tool snaps its own end point (angle + guides) below.
+      const shapeParentCtm = (shape.parentElement || svg)?.getScreenCTM?.();
+      const shapeNoSnap = e.ctrlKey || e.metaKey;
+      const isLineTool = selectedShapeTool === 'line';
+      if (!shape.__shapeGuideState) {
+        shape.__shapeGuideState = { svgElement: svg, svg, element: shape };
+        try { initSmartGuides(shape.__shapeGuideState); } catch { /* no guides */ }
+      }
+      if (pt && start && !isLineTool && !shapeNoSnap && shapeParentCtm && shape.__shapeGuideState.smartGuidesData) {
+        const { snappedPoint } = computeResizeSmartGuides({
+          resizeState: shape.__shapeGuideState,
+          currentPoint: pt,
+          parentCTM: shapeParentCtm,
+          dir: 'se',
+          zoomScale: zoom / 100,
+        });
+        if (snappedPoint) pt = { x: snappedPoint.x, y: snappedPoint.y };
+      }
+
       if (pt && start) {
-        const shape = drawingShapeRef.current;
         const dx = pt.x - start.x;
         const dy = pt.y - start.y;
+
+        // Shared bounding box starting from mouse-down point (start) to current cursor (pt)
+        let boxW = Math.abs(dx);
+        let boxH = Math.abs(dy);
+        if (e.shiftKey) {
+          const maxDim = Math.max(boxW, boxH);
+          boxW = maxDim;
+          boxH = maxDim;
+        }
+        const boxX = dx < 0 ? start.x - boxW : start.x;
+        const boxY = dy < 0 ? start.y - boxH : start.y;
+
+        const mapUnitVerticesToBox = (unitPts) => {
+          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+          for (const p of unitPts) {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+          }
+          const spanX = maxX - minX || 1;
+          const spanY = maxY - minY || 1;
+          return unitPts.map((p) => {
+            const x = boxX + ((p.x - minX) / spanX) * boxW;
+            const y = boxY + ((p.y - minY) / spanY) * boxH;
+            return `${x},${y}`;
+          });
+        };
 
         switch (selectedShapeTool) {
           case 'rectangle':
           case 'free-frame': {
-            let width = Math.abs(dx);
-            let height = Math.abs(dy);
-            if (e.shiftKey) {
-              const maxDim = Math.max(width, height);
-              width = maxDim;
-              height = maxDim;
-            }
-            shape.setAttribute('x', dx < 0 ? start.x - width : start.x);
-            shape.setAttribute('y', dy < 0 ? start.y - height : start.y);
-            shape.setAttribute('width', width);
-            shape.setAttribute('height', height);
+            shape.setAttribute('x', boxX);
+            shape.setAttribute('y', boxY);
+            shape.setAttribute('width', boxW);
+            shape.setAttribute('height', boxH);
             break;
           }
           case 'circle': {
-            let rx = Math.abs(dx);
-            let ry = Math.abs(dy);
-            if (e.shiftKey) {
-              const maxR = Math.max(rx, ry);
-              rx = maxR;
-              ry = maxR;
-            }
-            shape.setAttribute('rx', rx);
-            shape.setAttribute('ry', ry);
+            shape.setAttribute('cx', boxX + boxW / 2);
+            shape.setAttribute('cy', boxY + boxH / 2);
+            shape.setAttribute('rx', boxW / 2);
+            shape.setAttribute('ry', boxH / 2);
             break;
           }
           case 'line': {
-            if (e.shiftKey) {
-              const absDx = Math.abs(dx);
-              const absDy = Math.abs(dy);
+            // Straightness guide: auto-snap near 0°/45°/90°/135° (Shift = always snap to 45° steps,
+            // Ctrl/Cmd = free angle) + orange guide when perfectly straight + live angle badge.
+            const parentCtm = (shape.parentElement || svg).getScreenCTM?.();
+            const noSnap = e.ctrlKey || e.metaKey;
+            const angleSnap = snapLineEnd(start, pt, parentCtm, { shiftKey: e.shiftKey, disableSnap: noSnap });
+            const { snapped } = angleSnap;
+            let { end, angle } = angleSnap;
 
-              let newDx = 0, newDy = 0;
-              if (absDx >= absDy) {
-                newDx = dx;
-                newDy = 0;
-              } else {
-                newDx = 0;
-                newDy = dy;
-              }
-              shape.setAttribute('x2', start.x + newDx);
-              shape.setAttribute('y2', start.y + newDy);
+            // Smart guides on the end point (page edges / centre + other elements), like resizing.
+            // Horizontal line → snap x only, vertical → y only (keeps it perfectly straight),
+            // 45° → keep the exact angle, free angle → both axes.
+            const guideState = shape.__shapeGuideState;
+            const axisOnly = snapped ? (angle % 180 === 0 ? 'x' : (angle % 180 === 90 ? 'y' : 'none')) : 'both';
+            if (!noSnap && axisOnly !== 'none' && parentCtm && guideState.smartGuidesData) {
+              const { snappedPoint } = computeResizeSmartGuides({
+                resizeState: guideState,
+                currentPoint: end,
+                parentCTM: parentCtm,
+                dir: axisOnly === 'x' ? 'e' : (axisOnly === 'y' ? 's' : 'se'),
+                zoomScale: zoom / 100,
+              });
+              if (snappedPoint) end = { x: snappedPoint.x, y: snappedPoint.y };
+              if (!snapped) angle = snapLineEnd(start, end, parentCtm, { disableSnap: true }).angle;
+            }
+            shape.setAttribute('x2', end.x);
+            shape.setAttribute('y2', end.y);
+
+            // Magenta smart-guide lines for the end point (badge = the angle badge below)
+            if (guideState.smartGuidesData && !noSnap) {
+              try {
+                const svgInv = svg.getScreenCTM()?.inverse();
+                const endSvg = (parentCtm && svgInv)
+                  ? new DOMPoint(end.x, end.y).matrixTransform(svgInv.multiply(parentCtm))
+                  : { x: end.x, y: end.y };
+                const pointBox = { left: endSvg.x, right: endSvg.x, top: endSvg.y, bottom: endSvg.y, width: 0, height: 0, centerX: endSvg.x, centerY: endSvg.y };
+                const { guides } = collectResizeGuideLines({ resizeState: guideState, currentBox: pointBox, dir: 'se' });
+                renderSmartGuides(drawingPageIndexRef.current ?? activePageIndex, guides, null, zoom / 100, svg);
+              } catch { /* ignore */ }
             } else {
-              shape.setAttribute('x2', pt.x);
-              shape.setAttribute('y2', pt.y);
+              clearSmartGuides();
+            }
+            if (parentCtm && shape.tagName?.toLowerCase() === 'line') {
+              const toClient = (p) => ({
+                x: parentCtm.a * p.x + parentCtm.c * p.y + parentCtm.e,
+                y: parentCtm.b * p.x + parentCtm.d * p.y + parentCtm.f,
+              });
+              showLineAngleGuide({
+                startClient: toClient(start),
+                endClient: toClient(end),
+                snapped,
+                angle,
+                cursor: { x: e.clientX, y: e.clientY },
+              });
             }
             break;
           }
           case 'polygon': {
-            const radius = Math.sqrt(dx * dx + dy * dy);
             const sides = parseInt(shape.getAttribute('data-count') || 3);
-            const points = [];
+            const unitPts = [];
             for (let i = 0; i < sides; i++) {
               const angle = (i * 2 * Math.PI) / sides - Math.PI / 2;
-              points.push(`${start.x + radius * Math.cos(angle)},${start.y + radius * Math.sin(angle)}`);
+              unitPts.push({ x: Math.cos(angle), y: Math.sin(angle) });
             }
+            const points = mapUnitVerticesToBox(unitPts);
             shape.setAttribute('d', `M ${points.join(' L ')} Z`);
-            shape.setAttribute('data-rx', radius);
-            shape.setAttribute('data-ry', radius);
-            shape.setAttribute('data-cx', start.x);
-            shape.setAttribute('data-cy', start.y);
+            shape.setAttribute('data-rx', boxW / 2);
+            shape.setAttribute('data-ry', boxH / 2);
+            shape.setAttribute('data-cx', boxX + boxW / 2);
+            shape.setAttribute('data-cy', boxY + boxH / 2);
             break;
           }
           case 'star': {
-            const rOuter = Math.sqrt(dx * dx + dy * dy);
             const ratio = parseFloat(shape.getAttribute('data-ratio') || 40) / 100;
-            const rInner = rOuter * ratio;
             const count = parseInt(shape.getAttribute('data-count') || 5);
             const sides = count * 2;
-            const points = [];
+            const unitPts = [];
             for (let i = 0; i < sides; i++) {
-              const r = (i % 2 === 0) ? rOuter : rInner;
+              const r = (i % 2 === 0) ? 1 : ratio;
               const angle = (Math.PI / count) * i - Math.PI / 2;
-              points.push(`${start.x + r * Math.cos(angle)},${start.y + r * Math.sin(angle)}`);
+              unitPts.push({ x: r * Math.cos(angle), y: r * Math.sin(angle) });
             }
+            const points = mapUnitVerticesToBox(unitPts);
             shape.setAttribute('d', `M ${points.join(' L ')} Z`);
-            shape.setAttribute('data-rx', rOuter);
-            shape.setAttribute('data-ry', rOuter);
-            shape.setAttribute('data-cx', start.x);
-            shape.setAttribute('data-cy', start.y);
+            shape.setAttribute('data-rx', boxW / 2);
+            shape.setAttribute('data-ry', boxH / 2);
+            shape.setAttribute('data-cx', boxX + boxW / 2);
+            shape.setAttribute('data-cy', boxY + boxH / 2);
             break;
           }
+        }
+
+        // Smart-guide lines + W × H badge for the shape being drawn (the line has its own guides)
+        if (!isLineTool) {
+          if (!shapeNoSnap && shape.__shapeGuideState?.smartGuidesData) {
+            try {
+              const currentBox = getBoxInSvg(shape, svg);
+              const dir = `${dy < 0 ? 'n' : 's'}${dx < 0 ? 'w' : 'e'}`;
+              const { guides, badge } = collectResizeGuideLines({ resizeState: shape.__shapeGuideState, currentBox, dir });
+              if (badge && currentBox) {
+                // badge under the moving corner
+                badge.x = dx < 0 ? currentBox.left : currentBox.right;
+                badge.y = dy < 0 ? currentBox.top : currentBox.bottom;
+              }
+              renderSmartGuides(drawingPageIndexRef.current ?? activePageIndex, guides, badge, zoom / 100, svg);
+            } catch { /* ignore */ }
+          } else {
+            clearSmartGuides();
+          }
+        }
+
+        if (typeof drawOverlayHighlight === 'function') {
+          drawOverlayHighlight(shape, 'selected');
         }
         suppressClickRef.current = true;
       }
@@ -1982,6 +2198,9 @@ export const useCanvasPointerEvents = ({
 
       // Termination for Shape tools
       if (drawingShapeRef.current) {
+        clearLineAngleGuide();
+        clearSmartGuides();
+        delete drawingShapeRef.current.__shapeGuideState;
         const shape = drawingShapeRef.current;
         const pageIdx = drawingPageIndexRef.current;
         const svgEl = shape?.ownerSVGElement;
@@ -1993,7 +2212,7 @@ export const useCanvasPointerEvents = ({
 
         const start = shapeStartPointRef.current;
         if (start && svgEl && e) {
-          const pt = getSvgPoint(svgEl, e.clientX, e.clientY);
+          const pt = getLocalPoint(svgEl, shape.parentElement || svgEl, e.clientX, e.clientY);
           if (pt && Math.hypot(pt.x - start.x, pt.y - start.y) < 2) {
             const type = shape.getAttribute('data-shape-type') || shape.tagName.toLowerCase();
 
@@ -2717,6 +2936,10 @@ export const useCanvasPointerEvents = ({
         }
         const isMultiKey = Boolean(e.shiftKey || e.metaKey || (e.ctrlKey && !e.altKey));
         if (isMultiKey) {
+          if (typeof window !== 'undefined' && window.__interactMultiHandledAt && (Date.now() - window.__interactMultiHandledAt < 300)) {
+            window.__interactMultiHandledAt = 0;
+            return;
+          }
           if (isPageRootElement(clickedEl, svg)) return;
           const currentSet = new Set(multiSelectedIdsRef.current);
           const primaryId = selectedLayerIdRef.current;
@@ -2842,6 +3065,11 @@ export const useCanvasPointerEvents = ({
     // Works at top-level OR inside an entered frame, but does NOT enter frames.
     const isMultiSelectClick = Boolean(e.shiftKey || e.metaKey || (e.ctrlKey && !e.altKey));
     if (isMultiSelectClick) {
+      // Avoid double-toggling when interact.js drag-start just processed this Shift/Ctrl/Cmd press
+      if (typeof window !== 'undefined' && window.__interactMultiHandledAt && (Date.now() - window.__interactMultiHandledAt < 300)) {
+        window.__interactMultiHandledAt = 0;
+        return;
+      }
       // If clicking inside a table cell/element, do not toggle off the table from selection!
       const isInsideTable = Boolean(e.target?.closest?.('td, th, table, [data-type="table-frame"], [data-type="table"], g[id^="table-"]'));
       if (isInsideTable) {
@@ -2873,10 +3101,27 @@ export const useCanvasPointerEvents = ({
 
       // Find the topmost candidate hit at this point
       let hitEl = null;
-      for (let i = candidates.length - 1; i >= 0; i--) {
-        if (hitTest(candidates[i], e.clientX, e.clientY, 4)) {
-          hitEl = candidates[i];
-          break;
+      // If primary selection is a leaf text box inside a group (or clicking directly onto another text box
+      // while multi-selecting), prefer the direct leaf text box so Shift/Ctrl/Cmd+Click pairs sibling words!
+      const primaryIdCheck = selectedLayerIdRef.current;
+      const primaryElCheck = primaryIdCheck ? svg.querySelector(`[id="${primaryIdCheck}"]`) : null;
+      const directLeafText = e.target?.closest?.('text[id], foreignObject[id]');
+      if (
+        directLeafText &&
+        directLeafText.id &&
+        svg.contains(directLeafText) &&
+        !isPageRootElement(directLeafText, svg) &&
+        (primaryElCheck?.tagName?.toLowerCase() === 'text' || primaryElCheck?.tagName?.toLowerCase() === 'foreignobject' || primaryElCheck?.parentElement?.closest('g[id]'))
+      ) {
+        hitEl = directLeafText;
+      }
+
+      if (!hitEl) {
+        for (let i = candidates.length - 1; i >= 0; i--) {
+          if (hitTest(candidates[i], e.clientX, e.clientY, 4)) {
+            hitEl = candidates[i];
+            break;
+          }
         }
       }
 

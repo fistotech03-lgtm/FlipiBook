@@ -480,7 +480,18 @@ if (typeof window !== 'undefined' && !window.__vectorTextRunsTrackingInitialized
 
   const updateSelectionState = () => {
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    if (!sel || sel.rangeCount === 0) return;
+    if (sel.isCollapsed) {
+      // Caret placed inside the text being edited with nothing selected: drop the old range so
+      // the next style change (font, size, color…) applies to the whole text box.
+      const n = sel.anchorNode;
+      const el = n && (n.nodeType === 1 ? n : n.parentElement);
+      if (el && el.closest && el.closest('[contenteditable="true"]')) {
+        window.__savedTextSelection = null;
+        window.__lastTextSelection = null;
+      }
+      return;
+    }
 
     const r = sel.getRangeAt(0);
     const container = r.commonAncestorContainer.nodeType === 1

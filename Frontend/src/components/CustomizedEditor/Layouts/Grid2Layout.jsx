@@ -818,19 +818,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                         </div>
 
                         <div className="contents">
-                            {(settings?.brandingProfile?.profile ?? true) && renderToolbarBtn(
-                                <Icon icon="fluent:person-24-filled" className={`${isMobileLandscape ? 'w-[0.7vw] h-[0.7vw]' : isTablet ? 'w-[1vw] h-[1vw]' : (isSidebarOpen ? 'w-[1.1vw] h-[1.1vw]' : 'w-[1.25vw] h-[1.25vw]')}`} />,
-                                'Profile',
-                                (e) => {
-                                    e.stopPropagation();
-                                    const wasOpen = showProfilePopup;
-                                    closeAllPopups();
-                                    if (!wasOpen) setShowProfilePopup(true);
-                                },
-                                { color: getLayoutColorRgba('toolbar-text-main', '255, 255, 255', '1') },
-                                '',
-                                !!showProfilePopup
-                            )}
+
                             {(settings?.shareExport?.share ?? true) && renderToolbarBtn(
                                 <Icon icon="mage:share-fill" className={`${isMobileLandscape ? 'w-[0.7vw] h-[0.7vw]' : isTablet ? 'w-[1vw] h-[1vw]' : (isSidebarOpen ? 'w-[1.1vw] h-[1.1vw]' : 'w-[1.25vw] h-[1.25vw]')}`} />,
                                 'Share',

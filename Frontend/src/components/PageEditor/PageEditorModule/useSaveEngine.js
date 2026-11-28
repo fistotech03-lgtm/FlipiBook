@@ -17,7 +17,7 @@ import { sanitizeSvgXml, safeSerializeSvg } from "../utils/editorUtils";
 import { optimizeImageForWeb, shouldOptimizeImage } from "../../../utils/imageOptimizer";
 import { startInFlightActivity, endInFlightActivity, createRevisionSequencer } from "../../../utils/storage/saveLockManager";
 import { notifyBookSaved } from "../../../utils/common/editorSyncChannel";
-import { buildCustomFontFaceCss } from '../../../utils/customFonts';
+import { buildCustomFontFaceCss } from '../../../config/fonts';
 
 const VIRTUAL_FOLDERS = new Set([
   "recent book",
@@ -101,6 +101,20 @@ export const useSaveEngine = ({
         if (liveSvg) {
           const clone = liveSvg.cloneNode(true);
           clone.querySelectorAll('[data-highlight-id], .frame-boundary, #ghost-layer, .selection-overlay-layer, #vectra-overlay-group, #node-edit-overlay-group, [id="multi-selection-bounds"], .video-damage-rect, [class*="damage-rect"], [data-is-dummy="true"], #temp-blink-clone, [id^="temp-blink-"]').forEach(e => e.remove());
+          // Live font preview (Text Properties hover) is visual only — save the real font
+          clone.querySelectorAll('[data-fp-html]').forEach(n => {
+            n.innerHTML = n.getAttribute('data-fp-html');
+            n.removeAttribute('data-fp-html');
+          });
+          clone.querySelectorAll('[data-fp-orig]').forEach(n => {
+            const orig = n.getAttribute('data-fp-orig');
+            const prop = n.getAttribute('data-fp-prop') || 'font-family';
+            if (orig) n.style.setProperty(prop, orig, n.getAttribute('data-fp-prio') || '');
+            else n.style.removeProperty(prop);
+            n.removeAttribute('data-fp-orig');
+            n.removeAttribute('data-fp-prop');
+            n.removeAttribute('data-fp-prio');
+          });
           const serialized = safeSerializeSvg(clone);
           if (serialized && serialized.length > 50 && serialized.includes('<svg')) {
             pagesToSave[activePageIndex] = {

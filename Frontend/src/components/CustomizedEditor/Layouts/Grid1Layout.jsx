@@ -1293,27 +1293,7 @@ const Grid1Layout = React.memo((props) => {
                                 </div>
                             </div>
 
-                            {/* Profile Icon */}
-                            <div className={(settings?.brandingProfile?.profile ?? true) ? '' : 'invisible pointer-events-none hidden-but-taking-space'} style={{ display: (settings?.brandingProfile?.profile ?? true) ? 'contents' : 'block' }}>
-                                <div style={{ visibility: (settings?.brandingProfile?.profile ?? true) ? 'visible' : 'hidden' }}>
-                                    {renderDockBtn(
-                                        <Icon icon="fluent:person-24-filled" className={`${isTablet ? 'w-[1vw] h-[1vw]' : (isSidebarOpen ? 'w-[1.15vw] h-[1.15vw]' : 'w-[1.3vw] h-[1.3vw]')}`} />,
-                                        'Profile',
-                                        (e) => {
-                                            e.stopPropagation();
-                                            const wasOpen = showProfilePopup;
-                                            closeAllPopups();
-                                            if (!wasOpen) {
-                                                setShowProfilePopup(true);
-                                                setActivePopup('profile');
-                                            }
-                                        },
-                                        { color: getLayoutColor('toolbar-icon', '#FFFFFF'), opacity: 'var(--toolbar-icon-opacity, 1)' },
-                                        '',
-                                        showProfilePopup
-                                    )}
-                                </div>
-                            </div>
+
                         </div>
 
 

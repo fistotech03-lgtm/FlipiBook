@@ -11,6 +11,8 @@ import { useDynamicLayoutColors } from './hooks/useDynamicLayoutColors';
 import { useCustomizedAutoSave } from './hooks/useCustomizedAutoSave';
 import { useCustomizedActions } from './hooks/useCustomizedActions';
 import { useCustomizedEditorData } from './hooks/useCustomizedEditorData';
+import { Icon } from '@iconify/react';
+import { executeInlineTranslation, isEditableTextField, TRANSLATE_LANGUAGES } from '../PageEditor/utils/inlineTranslationHelper';
 import { loadWindowFromIDB } from '../../utils/customizedEditor/pageWindowStore';
 import { clearRasterCache } from '../../utils/customizedEditor/pageRasterCache';
 import { getInFlightActivityCount } from '../../utils/storage/saveLockManager';
@@ -163,20 +165,85 @@ const CustomizedEditor = () => {
     };
   }, []);
 
-  // Customization Settings States
-  const [logoSettings, setLogoSettings] = useState(() => createDefaultLogoSettings(currentBook, location.state));
-  const [watermarkSettings, setWatermarkSettings] = useState(() => createDefaultWatermarkSettings(currentBook, location.state));
-  const [preloaderSettings, setPreloaderSettings] = useState(() => createDefaultPreloaderSettings(currentBook, location.state));
-  const [profileSettings, setProfileSettings] = useState(() => createDefaultProfileSettings(currentBook, location.state));
-  const [backgroundSettings, setBackgroundSettings] = useState(() => createDefaultBackgroundSettings(currentBook, location.state));
-  const [bookAppearanceSettings, setBookAppearanceSettings] = useState(() => createDefaultAppearanceSettings(currentBook, location.state));
-  const [layoutSettings, setLayoutSettings] = useState(() => createDefaultLayoutSettings(currentBook, location.state));
-  const [layoutColors, setLayoutColors] = useState(() => createDefaultLayoutColors(currentBook, location.state));
+  // Customization Settings States (only seed from currentBook if it matches this book's v_id)
+  const matchingBook = currentBook?.v_id === v_id ? currentBook : null;
+  const [logoSettings, setLogoSettings] = useState(() => createDefaultLogoSettings(matchingBook, location.state));
+  const [watermarkSettings, setWatermarkSettings] = useState(() => createDefaultWatermarkSettings(matchingBook, location.state));
+  const [preloaderSettings, setPreloaderSettings] = useState(() => createDefaultPreloaderSettings(matchingBook, location.state));
+  const [profileSettings, setProfileSettings] = useState(() => createDefaultProfileSettings(matchingBook, location.state));
+  const [backgroundSettings, setBackgroundSettings] = useState(() => createDefaultBackgroundSettings(matchingBook, location.state));
+  const [bookAppearanceSettings, setBookAppearanceSettings] = useState(() => createDefaultAppearanceSettings(matchingBook, location.state));
+  const [layoutSettings, setLayoutSettings] = useState(() => createDefaultLayoutSettings(matchingBook, location.state));
+  const [layoutColors, setLayoutColors] = useState(() => createDefaultLayoutColors(matchingBook, location.state));
   const [menuBarSettings, setMenuBarSettings] = useState(() => createDefaultMenuBarSettings());
   const [otherSetupSettings, setOtherSetupSettings] = useState(() => createDefaultOtherSetupSettings());
-  const [leadFormSettings, setLeadFormSettings] = useState(() => createDefaultLeadFormSettings(currentBook, location.state));
+  const [leadFormSettings, setLeadFormSettings] = useState(() => createDefaultLeadFormSettings(matchingBook, location.state));
   const [visibilitySettings, setVisibilitySettings] = useState(() => createDefaultVisibilitySettings());
   const [shareSettings, setShareSettings] = useState(() => createDefaultShareSettings());
+
+  const [translateContextMenu, setTranslateContextMenu] = useState(null); // { x, y }
+
+  // Track editable text inputs/textareas, right-click translate menu, & handle inline translation in CustomizedEditor
+  useEffect(() => {
+    const captureEditable = (e) => {
+      const target = e?.target;
+      if (isEditableTextField(target)) {
+        window.__lastEditableSelection = {
+          el: target,
+          start: target.selectionStart,
+          end: target.selectionEnd,
+          timestamp: Date.now(),
+        };
+      }
+    };
+    const handleContextMenu = (e) => {
+      const target = e?.target;
+      if (isEditableTextField(target)) {
+        const start = target.selectionStart;
+        const end = target.selectionEnd;
+        const hasSelectedText = typeof start === 'number' && typeof end === 'number' && start !== end && (target.value || '').slice(start, end).trim().length > 0;
+        if (hasSelectedText) {
+          e.preventDefault();
+          window.__lastEditableSelection = {
+            el: target,
+            start,
+            end,
+            timestamp: Date.now(),
+          };
+          const menuWidth = 190;
+          const menuHeight = 48;
+          const x = Math.min(e.clientX, window.innerWidth - menuWidth - 16);
+          const y = Math.min(e.clientY, window.innerHeight - menuHeight - 16);
+          setTranslateContextMenu({ x, y });
+          return;
+        }
+      }
+      setTranslateContextMenu(null);
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setTranslateContextMenu(null);
+    };
+    const handleTriggerInlineTranslate = async (e) => {
+      const { targetLang = 'tam_Taml' } = e?.detail || {};
+      await executeInlineTranslation({ targetLang });
+    };
+    document.addEventListener('focusin', captureEditable, true);
+    document.addEventListener('mouseup', captureEditable, true);
+    document.addEventListener('keyup', captureEditable, true);
+    document.addEventListener('select', captureEditable, true);
+    document.addEventListener('contextmenu', handleContextMenu, true);
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('trigger-inline-translate', handleTriggerInlineTranslate);
+    return () => {
+      document.removeEventListener('focusin', captureEditable, true);
+      document.removeEventListener('mouseup', captureEditable, true);
+      document.removeEventListener('keyup', captureEditable, true);
+      document.removeEventListener('select', captureEditable, true);
+      document.removeEventListener('contextmenu', handleContextMenu, true);
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('trigger-inline-translate', handleTriggerInlineTranslate);
+    };
+  }, []);
 
   // Panel state synchronization
   useEffect(() => {
@@ -193,6 +260,7 @@ const CustomizedEditor = () => {
       clearRasterCache();
       const newBookName = location.state?.flipbookName || 'Name of the Book';
       setBookName(newBookName);
+      setPreloaderSettings(createDefaultPreloaderSettings(null, location.state));
       setProjectBaseUrl(null);
       setDevicePages({ Desktop: 0, Tablet: 0, Mobile: 0 });
       setIsDataLoaded(Boolean(location.state?.pages && location.state.pages.length > 0));
@@ -693,6 +761,28 @@ const CustomizedEditor = () => {
   const layoutColorVars = useLayoutColorVars(layoutSettings, layoutColors);
   const visiblePages = useMemo(() => pages.filter(p => !p.isHidden), [pages]);
 
+  const isPdfProject = useMemo(() => {
+    const bookType = String(currentBook?.bookType || currentBook?.meta?.bookType || '').toLowerCase();
+    if (bookType === 'pdf') return true;
+    return pages.some(
+      (p) =>
+        p?.html &&
+        (p.html.includes('data-name="PDF Background"') ||
+          p.html.includes('data-type="pdf-vector-layer"') ||
+          p.html.includes('Document Shield'))
+    );
+  }, [currentBook?.bookType, currentBook?.meta?.bookType, pages]);
+
+  useEffect(() => {
+    if (setCurrentBook) {
+      setCurrentBook((prev) => {
+        if (!prev) return prev;
+        if (Boolean(prev.isPdfProject) === isPdfProject) return prev;
+        return { ...prev, isPdfProject };
+      });
+    }
+  }, [isPdfProject, setCurrentBook]);
+
   return (
     <div
       className="flex flex-col h-full w-full bg-[#D9D9D9] overflow-hidden font-sans select-none relative"
@@ -701,6 +791,80 @@ const CustomizedEditor = () => {
         return [v.slice(0, i).trim(), v.slice(i + 1).trim()];
       })) : {}}
     >
+      {/* Right-click Translate Selection Context Menu for selected text in editable inputs */}
+      {translateContextMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-[99990]"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setTranslateContextMenu(null);
+            }}
+          />
+          <div
+            onMouseDown={(e) => e.preventDefault()}
+            className="fixed z-[99991] w-[12.5vw] min-w-[175px] bg-white rounded-[0.55vw] shadow-[0_12px_32px_rgba(0,0,0,0.18)] border border-gray-100 p-[0.35vw]"
+            style={{ left: translateContextMenu.x, top: translateContextMenu.y }}
+          >
+            <div className="relative group/translate-root">
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('trigger-inline-translate', {
+                    detail: { targetLang: 'tam_Taml' }
+                  }));
+                  setTranslateContextMenu(null);
+                }}
+                className="w-full flex items-center justify-between px-[0.6vw] py-[0.42vw] text-[0.75vw] font-medium text-gray-700 hover:bg-gray-50 rounded-[0.4vw] text-left cursor-pointer group-hover/translate-root:bg-gray-50"
+              >
+                <div className="flex items-center gap-[0.55vw]">
+                  <Icon icon="bi:translate" className="w-[0.9vw] h-[0.9vw] text-gray-700" />
+                  <span>Translate Selection</span>
+                </div>
+                <Icon icon="mdi:chevron-right" className="w-[0.8vw] h-[0.8vw] text-gray-400" />
+              </button>
+
+              <div
+                onMouseDown={(e) => e.preventDefault()}
+                className={`absolute left-full pl-[0.35vw] hidden group-hover/translate-root:block z-[99992] ${
+                  translateContextMenu.y > (typeof window !== 'undefined' ? window.innerHeight - 280 : 500)
+                    ? 'bottom-0'
+                    : 'top-0'
+                }`}
+              >
+                <div className="w-[11.5vw] min-w-[165px] bg-white rounded-[0.5vw] shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-gray-100 p-[0.3vw] flex flex-col gap-[0.1vw] max-h-[32vh] overflow-y-auto">
+                  <div className="px-[0.4vw] py-[0.2vw] border-b border-gray-100 text-[0.65vw] font-bold text-gray-500">
+                    Translate to:
+                  </div>
+                  {TRANSLATE_LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('trigger-inline-translate', {
+                          detail: { targetLang: lang.code }
+                        }));
+                        setTranslateContextMenu(null);
+                      }}
+                      className={`flex items-center justify-between px-[0.5vw] py-[0.35vw] text-[0.7vw] font-medium rounded-[0.3vw] text-left cursor-pointer transition-colors ${
+                        lang.code === 'tam_Taml'
+                          ? 'bg-gray-100 text-gray-900 font-semibold hover:bg-gray-200/70'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span>{lang.name}</span>
+                      <span className="text-[0.65vw] text-gray-400">{lang.native}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       <style>{`
         :root { ${layoutColorVars} }
       `}</style>
@@ -787,95 +951,11 @@ const CustomizedEditor = () => {
 
         {/* Main Preview Area */}
         <div className="flex-1 min-w-0 flex flex-col relative z-0 overflow-hidden">
-          {/* Modern Flipbook Skeleton Loader */}
-          {isLoading && pages.length === 0 && (
-            <div 
-              className="absolute inset-0 z-50 flex flex-col items-center justify-center select-none overflow-hidden"
-              style={{
-                backgroundColor: '#1E1F24',
-                color: '#ffffff'
-              }}
-            >
-              <style>{`
-                @keyframes skeletonShimmer {
-                  0% { transform: translateX(-100%); }
-                  100% { transform: translateX(100%); }
-                }
-                .skeleton-shimmer {
-                  position: absolute;
-                  inset: 0;
-                  transform: translateX(-100%);
-                  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
-                  animation: skeletonShimmer 2s infinite ease-in-out;
-                }
-              `}</style>
-              
-              <div className="w-full max-w-[800px] px-8 flex flex-col items-center justify-center gap-6">
-                {/* Top Status Badge */}
-                <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 border border-white/10 shadow-sm backdrop-blur-md">
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping" />
-                  <span className="text-[13px] font-medium tracking-wide text-gray-200">
-                    Preparing Flipbook Preview... {loadingProgress > 0 && loadingProgress < 100 ? `${loadingProgress}%` : ''}
-                  </span>
-                </div>
-
-                {/* 2-Page Open Book Skeleton Spread */}
-                <div className="relative w-full aspect-[16/10] max-h-[460px] flex rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-[#25282F]">
-                  {/* Left Page Skeleton */}
-                  <div className="flex-1 p-8 border-r border-black/40 flex flex-col justify-between bg-gradient-to-br from-white/10 via-white/5 to-transparent relative overflow-hidden">
-                    <div className="skeleton-shimmer" />
-                    <div className="space-y-4">
-                      <div className="h-6 w-3/4 rounded-md bg-white/20" />
-                      <div className="h-3 w-full rounded bg-white/10" />
-                      <div className="h-3 w-5/6 rounded bg-white/10" />
-                      <div className="h-3 w-4/6 rounded bg-white/10" />
-                    </div>
-                    <div className="w-full h-28 rounded-lg bg-white/10 border border-white/5 flex items-center justify-center">
-                      <div className="w-8 h-8 rounded-full bg-white/10" />
-                    </div>
-                    <div className="flex justify-between items-center pt-2">
-                      <div className="h-2.5 w-16 rounded bg-white/10" />
-                      <div className="h-3 w-6 rounded bg-white/15" />
-                    </div>
-                  </div>
-
-                  {/* Center Spine Crease */}
-                  <div className="w-[3px] bg-gradient-to-b from-black/50 via-black/80 to-black/50 shadow-inner z-10" />
-
-                  {/* Right Page Skeleton */}
-                  <div className="flex-1 p-8 flex flex-col justify-between bg-gradient-to-bl from-white/10 via-white/5 to-transparent relative overflow-hidden">
-                    <div className="skeleton-shimmer" style={{ animationDelay: '0.4s' }} />
-                    <div className="space-y-3.5">
-                      <div className="h-5 w-1/2 rounded bg-white/15 mb-4" />
-                      <div className="h-3 w-full rounded bg-white/10" />
-                      <div className="h-3 w-full rounded bg-white/10" />
-                      <div className="h-3 w-3/4 rounded bg-white/10" />
-                    </div>
-                    <div className="space-y-3">
-                      <div className="h-3 w-full rounded bg-white/10" />
-                      <div className="h-3 w-5/6 rounded bg-white/10" />
-                      <div className="h-3 w-4/6 rounded bg-white/10" />
-                    </div>
-                    <div className="flex justify-between items-center pt-2">
-                      <div className="h-3 w-6 rounded bg-white/15" />
-                      <div className="h-2.5 w-16 rounded bg-white/10" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Floating Toolbar Skeleton */}
-                <div className="flex items-center gap-3 px-6 py-2.5 rounded-full bg-white/10 border border-white/10 backdrop-blur-md shadow-lg">
-                  <div className="w-6 h-6 rounded-full bg-white/20" />
-                  <div className="w-16 h-4 rounded-full bg-white/15" />
-                  <div className="w-6 h-6 rounded-full bg-white/20" />
-                  <div className="w-[1px] h-4 bg-white/20 mx-1" />
-                  <div className="w-5 h-5 rounded-md bg-white/15" />
-                  <div className="w-5 h-5 rounded-md bg-white/15" />
-                  <div className="w-5 h-5 rounded-md bg-white/15" />
-                </div>
-              </div>
-            </div>
-          )}
+          <PreloaderOverlay
+            isLoading={isLoading && pages.length === 0}
+            preloaderSettings={{ isCustom: false }}
+            loadingProgress={loadingProgress}
+          />
           <PreviewArea
             bookName={bookName}
             pages={visiblePages}

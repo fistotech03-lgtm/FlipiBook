@@ -923,23 +923,7 @@ const Grid7Layout = ({
                             textFont={textFont}
                         />
                     )}
-                    {(settings?.brandingProfile?.profile ?? true) && (
-                        <MagneticDockBtn
-                            iconEl={<Icon icon="fluent:person-24-filled" className={bbIconSm} />}
-                            label="Profile"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                const wasOpen = showProfilePopup;
-                                closeAllPopups();
-                                if (!wasOpen) setShowProfilePopup?.(true);
-                            }}
-                            extraStyle={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
-                            mousePos={dockMousePos}
-                            isTablet={isTablet}
-                            addTextBelowIcons={addTextBelowIcons}
-                            textFont={textFont}
-                        />
-                    )}
+
                     {(settings?.shareExport?.share ?? true) && (
                         <MagneticDockBtn
                             iconEl={<Icon icon="mage:share-fill" className={bbIconSm} />}

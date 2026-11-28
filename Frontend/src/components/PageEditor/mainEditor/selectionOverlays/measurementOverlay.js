@@ -1,5 +1,5 @@
 import { getVisualBBox } from '../utils/geometryUtils';
-import { getOverlayForElement } from './overlayDomUtils';
+import { getOverlayForElement, setZoomStroke } from './overlayDomUtils';
 
 /**
  * Measurement overlay: draws Figma-style distance guides (mm values)
@@ -321,7 +321,7 @@ export const createMeasurementOverlay = ({
       line.setAttribute('x2', x2);
       line.setAttribute('y2', y2);
       line.setAttribute('stroke', MEAS_COLOR);
-      line.setAttribute('stroke-width', String(1 * invScale));
+      setZoomStroke(line, 1, zoomScale);
       // Arrow only at the outer (canvas / target boundary) end — no inner arrow
       line.setAttribute('marker-end', `url(#${markerEndId})`);
       g.appendChild(line);
@@ -360,7 +360,7 @@ export const createMeasurementOverlay = ({
       line.setAttribute('x2', x2);
       line.setAttribute('y2', y2);
       line.setAttribute('stroke', '#00a58e');
-      line.setAttribute('stroke-width', String(1 * invScale));
+      setZoomStroke(line, 1, zoomScale);
       line.setAttribute('stroke-dasharray', `${4 * invScale} ${2 * invScale}`);
       g.appendChild(line);
     };
@@ -515,7 +515,7 @@ export const createMeasurementOverlay = ({
       targetRect.setAttribute('height', rect2.height);
       targetRect.setAttribute('fill', 'none');
       targetRect.setAttribute('stroke', '#00a58e');
-      targetRect.setAttribute('stroke-width', String(1 * invScale));
+      setZoomStroke(targetRect, 1, zoomScale);
       g.appendChild(targetRect);
     }
 
@@ -536,7 +536,7 @@ export const createMeasurementOverlay = ({
           selectedAABB.setAttribute('height', rect1.height);
           selectedAABB.setAttribute('fill', 'none');
           selectedAABB.setAttribute('stroke', '#00a58e');
-          selectedAABB.setAttribute('stroke-width', String(1 * invScale));
+          setZoomStroke(selectedAABB, 1, zoomScale);
           selectedAABB.removeAttribute('stroke-dasharray');
           selectedAABB.setAttribute('opacity', '0.7');
           g.appendChild(selectedAABB);

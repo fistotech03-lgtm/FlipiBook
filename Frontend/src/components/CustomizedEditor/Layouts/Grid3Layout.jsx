@@ -751,22 +751,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                                 'p-[0.3vw]',
                                 !!showSoundPopup
                             )}
-                            {/* Profile */}
-                            {(settings?.brandingProfile?.profile ?? true) && renderToolbarBtn(
-                                <Icon icon="fluent:person-24-filled" className={`${isMobileLandscape ? 'w-[0.9vw] h-[0.9vw]' : isTablet ? 'w-[1vw] h-[1vw]' : 'w-[1.2vw] h-[1.2vw]'}`} />,
-                                'Profile',
-                                () => {
-                                    if (showProfilePopup) {
-                                        setShowProfilePopup?.(false);
-                                    } else {
-                                        closeAllPopups();
-                                        setTimeout(() => setShowProfilePopup?.(true), 0);
-                                    }
-                                },
-                                { color: getLayoutColor('toolbar-icon', '#FFFFFF'), opacity: 'var(--toolbar-icon-opacity, 1)' },
-                                'p-[0.3vw]',
-                                !!showProfilePopup
-                            )}
+
                             {/* Share */}
                             {(settings?.shareExport?.share ?? true) && renderToolbarBtn(
                                 <Icon icon="mage:share-fill" className={`${isMobileLandscape ? 'w-[0.9vw] h-[0.9vw]' : isTablet ? 'w-[1vw] h-[1vw]' : 'w-[1.2vw] h-[1.2vw]'}`} />,

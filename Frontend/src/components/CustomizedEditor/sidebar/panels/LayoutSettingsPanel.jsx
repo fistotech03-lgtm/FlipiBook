@@ -101,56 +101,40 @@ const MenuItem = ({ label, enabled, onChange, hasSettings, isExpanded, onToggleS
 
 // TOC Item Component for Editor
 const TocItem = ({ item, index, isEditing, onUpdate, onDelete, activeTOCItem, setActiveTOCItem, onToggleEdit, onAddHead, onAddSub }) => {
-  const isHeadActive = activeTOCItem?.type === 'head' && activeTOCItem?.index === index;
-
   return (
-    <div className="mb-[1vw] relative flex gap-[0.6vw]">
-      <div className="relative flex flex-col items-center w-[1.4vw] shrink-0">
-        <div className="w-[1.4vw] h-[1.4vw] rounded-full bg-[#525252] text-white flex items-center justify-center text-[0.8vw] font-medium z-10 shrink-0">
+    <div className="mb-[0.9vw] relative flex gap-[0.5vw]">
+      {/* Number Badge */}
+      <div className="relative flex flex-col items-center w-[1.4vw] shrink-0 pt-[0.4vw]">
+        <div className="w-[1.35vw] h-[1.35vw] rounded-full bg-[#404040] text-white flex items-center justify-center text-[0.75vw] font-semibold z-10 shrink-0">
           {index + 1}
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col gap-[0.6vw]">
+      <div className="flex-1 flex flex-col gap-[0.4vw]">
+        {/* Heading Row */}
         <div
-          className={`flex items-center gap-[0.3vw] relative group ${isHeadActive ? 'p-[0.3vw] bg-[#3F37C9] rounded-[0.5vw] border-[1px] border-[#3F37C9] shadow-sm' : ''}`}
-          onClick={() => setActiveTOCItem({ type: 'head', index })}
+          className="flex items-center gap-[0.4vw] relative"
+          onClick={() => {
+            setActiveTOCItem({ type: 'head', index });
+            if (onToggleEdit) onToggleEdit();
+          }}
         >
-          <div className={`flex-1 relative ${isHeadActive ? 'bg-white rounded-[0.3vw] flex items-center px-[0.8vw]' : 'flex items-center'}`}>
+          <div className="flex-1 relative flex items-center">
             <input
               type="text"
               placeholder={`Heading ${index + 1}`}
               value={item.title || ''}
               onChange={(e) => onUpdate({ ...item, title: e.target.value })}
-              className={`w-full h-[2.6vw] text-[0.85vw] transition-all placeholder-[#BCC2CF] outline-none ${isHeadActive
-                ? 'text-gray-900 h-[2.6vw]  gap-[0.3vw] w-full bg-transparent border-none'
-                : 'px-[0.8vw] text-gray-700 border border-[#BCBCBC] rounded-[0.6vw] hover:border-[#3F37C9] focus:border-[#3F37C9] shadow-sm'
-                }`}
+              className="w-full h-[2.5vw] px-[0.7vw] text-[0.8vw] text-gray-700 bg-white border border-[#D5D8DE] rounded-[0.5vw] focus:border-[#F2562B] placeholder-[#BCC2CF] outline-none shadow-2xs"
             />
-
-            <div className={`flex items-center gap-[0.2vw] ml-auto ${isHeadActive ? '' : 'absolute right-[0.5vw] opacity-0 group-hover:opacity-100 transition-opacity'}`}>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-                className="text-red-500 hover:text-red-600 p-[0.2vw] "
-                title="Delete Heading"
-              >
-                <Trash2 size="1vw" strokeWidth={2} />
-              </button>
-            </div>
           </div>
-          <div className={`${isHeadActive ? 'w-[2.6vw] h-[2.6vw]  bg-white rounded-[0.3vw] flex items-center justify-center' : ''}`}>
+          <div className="w-[2.2vw] h-[2.5vw] shrink-0 flex items-center justify-center">
             <input
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              value={(() => {
-                const val = (item.page !== undefined && item.page !== null && item.page !== '') ? String(item.page).replace(/\D/g, '') : '';
-                return val ? (parseInt(val, 10) < 10 ? `0${parseInt(val, 10)}` : val) : '';
-              })()}
-              placeholder={index + 1 < 10 ? `0${index + 1}` : `${index + 1}`}
+              value={item.page !== undefined && item.page !== null ? String(item.page).replace(/\D/g, '') : ''}
+              placeholder={`${index + 1}`}
               onChange={(e) => {
                 const numericVal = e.target.value.replace(/\D/g, '');
                 onUpdate({ ...item, page: numericVal });
@@ -166,141 +150,161 @@ const TocItem = ({ item, index, isEditing, onUpdate, onDelete, activeTOCItem, se
                   e.preventDefault();
                 }
               }}
-              className={`text-center text-[0.85vw] transition-all outline-none ${isHeadActive
-                ? 'w-full text-gray-900 bg-transparent border-none'
-                : 'w-[3.8vw] h-[2.6vw] text-gray-700 border border-[#BCBCBC] rounded-[0.6vw] hover:border-[#3F37C9] focus:border-[#3F37C9] shadow-sm'
-                }`}
+              className="w-full h-full text-center text-[0.8vw] text-gray-700 bg-white border border-[#D5D8DE] rounded-[0.5vw] focus:border-[#F2562B] outline-none shadow-2xs"
             />
           </div>
         </div>
 
-        {item.subheadings?.map((sub, sIdx) => {
-          const isSubActive = activeTOCItem?.type === 'sub' && activeTOCItem?.index === index && activeTOCItem?.sIdx === sIdx;
-          return (
-            <div
-              key={sub.id || sIdx}
-              className="flex items-center relative ml-[1.8vw]"
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveTOCItem({ type: 'sub', index, sIdx });
-              }}
-            >
-              <div
-                className={`absolute left-[-1.1vw] w-[1.1vw] border-l-[1.8px] border-b-[1.8px] border-dashed border-[#373D8A] rounded-bl-[0.2vw] pointer-events-none ${sIdx === 0 ? 'top-[-0.6vw] h-[2.1vw]' : 'top-[-1.3vw] h-[3.1vw]'
-                  }`}
-              ></div>
+        {/* Subheadings */}
+        {item.subheadings && item.subheadings.length > 0 && (
+          <div className="relative flex flex-col gap-[0.4vw] ml-[1.6vw]">
+            {item.subheadings.map((sub, sIdx) => {
+              const isSubActive = activeTOCItem?.type === 'sub' && activeTOCItem?.index === index && activeTOCItem?.sIdx === sIdx;
+              const isFirst = sIdx === 0;
+              const isLast = sIdx === item.subheadings.length - 1;
 
-              <div className={`flex-1 flex items-center gap-[0.3vw] relative group ${isSubActive ? 'p-[0.3vw] bg-[#3F37C9] rounded-[0.5vw] border-[1px] border-[#3F37C9] shadow-sm' : ''}`}>
-                <div className={`flex-1 relative ${isSubActive ? 'bg-white rounded-[0.3vw] flex items-center px-[0.6vw]' : 'flex items-center'}`}>
-                  <input
-                    type="text"
-                    placeholder={`Subheading ${sIdx + 1}`}
-                    value={sub.title || ''}
-                    onChange={(e) => {
-                      const newSubs = [...item.subheadings];
-                      newSubs[sIdx] = { ...sub, title: e.target.value };
-                      onUpdate({ ...item, subheadings: newSubs });
-                    }}
-                    className={`w-full h-[2.4vw] text-[0.85vw] transition-all placeholder-[#BCC2CF] outline-none ${isSubActive
-                      ? 'text-gray-900 h-[2.4vw] gap-[0.3vw] bg-transparent border-none'
-                      : 'px-[0.6vw] text-gray-700 border border-[#BCBCBC] rounded-[0.6vw] hover:border-[#3F37C9] focus:border-[#3F37C9] shadow-sm'
+              return (
+                <div
+                  key={sub.id || sIdx}
+                  className="flex items-center relative"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTOCItem({ type: 'sub', index, sIdx });
+                  }}
+                >
+                  {/* Dashed connector line */}
+                  {isLast ? (
+                    /* Last item: corner rounded-bl connector matching screenshot 2 */
+                    <div
+                      className={`absolute left-[-1.0vw] w-[1.0vw] border-l-[1.5px] border-b-[1.5px] border-dashed border-[#F27A54] rounded-bl-[0.35vw] pointer-events-none ${
+                        isFirst ? 'top-[-0.4vw] h-[calc(50%+0.4vw)]' : 'top-[-0.6vw] h-[calc(50%+0.6vw)]'
                       }`}
-                  />
+                    />
+                  ) : (
+                    /* Non-last items: T-junction line continuing downward */
+                    <>
+                      <div
+                        className={`absolute left-[-1.0vw] border-l-[1.5px] border-dashed border-[#F27A54] pointer-events-none ${
+                          isFirst ? 'top-[-0.4vw] bottom-[-0.4vw]' : 'top-[-0.6vw] bottom-[-0.4vw]'
+                        }`}
+                      />
+                      <div className="absolute left-[-1.0vw] top-[50%] w-[1.0vw] border-t-[1.5px] border-dashed border-[#F27A54] pointer-events-none" />
+                    </>
+                  )}
 
-                  <div className={`flex items-center ml-auto ${isSubActive ? '' : 'absolute right-[0.5vw] opacity-0 group-hover:opacity-100 transition-opacity'}`}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const newSubs = item.subheadings.filter((_, i) => i !== sIdx);
-                        onUpdate({ ...item, subheadings: newSubs });
-                      }}
-                      className="text-red-500 hover:text-red-600 p-[0.2vw]"
-                      title="Delete Subheading"
-                    >
-                      <Trash2 size="1vw" strokeWidth={2} />
-                    </button>
+                  {/* Subheading row: outer container highlights both title & page box with soft pink/peach fill color (no stroke border) */}
+                  <div
+                    className={`flex-1 flex items-center gap-[0.35vw] p-[0.2vw] rounded-[0.6vw] transition-all ${
+                      isSubActive
+                        ? 'bg-[#FEECE7]'
+                        : 'bg-transparent'
+                    }`}
+                  >
+                    <div className="flex-1 relative flex items-center rounded-[0.45vw] border border-[#D5D8DE] bg-white shadow-2xs">
+                      <input
+                        type="text"
+                        placeholder={`Subheading ${sIdx + 1}`}
+                        value={sub.title || ''}
+                        onChange={(e) => {
+                          const newSubs = [...item.subheadings];
+                          newSubs[sIdx] = { ...sub, title: e.target.value };
+                          onUpdate({ ...item, subheadings: newSubs });
+                        }}
+                        className="w-full h-[2.35vw] px-[0.7vw] pr-[1.8vw] text-[0.8vw] text-gray-700 bg-white rounded-[0.45vw] placeholder-[#BCC2CF] outline-none"
+                      />
+
+                      {/* Red trash icon inside when active/selected */}
+                      {isSubActive && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newSubs = item.subheadings.filter((_, i) => i !== sIdx);
+                            onUpdate({ ...item, subheadings: newSubs });
+                          }}
+                          className="absolute right-[0.5vw] text-[#EF4444] hover:text-[#DC2626] p-[0.2vw] transition-colors"
+                          title="Delete Subheading"
+                        >
+                          <Trash2 size="0.85vw" strokeWidth={2} />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="w-[2.2vw] h-[2.35vw] shrink-0 flex items-center justify-center">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={sub.page !== undefined && sub.page !== null ? String(sub.page).replace(/\D/g, '') : ''}
+                        placeholder={(() => {
+                          const parentVal = item.page !== undefined && item.page !== null ? String(item.page).replace(/\D/g, '') : '';
+                          return parentVal ? parentVal : `${index + 1}`;
+                        })()}
+                        onChange={(e) => {
+                          const numericVal = e.target.value.replace(/\D/g, '');
+                          const newSubs = [...item.subheadings];
+                          newSubs[sIdx] = { ...sub, page: numericVal };
+                          onUpdate({ ...item, subheadings: newSubs });
+                        }}
+                        onKeyDown={(e) => {
+                          if (
+                            ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) ||
+                            (e.ctrlKey || e.metaKey)
+                          ) {
+                            return;
+                          }
+                          if (!/^[0-9]$/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        className="w-full h-full text-center text-[0.8vw] text-gray-700 bg-white border border-[#D5D8DE] rounded-[0.45vw] outline-none shadow-2xs"
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className={`${isSubActive ? 'w-[2.6vw] h-[2.4vw] bg-white rounded-[0.3vw] flex items-center justify-center' : ''}`}>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={(() => {
-                      const val = (sub.page !== undefined && sub.page !== null && sub.page !== '') ? String(sub.page).replace(/\D/g, '') : '';
-                      return val ? (parseInt(val, 10) < 10 ? `0${parseInt(val, 10)}` : val) : '';
-                    })()}
-                    placeholder={(() => {
-                      const parentVal = (item.page !== undefined && item.page !== null && item.page !== '') ? String(item.page).replace(/\D/g, '') : '';
-                      const num = parentVal ? parseInt(parentVal, 10) : (index + 1);
-                      return num < 10 ? `0${num}` : `${num}`;
-                    })()}
-                    onChange={(e) => {
-                      const numericVal = e.target.value.replace(/\D/g, '');
-                      const newSubs = [...item.subheadings];
-                      newSubs[sIdx] = { ...sub, page: numericVal };
-                      onUpdate({ ...item, subheadings: newSubs });
-                    }}
-                    onKeyDown={(e) => {
-                      if (
-                        ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) ||
-                        (e.ctrlKey || e.metaKey)
-                      ) {
-                        return;
-                      }
-                      if (!/^[0-9]$/.test(e.key)) {
-                        e.preventDefault();
-                      }
-                    }}
-                    className={`text-center p-[0.3vw] text-[0.85vw] transition-all outline-none ${isSubActive
-                      ? 'w-full text-gray-900 bg-transparent border-none'
-                      : 'w-[3.8vw] h-[2.4vw] text-gray-700 border border-[#BCBCBC] rounded-[0.6vw] hover:border-[#3F37C9] focus:border-[#3F37C9] '
-                      }`}
-                  />
-                </div>
-              </div>
-            </div>
-          )
-        })}
+              );
+            })}
+          </div>
+        )}
 
+        {/* Action Controls: Edit button or (+ Head / + Sub buttons) */}
         {isEditing ? (
-          <div className="flex gap-[0.3vw] mt-[0.5vw] justify-end">
+          <div className="flex gap-[0.4vw] mt-[0.3vw] justify-end">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onAddHead();
               }}
-              className="bg-black text-white px-[0.8vw] py-[0.25vw] rounded-lg text-[0.75vw] font-semibold flex items-center justify-center gap-[0.3vw] hover:bg-gray-800 transition-all shadow-md"
+              className="bg-black text-white px-[0.7vw] py-[0.3vw] rounded-[0.45vw] text-[0.75vw] font-medium flex items-center justify-center gap-[0.25vw] hover:bg-gray-800 transition-all shadow-sm"
             >
-              <Icon icon="lucide:plus" className="w-[0.9vw] h-[0.9vw]" strokeWidth={3} /> Head
+              <Icon icon="lucide:plus" className="w-[0.8vw] h-[0.8vw]" strokeWidth={2.5} /> Head
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onAddSub();
               }}
-              className="bg-black text-white px-[0.8vw] py-[0.25vw] rounded-lg text-[0.75vw] font-semibold flex items-center justify-center gap-[0.3vw] hover:bg-gray-800 transition-all shadow-md"
+              className="bg-black text-white px-[0.7vw] py-[0.3vw] rounded-[0.45vw] text-[0.75vw] font-medium flex items-center justify-center gap-[0.25vw] hover:bg-gray-800 transition-all shadow-sm"
             >
-              <Icon icon="lucide:plus" className="w-[0.9vw] h-[0.9vw]" strokeWidth={3} /> Sub
+              <Icon icon="lucide:plus" className="w-[0.8vw] h-[0.8vw]" strokeWidth={2.5} /> Sub
             </button>
           </div>
         ) : (
-          <div className="flex justify-end pt-[0.2vw]">
+          <div className="flex justify-end pt-[0.1vw]">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleEdit();
               }}
-              className="text-gray-400 hover:text-gray-800 transition-colors p-[0.2vw]"
+              className="text-gray-500 hover:text-gray-800 transition-colors p-[0.2vw]"
               title="Edit TOC"
             >
-              <Edit2 size="1vw" strokeWidth={2} />
+              <Edit2 size="0.95vw" strokeWidth={2} />
             </button>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 };
 
 
@@ -416,11 +420,11 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, boo
       <div className="flex-1 overflow-y-auto px-[1vw] pb-[1vw] hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
 
 
-        {/* Navigation Section */}
-        <SectionHeader title="Navigation" />
+        {/* Navigation Controls Section */}
+        <SectionHeader title="Navigation Controls" />
         <div className="space-y-[0.325vw]">
           <MenuItem
-            label="Add Text to the Icons"
+            label="Show Icon Labels"
             enabled={otherSettings?.toolbar?.addTextBelowIcons ?? false}
             hasSettings={true}
             isExpanded={expandedSection === 'addTextToIcons'}
@@ -482,7 +486,7 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, boo
             </AnimatePresence>
           </MenuItem>
           <MenuItem
-            label="Next / Previous Buttons"
+            label="Next / Preview Buttons"
             enabled={settings.navigation?.nextPrevButtons}
             onChange={(val) => updateSection('navigation', 'nextPrevButtons', val)}
           />
@@ -654,6 +658,15 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, boo
                       )}
                     </div>
 
+                    {/* Footer Save Button */}
+                    <div className="flex justify-end pt-[1vw] border-t border-gray-200 mt-[1vw]">
+                      <button
+                        onClick={() => toggleSection('toc')}
+                        className="bg-[#EF4444] hover:bg-[#DC2626] text-white px-[1.8vw] py-[0.45vw] rounded-[0.5vw] text-[0.85vw] font-medium transition-all shadow-md active:scale-95"
+                      >
+                        Save
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -666,17 +679,83 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, boo
             onChange={(val) => updateSection('navigation', 'pageThumbnails', val)}
           />
 
-          {/* Bookmark */}
           <MenuItem
-            label="Bookmark"
-            enabled={settings.navigation?.bookmark}
+            label="First / Last Page Buttons"
+            enabled={settings.navigation?.startEndNav ?? true}
+            onChange={(val) => updateSection('navigation', 'startEndNav', val)}
+          />
+        </div>
+
+        {/* Playback & Audio Section */}
+        <SectionHeader title="Playback & Audio" />
+        <div className="space-y-[0.325vw]">
+          <MenuItem
+            label="Auto Flip Features"
+            enabled={settings.media?.autoFlip}
             hasSettings={true}
-            isExpanded={expandedSection === 'bookmark'}
-            onToggleSettings={() => toggleSection('bookmark')}
-            onChange={(val) => updateSection('navigation', 'bookmark', val)}
+            isExpanded={expandedSection === 'autoFlip'}
+            onToggleSettings={() => toggleSection('autoFlip')}
+            onChange={(val) => updateSection('media', 'autoFlip', val)}
           >
             <AnimatePresence>
-              {expandedSection === 'bookmark' && (
+              {expandedSection === 'autoFlip' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0, overflow: 'hidden' }}
+                  animate={{
+                    height: 'auto',
+                    opacity: 1,
+                    transitionEnd: { overflow: 'visible' }
+                  }}
+                  exit={{ height: 0, opacity: 0, overflow: 'hidden' }}
+                  className="border-t border-gray-200 bg-gray-50/50 relative z-10 !overflow-visible"
+                >
+                  <div className="p-[1vw]">
+                    <div className="space-y-[0.85vw]">
+                      <SettingRow label="Auto Flip Duration">
+                        <Stepper
+                          value={settings.media?.autoFlipSettings?.duration || 5}
+                          onChange={(val) => updateNestedSetting('media', 'autoFlipSettings', 'duration', val)}
+                        />
+                      </SettingRow>
+                      <SettingRow label="Next Flip Countdown">
+                        <Switch
+                          enabled={settings.media?.autoFlipSettings?.countdown ?? false}
+                          onChange={(val) => updateNestedSetting('media', 'autoFlipSettings', 'countdown', val)}
+                          variant="secondary"
+                        />
+                      </SettingRow>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </MenuItem>
+          <MenuItem
+            label="Audio Controls"
+            enabled={settings?.media?.backgroundAudio ?? settings?.media?.audio ?? true}
+            hasSettings={true}
+            isExpanded={expandedSection === 'sound'}
+            onToggleSettings={() => toggleSection('sound')}
+            onChange={(val) => {
+              updateSection('media', 'backgroundAudio', val);
+              updateSection('media', 'audio', val);
+              // Master off also stops background music; master on does NOT force background music on
+              // (it is opt-in). If master is switched on while both sounds are off, bring back the
+              // flip sound so "Audio Features on" always means at least one sound is on.
+              if (onUpdateOther) {
+                onUpdateOther(prev => {
+                  const snd = prev?.sound || {};
+                  if (!val) return { ...prev, sound: { ...snd, bgSoundEnabled: false } };
+                  if (snd.flipSoundEnabled === false && snd.bgSoundEnabled !== true) {
+                    return { ...prev, sound: { ...snd, flipSoundEnabled: true } };
+                  }
+                  return prev;
+                });
+              }
+            }}
+          >
+            <AnimatePresence>
+              {expandedSection === 'sound' && (
                 <motion.div
                   initial={{ height: 0, opacity: 0, overflow: 'hidden' }}
                   animate={{ 
@@ -688,28 +767,24 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, boo
                   transition={{ duration: 0.3 }}
                   className="bg-gray-50/50 rounded-b-[0.8vw] relative z-10 !overflow-visible"
                 >
-                  <div className="px-[1.25vw] pb-[1vw] pt-0 border-t border-gray-50">
-                    <BookmarkStylesPopup
-                      settings={settings}
-                      onUpdate={onUpdate}
-                      pages={pages}
-                      onClose={() => toggleSection('bookmark')}
+                  <div className="border-t border-gray-50">
+                    <OtherSetup 
+                      inlineMode="sound" 
+                      settings={otherSettings} 
+                      onUpdate={onUpdateOther} 
+                      bookAppearanceSettings={bookAppearanceSettings}
+                      folderName={folderName} 
+                      bookName={bookName} 
                     />
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </MenuItem>
-
-          <MenuItem
-            label="Start / End Navigation"
-            enabled={settings.navigation?.startEndNav ?? true}
-            onChange={(val) => updateSection('navigation', 'startEndNav', val)}
-          />
         </div>
 
-        {/* Viewing Section */}
-        <SectionHeader title="Viewing" />
+        {/* Viewing Controls Section */}
+        <SectionHeader title="Viewing Controls" />
         <div className="space-y-[0.325vw]">
           <MenuItem
             label="Zoom In / Out Button"
@@ -762,8 +837,8 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, boo
           />
         </div>
 
-        {/* Interaction Tools Section */}
-        <SectionHeader title="Interaction Tools" />
+        {/* Interactive Features Section */}
+        <SectionHeader title="Interactive Features" />
         <div className="space-y-[0.325vw]">
           {!isPdfProject && (
             <MenuItem
@@ -807,78 +882,18 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, boo
               )}
             </AnimatePresence>
           </MenuItem>
-        </div>
 
-        {/* Media Controls Section */}
-        <SectionHeader title="Media Controls" />
-        <div className="space-y-[0.325vw]">
+          {/* Bookmark */}
           <MenuItem
-            label="Auto Flip Features"
-            enabled={settings.media?.autoFlip}
+            label="Bookmark"
+            enabled={settings.navigation?.bookmark}
             hasSettings={true}
-            isExpanded={expandedSection === 'autoFlip'}
-            onToggleSettings={() => toggleSection('autoFlip')}
-            onChange={(val) => updateSection('media', 'autoFlip', val)}
+            isExpanded={expandedSection === 'bookmark'}
+            onToggleSettings={() => toggleSection('bookmark')}
+            onChange={(val) => updateSection('navigation', 'bookmark', val)}
           >
             <AnimatePresence>
-              {expandedSection === 'autoFlip' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0, overflow: 'hidden' }}
-                  animate={{
-                    height: 'auto',
-                    opacity: 1,
-                    transitionEnd: { overflow: 'visible' }
-                  }}
-                  exit={{ height: 0, opacity: 0, overflow: 'hidden' }}
-                  className="border-t border-gray-200 bg-gray-50/50 relative z-10 !overflow-visible"
-                >
-                  <div className="p-[1vw]">
-                    <div className="space-y-[0.85vw]">
-                      <SettingRow label="Auto Flip Duration">
-                        <Stepper
-                          value={settings.media?.autoFlipSettings?.duration || 5}
-                          onChange={(val) => updateNestedSetting('media', 'autoFlipSettings', 'duration', val)}
-                        />
-                      </SettingRow>
-                      <SettingRow label="Next Flip Countdown">
-                        <Switch
-                          enabled={settings.media?.autoFlipSettings?.countdown ?? false}
-                          onChange={(val) => updateNestedSetting('media', 'autoFlipSettings', 'countdown', val)}
-                          variant="secondary"
-                        />
-                      </SettingRow>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </MenuItem>
-          <MenuItem
-            label="Audio Features"
-            enabled={settings?.media?.backgroundAudio ?? settings?.media?.audio ?? true}
-            hasSettings={true}
-            isExpanded={expandedSection === 'sound'}
-            onToggleSettings={() => toggleSection('sound')}
-            onChange={(val) => {
-              updateSection('media', 'backgroundAudio', val);
-              updateSection('media', 'audio', val);
-              // Master off also stops background music; master on does NOT force background music on
-              // (it is opt-in). If master is switched on while both sounds are off, bring back the
-              // flip sound so "Audio Features on" always means at least one sound is on.
-              if (onUpdateOther) {
-                onUpdateOther(prev => {
-                  const snd = prev?.sound || {};
-                  if (!val) return { ...prev, sound: { ...snd, bgSoundEnabled: false } };
-                  if (snd.flipSoundEnabled === false && snd.bgSoundEnabled !== true) {
-                    return { ...prev, sound: { ...snd, flipSoundEnabled: true } };
-                  }
-                  return prev;
-                });
-              }
-            }}
-          >
-            <AnimatePresence>
-              {expandedSection === 'sound' && (
+              {expandedSection === 'bookmark' && (
                 <motion.div
                   initial={{ height: 0, opacity: 0, overflow: 'hidden' }}
                   animate={{ 
@@ -890,14 +905,12 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, boo
                   transition={{ duration: 0.3 }}
                   className="bg-gray-50/50 rounded-b-[0.8vw] relative z-10 !overflow-visible"
                 >
-                  <div className="border-t border-gray-50">
-                    <OtherSetup 
-                      inlineMode="sound" 
-                      settings={otherSettings} 
-                      onUpdate={onUpdateOther} 
-                      bookAppearanceSettings={bookAppearanceSettings}
-                      folderName={folderName} 
-                      bookName={bookName} 
+                  <div className={`px-[1.25vw] pb-[1vw] pt-0 border-t border-gray-50 ${!settings.navigation?.bookmark ? 'opacity-50 pointer-events-none select-none' : ''}`}>
+                    <BookmarkStylesPopup
+                      settings={settings}
+                      onUpdate={onUpdate}
+                      pages={pages}
+                      onClose={() => toggleSection('bookmark')}
                     />
                   </div>
                 </motion.div>
@@ -906,8 +919,8 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, boo
           </MenuItem>
         </div>
 
-        {/* Share & Export Section */}
-        <SectionHeader title="Share & Export" />
+        {/* Sharing & Download Section */}
+        <SectionHeader title="Sharing & Download" />
         <div className="space-y-[0.325vw]">
           <MenuItem
             label="Share"
@@ -919,21 +932,15 @@ const MenuBar = ({ onBack, settings, onUpdate, otherSettings, onUpdateOther, boo
             enabled={settings.shareExport?.download}
             onChange={(val) => updateSection('shareExport', 'download', val)}
           />
-
         </div>
 
-        {/* Branding & Profile Section */}
-        <SectionHeader title="Branding & Profile" />
+        {/* Branding Section */}
+        <SectionHeader title="Branding" />
         <div className="space-y-[0.325vw]">
           <MenuItem
             label="Logo"
             enabled={settings.brandingProfile?.logo}
             onChange={(val) => updateSection('brandingProfile', 'logo', val)}
-          />
-          <MenuItem
-            label="Profile"
-            enabled={settings.brandingProfile?.profile}
-            onChange={(val) => updateSection('brandingProfile', 'profile', val)}
           />
         </div>
       </div>

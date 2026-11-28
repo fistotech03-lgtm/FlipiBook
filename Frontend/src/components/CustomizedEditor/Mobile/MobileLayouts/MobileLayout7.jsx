@@ -113,6 +113,7 @@ const MobileLayout7 = (props) => {
         handleQuickSearch,
         isAutoFlipping,
         setIsPlaying,
+        isLandscape = false,
     } = props;
 
     const [localSearchQuery, setLocalSearchQuery] = useState('');
@@ -170,7 +171,7 @@ const MobileLayout7 = (props) => {
             '--toolbar-search-text': activeLayout?.toolbarSearchText || '#575C9C',
             '--toolbar-search-placeholder': activeLayout?.toolbarSearchPlaceholder || '#575C9C',
             '--toolbar-search-icon': activeLayout?.toolbarSearchIcon || '#575C9C',
-            '--page-bg': activeLayout?.pageBg || '#BDC3D9',
+            '--page-bg': activeLayout?.pageBg || '#DADBE8',
             '--progress-bar-bg': activeLayout?.progressBarBg || '#FFFFFF',
             '--progress-bar-fill': activeLayout?.progressBarFill || '#575C9C',
             '--play-button-bg': activeLayout?.playButtonBg || '#FFFFFF',
@@ -186,8 +187,10 @@ const MobileLayout7 = (props) => {
                     <TableOfContentsPopup
                         onClose={() => setLocalShowTOC(false)}
                         settings={settings?.tocSettings}
-                        activeLayout={8}
+                        activeLayout={7}
                         isMobile={true}
+                        isLandscape={isLandscape}
+                        layoutColors={props.layoutColors}
                         onNavigate={(pageIndex) => {
                             onPageClick(pageIndex);
                             setLocalShowTOC(false);
@@ -241,14 +244,14 @@ const MobileLayout7 = (props) => {
     );
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: getLayoutColor('page-bg', '#BDC3D9') }}>
+        <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: getLayoutColor('page-bg', '#DADBE8') }}>
             {renderPopups()}
 
             {/* Background Overlay */}
             <div className="absolute inset-0 z-0" style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', 1), opacity: 0.15 }} />
 
             {/* Notch Spacer */}
-            {!isPhysicalMobile && <div className="absolute top-0 left-0 right-0 h-10 z-[60] bg-[#0B0F4E] pointer-events-none" />}
+            {!isPhysicalMobile && <div className="absolute top-0 left-0 right-0 h-10 z-[60] bg-[#1e1e24] pointer-events-none" />}
 
             {/* Header (Floating) */}
             <header className={`absolute ${!isPhysicalMobile ? 'top-12' : 'top-4'} left-4 right-4 z-50 flex items-center justify-center pointer-events-none`}>
@@ -340,14 +343,14 @@ const MobileLayout7 = (props) => {
                 {/* Navigation Arrows */}
                 <button
                     className="absolute left-[2%] top-1/2 -translate-y-1/2 z-20 active:scale-90 transition-transform"
-                    style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}
+                    style={{ color: getLayoutColor('toolbar-bg', '#555555') }}
                     onClick={() => onPageClick(Math.max(0, currentPage - 1))}
                 >
                     <Icon icon="ph:caret-left-light" className="w-10 h-10 opacity-60" strokeWidth="4" />
                 </button>
                 <button
                     className="absolute right-[2%] top-1/2 -translate-y-1/2 z-20 active:scale-90 transition-transform"
-                    style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}
+                    style={{ color: getLayoutColor('toolbar-bg', '#555555') }}
                     onClick={() => onPageClick(Math.min(pages.length - 1, currentPage + 1))}
                 >
                     <Icon icon="ph:caret-right-light" className="w-10 h-10 opacity-60" strokeWidth="4" />
@@ -365,8 +368,61 @@ const MobileLayout7 = (props) => {
             </main>
 
             {/* Footer (Floating) */}
-            <footer className="absolute bottom-6 left-4 right-4 z-50 flex flex-col gap-3 pointer-events-none">
-                <div className="flex flex-col gap-3 shadow-2xl rounded-2xl p-4 backdrop-blur-xl border border-white/20 pointer-events-auto" style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', 0.95) }}>
+            <footer className="absolute bottom-6 left-4 right-4 z-50 flex flex-col pointer-events-none">
+                {/* Thumbnail Panel */}
+                <AnimatePresence>
+                    {(settings?.navigation?.pageThumbnails ?? true) && showThumbnails && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 15 }}
+                            transition={{ duration: 0.2 }}
+                            className="w-full flex flex-col shadow-2xl rounded-t-2xl overflow-hidden bg-white border border-gray-200/50 border-b-0 max-h-[320px] pointer-events-auto"
+                        >
+                            <div
+                                className="flex items-center justify-between px-4 py-2.5 shrink-0 relative"
+                                style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', 1) }}
+                            >
+                                <span className="text-[12px] font-bold text-white tracking-wide">Thumbnails</span>
+                                {/* Drag handle line in center */}
+                                <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-4 h-0.5 bg-white/50 rounded-full" />
+
+                                <button onClick={() => setShowThumbnails(false)} className="p-1 rounded-full hover:bg-white/10 transition-colors">
+                                    <Icon icon="lucide:x" className="w-4 h-4 text-white" />
+                                </button>
+                            </div>
+                            <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 bg-white">
+                                <div className="grid grid-cols-4 gap-3">
+                                    {spreads.map((spread, idx) => {
+                                        const isSelected = spread.indices.includes(currentPage);
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className={`bg-white rounded-md flex flex-col cursor-pointer transition-all p-1 border ${isSelected ? 'border-[#575C9C] shadow-sm bg-[#575C9C]/5' : 'border-gray-100 hover:border-gray-200'}`}
+                                                onClick={() => { onPageClick(spread.indices[0]); setShowThumbnails(false); }}
+                                            >
+                                                <div className="aspect-[1.4/1] rounded-[3px] overflow-hidden bg-gray-50 flex gap-[1px]">
+                                                    {spread.pages.map((page, pIdx) => (
+                                                        <div key={pIdx} className="flex-1 h-full relative">
+                                                            <PageThumbnail html={page.html || page.content} index={spread.indices[pIdx]} scale={0.1} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="flex justify-center mt-1.5">
+                                                    <span className="text-[8px] font-bold text-[#575C9C]">
+                                                        {spread.label}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <div className={`flex flex-col gap-3 shadow-2xl ${showThumbnails ? 'rounded-b-2xl border-t-0' : 'rounded-2xl'} p-4 backdrop-blur-xl border border-white/20 pointer-events-auto`} style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', 0.95) }}>
                     {/* Icon Row */}
                     <div className="flex items-center justify-between px-1">
                         <button onClick={() => {
@@ -389,12 +445,6 @@ const MobileLayout7 = (props) => {
                             setLocalShowTOC(false); setShowThumbnails(false); setLocalShowProfile(false); setShowSharePopup(false); setShowExportPopup(false);
                         }} className="text-white/80 hover:text-white transition-colors active:scale-90">
                             <Icon icon="clarity:image-gallery-solid" className="w-6 h-6" />
-                        </button>
-                        <button onClick={() => {
-                            setShowProfilePopup(true);
-                            setLocalShowTOC(false); setShowThumbnails(false); setShowSharePopup(false); setShowExportPopup(false);
-                        }} className="text-white/80 hover:text-white transition-colors active:scale-90">
-                            <Icon icon="ph:user-fill" className="w-6 h-6" />
                         </button>
                         <button onClick={() => {
                             setShowSharePopup(true);
@@ -454,59 +504,6 @@ const MobileLayout7 = (props) => {
                     </div>
                 </div>
             </footer>
-
-            {/* Thumbnail Sidebar */}
-            <AnimatePresence>
-                {(settings?.navigation?.pageThumbnails ?? true) && showThumbnails && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute left-3 right-3 bottom-[188px] z-[170] flex flex-col shadow-2xl rounded-t-xl overflow-hidden bg-white border border-gray-200/50 border-b-0 max-h-[350px]"
-                    >
-                        <div
-                            className="flex items-center justify-between px-4 py-2.5 shrink-0 relative"
-                            style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', 1) }}
-                        >
-                            <span className="text-[12px] font-bold text-white tracking-wide">Thumbnails</span>
-                            {/* Drag handle line in center */}
-                            <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-4 h-0.5 bg-white/50 rounded-full" />
-
-                            <button onClick={() => setShowThumbnails(false)} className="p-1 rounded-full hover:bg-white/10 transition-colors">
-                                <Icon icon="lucide:x" className="w-4 h-4 text-white" />
-                            </button>
-                        </div>
-                        <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 bg-white">
-                            <div className="grid grid-cols-4 gap-3">
-                                {spreads.map((spread, idx) => {
-                                    const isSelected = spread.indices.includes(currentPage);
-                                    return (
-                                        <div
-                                            key={idx}
-                                            className={`bg-white rounded-md flex flex-col cursor-pointer transition-all p-1 border ${isSelected ? 'border-[#575C9C] shadow-sm bg-[#575C9C]/5' : 'border-gray-100 hover:border-gray-200'}`}
-                                            onClick={() => { onPageClick(spread.indices[0]); setShowThumbnails(false); }}
-                                        >
-                                            <div className="aspect-[1.4/1] rounded-[3px] overflow-hidden bg-gray-50 flex gap-[1px]">
-                                                {spread.pages.map((page, pIdx) => (
-                                                    <div key={pIdx} className="flex-1 h-full relative">
-                                                        <PageThumbnail html={page.html || page.content} index={spread.indices[pIdx]} scale={0.1} />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className="flex justify-center mt-1.5">
-                                                <span className="text-[8px] font-bold text-[#575C9C]">
-                                                    {spread.label}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };

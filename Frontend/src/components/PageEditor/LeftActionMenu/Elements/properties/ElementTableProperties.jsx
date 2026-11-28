@@ -36,7 +36,7 @@ import { TableMatrix } from '../helpers/TableMatrix';
 import { normalizeForeignObjectNamespaces } from '../utils/tableElementUtils';
 import Color from '../../../properties/FillStrokeProperties';
 import ColorPicker from '../../../../Color';
-import { PropertySlider, handleScrubHelper } from '../../../properties/controls/propertiesShared';
+import { PropertySlider, handleScrubHelper, ScrubPercentInput } from '../../../properties/controls/propertiesShared';
 import {
   fontFamilies,
   fontWeights,
@@ -44,19 +44,8 @@ import {
   weightToNumeric,
   normalizeToTailwindWeight
 } from '../../../properties/TextProperties';
-import { CUSTOM_FONT_FAMILIES } from '../../../../../utils/customFonts';
+import { FONT_FAMILIES } from '../../../../../config/fonts';
 
-const FONT_FAMILIES = [
-  'Poppins',
-  'Inter',
-  'Roboto',
-  'Arial',
-  'Montserrat',
-  'Lato',
-  'Open Sans',
-  'Playfair Display',
-  ...CUSTOM_FONT_FAMILIES
-];
 
 const BORDER_STYLES = [
   { id: 'solid', label: 'Solid', icon: '—' },
@@ -450,25 +439,13 @@ const ColorBoxRow = ({
                 onChange(finalVal);
               }
             }}
-            className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+            className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
             maxLength={9}
           />
-          <div
-            className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-            onPointerDown={(e) => {
-              const currentPct = Math.round(parseFloat(opacity !== undefined ? opacity : 100));
-              handleScrubHelper(e, currentPct, (val) => {
-                const num = parseInt(val);
-                const clamped = Math.min(Math.max(num, 0), 100);
-                onOpacityChange(clamped);
-              });
-            }}
-            title="Drag horizontally to adjust opacity"
-          >
-            <span className="text-[0.8vw] font-medium text-gray-700">
-              {Math.round(parseFloat(opacity !== undefined ? opacity : 100))}%
-            </span>
-          </div>
+          <ScrubPercentInput
+            value={Math.round(parseFloat(opacity !== undefined ? opacity : 100))}
+            onChange={(clamped) => onOpacityChange(clamped)}
+          />
         </div>
       </div>
     </div>

@@ -58,7 +58,7 @@ export default function TranslationTaskWidget({
                 {isCompleted ? 'Translation Completed' : isFailed ? 'Translation Failed' : 'Translating Book'}
               </span>
               <span className="text-[0.62vw] text-gray-500 truncate">
-                {task.tgtName ? `Target: ${task.tgtName}` : 'Neural Machine Translation'}
+                {task.tgtName ? `Target: ${task.tgtName}` : 'Book Translation'}
               </span>
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function TranslationTaskWidget({
                   />
                 </div>
                 <div className="flex items-center justify-between text-[0.62vw] text-gray-500 font-medium">
-                  <span>IndicTrans2 (AI4Bharat)</span>
+                  <span>Progress</span>
                   <span className="text-[#ea543a] font-bold">{percent}%</span>
                 </div>
               </div>

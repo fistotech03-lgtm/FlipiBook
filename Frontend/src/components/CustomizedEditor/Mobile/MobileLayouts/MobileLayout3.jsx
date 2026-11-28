@@ -382,7 +382,7 @@ const MobileLayout3 = (props) => {
                                         }
                                     }}
                                 >
-                                    <Icon icon="lucide:chevron-up" className="w-5 h-5 text-[#575C9C]" />
+                                    <Icon icon="lucide:chevron-up" className="w-5 h-5" style={{ color: getLayoutColor('toolbar-bg', '#555555') }} />
                                 </button>
 
                                 {/* Vertical Scroll Area */}
@@ -397,8 +397,8 @@ const MobileLayout3 = (props) => {
                                             <div
                                                 key={idx}
                                                 data-index={idx}
-                                                className={`thumbnail-item shrink-0 flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all duration-300 cursor-pointer shadow-sm ${isSelected ? 'ring-2 ring-[#575C9C] ring-offset-2' : 'opacity-90 hover:opacity-100'}`}
-                                                style={{ backgroundColor: '#575C9C' }}
+                                                className={`thumbnail-item shrink-0 flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all duration-300 cursor-pointer shadow-sm ${isSelected ? 'ring-2 ring-gray-600 ring-offset-2' : 'opacity-90 hover:opacity-100'}`}
+                                                style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555') }}
                                                 onClick={() => onPageClick(spread.indices[0])}
                                             >
                                                 <div
@@ -432,7 +432,7 @@ const MobileLayout3 = (props) => {
                                         }
                                     }}
                                 >
-                                    <Icon icon="lucide:chevron-down" className="w-5 h-5 text-[#575C9C]" />
+                                    <Icon icon="lucide:chevron-down" className="w-5 h-5" style={{ color: getLayoutColor('toolbar-bg', '#555555') }} />
                                 </button>
                             </div>
                         </motion.div>
@@ -516,18 +516,19 @@ const MobileLayout3 = (props) => {
     return (
         <div className="flex flex-col h-full w-full overflow-hidden select-none relative bg-[#DADBE8]">
             {/* Notch Spacer - fills the area near the hardware notch with a dark status bar color */}
-            {!isPhysicalMobile && <div className="shrink-0 h-10 z-50 bg-[#0B0F4E]" />}
+            {!isPhysicalMobile && <div className="shrink-0 h-10 z-50 bg-[#1e1e24]" />}
 
-            {/* Header Row 2: Search, Logo and Icons (Medium Blue) */}
-            <div className="bg-[#575C9C] z-50 shadow-md pt-0">
+            {/* Header Row 2: Search, Logo and Icons */}
+            <div className="z-50 shadow-md pt-0" style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555') }}>
                 {/* Search and Logo Row */}
                 <div className="px-4 pt-5 pb-4 flex items-center justify-start">
-                    <div className="w-[70%] max-w-[300px] bg-[#D9DCEB] rounded-full h-7 px-3 flex items-center gap-2 relative">
-                        <Icon icon="ph:magnifying-glass" className="text-[#4B528C] w-3.5 h-3.5" />
+                    <div className="w-[70%] max-w-[300px] rounded-full h-7 px-3 flex items-center gap-2 relative" style={{ backgroundColor: getLayoutColor('search-bg-v2', '#D7D8E8') }}>
+                        <Icon icon="ph:magnifying-glass" className="w-3.5 h-3.5" style={{ color: getLayoutColor('search-text-v1', '#555555') }} />
                         <input
                             type="text" autoComplete="off" spellCheck="false" autoCorrect="off"
                             placeholder="Quick Search..."
-                            className="bg-transparent text-[#4B528C] placeholder-[#4B528C]/60 text-[11px] outline-none w-full font-bold"
+                            className="bg-transparent text-[11px] outline-none w-full font-bold"
+                            style={{ color: getLayoutColor('search-text-v1', '#555555') }}
                             value={localSearchQuery}
                             onChange={(e) => {
                                 const val = e.target.value;
@@ -570,7 +571,8 @@ const MobileLayout3 = (props) => {
                                         {recommendations.map((rec, idx) => (
                                             <button
                                                 key={idx}
-                                                className="flex items-center justify-between px-4 py-2.5 hover:bg-[#575C9C]/5 transition-colors text-[#575C9C]"
+                                                className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-100 transition-colors"
+                                                style={{ color: getLayoutColor('search-text-v1', '#555555') }}
                                                 onClick={() => {
                                                     onPageClick(rec.pageNumber - 1);
                                                     setRecommendations([]);
@@ -618,12 +620,7 @@ const MobileLayout3 = (props) => {
                             onClick={(e) => { e.stopPropagation(); toggleSoundPopup(true); }}
                         />
                     )}
-                    <TooltipBtn
-                        title="Profile"
-                        icon="fluent:person-24-filled"
-                        className="text-white p-1"
-                        onClick={(e) => { e.stopPropagation(); toggleProfilePopup(true); }}
-                    />
+
                     <TooltipBtn
                         title="Share"
                         icon="majesticons:share"
@@ -639,27 +636,29 @@ const MobileLayout3 = (props) => {
                 </div>
             </div>
 
-            {/* Content Sub-Header (Light Blue/Gray) */}
-            <div className="bg-[#BDC3D9] h-10 flex items-center justify-between px-5 z-40 pt-6">
-                <span className="text-[#575C9C] text-[12px] font-bold truncate max-w-[50%]">
+            {/* Content Sub-Header */}
+            <div className="h-10 flex items-center justify-between px-5 z-40 pt-6" style={{ backgroundColor: props.backgroundSettings?.color || getLayoutColor('page-bg', '#DADBE8') }}>
+                <span className="text-[12px] font-bold truncate max-w-[50%]" style={{ color: getLayoutColor('toolbar-bg', '#555555') }}>
                     {/* bookName hidden */}
                 </span>
             </div>
 
             {/* Main Content Area: Flipbook + Navigation */}
-            <div className="flex-1 relative bg-[#BDC3D9] flex flex-col items-center justify-center overflow-hidden">
+            <div className="flex-1 relative flex flex-col items-center justify-center overflow-hidden" style={{ backgroundColor: props.backgroundSettings?.color || getLayoutColor('page-bg', '#DADBE8') }}>
                 {/* Navigation Arrows */}
                 <button
                     className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-2 active:scale-90 transition-transform"
+                    style={{ color: getLayoutColor('toolbar-bg', '#555555') }}
                     onClick={() => bookRef.current?.pageFlip()?.flipPrev()}
                 >
-                    <Icon icon="ph:caret-left-light" className="w-10 h-10 text-[#575C9C] opacity-60" />
+                    <Icon icon="ph:caret-left-light" className="w-10 h-10 opacity-60" />
                 </button>
                 <button
                     className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-2 active:scale-90 transition-transform"
+                    style={{ color: getLayoutColor('toolbar-bg', '#555555') }}
                     onClick={() => bookRef.current?.pageFlip()?.flipNext()}
                 >
-                    <Icon icon="ph:caret-right-light" className="w-10 h-10 text-[#575C9C] opacity-60" />
+                    <Icon icon="ph:caret-right-light" className="w-10 h-10 opacity-60" />
                 </button>
 
                 {/* Flipbook Canvas - Scaled down for better mobile fit */}
@@ -670,8 +669,8 @@ const MobileLayout3 = (props) => {
                 </div>
             </div>
 
-            {/* Footer Bar (Medium Blue) */}
-            <footer className="bg-[#575C9C] flex flex-col pt-3 pb-6 relative shadow-[0_-5px_20px_rgba(0,0,0,0.2)] z-[60]">
+            {/* Footer Bar */}
+            <footer className="flex flex-col pt-3 pb-6 relative shadow-[0_-5px_20px_rgba(0,0,0,0.2)] z-[60]" style={{ backgroundColor: getLayoutColor('bottom-toolbar-bg', getLayoutColor('toolbar-bg', '#555555')) }}>
                 {/* Bottom Icons */}
                 <div className="flex items-center justify-center gap-8 text-white mb-3 px-6">
                     <TooltipBtn

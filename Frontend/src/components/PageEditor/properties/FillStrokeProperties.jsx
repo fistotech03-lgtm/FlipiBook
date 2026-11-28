@@ -8,8 +8,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { createPortal } from 'react-dom';
 import ColorPicker, { parseGradient, generateGradientString, cssColorToHex } from '../../Color';
+import { createOrUpdateSvgPatternGradient } from '../../Color/utils/colorUtils';
 import { ChevronUp, ChevronDown } from 'lucide-react';
-import { handleScrubHelper } from './controls/propertiesShared';
+import { handleScrubHelper, ScrubPercentInput } from './controls/propertiesShared';
 export { handleScrubHelper };
 
 export const ColorField = ({ label, color, opacity, onColorChange, onOpacityChange, onPickerToggle, baseAttr, selectedElementProps }) => (
@@ -49,7 +50,7 @@ export const ColorField = ({ label, color, opacity, onColorChange, onOpacityChan
             onColorChange(finalVal);
           }
         }}
-        className="flex-grow text-[0.75vw] font-medium text-gray-700 outline-none bg-transparent min-w-[3vw] font-mono tracking-tight"
+        className="flex-grow text-[0.75vw] font-medium text-gray-700 outline-none bg-transparent min-w-[3vw] tracking-tight"
         maxLength={7}
       />
       <div
@@ -168,7 +169,7 @@ const FillStrokeProperties = ({
     strokeOpacity: 100,
     strokeWeight: 0,
     strokeDashStyle: 'Solid',
-    strokePosition: 'Outside',
+    strokePosition: 'Inside',
     strokeLinecap: 'butt'
   });
   const [internalActiveColorPicker, setInternalActiveColorPicker] = useState(null);
@@ -232,7 +233,7 @@ const FillStrokeProperties = ({
       strokeDasharrayValue: strokeArray !== 'none' ? strokeArray : undefined,
       strokeDashLength: dashLen,
       strokeDashGap: dashGap,
-      strokePosition: el.getAttribute('data-stroke-position') || 'Outside',
+      strokePosition: el.getAttribute('data-stroke-position') || 'Inside',
       strokeLinecap: el.getAttribute('stroke-linecap') || 'butt'
     };
 
@@ -291,7 +292,7 @@ const FillStrokeProperties = ({
         strokeDasharrayValue: strokeArray !== 'none' ? strokeArray : undefined,
         strokeDashLength: dashLen,
         strokeDashGap: dashGap,
-        strokePosition: el.getAttribute('data-stroke-position') || 'Outside',
+        strokePosition: el.getAttribute('data-stroke-position') || 'Inside',
         strokeLinecap: el.getAttribute('stroke-linecap') || 'butt',
         bgStrokeDasharray: strokeArray !== 'none' ? strokeArray : undefined,
       };
@@ -339,43 +340,65 @@ const FillStrokeProperties = ({
               const gradEl = gradId && svgRoot ? svgRoot.querySelector(`#${gradId}`) : null;
               if (gradEl) {
                 const parsed = parseGradient(backgroundColor.fill);
-                const existingStops = Array.from(gradEl.querySelectorAll('stop'));
+                const parsedType = parsed?.type?.toLowerCase();
+                const isTargetSpecial = parsedType === 'angular' || parsedType === 'diamond';
+                const isCurrentPattern = gradEl.tagName.toLowerCase() === 'pattern';
 
-                const isTargetLinear = parsed?.type?.toLowerCase() === 'linear';
-                const isCurrentLinear = gradEl.tagName.toLowerCase() === 'lineargradient';
-
-                if (parsed && isTargetLinear === isCurrentLinear && parsed.stops.length > 0 && parsed.stops.length === existingStops.length) {
-                  // Same stop count and same type — just update colors and angle/radius in-place (fastest path, no React cycle)
-                  parsed.stops.forEach((ns, i) => {
-                    existingStops[i].setAttribute('stop-color', ns.color);
-                    existingStops[i].setAttribute('stop-opacity', (ns.opacity !== undefined ? ns.opacity / 100 : 1).toString());
+                if (parsed && isTargetSpecial && isCurrentPattern && parsed.stops.length > 0) {
+                  createOrUpdateSvgPatternGradient({
+                    doc: el.ownerDocument || document,
+                    defs: svgRoot.querySelector('defs'),
+                    gradId,
+                    existingEl: gradEl,
+                    type: parsedType,
+                    stops: parsed.stops,
+                    angle: parsed.angle || 0,
+                    radius: parsed.radius || 100,
                   });
-
-                  // Update angle/radius
-                  if (parsed.type.toLowerCase() === 'linear') {
-                    const angleRad = ((parsed.angle || 0) * Math.PI) / 180;
-                    const dx = Math.sin(angleRad) * 50;
-                    const dy = -Math.cos(angleRad) * 50;
-                    gradEl.setAttribute('x1', Math.round(50 - dx) + '%');
-                    gradEl.setAttribute('y1', Math.round(50 - dy) + '%');
-                    gradEl.setAttribute('x2', Math.round(50 + dx) + '%');
-                    gradEl.setAttribute('y2', Math.round(50 + dy) + '%');
-                  } else {
-                    const radius = parsed.radius || 50;
-                    gradEl.setAttribute('r', radius + '%');
-                    gradEl.setAttribute('cx', '50%');
-                    gradEl.setAttribute('cy', '50%');
-                  }
-
                   fillLayer.setAttribute('fill-opacity', (backgroundColor.fillOpacity / 100).toString());
-
-                  // Only skip onUpdate and data-fill-color during active drag to prevent lag.
-                  // If it's a preset click or drag has finished, we must sync state!
                   if (!isDraggingRef.current) {
                     el.setAttribute('data-fill-color', backgroundColor.fill);
                   }
-
                   fillFastPathDone = true;
+                } else {
+                  const existingStops = Array.from(gradEl.querySelectorAll('stop'));
+
+                  const isTargetLinear = parsedType === 'linear';
+                  const isCurrentLinear = gradEl.tagName.toLowerCase() === 'lineargradient';
+
+                  if (parsed && !isTargetSpecial && !isCurrentPattern && isTargetLinear === isCurrentLinear && parsed.stops.length > 0 && parsed.stops.length === existingStops.length) {
+                    // Same stop count and same type — just update colors and angle/radius in-place (fastest path, no React cycle)
+                    parsed.stops.forEach((ns, i) => {
+                      existingStops[i].setAttribute('stop-color', ns.color);
+                      existingStops[i].setAttribute('stop-opacity', (ns.opacity !== undefined ? ns.opacity / 100 : 1).toString());
+                    });
+
+                    // Update angle/radius
+                    if (parsedType === 'linear') {
+                      const angleRad = ((parsed.angle || 0) * Math.PI) / 180;
+                      const dx = Math.sin(angleRad) * 50;
+                      const dy = -Math.cos(angleRad) * 50;
+                      gradEl.setAttribute('x1', Math.round(50 - dx) + '%');
+                      gradEl.setAttribute('y1', Math.round(50 - dy) + '%');
+                      gradEl.setAttribute('x2', Math.round(50 + dx) + '%');
+                      gradEl.setAttribute('y2', Math.round(50 + dy) + '%');
+                    } else {
+                      const radius = parsed.radius || 50;
+                      gradEl.setAttribute('r', radius + '%');
+                      gradEl.setAttribute('cx', '50%');
+                      gradEl.setAttribute('cy', '50%');
+                    }
+
+                    fillLayer.setAttribute('fill-opacity', (backgroundColor.fillOpacity / 100).toString());
+
+                    // Only skip onUpdate and data-fill-color during active drag to prevent lag.
+                    // If it's a preset click or drag has finished, we must sync state!
+                    if (!isDraggingRef.current) {
+                      el.setAttribute('data-fill-color', backgroundColor.fill);
+                    }
+
+                    fillFastPathDone = true;
+                  }
                 }
               }
             }
@@ -427,7 +450,7 @@ const FillStrokeProperties = ({
           : 'none';
 
         el.setAttribute('data-stroke-dasharray', dashArray);
-        el.setAttribute('data-stroke-position', backgroundColor.strokePosition || 'Outside');
+        el.setAttribute('data-stroke-position', backgroundColor.strokePosition || 'Inside');
         el.setAttribute('stroke-linecap', backgroundColor.strokeLinecap || 'butt');
         el.setAttribute('data-stroke-type', backgroundColor.strokeType || 'solid');
 
@@ -444,7 +467,7 @@ const FillStrokeProperties = ({
         }
 
         if (!isImage) {
-          const pos = backgroundColor.strokePosition || 'Outside';
+          const pos = backgroundColor.strokePosition || 'Inside';
           const sw = backgroundColor.strokeWeight || 0;
           const isEligibleShape = ['rect', 'ellipse', 'path', 'circle', 'polygon'].includes(el.tagName?.toLowerCase());
 
@@ -479,7 +502,13 @@ const FillStrokeProperties = ({
             // Outside stroke: stroke-width is sw * 2 with paint-order: stroke fill (inner half is covered by fill)
             // Inside stroke: stroke-width is sw * 2 with paint-order: fill stroke (stroke is drawn over fill)
             // Center stroke: stroke-width is sw with paint-order: normal
-            if (pos === 'Outside') {
+            // Open paths have no inside to align against → always the real (centre) width
+            const isOpenPath = el.tagName?.toLowerCase() === 'path' && !/z/i.test(el.getAttribute('d') || '');
+            if (isOpenPath) {
+              el.setAttribute('stroke-width', sw.toString());
+              el.setAttribute('paint-order', 'normal');
+              el.style.paintOrder = 'normal';
+            } else if (pos === 'Outside') {
               el.setAttribute('stroke-width', (sw * 2).toString());
               el.setAttribute('paint-order', 'stroke fill');
               el.style.paintOrder = 'stroke fill';
@@ -578,7 +607,7 @@ const FillStrokeProperties = ({
     'stroke-dasharray': backgroundColor?.strokeDashStyle === 'Dashed' ? (backgroundColor?.strokeDasharrayValue || `${backgroundColor?.strokeDashLength ?? 10},${backgroundColor?.strokeDashGap ?? 10}`) : 'none',
     strokeDasharray: backgroundColor?.strokeDashStyle === 'Dashed' ? (backgroundColor?.strokeDasharrayValue || `${backgroundColor?.strokeDashLength ?? 10},${backgroundColor?.strokeDashGap ?? 10}`) : 'none',
     'stroke-linecap': backgroundColor?.strokeLinecap || 'butt',
-    'data-stroke-position': backgroundColor?.strokePosition || 'Outside',
+    'data-stroke-position': backgroundColor?.strokePosition || 'Inside',
   };
 
   const handleUpdate = (page, layer, attr, value) => {
@@ -589,7 +618,7 @@ const FillStrokeProperties = ({
     if (attr === 'fill-angle' && setBackgroundColor) setBackgroundColor(p => ({ ...p, fillAngle: parseFloat(value) }));
     if (attr === 'fill-radius' && setBackgroundColor) setBackgroundColor(p => ({ ...p, fillRadius: parseFloat(value) }));
     if (attr === 'opacity' && setBackgroundColor) setBackgroundColor(p => ({ ...p, fillOpacity: parseFloat(value) * 100 }));
-    if (attr === 'stroke' && setBackgroundColor) setBackgroundColor(p => ({ ...p, stroke: value, strokeWeight: (p.strokeWeight === 0 && value !== 'transparent' && value !== 'none') ? 1 : p.strokeWeight }));
+    if (attr === 'stroke' && setBackgroundColor) setBackgroundColor(p => ({ ...p, stroke: value, strokeWeight: (p.strokeWeight === 0 && value !== 'transparent' && value !== 'none') ? 1 : p.strokeWeight, strokePosition: (value !== 'transparent' && value !== 'none' && (!p.stroke || p.stroke === 'transparent' || p.stroke === 'none')) ? 'Inside' : (p.strokePosition || 'Inside') }));
     if (attr === 'stroke-type' && setBackgroundColor) setBackgroundColor(p => ({ ...p, strokeType: value }));
     if (attr === 'stroke-gradient-type' && setBackgroundColor) setBackgroundColor(p => ({ ...p, strokeGradientType: value }));
     if (attr === 'stroke-stops' && setBackgroundColor) setBackgroundColor(p => ({ ...p, strokeStops: value }));
@@ -803,25 +832,13 @@ const FillStrokeProperties = ({
                         updateAttr('fill', finalVal);
                       }
                     }}
-                    className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+                    className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
                     maxLength={8}
                   />
-                  <div
-                    className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-                    onPointerDown={(e) => {
-                      const currentPct = Math.round(parseFloat(pseudoProps.opacity !== undefined ? pseudoProps.opacity : 1) * 100);
-                      handleScrubHelper(e, currentPct, (val) => {
-                        const num = parseInt(val);
-                        const clamped = Math.min(Math.max(num, 0), 100);
-                        updateAttr('opacity', (clamped / 100).toString());
-                      });
-                    }}
-                    title="Drag horizontally to adjust opacity"
-                  >
-                    <span className="text-[0.8vw] font-medium text-gray-700">
-                      {Math.round(parseFloat(pseudoProps.opacity !== undefined ? pseudoProps.opacity : 1) * 100)}%
-                    </span>
-                  </div>
+                  <ScrubPercentInput
+                    value={Math.round(parseFloat(pseudoProps.opacity !== undefined ? pseudoProps.opacity : 1) * 100)}
+                    onChange={(clamped) => updateAttr('opacity', (clamped / 100).toString())}
+                  />
                 </div>
               </div>
             </div>
@@ -871,25 +888,14 @@ const FillStrokeProperties = ({
                         updateAttr('data-bg-fill', finalVal);
                       }
                     }}
-                    className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+                    className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
                     maxLength={8}
                   />
-                  <div
-                    className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-                    onPointerDown={(e) => {
-                      const currentPct = Math.round(parseFloat(selectedElementProps?.['data-bg-fill-opacity'] !== undefined ? selectedElementProps?.['data-bg-fill-opacity'] : 1) * 100);
-                      handleScrubHelper(e, currentPct, (val) => {
-                        const num = parseInt(val);
-                        const clamped = Math.min(Math.max(num, 0), 100);
-                        updateAttr('data-bg-fill-opacity', (clamped / 100).toString());
-                      });
-                    }}
-                    title="Drag horizontally to adjust background opacity"
-                  >
-                    <span className="text-[0.8vw] font-medium text-gray-700">
-                      {Math.round(parseFloat(selectedElementProps?.['data-bg-fill-opacity'] !== undefined ? selectedElementProps?.['data-bg-fill-opacity'] : 1) * 100)}%
-                    </span>
-                  </div>
+                  <ScrubPercentInput
+                    value={Math.round(parseFloat(selectedElementProps?.['data-bg-fill-opacity'] !== undefined ? selectedElementProps?.['data-bg-fill-opacity'] : 1) * 100)}
+                    onChange={(clamped) => updateAttr('data-bg-fill-opacity', (clamped / 100).toString())}
+                    title="Drag horizontally to adjust background opacity or click to edit"
+                  />
                 </div>
               </div>
 
@@ -927,7 +933,7 @@ const FillStrokeProperties = ({
                       if (setBackgroundColor) setBackgroundColor(p => ({ ...p, scrollBarColor: finalVal }));
                       if (onUpdate) onUpdate({ shouldRefresh: true });
                     }}
-                    className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+                    className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
                     maxLength={8}
                   />
                 </div>
@@ -936,10 +942,10 @@ const FillStrokeProperties = ({
             </div>
           )}
 
-          {/* ── Stoke Color ── */}
+          {/* ── Stroke Color ── */}
           <div className={`flex flex-col gap-[1.1vw] ${disableStroke ? 'opacity-40 pointer-events-none select-none cursor-not-allowed' : ''}`}>
             <div className="flex items-center gap-[0.8vw] mb-[0.25vw]">
-              <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Stoke Color</span>
+              <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Stroke Color</span>
               {disableStroke && <span className="text-[0.62vw] text-gray-400 font-normal ml-auto">(Global mode only)</span>}
               <div className="flex-1 h-[1px] bg-gray-200" />
             </div>
@@ -992,31 +998,19 @@ const FillStrokeProperties = ({
                       updateAttr('stroke', finalVal);
                     }
                   }}
-                  className="text-[0.8vw] font-mono font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
+                  className="text-[0.8vw] font-medium text-gray-800 outline-none bg-transparent flex-1 uppercase"
                   maxLength={8}
                 />
-                <div
-                  className="flex items-center cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-                  onPointerDown={(e) => {
-                    const currentPct = Math.round(parseFloat(pseudoProps['stroke-opacity'] !== undefined ? pseudoProps['stroke-opacity'] : 1) * 100);
-                    handleScrubHelper(e, currentPct, (val) => {
-                      const num = parseInt(val);
-                      const clamped = Math.min(Math.max(num, 0), 100);
-                      updateAttr('stroke-opacity', (clamped / 100).toString());
-                    });
-                  }}
-                  title="Drag horizontally to adjust opacity"
-                >
-                  <span className="text-[0.8vw] font-medium text-gray-700">
-                    {Math.round(parseFloat(pseudoProps['stroke-opacity'] !== undefined ? pseudoProps['stroke-opacity'] : 1) * 100)}%
-                  </span>
-                </div>
+                <ScrubPercentInput
+                  value={Math.round(parseFloat(pseudoProps['stroke-opacity'] !== undefined ? pseudoProps['stroke-opacity'] : 1) * 100)}
+                  onChange={(clamped) => updateAttr('stroke-opacity', (clamped / 100).toString())}
+                />
               </div>
             </div>
 
             {/* Rows 2-4 are disabled until a stroke color is chosen */}
             <div className={`flex flex-col gap-[0.85vw] transition-opacity ${isNoStroke(pseudoProps.stroke) ? 'opacity-40 pointer-events-none select-none' : ''}`}>
-            {/* Row 2: Alignment & Stoke Width */}
+            {/* Row 2: Alignment & Stroke Width */}
             <div className="flex items-center gap-[1vw]">
               {!isTable && !hideAlignment && (
                 /* Alignment */
@@ -1028,7 +1022,7 @@ const FillStrokeProperties = ({
                       onClick={() => setIsAlignOpen(!isAlignOpen)}
                       className="w-full h-[2.1vw] px-[0.7vw] border border-gray-300 rounded-[0.45vw] flex items-center justify-between bg-white text-[0.8vw] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-2xs cursor-pointer transition-colors"
                     >
-                      <span className="capitalize">{pseudoProps['data-stroke-position'] || 'Center'}</span>
+                      <span className="capitalize">{pseudoProps['data-stroke-position'] || 'Inside'}</span>
                       <ChevronDown size="0.75vw" className="text-gray-400" />
                     </button>
                     {isAlignOpen && (
@@ -1054,9 +1048,9 @@ const FillStrokeProperties = ({
                 </div>
               )}
 
-              {/* Stoke Width */}
+              {/* Stroke Width */}
               <div className={`${(isTable || hideAlignment) ? 'w-full' : 'flex-1'} flex flex-col gap-[0.35vw]`}>
-                <span className="text-[0.82vw] font-medium text-gray-800">Stoke Width</span>
+                <span className="text-[0.82vw] font-medium text-gray-800">Stroke Width</span>
                 <div className="flex items-center gap-[0.25vw] h-[2.1vw]">
                   <button
                     type="button"
@@ -1147,28 +1141,30 @@ const FillStrokeProperties = ({
                   <div className={`flex-1 flex flex-col gap-[0.35vw] ${(!pseudoProps.strokeDasharray || pseudoProps.strokeDasharray === 'none') ? 'opacity-40 pointer-events-none' : ''}`}>
                     <span className="text-[0.82vw] font-medium text-gray-800">Dash Property</span>
                     <div className="flex items-center gap-[0.3vw] h-[2.1vw]">
-                      <div
-                        className="flex-1 flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white h-full px-[0.6vw] shadow-2xs cursor-ew-resize hover:border-gray-400 transition-colors"
-                        onPointerDown={(e) => handleScrubHelper(e, lVal, (v) => updateAttr('stroke-dasharray', `${Math.max(1, parseInt(v))},${gVal}`))}
-                      >
-                        <span className="text-gray-800 font-semibold text-[0.78vw] select-none">L</span>
+                      <div className="flex-1 flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white h-full px-[0.6vw] shadow-2xs hover:border-gray-400 transition-colors">
+                        <span
+                          className="text-gray-800 font-semibold text-[0.78vw] select-none cursor-ew-resize px-[0.15vw]"
+                          onPointerDown={(e) => handleScrubHelper(e, lVal, (v) => updateAttr('stroke-dasharray', `${Math.max(1, parseInt(v))},${gVal}`))}
+                        >L</span>
                         <input
                           type="number"
                           value={lVal}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => updateAttr('stroke-dasharray', `${Math.max(1, parseInt(e.target.value || 1))},${gVal}`)}
                           className="w-[1.8vw] bg-transparent outline-none text-[0.8vw] font-medium text-gray-700 text-center no-spin cursor-text"
                           onPointerDown={(e) => e.stopPropagation()}
                         />
                       </div>
                       <span className="text-[0.78vw] text-gray-400 font-bold">:</span>
-                      <div
-                        className="flex-1 flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white h-full px-[0.6vw] shadow-2xs cursor-ew-resize hover:border-gray-400 transition-colors"
-                        onPointerDown={(e) => handleScrubHelper(e, gVal, (v) => updateAttr('stroke-dasharray', `${lVal},${Math.max(1, parseInt(v))}`))}
-                      >
-                        <span className="text-gray-800 font-semibold text-[0.78vw] select-none">G</span>
+                      <div className="flex-1 flex items-center justify-between border border-gray-300 rounded-[0.45vw] bg-white h-full px-[0.6vw] shadow-2xs hover:border-gray-400 transition-colors">
+                        <span
+                          className="text-gray-800 font-semibold text-[0.78vw] select-none cursor-ew-resize px-[0.15vw]"
+                          onPointerDown={(e) => handleScrubHelper(e, gVal, (v) => updateAttr('stroke-dasharray', `${lVal},${Math.max(1, parseInt(v))}`))}
+                        >G</span>
                         <input
                           type="number"
                           value={gVal}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => updateAttr('stroke-dasharray', `${lVal},${Math.max(1, parseInt(e.target.value || 1))}`)}
                           className="w-[1.8vw] bg-transparent outline-none text-[0.8vw] font-medium text-gray-700 text-center no-spin cursor-text"
                           onPointerDown={(e) => e.stopPropagation()}
@@ -1301,21 +1297,12 @@ const FillStrokeProperties = ({
                       className="flex-grow text-[0.75vw] font-medium text-gray-700 outline-none bg-transparent min-w-[3vw] tracking-tight"
                       maxLength={7}
                     />
-                    <div
+                    <ScrubPercentInput
+                      value={Math.round(parseFloat(selectedElementProps?.['data-bg-fill-opacity'] !== undefined ? selectedElementProps?.['data-bg-fill-opacity'] : 1) * 100)}
+                      onChange={(clamped) => updateAttr('data-bg-fill-opacity', (clamped / 100).toString())}
                       className="flex items-center gap-[0.1vw] ml-[0.5vw] cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-                      onPointerDown={(e) => {
-                        const currentPct = Math.round(parseFloat(selectedElementProps?.['data-bg-fill-opacity'] !== undefined ? selectedElementProps?.['data-bg-fill-opacity'] : 1) * 100);
-                        handleScrubHelper(e, currentPct, (val) => {
-                          const num = parseInt(val);
-                          const clamped = Math.min(Math.max(num, 0), 100);
-                          updateAttr('data-bg-fill-opacity', (clamped / 100).toString());
-                        });
-                      }}
-                    >
-                      <span className="text-[0.75vw] font-medium text-gray-600">
-                        {Math.round(parseFloat(selectedElementProps?.['data-bg-fill-opacity'] !== undefined ? selectedElementProps?.['data-bg-fill-opacity'] : 1) * 100)}%
-                      </span>
-                    </div>
+                      textClassName="text-[0.75vw] font-medium text-gray-600"
+                    />
                   </div>
                 </div>
 
@@ -1363,21 +1350,12 @@ const FillStrokeProperties = ({
                       className="flex-grow text-[0.75vw] font-medium text-gray-700 outline-none bg-transparent min-w-[3vw] tracking-tight"
                       maxLength={7}
                     />
-                    <div
+                    <ScrubPercentInput
+                      value={Math.round(parseFloat(selectedElementProps?.['data-bg-stroke-opacity'] !== undefined ? selectedElementProps?.['data-bg-stroke-opacity'] : 1) * 100)}
+                      onChange={(clamped) => updateAttr('data-bg-stroke-opacity', (clamped / 100).toString())}
                       className="flex items-center gap-[0.1vw] ml-[0.5vw] cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-                      onPointerDown={(e) => {
-                        const currentPct = Math.round(parseFloat(selectedElementProps?.['data-bg-stroke-opacity'] !== undefined ? selectedElementProps?.['data-bg-stroke-opacity'] : 1) * 100);
-                        handleScrubHelper(e, currentPct, (val) => {
-                          const num = parseInt(val);
-                          const clamped = Math.min(Math.max(num, 0), 100);
-                          updateAttr('data-bg-stroke-opacity', (clamped / 100).toString());
-                        });
-                      }}
-                    >
-                      <span className="text-[0.75vw] font-medium text-gray-600">
-                        {Math.round(parseFloat(selectedElementProps?.['data-bg-stroke-opacity'] !== undefined ? selectedElementProps?.['data-bg-stroke-opacity'] : 1) * 100)}%
-                      </span>
-                    </div>
+                      textClassName="text-[0.75vw] font-medium text-gray-600"
+                    />
                   </div>
 
                 </div>                {/* Stroke Properties */}
@@ -1394,7 +1372,7 @@ const FillStrokeProperties = ({
 
                     {/* Stroke Width */}
                     <div className="flex-1 flex flex-col gap-[0.3vw]">
-                      <span className="text-[0.7vw] text-gray-500 font-medium">Stoke Width</span>
+                      <span className="text-[0.7vw] text-gray-500 font-medium">Stroke Width</span>
                       <div className="flex items-center gap-[0.3vw] h-[2vw]">
                         <button
                           className="w-[2vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.3vw] text-gray-600 hover:bg-gray-200 transition-colors"
@@ -1499,22 +1477,30 @@ const FillStrokeProperties = ({
 
                           return (
                             <>
-                              <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white h-full px-[0.5vw] cursor-ew-resize" onPointerDown={(e) => handleScrubHelper(e, lVal, (v) => updateAttr('data-bg-stroke-dasharray', `${Math.max(1, parseInt(v))},${gVal}`))}>
-                                <span className="text-[0.7vw] text-gray-400 font-medium">L</span>
+                              <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white h-full px-[0.5vw]">
+                                <span
+                                  className="text-[0.7vw] text-gray-400 font-medium select-none cursor-ew-resize px-[0.15vw]"
+                                  onPointerDown={(e) => handleScrubHelper(e, lVal, (v) => updateAttr('data-bg-stroke-dasharray', `${Math.max(1, parseInt(v))},${gVal}`))}
+                                >L</span>
                                 <input
                                   type="number"
                                   value={lVal}
+                                  onFocus={(e) => e.target.select()}
                                   onChange={(e) => updateAttr('data-bg-stroke-dasharray', `${Math.max(1, parseInt(e.target.value || 1))},${gVal}`)}
                                   className="w-[1.5vw] bg-transparent outline-none text-[0.75vw] text-gray-700 font-medium no-spin text-center cursor-text"
                                   onPointerDown={(e) => e.stopPropagation()}
                                 />
                               </div>
                               <span className="text-[0.7vw] text-gray-400 font-bold">:</span>
-                              <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white h-full px-[0.5vw] cursor-ew-resize" onPointerDown={(e) => handleScrubHelper(e, gVal, (v) => updateAttr('data-bg-stroke-dasharray', `${lVal},${Math.max(1, parseInt(v))}`))}>
-                                <span className="text-[0.7vw] text-gray-400 font-medium">G</span>
+                              <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white h-full px-[0.5vw]">
+                                <span
+                                  className="text-[0.7vw] text-gray-400 font-medium select-none cursor-ew-resize px-[0.15vw]"
+                                  onPointerDown={(e) => handleScrubHelper(e, gVal, (v) => updateAttr('data-bg-stroke-dasharray', `${lVal},${Math.max(1, parseInt(v))}`))}
+                                >G</span>
                                 <input
                                   type="number"
                                   value={gVal}
+                                  onFocus={(e) => e.target.select()}
                                   onChange={(e) => updateAttr('data-bg-stroke-dasharray', `${lVal},${Math.max(1, parseInt(e.target.value || 1))}`)}
                                   className="w-[1.5vw] bg-transparent outline-none text-[0.75vw] text-gray-700 font-medium no-spin text-center cursor-text"
                                   onPointerDown={(e) => e.stopPropagation()}
@@ -1627,21 +1613,12 @@ const FillStrokeProperties = ({
                     className="flex-grow text-[0.75vw] font-medium text-gray-700 outline-none bg-transparent min-w-[3vw] tracking-tight"
                     maxLength={7}
                   />
-                  <div
+                  <ScrubPercentInput
+                    value={Math.round(parseFloat(pseudoProps.opacity !== undefined ? pseudoProps.opacity : 1) * 100)}
+                    onChange={(clamped) => updateAttr('opacity', (clamped / 100).toString())}
                     className="flex items-center gap-[0.1vw] ml-[0.5vw] cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-                    onPointerDown={(e) => {
-                      const currentPct = Math.round(parseFloat(pseudoProps.opacity !== undefined ? pseudoProps.opacity : 1) * 100);
-                      handleScrubHelper(e, currentPct, (val) => {
-                        const num = parseInt(val);
-                        const clamped = Math.min(Math.max(num, 0), 100);
-                        updateAttr('opacity', (clamped / 100).toString());
-                      });
-                    }}
-                  >
-                    <span className="text-[0.75vw] font-medium text-gray-600">
-                      {Math.round(parseFloat(pseudoProps.opacity !== undefined ? pseudoProps.opacity : 1) * 100)}%
-                    </span>
-                  </div>
+                    textClassName="text-[0.75vw] font-medium text-gray-600"
+                  />
                 </div>
               </div>
             </div>
@@ -1720,21 +1697,12 @@ const FillStrokeProperties = ({
                     className="flex-grow text-[0.75vw] font-medium text-gray-700 outline-none bg-transparent min-w-[3vw] tracking-tight"
                     maxLength={7}
                   />
-                  <div
+                  <ScrubPercentInput
+                    value={Math.round(parseFloat(pseudoProps['stroke-opacity'] !== undefined ? pseudoProps['stroke-opacity'] : 1) * 100)}
+                    onChange={(clamped) => updateAttr('stroke-opacity', (clamped / 100).toString())}
                     className="flex items-center gap-[0.1vw] ml-[0.5vw] cursor-ew-resize select-none px-[0.2vw] hover:bg-gray-50 rounded"
-                    onPointerDown={(e) => {
-                      const currentPct = Math.round(parseFloat(pseudoProps['stroke-opacity'] !== undefined ? pseudoProps['stroke-opacity'] : 1) * 100);
-                      handleScrubHelper(e, currentPct, (val) => {
-                        const num = parseInt(val);
-                        const clamped = Math.min(Math.max(num, 0), 100);
-                        updateAttr('stroke-opacity', (clamped / 100).toString());
-                      });
-                    }}
-                  >
-                    <span className="text-[0.75vw] font-medium text-gray-600">
-                      {Math.round(parseFloat(pseudoProps['stroke-opacity'] !== undefined ? pseudoProps['stroke-opacity'] : 1) * 100)}%
-                    </span>
-                  </div>
+                    textClassName="text-[0.75vw] font-medium text-gray-600"
+                  />
                 </div>
               </div>
 
@@ -1752,7 +1720,7 @@ const FillStrokeProperties = ({
 
                   {/* Stroke Width */}
                   <div className="flex-1 flex flex-col gap-[0.3vw]">
-                    <span className="text-[0.7vw] text-gray-500 font-medium">Stoke Width</span>
+                    <span className="text-[0.7vw] text-gray-500 font-medium">Stroke Width</span>
                     <div className="flex items-center gap-[0.3vw] h-[2vw]">
                       <button
                         className="w-[2vw] h-full flex items-center justify-center bg-gray-100 rounded-[0.3vw] text-gray-600 hover:bg-gray-200 transition-colors"
@@ -1854,22 +1822,30 @@ const FillStrokeProperties = ({
 
                         return (
                           <>
-                            <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white h-full px-[0.5vw] cursor-ew-resize" onPointerDown={(e) => handleScrubHelper(e, lVal, (v) => updateAttr('stroke-dasharray', `${Math.max(1, parseInt(v))},${gVal}`))}>
-                              <span className="text-[0.7vw] text-gray-400 font-medium">L</span>
+                            <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white h-full px-[0.5vw]">
+                              <span
+                                className="text-[0.7vw] text-gray-400 font-medium select-none cursor-ew-resize px-[0.15vw]"
+                                onPointerDown={(e) => handleScrubHelper(e, lVal, (v) => updateAttr('stroke-dasharray', `${Math.max(1, parseInt(v))},${gVal}`))}
+                              >L</span>
                               <input
                                 type="number"
                                 value={lVal}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => updateAttr('stroke-dasharray', `${Math.max(1, parseInt(e.target.value || 1))},${gVal}`)}
                                 className="w-[1.5vw] bg-transparent outline-none text-[0.75vw] text-gray-700 font-medium no-spin text-center cursor-text"
                                 onPointerDown={(e) => e.stopPropagation()}
                               />
                             </div>
                             <span className="text-[0.7vw] text-gray-400 font-bold">:</span>
-                            <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white h-full px-[0.5vw] cursor-ew-resize" onPointerDown={(e) => handleScrubHelper(e, gVal, (v) => updateAttr('stroke-dasharray', `${lVal},${Math.max(1, parseInt(v))}`))}>
-                              <span className="text-[0.7vw] text-gray-400 font-medium">G</span>
+                            <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-[0.5vw] bg-white h-full px-[0.5vw]">
+                              <span
+                                className="text-[0.7vw] text-gray-400 font-medium select-none cursor-ew-resize px-[0.15vw]"
+                                onPointerDown={(e) => handleScrubHelper(e, gVal, (v) => updateAttr('stroke-dasharray', `${lVal},${Math.max(1, parseInt(v))}`))}
+                              >G</span>
                               <input
                                 type="number"
                                 value={gVal}
+                                onFocus={(e) => e.target.select()}
                                 onChange={(e) => updateAttr('stroke-dasharray', `${lVal},${Math.max(1, parseInt(e.target.value || 1))}`)}
                                 className="w-[1.5vw] bg-transparent outline-none text-[0.75vw] text-gray-700 font-medium no-spin text-center cursor-text"
                                 onPointerDown={(e) => e.stopPropagation()}

@@ -578,20 +578,35 @@ export const useCustomizedEditorData = ({
             }));
 
             if (setCurrentBook) {
-              setCurrentBook(prev => ({
-                ...(prev || {}),
-                isPublished: res.data.isPublished !== undefined ? Boolean(res.data.isPublished) : Boolean(res.data.meta?.isPublished),
-                flipbookName: res.data.meta?.flipbookName || res.data.name || prev?.flipbookName,
+              const fetchedBookType = res.data.bookType || res.data.meta?.bookType;
+              const hasPdfPages = Array.isArray(res.data.pages) && res.data.pages.some((p) => {
+                const content = p?.html || p?.content || '';
+                return typeof content === 'string' && (
+                  content.includes('data-name="PDF Background"') ||
+                  content.includes('data-type="pdf-vector-layer"') ||
+                  content.includes('Document Shield')
+                );
+              });
+              setCurrentBook(prev => {
+                const resolvedType = fetchedBookType || prev?.bookType;
+                const isPdfBook = String(resolvedType || '').toLowerCase() === 'pdf' || hasPdfPages;
+                return {
+                  ...(prev || {}),
+                  isPublished: res.data.isPublished !== undefined ? Boolean(res.data.isPublished) : Boolean(res.data.meta?.isPublished),
+                  flipbookName: res.data.meta?.flipbookName || res.data.name || prev?.flipbookName,
+                  bookType: resolvedType || (isPdfBook ? 'pdf' : prev?.bookType),
+                  isPdfProject: isPdfBook,
                 quotes: res.data.quotes || res.data.meta?.quotes || prev?.quotes || '',
                 about: res.data.about || res.data.meta?.about || prev?.about || '',
                 category: res.data.category || res.data.meta?.category || prev?.category || 'Product Based',
                 language: res.data.language || res.data.meta?.language || prev?.language || 'English',
                 tags: res.data.tags || res.data.meta?.tags || prev?.tags || [],
-                meta: {
-                  ...(prev?.meta || {}),
-                  ...(res.data.meta || {})
-                }
-              }));
+                  meta: {
+                    ...(prev?.meta || {}),
+                    ...(res.data.meta || {})
+                  }
+                };
+              });
             }
           }
         } catch (err) {

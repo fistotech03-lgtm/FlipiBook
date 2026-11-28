@@ -73,15 +73,56 @@ const getLayoutColorAlpha = (id, defaultRgb, alpha) => {
     return `rgba(var(--${id}-rgb, ${defaultRgb}), ${alpha})`;
 };
 
-const SidebarButton = ({ icon, label, onClick }) => {
+const SidebarButton = ({ icon, label, onClick, addTextBelowIcons = false, textFont }) => {
+    const [showTooltip, setShowTooltip] = useState(false);
     return (
-        <button 
-            onClick={onClick}
-            className="flex flex-col items-center justify-center p-[0.5cqw] rounded-[0.5cqw] transition-colors hover:opacity-80 group relative w-full"
-            title={label}
-        >
-            <Icon icon={icon} className="w-[2cqw] h-[2cqw]" style={{ color: getLayoutColor('toolbar-icon', '#FFFFFF') }} />
-        </button>
+        <div className="relative flex flex-col items-center justify-center w-full">
+            <button 
+                onClick={onClick}
+                onMouseEnter={() => setShowTooltip(true)}
+                onMouseLeave={() => setShowTooltip(false)}
+                className="flex flex-col items-center justify-center p-[0.5cqw] rounded-[0.5cqw] transition-colors hover:opacity-80 active:scale-95 group relative"
+            >
+                <Icon icon={icon} className="w-[2cqw] h-[2cqw]" style={{ color: getLayoutColor('toolbar-icon', '#FFFFFF') }} />
+                {addTextBelowIcons && (
+                    <span 
+                        className="text-[0.9cqw] font-semibold leading-tight mt-[0.3cqw] whitespace-nowrap"
+                        style={{ color: getLayoutColor('toolbar-icon', '#FFFFFF'), fontFamily: textFont }}
+                    >
+                        {label}
+                    </span>
+                )}
+            </button>
+            {showTooltip && !addTextBelowIcons && (
+                <div
+                    className="absolute left-full ml-[0.8cqw] top-1/2 -translate-y-1/2 whitespace-nowrap pointer-events-none z-[9999]"
+                    style={{
+                        background: 'rgba(25, 25, 28, 0.78)',
+                        backdropFilter: 'blur(24px)',
+                        WebkitBackdropFilter: 'blur(24px)',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        color: '#ffffff',
+                        padding: '0.35cqw 0.75cqw',
+                        borderRadius: '0.4cqw',
+                        fontSize: '0.95cqw',
+                        fontWeight: 500,
+                        fontFamily: textFont,
+                        boxShadow: '0 6px 20px rgba(0, 0, 0, 0.35)',
+                    }}
+                >
+                    {label}
+                    {/* Arrow seamless connector pointing left */}
+                    <div
+                        className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0"
+                        style={{
+                            borderTop: '0.35cqw solid transparent',
+                            borderBottom: '0.35cqw solid transparent',
+                            borderRight: '0.4cqw solid rgba(25, 25, 28, 0.78)',
+                        }}
+                    />
+                </div>
+            )}
+        </div>
     );
 };
 
@@ -120,8 +161,10 @@ const TabletLayout4 = ({
     setShowExportPopupMemo,
     offset = 0,
     currentBook,
-    activeLayout
+    activeLayout,
+    layoutColors
 }) => {
+    const textFont = settings?.navigation?.addTextToIconsSettings?.font || settings?.addTextToIconsSettings?.font || settings?.toolbar?.textProperties?.font || 'Arial';
     const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery || '');
     const [isShareOpen, setIsShareOpen] = useState(false);
 
@@ -225,14 +268,16 @@ const TabletLayout4 = ({
                 
                 {/* Left Sidebar */}
                 <div 
-                    className="w-[6cqw] flex flex-col items-center pt-[4cqh] pb-[2cqh] gap-[4cqh] shrink-0 shadow-lg z-40"
+                    className="w-[6cqw] flex flex-col items-center justify-evenly py-[4cqh] shrink-0 shadow-lg z-40"
                     style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555') }}
                 >
                     {(settings?.navigation?.tableOfContents ?? true) && (
                         <SidebarButton 
                             icon="fluent:text-bullet-list-24-filled" 
-                            label="Table of Contents" 
+                            label="TOC" 
                             onClick={() => setShowTOCMemo(!showTOC)} 
+                            addTextBelowIcons={settings?.toolbar?.addTextBelowIcons}
+                            textFont={textFont}
                         />
                     )}
                     
@@ -241,34 +286,32 @@ const TabletLayout4 = ({
                             icon="ph:squares-four-fill" 
                             label="Thumbnails" 
                             onClick={() => setShowThumbnailBarMemo(true)} 
+                            addTextBelowIcons={settings?.toolbar?.addTextBelowIcons}
+                            textFont={textFont}
                         />
                     )}
                     
-                    {(settings?.interaction?.gallery ?? true) && (
+                    {(settings?.toolbar?.gallery ?? settings?.interaction?.gallery ?? true) && (
                         <SidebarButton 
                             icon="clarity:image-gallery-solid" 
                             label="Gallery" 
                             onClick={() => setShowGalleryPopupMemo(true)} 
+                            addTextBelowIcons={settings?.toolbar?.addTextBelowIcons}
+                            textFont={textFont}
                         />
                     )}
                     
-                    {(settings?.media?.backgroundAudio ?? true) && (
+                    {(settings?.audio?.backgroundAudio ?? settings?.audio?.audio ?? settings?.media?.backgroundAudio ?? true) && (
                         <SidebarButton 
                             icon={isMuted ? "solar:music-notes-bold-duotone" : "solar:music-notes-bold"} 
                             label="Sound" 
                             onClick={(e) => { e.stopPropagation(); setShowSoundPopupMemo?.(!showSoundPopup); }} 
+                            addTextBelowIcons={settings?.toolbar?.addTextBelowIcons}
+                            textFont={textFont}
                         />
                     )}
                     
-                    {(settings?.brandingProfile?.profile ?? true) && (
-                        <SidebarButton 
-                            icon="fluent:person-24-filled" 
-                            label="Profile" 
-                            onClick={() => setShowProfilePopup(!showProfilePopup)} 
-                        />
-                    )}
-                    
-                    {(settings?.shareExport?.share ?? true) && (
+                    {(settings?.interaction?.share ?? settings?.shareExport?.share ?? true) && (
                         <SidebarButton 
                             icon="mage:share-fill" 
                             label="Share" 
@@ -281,22 +324,28 @@ const TabletLayout4 = ({
                                 setShowExportPopupMemo?.(false);
                                 setIsShareOpen(true);
                             }} 
+                            addTextBelowIcons={settings?.toolbar?.addTextBelowIcons}
+                            textFont={textFont}
                         />
                     )}
                     
-                    {(settings?.shareExport?.download ?? true) && (
+                    {(settings?.interaction?.download ?? settings?.shareExport?.download ?? true) && (
                         <SidebarButton 
                             icon="meteor-icons:download" 
                             label="Download" 
                             onClick={() => setShowExportPopupMemo?.(true)} 
+                            addTextBelowIcons={settings?.toolbar?.addTextBelowIcons}
+                            textFont={textFont}
                         />
                     )}
                     
-                    {(settings?.viewing?.fullScreen ?? true) && (
+                    {(settings?.interaction?.fullScreen ?? settings?.viewing?.fullScreen ?? true) && (
                         <SidebarButton 
                             icon={isFullscreen ? "mingcute:fullscreen-exit-fill" : "lucide:fullscreen"} 
                             label="Fullscreen" 
                             onClick={handleFullScreen} 
+                            addTextBelowIcons={settings?.toolbar?.addTextBelowIcons}
+                            textFont={textFont}
                         />
                     )}
                 </div>
@@ -309,6 +358,7 @@ const TabletLayout4 = ({
                             onNavigate={onPageClick}
                             settings={settings}
                             variant="layout4"
+                            layoutColors={layoutColors}
                         />
                     )}
                     
@@ -436,25 +486,37 @@ const TabletLayout4 = ({
                     <div className="flex items-center rounded-[0.8cqw] overflow-hidden" style={{ backgroundColor: getLayoutColor('reset-bg', '#E5E7EB'), color: getLayoutColor('reset-text', '#555555') }}>
                         <button 
                             onClick={() => setCurrentZoom?.(Math.max(0.5, (currentZoom || 1) - 0.1))} 
-                            className="p-[0.5cqw] transition-colors hover:opacity-80"
+                            className="p-[0.5cqw] transition-colors hover:opacity-80 relative group"
                         >
                             <Icon icon="lucide:zoom-out" className="w-[2cqw] h-[2cqw]" />
+                            <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                                Zoom Out
+                                <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                            </div>
                         </button>
                         <span className="text-[1.8cqw] font-medium px-[1cqw]">
                             {Math.round((currentZoom || 1) * 100)}%
                         </span>
                         <button 
                             onClick={() => setCurrentZoom?.(Math.min(3, (currentZoom || 1) + 0.1))}
-                            className="p-[0.5cqw] transition-colors hover:opacity-80"
+                            className="p-[0.5cqw] transition-colors hover:opacity-80 relative group"
                         >
                             <Icon icon="lucide:zoom-in" className="w-[2cqw] h-[2cqw]" />
+                            <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                                Zoom In
+                                <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                            </div>
                         </button>
                         <button 
                             onClick={() => setCurrentZoom?.(1)}
-                            className="px-[1cqw] py-[0.5cqh] text-[1.6cqw] transition-colors font-medium"
+                            className="px-[1cqw] py-[0.5cqh] text-[1.6cqw] transition-colors font-medium relative group"
                             style={{ borderLeft: `1px solid ${getLayoutColorAlpha('reset-text', '85,85,85', 0.2)}` }}
                         >
                             Reset
+                            <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
+                                Reset
+                                <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
+                            </div>
                         </button>
                     </div>
                 </div>

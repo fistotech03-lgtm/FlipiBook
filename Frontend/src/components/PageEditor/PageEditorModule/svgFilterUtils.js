@@ -3,6 +3,7 @@
  * SVG DOM manipulation, layer parsing, gradient definitions, and complex SVG filter pipelines
  * (drop-shadow, inner-shadow, blur, backdrop-blur, clip wrappers).
  */
+import { createOrUpdateSvgPatternGradient } from '../../Color/utils/colorUtils';
 
 export const parseLayersFromSVG = (element) => {
   return Array.from(element.children)
@@ -41,6 +42,11 @@ export const parseLayersFromSVG = (element) => {
       }
       const rawName = child.getAttribute('data-name') || id || `${child.tagName.charAt(0).toUpperCase() + child.tagName.slice(1)}`;
       const cleanName = rawName.replace(/^tpl-[a-z0-9]{4}-/, '');
+      const childDataType = child.getAttribute('data-type') || '';
+      const childShapeType = child.getAttribute('data-shape-type') || child.getAttribute('data-shape-title') || '';
+      const isCustomName = child.getAttribute('data-custom-name') === 'true';
+      const isTextNode = child.tagName.toLowerCase() === 'text' || childDataType === 'text';
+      const rawTextContent = isTextNode ? (child.textContent || '').replace(/\s+/g, ' ').trim() : '';
 
       const isHidden = child.getAttribute('data-hidden') === 'true' ||
                        child.getAttribute('style')?.includes('display:none') ||
@@ -51,6 +57,10 @@ export const parseLayersFromSVG = (element) => {
         id,
         name: cleanName,
         type: child.tagName.toLowerCase(),
+        'data-type': childDataType || undefined,
+        'data-shape-type': childShapeType || undefined,
+        textContent: rawTextContent || undefined,
+        isCustomName: isCustomName || undefined,
         visible: !isHidden,
         locked: child.getAttribute('data-locked') === 'true'
       };
@@ -354,61 +364,85 @@ export const syncGradient = (doc, element, baseAttr) => {
     }
     const gradId = `grad-${element.id}-${baseAttr}`;
     let gradEl = defs.querySelector(`[id="${gradId}"]`);
+    const normGradType = String(gradType || 'linear').toLowerCase();
 
-    const svgGradType = (gradType === 'angular' || gradType === 'diamond') ? (gradType === 'angular' ? 'linear' : 'radial') : gradType;
-
-    if (gradEl && gradEl.tagName.toLowerCase() !== `${svgGradType}gradient`.toLowerCase()) {
-      gradEl.remove();
-      gradEl = null;
-    }
-
-    if (!gradEl) {
-      gradEl = doc.createElementNS("http://www.w3.org/2000/svg", `${svgGradType}Gradient`);
-      gradEl.id = gradId;
-      defs.appendChild(gradEl);
-    }
-
-    if (svgGradType === 'linear') {
+    if (normGradType === 'angular' || normGradType === 'diamond') {
       let angleStr = element.getAttribute(`${baseAttr}-angle`);
       if (!angleStr && currentValue) {
-         const match = currentValue.match(/(\d+)deg/);
-         if (match) angleStr = match[1];
+        const match = currentValue.match(/(\d+)deg/);
+        if (match) angleStr = match[1];
       }
-      const angleDeg = parseFloat(angleStr || '0');
-      const theta = (angleDeg - 90) * (Math.PI / 180);
-      const length = Math.abs(Math.cos(theta)) + Math.abs(Math.sin(theta));
-      const x1 = 50 - (Math.cos(theta) * length * 50);
-      const y1 = 50 - (Math.sin(theta) * length * 50);
-      const x2 = 50 + (Math.cos(theta) * length * 50);
-      const y2 = 50 + (Math.sin(theta) * length * 50);
-
-      gradEl.setAttribute('x1', `${x1}%`);
-      gradEl.setAttribute('y1', `${y1}%`);
-      gradEl.setAttribute('x2', `${x2}%`);
-      gradEl.setAttribute('y2', `${y2}%`);
-    } else {
       let radiusStr = element.getAttribute(`${baseAttr}-radius`);
       if (!radiusStr && currentValue) {
         const maxPctMatch = [...currentValue.matchAll(/([\d.]+)%/g)].map(m => parseFloat(m[1]));
         if (maxPctMatch.length > 0) radiusStr = Math.max(...maxPctMatch).toString();
       }
-      const radius = parseFloat(radiusStr || '100');
-      
-      gradEl.setAttribute('cx', '50%');
-      gradEl.setAttribute('cy', '50%');
-      gradEl.setAttribute('r', `${50 * (radius / 100)}%`);
-    }
+      createOrUpdateSvgPatternGradient({
+        doc,
+        defs,
+        gradId,
+        existingEl: gradEl,
+        type: normGradType,
+        stops,
+        angle: parseFloat(angleStr || '0'),
+        radius: parseFloat(radiusStr || '100'),
+      });
+    } else {
+      const svgGradType = normGradType === 'radial' ? 'radial' : 'linear';
 
-    while (gradEl.firstChild) gradEl.removeChild(gradEl.firstChild);
-    stops.forEach(s => {
-      const stop = doc.createElementNS("http://www.w3.org/2000/svg", "stop");
-      stop.setAttribute('offset', `${s.offset}%`);
-      stop.setAttribute('stop-color', s.color);
-      const rawOp = (s.opacity !== undefined && s.opacity !== null) ? s.opacity : 1;
-      const normOp = typeof rawOp === 'number' && rawOp > 1 ? rawOp / 100 : rawOp;
-      stop.setAttribute('stop-opacity', normOp);
-      gradEl.appendChild(stop);
-    });
+      if (gradEl && gradEl.tagName.toLowerCase() !== `${svgGradType}gradient`.toLowerCase()) {
+        gradEl.remove();
+        gradEl = null;
+      }
+
+      if (!gradEl) {
+        gradEl = doc.createElementNS("http://www.w3.org/2000/svg", `${svgGradType}Gradient`);
+        gradEl.id = gradId;
+        defs.appendChild(gradEl);
+      }
+
+      if (svgGradType === 'linear') {
+        let angleStr = element.getAttribute(`${baseAttr}-angle`);
+        if (!angleStr && currentValue) {
+           const match = currentValue.match(/(\d+)deg/);
+           if (match) angleStr = match[1];
+        }
+        const angleDeg = parseFloat(angleStr || '0');
+        const theta = (angleDeg - 90) * (Math.PI / 180);
+        const length = Math.abs(Math.cos(theta)) + Math.abs(Math.sin(theta));
+        const x1 = 50 - (Math.cos(theta) * length * 50);
+        const y1 = 50 - (Math.sin(theta) * length * 50);
+        const x2 = 50 + (Math.cos(theta) * length * 50);
+        const y2 = 50 + (Math.sin(theta) * length * 50);
+
+        gradEl.setAttribute('x1', `${x1}%`);
+        gradEl.setAttribute('y1', `${y1}%`);
+        gradEl.setAttribute('x2', `${x2}%`);
+        gradEl.setAttribute('y2', `${y2}%`);
+      } else {
+        let radiusStr = element.getAttribute(`${baseAttr}-radius`);
+        if (!radiusStr && currentValue) {
+          const maxPctMatch = [...currentValue.matchAll(/([\d.]+)%/g)].map(m => parseFloat(m[1]));
+          if (maxPctMatch.length > 0) radiusStr = Math.max(...maxPctMatch).toString();
+        }
+        const radius = parseFloat(radiusStr || '100');
+        
+        gradEl.setAttribute('cx', '50%');
+        gradEl.setAttribute('cy', '50%');
+        gradEl.setAttribute('r', `${50 * (radius / 100)}%`);
+      }
+
+      while (gradEl.firstChild) gradEl.removeChild(gradEl.firstChild);
+      stops.forEach(s => {
+        const stop = doc.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stop.setAttribute('offset', `${s.offset}%`);
+        stop.setAttribute('stop-color', s.color);
+        const rawOp = (s.opacity !== undefined && s.opacity !== null) ? s.opacity : 1;
+        const normOp = typeof rawOp === 'number' && rawOp > 1 ? rawOp / 100 : rawOp;
+        stop.setAttribute('stop-opacity', normOp);
+        gradEl.appendChild(stop);
+      });
+    }
 
     element.setAttribute(baseAttr, `url(#${gradId})`);
 

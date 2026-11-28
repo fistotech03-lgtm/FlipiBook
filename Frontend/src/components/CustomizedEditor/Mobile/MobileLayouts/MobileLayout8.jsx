@@ -240,7 +240,7 @@ const MobileLayout8 = ({
             '--toolbar-search-text': activeLayout?.toolbarSearchText || '#575C9C',
             '--toolbar-search-placeholder': activeLayout?.toolbarSearchPlaceholder || '#575C9C',
             '--toolbar-search-icon': activeLayout?.toolbarSearchIcon || '#575C9C',
-            '--page-bg': activeLayout?.pageBg || '#BDC3D9',
+            '--page-bg': activeLayout?.pageBg || '#DADBE8',
             '--progress-bar-bg': activeLayout?.progressBarBg || '#FFFFFF',
             '--progress-bar-fill': activeLayout?.progressBarFill || '#575C9C',
             '--play-button-bg': activeLayout?.playButtonBg || '#FFFFFF',
@@ -328,7 +328,7 @@ const MobileLayout8 = ({
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="absolute top-[4.5rem] right-6 w-[170px] rounded-xl shadow-2xl z-[160] overflow-hidden border border-white/10 bg-[#575c9c]/90 backdrop-blur-md pointer-events-auto"
+                            className="absolute top-[4.5rem] right-6 w-[170px] rounded-xl shadow-2xl z-[160] overflow-hidden border border-white/10 bg-[#555555]/90 backdrop-blur-md pointer-events-auto"
                         >
                             <div className="flex flex-col p-1.5 gap-1">
                                 <MenuBtn icon="mdi:table-of-contents" label="Table of Contents" onClick={() => { setShowTOC(true); setShowMoreMenu(false); }} />
@@ -444,7 +444,7 @@ const MobileLayout8 = ({
                 {showSuggestions && recommendations.length > 0 && <div className="fixed inset-0 z-[15] bg-transparent pointer-events-auto" onClick={() => setShowSuggestions(false)} />}
                 
                 {/* Floating Header */}
-                <header className="absolute top-2 left-14 right-14 z-50 h-8 flex items-center justify-between shadow-lg rounded-full px-4 pointer-events-auto border border-white/20 backdrop-blur-md" style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '11, 15, 78', 0.9) }}>
+                <header className="absolute top-2 left-14 right-14 z-50 h-8 flex items-center justify-between shadow-lg rounded-full px-4 pointer-events-auto border border-white/20 backdrop-blur-md" style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '85, 85, 85', 0.9) }}>
                     <div className={`flex-1 max-w-[150px] relative ${showSuggestions && recommendations.length > 0 ? 'z-20' : ''}`}>
                         <div className="bg-white/10 rounded-full px-2 py-1 flex items-center gap-1 backdrop-blur-sm border border-white/10">
                             <Icon icon="lucide:search" className="text-white/60 w-3 h-3" />
@@ -541,7 +541,7 @@ const MobileLayout8 = ({
                 </div>
 
                 {/* Floating Footer */}
-                <footer className="absolute bottom-2 left-14 right-14 h-9 px-6 flex items-center justify-between shadow-2xl rounded-full z-[60] font-sans border border-white/20 pointer-events-auto backdrop-blur-md" style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', 0.9) }}>
+                <footer className="absolute bottom-2 left-14 right-14 h-9 px-6 flex items-center justify-between shadow-2xl rounded-full z-[60] font-sans border border-white/20 pointer-events-auto backdrop-blur-md" style={{ backgroundColor: getLayoutColorRgba('bottom-toolbar-bg', getLayoutColorRgba('toolbar-bg', '85, 85, 85', 0.9), 0.9) }}>
                     {/* Left Group */}
                     <div className="flex items-center gap-3 min-w-max">
                         <button onClick={() => { setShowTOC(true); setShowThumbnailBar(false); }} className="text-white hover:scale-110 active:scale-90 transition-transform"><Icon icon="ph:list-bold" className="w-4 h-4" /></button>
@@ -594,9 +594,9 @@ const MobileLayout8 = ({
                 {showSharePopup && (
                     <FlipbookSharePopup
                     onClose={() => setShowSharePopup(false)}
-                    bookName={props.currentBook?.flipbookName || bookName}
-                    url={props.currentBook?.shareUrl || window.location.href}
-                    isPublished={props.currentBook?.status === 'Published'}
+                    bookName={bookName}
+                    url={window.location.href}
+                    isPublished={false}
                     isMobile={true}
                     isLandscape={isLandscape}
                 />
@@ -606,9 +606,9 @@ const MobileLayout8 = ({
     }
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: 'var(--page-bg, #BDC3D9)' }}>
+        <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: '#ECECF0' }}>
             {/* Notch Area */}
-            {!isPhysicalMobile && <div className="shrink-0 h-10 z-50 bg-[#0B0F4E]" />}
+            {!isPhysicalMobile && <div className="shrink-0 h-10 z-50 bg-[#1e1e24]" />}
 
             {/* Header: Search and Logo */}
             <header className="px-5 pt-4 pb-2 flex items-center justify-between gap-3 relative" style={{ zIndex: showSuggestions && recommendations.length > 0 ? 3000 : 50 }}>
@@ -659,14 +659,14 @@ const MobileLayout8 = ({
                     {/* Search Input */}
                     <div
                         className="relative z-10 bg-white rounded-full px-4 py-2 flex items-center gap-2 shadow-sm"
-                        style={{ border: showSuggestions && recommendations.length > 0 ? 'none' : '1px solid #C0C5E0' }}
+                        style={{ border: showSuggestions && recommendations.length > 0 ? 'none' : '1px solid #E0E0E0' }}
                     >
-                        <Icon icon="ph:magnifying-glass-bold" className="w-4 h-4 opacity-70" style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }} />
+                        <Icon icon="ph:magnifying-glass-bold" className="w-4 h-4 opacity-70" style={{ color: getLayoutColor('toolbar-bg', '#555555') }} />
                         <input
                             type="text" autoComplete="off" spellCheck="false" autoCorrect="off"
                             placeholder="Quick Search..."
                             className="bg-transparent text-[12px] outline-none w-full font-semibold"
-                            style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}
+                            style={{ color: getLayoutColor('toolbar-bg', '#555555') }}
                             value={localSearchQuery}
                             onChange={(e) => {
                                 const val = e.target.value;
@@ -712,40 +712,63 @@ const MobileLayout8 = ({
             {/* Toolbar: 8 Circular Icons */}
             <div className="px-5 py-2 flex justify-between items-center relative z-[2200] bg-transparent">
                 {[
-                    { id: 'toc', icon: 'mdi:table-of-contents', action: (e) => { e.stopPropagation(); setShowTOC(!showTOC); } },
-                    { id: 'grid', icon: 'ep:menu', action: (e) => { e.stopPropagation(); setShowThumbnailBar(!showThumbnailBar); } },
-                    { id: 'image', icon: 'clarity:image-gallery-solid', action: (e) => { e.stopPropagation(); } },
-                    { id: 'music', icon: 'solar:music-notes-bold', action: (e) => { e.stopPropagation(); setShowSoundPopup(!showSoundPopup); } },
-                    { id: 'profile', icon: 'solar:user-bold', action: (e) => { e.stopPropagation(); setShowProfilePopup(!showProfilePopup); } },
-                    { id: 'share', icon: 'mage:share-fill', action: (e) => { e.stopPropagation(); handleShare(); } },
-                    { id: 'download', icon: 'meteor-icons:download', action: (e) => { e.stopPropagation(); handleDownload(); } },
+                    { id: 'toc', label: 'TOC', icon: 'mdi:table-of-contents', action: (e) => { e.stopPropagation(); setShowTOC(!showTOC); } },
+                    { id: 'grid', label: 'Thumbnails', icon: 'ep:menu', action: (e) => { e.stopPropagation(); setShowThumbnailBar(!showThumbnailBar); } },
+                    { id: 'image', label: 'Gallery', icon: 'clarity:image-gallery-solid', action: (e) => { e.stopPropagation(); } },
+                    { id: 'music', label: 'Sound', icon: 'solar:music-notes-bold', action: (e) => { e.stopPropagation(); setShowSoundPopup(!showSoundPopup); } },
+                    { id: 'share', label: 'Share', icon: 'mage:share-fill', action: (e) => { e.stopPropagation(); handleShare(); } },
+                    { id: 'download', label: 'Download', icon: 'meteor-icons:download', action: (e) => { e.stopPropagation(); handleDownload(); } },
                 ].map((btn, i) => {
                     const isActive = (btn.id === 'grid' && showThumbnailBar) || (btn.id === 'toc' && showTOC) || (btn.id === 'search' && showTopNotesOptions) || (btn.id === 'music' && showSoundPopup) || (btn.id === 'profile' && showProfilePopup);
                     return (
-                        <button
-                            key={i}
-                            onClick={btn.action}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center active:scale-95 transition-all shadow-md`}
-                            style={{
-                                backgroundColor: isActive ? getLayoutColor('toolbar-text-main', '#FFFFFF') : getLayoutColor('toolbar-bg', '#575C9C'),
-                                color: isActive ? getLayoutColor('toolbar-bg', '#575C9C') : getLayoutColor('toolbar-text-main', '#FFFFFF')
-                            }}
-                        >
-                            <Icon icon={btn.icon} className="w-[1.1rem] h-[1.1rem]" />
-                        </button>
+                        <div key={i} className="relative group flex items-center justify-center">
+                            <button
+                                onClick={btn.action}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center active:scale-95 transition-all shadow-md`}
+                                style={{
+                                    backgroundColor: isActive ? getLayoutColor('toolbar-text-main', '#FFFFFF') : getLayoutColor('toolbar-bg', '#555555'),
+                                    color: isActive ? getLayoutColor('toolbar-bg', '#555555') : getLayoutColor('toolbar-text-main', '#FFFFFF')
+                                }}
+                            >
+                                <Icon icon={btn.icon} className="w-[1.1rem] h-[1.1rem]" />
+                            </button>
+                            {btn.label && (
+                                <div
+                                    className="absolute top-[calc(100%+6px)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]"
+                                    style={{
+                                        background: 'rgba(10, 10, 12, 0.65)',
+                                        backdropFilter: 'blur(20px)',
+                                        WebkitBackdropFilter: 'blur(20px)',
+                                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                                        color: '#ffffff',
+                                        padding: '2px 7px',
+                                        borderRadius: '4px',
+                                        fontSize: '10px',
+                                        fontWeight: 600,
+                                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)'
+                                    }}
+                                >
+                                    {btn.label}
+                                    <div
+                                        className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[4px] border-l-[4px] border-r-[4px]"
+                                        style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     );
                 })}
             </div>
 
             {/* Subheader: Book Name and Zoom */}
             <div className="px-5 py-2 flex items-center justify-between">
-                <span className="text-[13px] font-bold opacity-80 truncate max-w-[60%]" style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}>
+                <span className="text-[13px] font-bold opacity-80 truncate max-w-[60%]" style={{ color: getLayoutColor('toolbar-bg', '#555555') }}>
                     {/* bookName hidden */}
                 </span>
-                <div className="flex items-center gap-1.5 bg-white/60 rounded-full px-2 py-0.5 border border-[#C0C5E0]" style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}>
+                <div className="flex items-center gap-1.5 bg-white/60 rounded-full px-2 py-0.5 border border-[#E0E0E0]" style={{ color: getLayoutColor('toolbar-bg', '#555555') }}>
                     <Icon icon="ph:magnifying-glass-plus-bold" className="w-3.5 h-3.5" />
                     <span className="text-[10px] font-bold">50%</span>
-                    <button className="text-[9px] font-bold border rounded-full px-1.5 leading-tight py-0.5 ml-0.5 hover:opacity-80 transition-opacity" style={{ borderColor: getLayoutColor('toolbar-bg', '#575C9C'), color: getLayoutColor('toolbar-bg', '#575C9C') }}>Reset</button>
+                    <button className="text-[9px] font-bold border rounded-full px-1.5 leading-tight py-0.5 ml-0.5 hover:opacity-80 transition-opacity" style={{ borderColor: getLayoutColor('toolbar-bg', '#555555'), color: getLayoutColor('toolbar-bg', '#555555') }}>Reset</button>
                 </div>
             </div>
 
@@ -765,7 +788,7 @@ const MobileLayout8 = ({
                 <button
                     onClick={() => onPageClick(0)}
                     className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform"
-                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#575C9C'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
+                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
                 >
                     <Icon icon="ph:skip-back-bold" className="w-[1.1rem] h-[1.1rem]" />
                 </button>
@@ -773,14 +796,14 @@ const MobileLayout8 = ({
                 <button
                     onClick={() => onPageClick(Math.max(0, currentPage - 1))}
                     className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform"
-                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#575C9C'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
+                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
                 >
                     <Icon icon="ph:caret-left-bold" className="w-[1.1rem] h-[1.1rem]" />
                 </button>
 
                 {/* Page Number Pill */}
-                <div className="bg-white rounded-full px-4 py-1.5 border border-[#C0C5E0] shadow-md flex items-center justify-center min-w-[100px]">
-                    <span className="text-[11px] font-bold whitespace-nowrap" style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}>
+                <div className="bg-white rounded-full px-4 py-1.5 border border-[#E0E0E0] shadow-md flex items-center justify-center min-w-[100px]">
+                    <span className="text-[11px] font-bold whitespace-nowrap" style={{ color: getLayoutColor('toolbar-bg', '#555555') }}>
                         Page - {currentPage + 1} / {pages.length}
                     </span>
                 </div>
@@ -788,7 +811,7 @@ const MobileLayout8 = ({
                 <button
                     onClick={() => onPageClick(Math.min(pages.length - 1, currentPage + 1))}
                     className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform"
-                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#575C9C'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
+                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
                 >
                     <Icon icon="ph:caret-right-bold" className="w-[1.1rem] h-[1.1rem]" />
                 </button>
@@ -796,7 +819,7 @@ const MobileLayout8 = ({
                 <button
                     onClick={() => onPageClick(pages.length - 1)}
                     className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform"
-                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#575C9C'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
+                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
                 >
                     <Icon icon="ph:skip-forward-bold" className="w-[1.1rem] h-[1.1rem]" />
                 </button>
@@ -804,7 +827,7 @@ const MobileLayout8 = ({
                 <button
                     onClick={handleFullScreen}
                     className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform"
-                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#575C9C'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
+                    style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
                 >
                     <Icon icon="lucide:fullscreen" className="w-[1.1rem] h-[1.1rem]" />
                 </button>
@@ -816,7 +839,7 @@ const MobileLayout8 = ({
                     <TableOfContentsPopup
                         onClose={() => setShowTOC(false)}
                         settings={settings?.tocSettings}
-                        activeLayout={9}
+                        activeLayout={8}
                         isMobile={true}
                         onNavigate={(pageIndex) => {
                             onPageClick(pageIndex);

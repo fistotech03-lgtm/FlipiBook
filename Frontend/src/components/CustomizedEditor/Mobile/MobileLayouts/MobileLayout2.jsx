@@ -537,13 +537,13 @@ const MobileLayout2 = (props) => {
     const isPhysicalMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: props.backgroundSettings?.color || '#BDC3D9' }}>
+        <div className="flex flex-col h-full w-full overflow-hidden select-none relative" style={{ backgroundColor: props.backgroundSettings?.color || getLayoutColor('page-bg', '#DADBE8') }}>
             <div className="absolute inset-0 z-0" style={props.backgroundStyle} />
             <div className="flex flex-col h-full w-full z-10 relative pointer-events-none">
                 <div className="pointer-events-auto flex flex-col h-full w-full">
             {/* Notch Spacer - fills the area near the hardware notch with a dark status bar color */}
-            {!isPhysicalMobile && <div className="h-10 w-full shrink-0 z-50 bg-[#0B0F4E]" />}
-            <header className="z-40 bg-[#4B528C] shadow-md border-b border-white/10">
+            {!isPhysicalMobile && <div className="h-10 w-full shrink-0 z-50 bg-[#1e1e24]" />}
+            <header className="z-40 shadow-md border-b border-white/10" style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555') }}>
                 <div className="px-5 pt-3 pb-2 flex items-center justify-start">
                     <div className="w-[70%] max-w-[240px] h-7.5 bg-white/80 rounded-full flex items-center px-3 gap-1.5 relative">
                         <Icon icon="ph:magnifying-glass-bold" className="text-[#575C9C] w-3 h-3" />
@@ -731,7 +731,7 @@ const MobileLayout2 = (props) => {
             </div>
 
             {/* Footer: Progress and Playback Controls */}
-            <footer className="z-40 bg-[#4B528C] px-6 pt-3 pb-6 flex flex-col gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.15)]">
+            <footer className="z-40 px-6 pt-3 pb-6 flex flex-col gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.15)]" style={{ backgroundColor: getLayoutColor('bottom-toolbar-bg', getLayoutColor('toolbar-bg', '#555555')) }}>
                 {/* Slider-style Progress Bar */}
                 <div className="flex flex-col gap-1.5">
                     <div className="flex justify-center items-center text-[9px] text-white/60 font-black tracking-widest tabular-nums">

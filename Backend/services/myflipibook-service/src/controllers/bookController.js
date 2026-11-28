@@ -1248,10 +1248,39 @@ exports.publishBook = async (req, res) => {
       publishedAt: new Date()
     };
 
+    const wasAlreadyPublished = Boolean(book.isPublished);
+
     book.isPublished = true;
     book.publishedAt = new Date();
     book.lastUpdated = new Date();
     await book.save();
+
+    if (!wasAlreadyPublished) {
+      Promise.resolve().then(async () => {
+        let creatorEmail = getAuthUser(req)?.emailId || '';
+        let creatorName = '';
+        if (!creatorEmail && book.userObjectID) {
+          const owner = await User.findById(book.userObjectID).select('emailId name').lean();
+          creatorEmail = owner?.emailId || '';
+          creatorName = owner?.name || '';
+        }
+        if (!creatorEmail) return;
+
+        const notifServiceUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://127.0.0.1:5010';
+        await fetch(`${notifServiceUrl}/api/notifications/internal/book-published`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            creatorEmail,
+            creatorName,
+            bookId: book.v_id || '',
+            bookTitle: book.flipbookName || 'New Flipbook',
+            bookUrl: book.v_id ? `/share/${book.v_id}` : ''
+          }),
+          signal: AbortSignal.timeout(3000)
+        });
+      }).catch(() => {});
+    }
 
     try {
       if (mongoose.connection && mongoose.connection.db) {

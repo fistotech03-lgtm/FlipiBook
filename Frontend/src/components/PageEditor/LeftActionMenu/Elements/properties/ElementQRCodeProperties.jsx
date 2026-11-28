@@ -644,6 +644,7 @@ const ElementQRCodeProperties = ({
 
   // Frames & Typography states
   const [frame, setFrame] = useState('frame-none');
+  const [frameCorner, setFrameCorner] = useState('rounded');
   const [text, setText] = useState('Scan Me');
   const [fontFamily, setFontFamily] = useState('Poppins');
   const [fontSize, setFontSize] = useState(24);
@@ -754,6 +755,7 @@ const ElementQRCodeProperties = ({
           textColor,
           frameBgColor,
           arrowColor,
+          frameCorner,
           scale: 1
         });
 
@@ -1008,7 +1010,8 @@ const ElementQRCodeProperties = ({
       setLogoAspect(initAspect);
 
       const currentFrame = targetEl.getAttribute('data-qr-frame') || 'frame-none';
-      const isLightBg = currentFrame === 'frame-curved-arrow' || currentFrame === 'frame-simple-text';
+      const currentFrameCorner = targetEl.getAttribute('data-qr-frame-corner') || 'rounded';
+      const isLightBg = currentFrame === 'frame-curved-arrow' || currentFrame === 'frame-simple-text' || currentFrame === 'frame-covered';
       const defaultTextColor = isLightBg ? '#000000' : '#FFFFFF';
       const defaultFontFamily = currentFrame === 'frame-curved-arrow' ? 'Caveat' : 'Poppins';
 
@@ -1049,6 +1052,7 @@ const ElementQRCodeProperties = ({
       }
 
       setFrame(currentFrame);
+      setFrameCorner(currentFrameCorner);
       const rawText = targetEl.getAttribute('data-qr-text');
       setText((rawText !== null ? rawText : (currentFrame === 'frame-curved-arrow' ? 'Scan Me' : (currentFrame === 'frame-none' ? '' : 'SCAN ME'))).slice(0, 30));
       setFontFamily(targetEl.getAttribute('data-qr-font-family') || defaultFontFamily);
@@ -1087,6 +1091,7 @@ const ElementQRCodeProperties = ({
         fontWeight: targetEl.getAttribute('data-qr-font-weight') || 'Semi Bold',
         frameBgColor: targetEl.getAttribute('data-qr-frame-bg') || '#FFFFFF',
         arrowColor: targetEl.getAttribute('data-qr-arrow-color') || '#000000',
+        frameCorner: currentFrameCorner,
         qrColor: targetEl.getAttribute('data-qr-color') || '#000000',
         backdrop: (targetEl.hasAttribute('data-qr-backdrop') ? targetEl.getAttribute('data-qr-backdrop') : '#FFFFFF'),
         patternStyle: targetEl.getAttribute('data-qr-pattern') || 'classic-square',
@@ -1152,6 +1157,7 @@ const ElementQRCodeProperties = ({
     const currentLogoAspect = overrides.logoAspect !== undefined ? overrides.logoAspect : logoAspect;
 
     const currentFrame = overrides.frame !== undefined ? overrides.frame : frame;
+    const currentFrameCorner = overrides.frameCorner !== undefined ? overrides.frameCorner : frameCorner;
     const currentText = overrides.text !== undefined ? overrides.text : text;
     const currentFontFamily = overrides.fontFamily !== undefined ? overrides.fontFamily : fontFamily;
     const currentFontSize = overrides.fontSize !== undefined ? overrides.fontSize : fontSize;
@@ -1184,6 +1190,7 @@ const ElementQRCodeProperties = ({
     }
 
     targetEl.setAttribute('data-qr-frame', currentFrame);
+    targetEl.setAttribute('data-qr-frame-corner', currentFrameCorner);
     targetEl.setAttribute('data-qr-text', currentText !== undefined && currentText !== null ? currentText : '');
     targetEl.setAttribute('data-qr-font-family', currentFontFamily);
     targetEl.setAttribute('data-qr-font-size', currentFontSize.toString());
@@ -1214,7 +1221,8 @@ const ElementQRCodeProperties = ({
         fontWeight: currentFontWeight,
         textColor: currentTextColor,
         frameBgColor: currentFrameBg,
-        arrowColor: currentArrowColor
+        arrowColor: currentArrowColor,
+        frameCorner: currentFrameCorner
       });
 
       if (seq !== renderSeqRef.current) return;
@@ -1334,9 +1342,10 @@ const ElementQRCodeProperties = ({
     if (key === 'logoRadius') setLogoRadius(value);
     if (key === 'logoBgColor') setLogoBgColor(value);
 
+    if (key === 'frameCorner') setFrameCorner(value);
     if (key === 'frame') {
       setFrame(value);
-      const isNewLightBg = value === 'frame-curved-arrow' || value === 'frame-simple-text';
+      const isNewLightBg = value === 'frame-curved-arrow' || value === 'frame-simple-text' || value === 'frame-covered';
 
       if (value === 'frame-curved-arrow' && (!text || text === 'SCAN ME')) {
         setText('Scan Me');
@@ -2030,64 +2039,98 @@ const ElementQRCodeProperties = ({
         <div className="flex flex-col gap-[0.9vw]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-[0.8vw] flex-1">
-              <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">Frame Text & Style</span>
+              <span className="text-[0.82vw] font-semibold text-gray-900 whitespace-nowrap">
+                {frame === 'frame-covered' ? 'Frame Style' : 'Frame Text & Style'}
+              </span>
               <div className="flex-1 h-[1px] bg-gray-200" />
             </div>
-            <span className="text-[0.68vw] text-gray-400 font-medium ml-[0.5vw]">
-              {(text || '').length}/30
-            </span>
+            {frame !== 'frame-covered' && (
+              <span className="text-[0.68vw] text-gray-400 font-medium ml-[0.5vw]">
+                {(text || '').length}/30
+              </span>
+            )}
           </div>
 
-          {/* Frame Text (matching TextProperties.jsx input) */}
-          <div className="relative w-full">
-            <input
-              type="text"
-              value={text}
-              maxLength={30}
-              onChange={(e) => handleChange('text', e.target.value.slice(0, 30))}
-              placeholder="Scan Me"
-              className="w-full h-[2.1vw] min-h-[30px] bg-white border border-gray-300 rounded-[0.45vw] px-[0.75vw] pr-[2vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#EC5137] shadow-2xs font-medium"
-            />
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.6vw] text-gray-400">
-              <Pencil className="w-[0.85vw] h-[0.85vw]" />
+          {/* Frame Corner: Rounded or Sharp */}
+          {(frame === 'frame-covered' || frame === 'frame-simple-text') && (
+            <div className="flex items-center justify-between gap-[0.8vw]">
+              <span className="text-[0.78vw] font-medium text-gray-800 whitespace-nowrap">Frame Corner</span>
+              <div className="flex items-center bg-gray-100/80 border border-gray-200 rounded-[0.45vw] p-[0.2vw] gap-[0.2vw] w-[10.5vw]">
+                {[
+                  { label: 'Rounded', value: 'rounded' },
+                  { label: 'Sharp', value: 'sharp' }
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleChange('frameCorner', opt.value)}
+                    className={`flex-1 py-[0.25vw] rounded-[0.35vw] text-[0.74vw] font-semibold transition-all cursor-pointer ${
+                      frameCorner === opt.value
+                        ? 'bg-[#EC5137] text-white shadow-2xs'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Font Family & Size Dropdowns (matching TextProperties.jsx layout) */}
-          <div className="flex items-center gap-[0.6vw]">
-            <div className="flex-[1.6]">
-              <CustomSelect
-                value={fontFamily}
-                onChange={(val) => handleChange('fontFamily', val)}
-                options={FONT_FAMILY_OPTIONS}
+          {frame !== 'frame-covered' && (
+            <>
+              {/* Frame Text (matching TextProperties.jsx input) */}
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  value={text}
+                  maxLength={30}
+                  onChange={(e) => handleChange('text', e.target.value.slice(0, 30))}
+                  placeholder="Scan Me"
+                  className="w-full h-[2.1vw] min-h-[30px] bg-white border border-gray-300 rounded-[0.45vw] px-[0.75vw] pr-[2vw] text-[0.8vw] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#EC5137] shadow-2xs font-medium"
+                />
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-[0.6vw] text-gray-400">
+                  <Pencil className="w-[0.85vw] h-[0.85vw]" />
+                </div>
+              </div>
+
+              {/* Font Family & Size Dropdowns (matching TextProperties.jsx layout) */}
+              <div className="flex items-center gap-[0.6vw]">
+                <div className="flex-[1.6]">
+                  <CustomSelect
+                    value={fontFamily}
+                    onChange={(val) => handleChange('fontFamily', val)}
+                    options={FONT_FAMILY_OPTIONS}
+                  />
+                </div>
+                <div className="flex-1">
+                  <CustomSelect
+                    value={fontSize}
+                    onChange={(val) => handleChange('fontSize', parseInt(val, 10))}
+                    options={FONT_SIZE_OPTIONS}
+                  />
+                </div>
+              </div>
+
+              {/* Font Weight Dropdown */}
+              <div className="w-full">
+                <CustomSelect
+                  value={fontWeight}
+                  onChange={(val) => handleChange('fontWeight', val)}
+                  options={FONT_WEIGHT_OPTIONS}
+                />
+              </div>
+
+              {/* Text Color (Fill Color card style matching Color.jsx) */}
+              <FillColorCard
+                label="Text Color"
+                color={textColor}
+                onColorChange={(val) => handleChange('textColor', val)}
+                onPickerToggle={() => handleToggleColorPicker('textColor')}
+                isPickerActive={activeColorPicker === 'textColor'}
               />
-            </div>
-            <div className="flex-1">
-              <CustomSelect
-                value={fontSize}
-                onChange={(val) => handleChange('fontSize', parseInt(val, 10))}
-                options={FONT_SIZE_OPTIONS}
-              />
-            </div>
-          </div>
-
-          {/* Font Weight Dropdown */}
-          <div className="w-full">
-            <CustomSelect
-              value={fontWeight}
-              onChange={(val) => handleChange('fontWeight', val)}
-              options={FONT_WEIGHT_OPTIONS}
-            />
-          </div>
-
-          {/* Text Color (Fill Color card style matching Color.jsx) */}
-          <FillColorCard
-            label="Text Color"
-            color={textColor}
-            onColorChange={(val) => handleChange('textColor', val)}
-            onPickerToggle={() => handleToggleColorPicker('textColor')}
-            isPickerActive={activeColorPicker === 'textColor'}
-          />
+            </>
+          )}
 
           {/* Frame Background Color (Fill Color card style matching Color.jsx) */}
           <FillColorCard

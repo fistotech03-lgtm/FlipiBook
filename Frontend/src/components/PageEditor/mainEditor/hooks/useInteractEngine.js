@@ -181,6 +181,8 @@ export const useInteractEngine = ({
 
   useEffect(() => {
     // Setup interactjs for elements within the SVG - targeting the SVG container (events bubble up with full performance)
+    // Kept so a canvas pan / zoom while holding content can drive the same start / move / end
+    let dragListeners = null;
     const interactable = interact('.page-svg-container svg')
       .styleCursor(false) // Prevents interact.js from dynamically setting cursors on hover
       .rectChecker(safeRectChecker)
@@ -189,8 +191,16 @@ export const useInteractEngine = ({
         cursorChecker: () => null, // Second layer of prevention just in case
         inertia: false, // Disable inertia for perfect cursor sync
         autoScroll: true,
-        listeners: {
+        listeners: (dragListeners = {
           start(event) {
+            // A pan-started (manual) drag is already running for this press: adopt it instead of
+            // starting a second drag (that would apply the scroll offset twice).
+            const manual = window.__fbeManualDrag;
+            if (manual && manual.interaction?.dragState && !manual.adopted) {
+              manual.adopted = true;
+              event.interaction.dragState = manual.interaction.dragState;
+              return;
+            }
             let target = event.target;
 
             const container = target.closest('.page-svg-container');
@@ -649,11 +659,28 @@ export const useInteractEngine = ({
               multiDragItems: multiDragItems.length > 0 ? multiDragItems : null,
               initialClientX: event.clientX,
               initialClientY: event.clientY,
+              // Start point fixed in PAGE units: panning / zooming mid-drag must not move it, so the
+              // element keeps following the pointer when the canvas scrolls under it.
+              rootStartFixed: (window.__fbePressPointer?.root && window.__fbePressPointer.svg === svgElement)
+                ? { ...window.__fbePressPointer.root }
+                : getLocalPoint(svgElement, svgElement, event.clientX, event.clientY),
               thresholdMet: false
             };
           },
           move(event) {
             const dragState = event.interaction.dragState;
+            if (dragState) {
+              // Remember the pointer so a pan / zoom while the button is held can replay this move
+              window.__fbeActiveDragPointer = {
+                clientX: event.clientX,
+                clientY: event.clientY,
+                interaction: event.interaction,
+                ctrlKey: !!event.ctrlKey,
+                metaKey: !!event.metaKey,
+                altKey: !!event.altKey,
+                shiftKey: !!event.shiftKey,
+              };
+            }
             if (!dragState) return;
 
             // ── RE-SYNC: If React re-rendered and the original nodes were detached, ──
@@ -691,9 +718,18 @@ export const useInteractEngine = ({
 
             if (!dragState.thresholdMet) {
               const DRAG_THRESHOLD = 2;
-              const dxClient = event.clientX - dragState.initialClientX;
-              const dyClient = event.clientY - dragState.initialClientY;
-              const distance = Math.sqrt(dxClient * dxClient + dyClient * dyClient);
+              let distance;
+              const rootNow = dragState.rootStartFixed ? getLocalPoint(dragState.svgElement, dragState.svgElement, event.clientX, event.clientY) : null;
+              const svgCtmNow = dragState.svgElement?.getScreenCTM?.();
+              if (rootNow && svgCtmNow) {
+                // page-space movement in screen px: includes the canvas panning under the pointer
+                const pxScale = Math.hypot(svgCtmNow.a, svgCtmNow.b) || 1;
+                distance = Math.hypot(rootNow.x - dragState.rootStartFixed.x, rootNow.y - dragState.rootStartFixed.y) * pxScale;
+              } else {
+                const dxClient = event.clientX - dragState.initialClientX;
+                const dyClient = event.clientY - dragState.initialClientY;
+                distance = Math.sqrt(dxClient * dxClient + dyClient * dyClient);
+              }
 
               if (distance < DRAG_THRESHOLD) {
                 return; // Do nothing until threshold is met
@@ -822,7 +858,7 @@ export const useInteractEngine = ({
 
             if (dragState.multiDragItems) {
               // Move ALL multi-selected elements freely across canvas with smart snapping
-              const rootStart = getLocalPoint(dragState.svgElement, dragState.svgElement, dragState.initialClientX, dragState.initialClientY);
+              const rootStart = dragState.rootStartFixed || getLocalPoint(dragState.svgElement, dragState.svgElement, dragState.initialClientX, dragState.initialClientY);
               const rootCurrent = getLocalPoint(dragState.svgElement, dragState.svgElement, event.clientX, event.clientY);
               const rootDx = (rootStart && rootCurrent) ? (rootCurrent.x - rootStart.x) : 0;
               const rootDy = (rootStart && rootCurrent) ? (rootCurrent.y - rootStart.y) : 0;
@@ -858,7 +894,7 @@ export const useInteractEngine = ({
             } else {
               // Single element drag with smart snapping, magenta guidelines, and coordinate badge
               const target = dragState.element;
-              const rootStart = getLocalPoint(dragState.svgElement, dragState.svgElement, dragState.initialClientX, dragState.initialClientY);
+              const rootStart = dragState.rootStartFixed || getLocalPoint(dragState.svgElement, dragState.svgElement, dragState.initialClientX, dragState.initialClientY);
               const rootCurrent = getLocalPoint(dragState.svgElement, dragState.svgElement, event.clientX, event.clientY);
               if (!rootStart || !rootCurrent) return;
 
@@ -955,6 +991,7 @@ export const useInteractEngine = ({
             suppressClickRef.current = true;
           },
           end(event) {
+            window.__fbeActiveDragPointer = null;
             const dragState = event.interaction.dragState;
             if (!dragState) {
               document.body.classList.remove('dragging-active');
@@ -1067,7 +1104,7 @@ export const useInteractEngine = ({
               if (!hasAnimation) finalizeEnd();
             }
           }
-        }
+        })
       });
 
     const handleGlobalPointerUp = (e) => {
@@ -1084,7 +1121,122 @@ export const useInteractEngine = ({
     window.addEventListener('pointercancel', handleGlobalPointerUp);
     window.addEventListener('mouseup', handleGlobalPointerUp);
 
+    // Pan / zoom while holding content (wheel, trackpad, zoom): the canvas moves under a still
+    // pointer and no pointermove fires, so the held element used to stay behind on the page.
+    // Replay the pointer once per frame → the element is dragged along and stays under the cursor,
+    // exactly like moving the mouse. Works even if the mouse never moved since the press.
+    const getCanvasSvg = (node) => {
+      const c = node?.closest?.('.page-svg-container');
+      return c?.querySelector('[id^="canvas-content-"] svg') || c?.querySelector('svg:not([id^="highlight-overlay-"])') || null;
+    };
+    const handlePressDown = (e) => {
+      window.__fbePressPointer = null;
+      window.__fbeManualDrag = null;
+      if (e.button !== 0) return;
+      const svg = getCanvasSvg(e.target);
+      if (!svg) return;
+      let root = null;
+      try {
+        const ctm = svg.getScreenCTM();
+        if (ctm) {
+          const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+          root = { x: p.x, y: p.y };
+        }
+      } catch { /* ignore */ }
+      window.__fbePressPointer = {
+        clientX: e.clientX, clientY: e.clientY, pointerId: e.pointerId, pointerType: e.pointerType || 'mouse',
+        target: e.target, svg, root,
+      };
+    };
+    const handlePressMove = (e) => {
+      const p = window.__fbePressPointer;
+      if (p && e.isTrusted && e.pointerId === p.pointerId) {
+        p.clientX = e.clientX; p.clientY = e.clientY;
+        p.ctrlKey = e.ctrlKey; p.metaKey = e.metaKey; p.altKey = e.altKey; p.shiftKey = e.shiftKey;
+      }
+    };
+    const clearPress = () => {
+      finishManualDrag();
+      window.__fbePressPointer = null;
+      window.__fbeActiveDragPointer = null;
+    };
+
+    const makeDragEvent = (src, interaction, target) => ({
+      target: target || src.target,
+      clientX: src.clientX,
+      clientY: src.clientY,
+      ctrlKey: !!src.ctrlKey,
+      metaKey: !!src.metaKey,
+      altKey: !!src.altKey,
+      shiftKey: !!src.shiftKey,
+      sourceEvent: { altKey: !!src.altKey },
+      pointerType: src.pointerType || 'mouse',
+      interaction,
+    });
+
+    let panReplayRaf = null;
+    const handlePanWhileDragging = () => {
+      if (panReplayRaf || !dragListeners) return;
+      const active = window.__fbeActiveDragPointer;
+      const press = window.__fbePressPointer;
+      if (!active && !press) return;
+      // Not dragging yet (mouse never moved since the press): only when holding selected content
+      if (!active && !press.target?.closest?.('[data-selected="true"], [data-child-selected="true"]')) return;
+      panReplayRaf = requestAnimationFrame(() => {
+        panReplayRaf = null;
+        try {
+          const cur = window.__fbeActiveDragPointer;
+          if (cur?.interaction?.dragState) {
+            // Drag running: re-run the move at the (unchanged) pointer over the moved canvas
+            dragListeners.move(makeDragEvent(cur, cur.interaction));
+            return;
+          }
+          const pr = window.__fbePressPointer;
+          if (!pr) return;
+          let manual = window.__fbeManualDrag;
+          if (!manual) {
+            // Start the drag ourselves, anchored at the press point
+            manual = { interaction: {}, adopted: false, src: pr };
+            window.__fbeManualDrag = manual;
+            dragListeners.start(makeDragEvent(pr, manual.interaction, pr.target));
+            if (!manual.interaction.dragState) { window.__fbeManualDrag = null; return; }
+          }
+          dragListeners.move(makeDragEvent(pr, manual.interaction, pr.target));
+        } catch (err) {
+          console.warn('[drag] pan-follow failed', err);
+        }
+      });
+    };
+
+    // Finish a drag that was started by panning (interact.js never saw it move)
+    const finishManualDrag = () => {
+      const manual = window.__fbeManualDrag;
+      window.__fbeManualDrag = null;
+      if (!manual || manual.adopted || !manual.interaction?.dragState || !dragListeners) return;
+      try {
+        const pr = window.__fbePressPointer || manual.src;
+        dragListeners.end(makeDragEvent(pr, manual.interaction, pr.target));
+      } catch (err) {
+        console.warn('[drag] pan-follow end failed', err);
+      }
+    };
+
+    window.addEventListener('pointerdown', handlePressDown, true);
+    window.addEventListener('pointermove', handlePressMove, true);
+    window.addEventListener('pointerup', clearPress, true);
+    window.addEventListener('pointercancel', clearPress, true);
+    window.addEventListener('editor-pan-update', handlePanWhileDragging);
+
     return () => {
+      window.removeEventListener('editor-pan-update', handlePanWhileDragging);
+      window.removeEventListener('pointerdown', handlePressDown, true);
+      window.removeEventListener('pointermove', handlePressMove, true);
+      window.removeEventListener('pointerup', clearPress, true);
+      window.removeEventListener('pointercancel', clearPress, true);
+      if (panReplayRaf) cancelAnimationFrame(panReplayRaf);
+      window.__fbeActiveDragPointer = null;
+      window.__fbePressPointer = null;
+      window.__fbeManualDrag = null;
       interactable.unset();
       clearSmartGuides();
       window.removeEventListener('pointerup', handleGlobalPointerUp);

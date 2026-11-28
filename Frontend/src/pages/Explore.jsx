@@ -267,18 +267,18 @@ const FlipbookCard = ({ v_id, shareId, access, rawBook, authorPicture, authorBgC
                 {/* Stats (Split evenly across width) */}
                 <div className="flex items-center justify-between w-full text-[0.76vw] text-gray-700 font-medium whitespace-nowrap">
                     <div className="flex items-center gap-[0.25vw]">
-                        <span className="text-black font-semibold">{(Array.isArray(pages) ? pages.length : (typeof pages === 'number' ? pages : 12))}</span>
+                        <span className="text-black font-semibold">{(Array.isArray(pages) ? pages.length : (typeof pages === 'number' ? pages : 0))}</span>
                         <span className="font-normal text-gray-500">Pages</span>
                     </div>
                     <span className="text-gray-300">|</span>
                     <div className="flex items-center gap-[0.25vw]">
                         <Icon icon="lucide:eye" className="w-[0.85vw] h-[0.85vw] text-gray-400" />
-                        <span>{views || '12.5k'}</span>
+                        <span>{typeof views === 'number' ? (views >= 1000 ? `${(views / 1000).toFixed(1).replace(/\.0$/, '')}k` : views) : (views || 0)}</span>
                     </div>
                     <span className="text-gray-300">|</span>
                     <div className="flex items-center gap-[0.25vw]">
                         <Icon icon="material-symbols:star" className="w-[0.9vw] h-[0.9vw] text-yellow-400" />
-                        <span>{rating || 4.5}</span>
+                        <span>{rating !== undefined && rating !== null ? Number(rating).toFixed(1).replace(/\.0$/, '') : '0'}</span>
                     </div>
                 </div>
 
@@ -315,10 +315,12 @@ const FlipbookCard = ({ v_id, shareId, access, rawBook, authorPicture, authorBgC
                             <span className="text-[0.88vw] font-semibold text-gray-900 leading-tight truncate hover:text-[#ea543a] transition-colors">
                                 {authorName || 'Creator'}
                             </span>
-                            <span className="flex items-center gap-[0.2vw] text-[0.68vw] text-gray-400 mt-0.5 truncate">
-                                <Icon icon="lucide:map-pin" className="w-[0.75vw] h-[0.75vw] min-w-[10px] min-h-[10px] text-gray-400 shrink-0" />
-                                <span className="truncate">{location ? String(location).replace(/📍/g, '').trim() : 'Coimbatore'}</span>
-                            </span>
+                            {location && String(location).replace(/📍/g, '').trim() ? (
+                                <span className="flex items-center gap-[0.2vw] text-[0.68vw] text-gray-400 mt-0.5 truncate">
+                                    <Icon icon="lucide:map-pin" className="w-[0.75vw] h-[0.75vw] min-w-[10px] min-h-[10px] text-gray-400 shrink-0" />
+                                    <span className="truncate">{String(location).replace(/📍/g, '').trim()}</span>
+                                </span>
+                            ) : null}
                         </div>
                     </div>
 
@@ -770,12 +772,12 @@ const Explore = () => {
                             userEmail: book.userEmail,
                             bookName: book.flipbookName,
                             authorName: book.authorName || (book.userEmail ? book.userEmail.split('@')[0] : "Creator"),
-                            location: book.city || book.location || "Coimbatore",
+                            location: book.city || book.location || "",
                             authorPicture: book.authorPicture || null,
                             authorBgColor: book.authorBgColor || '#E8D4C8',
-                            pages: typeof book.pages === 'number' ? book.pages : (book.pages?.length || book.pageCount || 12),
-                            views: book.views || book.analytics?.views || "12.5k",
-                            rating: book.rating || 4.5,
+                            pages: typeof book.pages === 'number' ? book.pages : (Array.isArray(book.pages) ? book.pages.length : (book.pageCount || 0)),
+                            views: book.viewsCount ?? book.views ?? book.analytics?.views ?? 0,
+                            rating: book.averageRating ?? book.rating ?? 0,
                             description: book.Customized_Settings?.FlipbookInfo?.quotes,
                             type: typeName,
                             has3D: has3D,

@@ -13,6 +13,7 @@ import { checkIsAnimatedWebp } from '../utils/editorUtils';
 import ImportViaUrlModal from '../modals/ImportViaUrlModal';
 import MediaGalleryPopup from '../modals/MediaGalleryPopup';
 import { optimizeImageForWeb, shouldOptimizeImage } from '../../../utils/imageOptimizer';
+import { isSvgFile } from '../utils/svgVectorImport';
 
 const UploadProperties = ({ activePageIndex, setActiveMainTool }) => {
   const { user } = useAuth();
@@ -47,10 +48,10 @@ const UploadProperties = ({ activePageIndex, setActiveMainTool }) => {
     if (!isGif && file.type.includes('webp')) {
       isGif = await checkIsAnimatedWebp(file);
     }
-    const isSvg = file.type === 'image/svg+xml';
+    const isSvg = isSvgFile(file);
 
     if (!file.type.startsWith('image/') && !isVideo && !isGif && !isSvg) {
-      toast.error('Only Image, Video, and GIF formats are allowed.');
+      toast.error('Only Image, Video, GIF, and SVG formats are allowed.');
       e.target.value = '';
       return;
     }
@@ -59,6 +60,27 @@ const UploadProperties = ({ activePageIndex, setActiveMainTool }) => {
       alert(`You must be logged in to upload ${isVideo ? 'videos' : 'GIFs'}.`);
       e.target.value = '';
       return;
+    }
+
+    // Inline vector SVG path: insert real vector paths on the page without WebP conversion
+    if (isSvg && file.size <= 1024 * 1024) {
+      try {
+        const svgText = await file.text();
+        if (svgText && svgText.includes('<svg')) {
+          window.dispatchEvent(new CustomEvent('upload-svg-to-editor', {
+            detail: {
+              svgText,
+              fileName: file.name,
+              pageIndex: activePageIndex,
+              file,
+            }
+          }));
+          e.target.value = '';
+          return;
+        }
+      } catch (svgErr) {
+        console.warn('[UploadProperties] SVG text read fallback:', svgErr);
+      }
     }
 
     // Fast-path for images: off-thread WebP optimization if needed

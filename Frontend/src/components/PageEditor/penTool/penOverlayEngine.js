@@ -257,7 +257,7 @@ export const drawShapeImageAdjustOverlay = (shapeEl, pageIndex, zoom = 100) => {
   });
 };
 
-export const drawNodeEditOverlay = (
+const drawNodeEditOverlayImpl = (
   pathEl,
   paperPath,
   pageIndex,
@@ -554,7 +554,7 @@ export const clearPenToolNodes = (pageIndex) => {
   if (nodeGroup) nodeGroup.remove();
 };
 
-export const drawPenToolNodes = (pageIndex, parentEl, nestedPoints, currentPoint = null, zoom = 100) => {
+const drawPenToolNodesImpl = (pageIndex, parentEl, nestedPoints, currentPoint = null, zoom = 100) => {
   const overlay = document.getElementById(`highlight-overlay-${pageIndex}`);
   if (!overlay || !parentEl) return;
 
@@ -609,7 +609,7 @@ export const drawPenToolNodes = (pageIndex, parentEl, nestedPoints, currentPoint
   } catch (e) { }
 };
 
-export const drawBendingNodes = (pageIndex, pathEl, paperPath, activeCurveIndex, zoom = 100, refs = {}) => {
+const drawBendingNodesImpl = (pageIndex, pathEl, paperPath, activeCurveIndex, zoom = 100, refs = {}) => {
   const overlay = document.getElementById(`highlight-overlay-${pageIndex}`);
   if (!overlay || !pathEl) return;
 
@@ -698,7 +698,7 @@ export const drawBendingNodes = (pageIndex, pathEl, paperPath, activeCurveIndex,
   } catch (e) { }
 };
 
-export const renderVectraOverlay = (pageIndex, parentEl, vectraSession, zoom = 100) => {
+const renderVectraOverlayImpl = (pageIndex, parentEl, vectraSession, zoom = 100) => {
   const overlay = document.getElementById(`highlight-overlay-${pageIndex}`);
   if (!overlay || !parentEl || !vectraSession) return;
 
@@ -739,8 +739,16 @@ export const renderVectraOverlay = (pageIndex, parentEl, vectraSession, zoom = 1
       previewPath.setAttribute('d', vectraSession.ui.previewD);
       previewPath.setAttribute('fill', 'none');
       previewPath.setAttribute('stroke', '#6366f1');
-      previewPath.setAttribute('stroke-width', '1');
-      previewPath.setAttribute('vector-effect', 'non-scaling-stroke');
+      // Exactly 1 screen px at any zoom. vector-effect:non-scaling-stroke does not cancel the canvas
+      // zoom (a CSS scale on an HTML ancestor), so size it explicitly in the path's local units:
+      // 1px / (local → screen scale), then follow the live --fbe-inv-zoom (same as the node dots).
+      const localToScreen = (Math.sqrt(Math.abs(matrix.a * matrix.d - matrix.b * matrix.c)) || 1) * overlayScale;
+      const rubberW = 1 / localToScreen;
+      previewPath.setAttribute('stroke-width', String(rubberW));
+      const inv0 = parseFloat(getComputedStyle(overlay).getPropertyValue('--fbe-inv-zoom'));
+      if (inv0 > 0) {
+        previewPath.style.strokeWidth = `calc(${rubberW}px * var(--fbe-inv-zoom, ${inv0}) / ${inv0})`;
+      }
       previewPath.setAttribute('stroke-linecap', 'round');
       previewPath.setAttribute('stroke-opacity', '0.9');
       previewPath.style.pointerEvents = 'none';
@@ -877,3 +885,51 @@ export const generatePathData = (pts, isClosed = false, toolType = 'pen', active
   if (subIsClosed) d += " Z";
   return d;
 };
+
+
+/* ── Constant on-screen size for node / handle markers while zooming ─────────────────────────────
+ * Markers are sized for the zoom at draw time (r = 3.5 × invScale …) and the overlay is not redrawn
+ * on every zoom frame, so they used to grow / shrink with the canvas. Pin them to the live
+ * --fbe-inv-zoom CSS variable (set on the zoom container in the same frame as the zoom transform):
+ * each marker scales around its own centre by inv(now) / inv(at draw) → same size on screen.
+ */
+const OVERLAY_GROUP_IDS = ['node-edit-overlay-group', 'vectra-overlay-group'];
+
+const pinOverlayMarkersToScreen = (pageIndex) => {
+  const overlay = document.getElementById(`highlight-overlay-${pageIndex}`);
+  if (!overlay) return;
+  OVERLAY_GROUP_IDS.forEach((gid) => {
+    const group = overlay.querySelector(`#${gid}`);
+    if (!group) return;
+    const inv0 = parseFloat(getComputedStyle(group).getPropertyValue('--fbe-inv-zoom'));
+    if (!(inv0 > 0)) return;
+    const k = `calc(var(--fbe-inv-zoom, ${inv0}) / ${inv0})`;
+    group.querySelectorAll('circle, rect, line, path').forEach((m) => {
+      // leave transformed sub-groups (mask crop preview, path previews) and defs alone
+      if (m.parentElement && m.parentElement !== group && m.parentElement.closest('[transform], mask, defs, clipPath')) return;
+      const tag = m.tagName.toLowerCase();
+      if (tag === 'circle' || tag === 'rect') {
+        if (tag === 'rect' && parseFloat(m.getAttribute('width')) > 100) return; // backgrounds, not markers
+        let rotate = '';
+        const t = m.getAttribute('transform');
+        if (t) {
+          const r = t.match(/^\s*rotate\(\s*([-\d.]+)/);
+          if (!r) return;
+          rotate = `rotate(${r[1]}deg) `; // rotate(a, cx, cy) about its own centre == CSS rotate with fill-box origin
+          m.removeAttribute('transform');
+        }
+        m.style.transformBox = 'fill-box';
+        m.style.transformOrigin = 'center';
+        m.style.transform = `${rotate}scale(${k})`;
+      } else {
+        const sw = parseFloat(m.getAttribute('stroke-width'));
+        if (sw > 0) m.style.strokeWidth = `calc(${sw}px * ${k})`;
+      }
+    });
+  });
+};
+
+export const drawNodeEditOverlay = (...args) => { const r = drawNodeEditOverlayImpl(...args); pinOverlayMarkersToScreen(args[2]); return r; };
+export const drawPenToolNodes = (...args) => { const r = drawPenToolNodesImpl(...args); pinOverlayMarkersToScreen(args[0]); return r; };
+export const drawBendingNodes = (...args) => { const r = drawBendingNodesImpl(...args); pinOverlayMarkersToScreen(args[0]); return r; };
+export const renderVectraOverlay = (...args) => { const r = renderVectraOverlayImpl(...args); pinOverlayMarkersToScreen(args[0]); return r; };

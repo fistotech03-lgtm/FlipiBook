@@ -5,6 +5,7 @@ import axios from 'axios';
 import { checkIsAnimatedWebp } from '../utils/editorUtils';
 import { resolveUploadsPath } from '../../../utils/assets/assetUtils';
 import { optimizeImageForWeb } from '../../../utils/assets/imageOptimizer';
+import { isSvgFile } from '../utils/svgVectorImport';
 import { useToast } from '../../CustomToast';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -180,7 +181,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
         // Optimize image client-side to WebP (20MB-40MB -> ~250KB in <80ms off-thread)
         let fileToUpload = newFile;
         let previewUrl = objectUrl;
-        if (!isVideo && !isAnimated) {
+        if (!isVideo && !isAnimated && !isSvgFile(newFile)) {
           try {
             const opt = await optimizeImageForWeb(newFile, { maxDimension: 2048, quality: 0.82 });
             fileToUpload = opt.file;
@@ -254,7 +255,7 @@ const MediaGalleryPopup = ({ isOpen, onClose, anchorRef, onFileSelect, initialGa
 
       let fileToUpload = newFile;
       let previewUrl = newUrl;
-      if (!isVideo && !isAnimated) {
+      if (!isVideo && !isAnimated && !isSvgFile(newFile)) {
         try {
           const opt = await optimizeImageForWeb(newFile, { maxDimension: 2048, quality: 0.82 });
           fileToUpload = opt.file;

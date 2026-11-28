@@ -29,7 +29,7 @@ export const snapLineEnd = (start, pt, ctm, { shiftKey = false, disableSnap = fa
   const len = Math.hypot(sv.x, sv.y);
   if (len < 0.5) return { end: { x: pt.x, y: pt.y }, snapped: false, angle: 0 };
 
-  const rawDeg = (Math.atan2(-sv.y, sv.x) * 180) / Math.PI; // screen angle, y up
+  const rawDeg = (Math.atan2(sv.y, sv.x) * 180) / Math.PI; // screen angle, clockwise (y down)
   const nearest = Math.round(rawDeg / 45) * 45;
   const diff = Math.abs(rawDeg - nearest);
   const shouldSnap = !disableSnap && (shiftKey || diff <= SNAP_DEG);
@@ -40,9 +40,9 @@ export const snapLineEnd = (start, pt, ctm, { shiftKey = false, disableSnap = fa
     angleDeg = nearest;
     const rad = (nearest * Math.PI) / 180;
     // keep the projected length along the snapped direction (feels natural under the cursor)
-    const proj = sv.x * Math.cos(rad) + sv.y * -Math.sin(rad);
+    const proj = sv.x * Math.cos(rad) + sv.y * Math.sin(rad);
     const sx = proj * Math.cos(rad);
-    const sy = -proj * Math.sin(rad);
+    const sy = proj * Math.sin(rad);
     // screen vector -> local vector
     if (ctm) {
       const det = ctm.a * ctm.d - ctm.b * ctm.c || 1;
@@ -54,7 +54,7 @@ export const snapLineEnd = (start, pt, ctm, { shiftKey = false, disableSnap = fa
       end = { x: start.x + sx, y: start.y + sy };
     }
   }
-  // Direction from start to end, 0–359° (0 = right, 90 = up, 180 = left, 270 = down)
+  // Direction from start to end, 0–359° (0 = right, 90 = down, 180 = left, 270 = up)
   let shown = ((angleDeg % 360) + 360) % 360;
   if (shown >= 359.95) shown = 0;
   return { end, snapped: shouldSnap, angle: shown };

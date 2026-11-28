@@ -656,19 +656,23 @@ export default function ColorPicker({
 
   const renderCustomPickerContent = (isStandalone = false) => (
     <>
-      {/* Custom Picker Header (Back Button) */}
+      {/* Custom Picker Header (Back Button or Standalone Title) */}
       <div className="flex items-center justify-between mb-[0.9vw]">
-        <button
-          type="button"
-          onClick={() => {
-            setView("palette");
-            setEditingStopIndex(null);
-          }}
-          className="flex items-center gap-[0.35vw] text-[0.82vw] font-semibold text-gray-700 hover:text-gray-900 transition-colors cursor-pointer"
-        >
-          <Icon icon="heroicons:chevron-left" className="w-[1.05vw] h-[1.05vw]" />
-          <span>{editingStopIndex !== null ? `Edit Stop ${editingStopIndex + 1}` : 'Back to Palette'}</span>
-        </button>
+        {isStandalone ? (
+          <span className="text-[0.82vw] font-semibold text-gray-800">Color Picker</span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setView("palette");
+              setEditingStopIndex(null);
+            }}
+            className="flex items-center gap-[0.35vw] text-[0.82vw] font-semibold text-gray-700 hover:text-gray-900 transition-colors cursor-pointer"
+          >
+            <Icon icon="heroicons:chevron-left" className="w-[1.05vw] h-[1.05vw]" />
+            <span>{editingStopIndex !== null ? `Edit Stop ${editingStopIndex + 1}` : 'Back to Palette'}</span>
+          </button>
+        )}
         {onClose && (
           <button
             type="button"
@@ -1204,26 +1208,32 @@ export default function ColorPicker({
   return (
     <div
       ref={containerRef}
-      className={`w-[19vw] p-[1.2vw] rounded-[0.8vw] bg-white shadow-[0_1vw_3vw_-0.5vw_rgba(0,0,0,0.2)] border border-gray-200 animate-in fade-in zoom-in-95 duration-200 select-none font-sans pointer-events-auto color-picker-container cursor-move ${className || ""}`}
+      className={`${hidePalette ? 'w-[18vw] p-[1vw]' : 'w-[19vw] p-[1.2vw]'} rounded-[0.8vw] bg-white shadow-[0_1vw_3vw_-0.5vw_rgba(0,0,0,0.2)] border border-gray-200 animate-in fade-in zoom-in-95 duration-200 select-none font-sans pointer-events-auto color-picker-container cursor-move ${className || ""}`}
       style={combinedStyle}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={handlePopupPointerDown}
       {...props}
     >
-      {renderPaletteContent()}
+      {hidePalette ? (
+        renderCustomPickerContent(true)
+      ) : (
+        <>
+          {renderPaletteContent()}
 
-      {view === "custom" && (
-        <div
-          className="absolute top-[3vw] left-[calc(100%-4.5vw)] w-[18vw] p-[1vw] bg-white border border-gray-200 rounded-[0.8vw] shadow-[0_1vw_3vw_-0.5vw_rgba(0,0,0,0.25)] animate-in fade-in slide-in-from-left-2 z-[9999] cursor-move"
-          style={{
-            transform: `translate(${customDragPosition.x}px, ${customDragPosition.y}px)`,
-            ...(isCustomPopupDragging || isPopupDragging ? { transition: 'none' } : {})
-          }}
-          onPointerDown={handleCustomPopupPointerDown}
-        >
-          {renderCustomPickerContent(false)}
-        </div>
+          {view === "custom" && (
+            <div
+              className="absolute top-[3vw] left-[calc(100%-4.5vw)] w-[18vw] p-[1vw] bg-white border border-gray-200 rounded-[0.8vw] shadow-[0_1vw_3vw_-0.5vw_rgba(0,0,0,0.25)] animate-in fade-in slide-in-from-left-2 z-[9999] cursor-move"
+              style={{
+                transform: `translate(${customDragPosition.x}px, ${customDragPosition.y}px)`,
+                ...(isCustomPopupDragging || isPopupDragging ? { transition: 'none' } : {})
+              }}
+              onPointerDown={handleCustomPopupPointerDown}
+            >
+              {renderCustomPickerContent(false)}
+            </div>
+          )}
+        </>
       )}
       <style>{`
         input[type="range"].custom-range-slider-color { -webkit-appearance: none; width: 100%; background: transparent; }

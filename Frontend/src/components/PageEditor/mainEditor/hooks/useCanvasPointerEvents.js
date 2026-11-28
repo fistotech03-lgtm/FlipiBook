@@ -3116,6 +3116,17 @@ export const useCanvasPointerEvents = ({
         hitEl = directLeafText;
       }
 
+      // Group-aware target (same rule as a plain click): inside a group — e.g. the layers of an
+      // imported SVG — Shift/Cmd+Click toggles the element at the level you are working in (a sibling
+      // of the selected layer), not the whole top-level group.
+      if (!hitEl && selectedSelectTool !== 'direct') {
+        const leaf = getDraggableElement(e.target, svg);
+        const groupAware = leaf ? resolveGroupTarget(leaf, svg, selectedLayerIdRef.current) : null;
+        if (groupAware && groupAware.id && !isPageRootElement(groupAware, svg)) {
+          hitEl = groupAware;
+        }
+      }
+
       if (!hitEl) {
         for (let i = candidates.length - 1; i >= 0; i--) {
           if (hitTest(candidates[i], e.clientX, e.clientY, 4)) {

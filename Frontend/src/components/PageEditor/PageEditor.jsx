@@ -2271,7 +2271,8 @@ const PageEditor = () => {
           isOpen={is3DModalOpen}
           onClose={() => setIs3DModalOpen(false)}
           isARInteraction={
-            (current3DItem?.getAttribute?.("data-interaction") ||
+            (current3DItem?._interactionType ||
+              current3DItem?.getAttribute?.("data-interaction") ||
               current3DItem?.["data-interaction"]) === "ar-view"
           }
           dataUrl={preview3DDataUrl}

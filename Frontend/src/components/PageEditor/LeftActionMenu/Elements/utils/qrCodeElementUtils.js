@@ -20,7 +20,7 @@ export const isElementQRCode = (el) => {
 export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
   const {
     frameId = 'frame-none',
-    url = 'https://example.com',
+    url = 'https://flipibook.com',
     text,
     textColor,
     fontFamily,
@@ -29,6 +29,7 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
     logoRadius = 0,
     logoBgColor = '#FFFFFF',
     logoBg = true,
+    frameCorner = 'rounded',
     width = 55
   } = options;
 
@@ -36,12 +37,12 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
   const ratio = frameObj.ratio || 1;
   const height = Math.round(width * ratio);
 
-  const isLightBg = frameId === 'frame-curved-arrow' || frameId === 'frame-simple-text';
+  const isLightBg = frameId === 'frame-curved-arrow' || frameId === 'frame-simple-text' || frameId === 'frame-covered';
   const resolvedTextColor = textColor || (isLightBg ? '#000000' : '#FFFFFF');
   const resolvedFontFamily = fontFamily || (frameId === 'frame-curved-arrow' ? 'Caveat' : 'Poppins');
   const resolvedText = String(text !== undefined && text !== null ? text : frameObj.defaultText).slice(0, 30);
 
-  const sampleUrl = (url && String(url).trim()) ? String(url).trim() : 'https://example.com';
+  const sampleUrl = (url && String(url).trim()) ? String(url).trim() : 'https://flipibook.com';
   const cached = getCachedFrame(frameId, sampleUrl);
   const imgHref = cached?.dataUrl || (url ? `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=240x240` : (cached?.dataUrl || ''));
 
@@ -56,6 +57,7 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
   g.setAttribute('cursor', 'pointer');
   g.setAttribute('data-qr-url', url);
   g.setAttribute('data-qr-frame', frameId);
+  g.setAttribute('data-qr-frame-corner', frameCorner);
   g.setAttribute('data-qr-text', resolvedText);
   g.setAttribute('data-qr-text-color', resolvedTextColor);
   g.setAttribute('data-qr-font-family', resolvedFontFamily);
@@ -97,7 +99,8 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
     logoRadius: Number(logoRadius) || 0,
     logoBg: logoBg !== false && logoBg !== 'false',
     logoBgColor: logoBgColor || '#FFFFFF',
-    logoAspect: options.logoAspect || null
+    logoAspect: options.logoAspect || null,
+    frameCorner
   })
     .then((rendered) => {
       if (rendered?.dataUrl) {
@@ -118,7 +121,7 @@ export function createQRCodeElementNode(options = {}, cx = 100, cy = 100) {
 export function getQRCodeSvgString(options = {}, isDrag = false) {
   const {
     frameId = 'frame-none',
-    url = 'https://example.com',
+    url = 'https://flipibook.com',
     text,
     textColor,
     fontFamily,
@@ -138,7 +141,7 @@ export function getQRCodeSvgString(options = {}, isDrag = false) {
   const resolvedFontFamily = fontFamily || (frameId === 'frame-curved-arrow' ? 'Caveat' : 'Poppins');
   const resolvedText = String(text !== undefined && text !== null ? text : frameObj.defaultText).slice(0, 30);
 
-  const sampleUrl = (url && String(url).trim()) ? String(url).trim() : 'https://example.com';
+  const sampleUrl = (url && String(url).trim()) ? String(url).trim() : 'https://flipibook.com';
   const cached = getCachedFrame(frameId, sampleUrl);
   const imgHref = cached?.dataUrl || (url ? `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=240x240` : (cached?.dataUrl || ''));
   const uniqueId = `qrcode-${Date.now()}`;

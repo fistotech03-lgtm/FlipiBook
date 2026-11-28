@@ -464,7 +464,13 @@ const ThreeDViewerAction = ({
                       fileMeta &&
                       fileMeta.data
                     ) {
-                      setCurrent3DItem(item);
+                      const itemWithType = item && typeof item.getAttribute === "function"
+                        ? item
+                        : { ...item, "data-interaction": interactionType, _interactionType: interactionType };
+                      if (item && typeof item.setAttribute === "function") {
+                        item.setAttribute("data-interaction", interactionType);
+                      }
+                      setCurrent3DItem(itemWithType);
                       setIs3DModalOpen(true);
                     }
                   }}

@@ -117,16 +117,14 @@ export const parseSingleMatrix = (el) => {
 export const bakeTransformIntoPaperPath = (pathEl, paperPath, paperScope) => {
   if (!pathEl || !paperPath) return paperPath;
 
+  // Bake ONLY the path's own transform. Ancestor transforms (e.g. an imported SVG group's
+  // translate/scale) must stay: removing them moved and rescaled every sibling layer in the file.
+  // Node editing works in the path's local space through pathEl.getScreenCTM() (overlay, hit
+  // testing, getLocalPoint), which already includes the parents' transforms.
   const elementsWithTransform = [];
-  let curr = pathEl;
-  while (curr && curr.tagName && curr.tagName.toLowerCase() !== 'svg') {
-    const transformAttr = curr.getAttribute('transform');
-    const styleTransform = curr.style.transform || curr.style.translate;
-    if (transformAttr || styleTransform) {
-      elementsWithTransform.push(curr);
-    }
-    curr = curr.parentElement;
-  }
+  const ownTransform = pathEl.getAttribute('transform');
+  const ownStyleTransform = pathEl.style?.transform || pathEl.style?.translate;
+  if (ownTransform || ownStyleTransform) elementsWithTransform.push(pathEl);
 
   if (elementsWithTransform.length === 0) return paperPath;
 

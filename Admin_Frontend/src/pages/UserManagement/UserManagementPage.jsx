@@ -123,12 +123,12 @@ export default function UserManagementPage() {
       {/* Top 4 KPI Stat Cards */}
       <div className="grid grid-cols-4 gap-[1.3vw]">
         {/* Total Users */}
-        <div className="bg-white rounded-[16px] p-[1.3vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex items-center justify-between">
+        <div className="bg-white rounded-[16px] px-[1.3vw] py-[0.8vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex items-center justify-between">
           <div>
             <h2 className="text-[2.2vw] font-semibold text-[#000000] leading-none tracking-tight">
               {stats.totalUsers}
             </h2>
-            <p className="text-[0.88vw] font-semibold text-[#f87171] mt-[0.6vw]">
+            <p className="text-[0.88vw] font-semibold text-[#f87171] mt-[0.35vw]">
               Total Users
             </p>
           </div>
@@ -143,12 +143,12 @@ export default function UserManagementPage() {
         </div>
 
         {/* New Users */}
-        <div className="bg-white rounded-[16px] p-[1.3vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex items-center justify-between">
+        <div className="bg-white rounded-[16px] px-[1.3vw] py-[0.8vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex items-center justify-between">
           <div>
             <h2 className="text-[2.2vw] font-semibold text-[#000000] leading-none tracking-tight">
               {stats.newUsers}
             </h2>
-            <p className="text-[0.88vw] font-semibold text-[#3b82f6] mt-[0.6vw]">
+            <p className="text-[0.88vw] font-semibold text-[#3b82f6] mt-[0.35vw]">
               New Users
             </p>
           </div>
@@ -163,12 +163,12 @@ export default function UserManagementPage() {
         </div>
 
         {/* Active Accounts */}
-        <div className="bg-white rounded-[16px] p-[1.3vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex items-center justify-between">
+        <div className="bg-white rounded-[16px] px-[1.3vw] py-[0.8vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex items-center justify-between">
           <div>
             <h2 className="text-[2.2vw] font-semibold text-[#000000] leading-none tracking-tight">
               {stats.activeAccounts}
             </h2>
-            <p className="text-[0.88vw] font-semibold text-[#22c55e] mt-[0.6vw]">
+            <p className="text-[0.88vw] font-semibold text-[#22c55e] mt-[0.35vw]">
               Active Accounts
             </p>
           </div>
@@ -182,12 +182,12 @@ export default function UserManagementPage() {
         </div>
 
         {/* Suspended Accounts */}
-        <div className="bg-white rounded-[16px] p-[1.3vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex items-center justify-between">
+        <div className="bg-white rounded-[16px] px-[1.3vw] py-[0.8vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex items-center justify-between">
           <div>
             <h2 className="text-[2.2vw] font-semibold text-[#000000] leading-none tracking-tight">
               {stats.suspendedAccounts}
             </h2>
-            <p className="text-[0.88vw] font-semibold text-[#ef4444] mt-[0.6vw]">
+            <p className="text-[0.88vw] font-semibold text-[#ef4444] mt-[0.35vw]">
               Suspended Accounts
             </p>
           </div>

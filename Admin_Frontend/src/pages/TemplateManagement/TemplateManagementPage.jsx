@@ -237,13 +237,13 @@ export default function TemplateManagementPage() {
         {stats.map((st, i) => (
           <div
             key={i}
-            className="bg-white rounded-[16px] p-[1.3vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex items-center justify-between"
+            className="bg-white rounded-[16px] px-[1.3vw] py-[0.8vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex items-center justify-between"
           >
             <div>
               <h2 className="text-[2.2vw] font-semibold text-[#000000] leading-none tracking-tight">
                 {st.count}
               </h2>
-              <p className={`text-[0.88vw] font-semibold mt-[0.55vw] ${st.color}`}>
+              <p className={`text-[0.88vw] font-semibold mt-[0.35vw] ${st.color}`}>
                 {st.label}
               </p>
             </div>

@@ -46,13 +46,13 @@ export default function OverviewTab({ user, profile, flipbooks = [] }) {
       {/* 4 Metric Cards Grid - Exact Figma: rounded-[16px], shadow-[1px_2px_6px_rgba(0,0,0,0.16)] */}
       <div className="grid grid-cols-4 gap-[1.1vw]">
         {/* Flipbooks Card */}
-        <div className="bg-white rounded-[16px] p-[1.2vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex flex-col justify-between h-[8.5vw]">
+        <div className="bg-white rounded-[16px] px-[1.1vw] py-[0.8vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex flex-col justify-between min-h-[6.2vw]">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-[1.8vw] font-semibold text-[#000000] leading-none">
                 {flipbooksCount}
               </span>
-              <p className="text-[0.8vw] font-semibold text-[#ec5137] mt-[0.4vw]">
+              <p className="text-[0.8vw] font-semibold text-[#ec5137] mt-[0.3vw]">
                 Flipbooks
               </p>
             </div>
@@ -60,19 +60,19 @@ export default function OverviewTab({ user, profile, flipbooks = [] }) {
               <BookOpen size="1.05vw" />
             </div>
           </div>
-          <p className="text-[0.7vw] text-gray-400 font-semibold">
+          <p className="text-[0.7vw] text-gray-400 font-semibold mt-[0.4vw]">
             {publishedCount} Published · {draftCount} Drafts
           </p>
         </div>
 
         {/* Total Views Card */}
-        <div className="bg-white rounded-[16px] p-[1.2vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex flex-col justify-between h-[8.5vw]">
+        <div className="bg-white rounded-[16px] px-[1.1vw] py-[0.8vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex flex-col justify-between min-h-[6.2vw]">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-[1.8vw] font-semibold text-[#000000] leading-none">
                 {totalViews}
               </span>
-              <p className="text-[0.8vw] font-semibold text-[#0284c7] mt-[0.4vw]">
+              <p className="text-[0.8vw] font-semibold text-[#0284c7] mt-[0.3vw]">
                 Total Views
               </p>
             </div>
@@ -80,19 +80,19 @@ export default function OverviewTab({ user, profile, flipbooks = [] }) {
               <Eye size="1.05vw" />
             </div>
           </div>
-          <p className="text-[0.7vw] text-gray-400 font-semibold">
+          <p className="text-[0.7vw] text-gray-400 font-semibold mt-[0.4vw]">
             Across all flipbooks
           </p>
         </div>
 
         {/* 3D Requests Card */}
-        <div className="bg-white rounded-[16px] p-[1.2vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex flex-col justify-between h-[8.5vw]">
+        <div className="bg-white rounded-[16px] px-[1.1vw] py-[0.8vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex flex-col justify-between min-h-[6.2vw]">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-[1.8vw] font-semibold text-[#000000] leading-none">
                 {requests3DCount}
               </span>
-              <p className="text-[0.8vw] font-semibold text-[#a855f7] mt-[0.4vw]">
+              <p className="text-[0.8vw] font-semibold text-[#a855f7] mt-[0.3vw]">
                 3D Requests
               </p>
             </div>
@@ -100,19 +100,19 @@ export default function OverviewTab({ user, profile, flipbooks = [] }) {
               <Box size="1.05vw" />
             </div>
           </div>
-          <p className="text-[0.7vw] text-gray-400 font-semibold">
+          <p className="text-[0.7vw] text-gray-400 font-semibold mt-[0.4vw]">
             {completedRequests} Completed · {pendingRequests} Pending
           </p>
         </div>
 
         {/* Total Payments Card */}
-        <div className="bg-white rounded-[16px] p-[1.2vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex flex-col justify-between h-[8.5vw]">
+        <div className="bg-white rounded-[16px] px-[1.1vw] py-[0.8vw] shadow-[1px_2px_6px_rgba(0,0,0,0.16)] flex flex-col justify-between min-h-[6.2vw]">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-[1.8vw] font-semibold text-[#000000] leading-none">
                 {totalPayments}
               </span>
-              <p className="text-[0.8vw] font-semibold text-[#16a34a] mt-[0.4vw]">
+              <p className="text-[0.8vw] font-semibold text-[#16a34a] mt-[0.3vw]">
                 Total Payments
               </p>
             </div>
@@ -120,7 +120,7 @@ export default function OverviewTab({ user, profile, flipbooks = [] }) {
               <Banknote size="1.05vw" />
             </div>
           </div>
-          <p className="text-[0.7vw] text-gray-400 font-semibold">
+          <p className="text-[0.7vw] text-gray-400 font-semibold mt-[0.4vw]">
             {successfulTxns} Successful transactions
           </p>
         </div>

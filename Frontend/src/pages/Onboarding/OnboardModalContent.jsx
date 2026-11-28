@@ -60,6 +60,18 @@ export default function OnboardModalContent({ onClose }) {
     user?.emailId || user?.email || ''
   );
 
+  // Custom Dropdown Open States
+  const [openDropdown, setOpenDropdown] = useState(null); // 'industry' | 'experience' | 'teamSize' | 'companySize' | null
+
+  // Close custom dropdowns on clicking outside
+  React.useEffect(() => {
+    const handleDocumentClick = () => setOpenDropdown(null);
+    if (openDropdown) {
+      document.addEventListener('click', handleDocumentClick);
+    }
+    return () => document.removeEventListener('click', handleDocumentClick);
+  }, [openDropdown]);
+
   const [skills, setSkills] = useState([
     'Website',
     'Mobile Application',
@@ -165,21 +177,53 @@ export default function OnboardModalContent({ onClose }) {
       experienceOrTeam = companySize;
     }
 
+    const profileTypeCapitalized =
+      selectedAccountType === 'freelancer'
+        ? 'Freelancer'
+        : selectedAccountType === 'agency'
+        ? 'Agency'
+        : selectedAccountType === 'company'
+        ? 'Company'
+        : 'Individual';
+
     const payload = {
       emailId: email,
+      email: email,
       name: personalData.fullName || user?.name || '',
       displayName: personalData.displayName.trim() || personalData.fullName || user?.displayName || '',
-      profileType: selectedAccountType,
+      profileType: profileTypeCapitalized,
       accountType: selectedAccountType,
       professionalTitle: professionalTitle,
       companyName: selectedAccountType === 'company' || selectedAccountType === 'agency' ? professionalTitle : (user?.companyName || ''),
+      businessName: selectedAccountType === 'company' || selectedAccountType === 'agency' ? professionalTitle : (user?.businessName || ''),
+      agencyName: selectedAccountType === 'agency' ? professionalTitle : '',
       industryType: selectedAccountType !== 'individual' ? industryType : '',
+      industry: selectedAccountType !== 'individual' ? industryType : '',
       companyEmail: businessEmail || '',
+      businessEmail: businessEmail || '',
+      experience: selectedAccountType === 'freelancer' ? yearsOfExperience : '',
+      teamSize: selectedAccountType === 'agency' ? teamSize : '',
+      companySize: selectedAccountType === 'company' ? companySize : '',
       services: skills,
+      skills: skills,
       experienceOrTeamSize: experienceOrTeam,
       primaryPurpose: selectedPurpose,
     };
 
+    // Immediately advance to Step 6 (instant 0ms transition for user)
+    setCurrentStep(6);
+    setIsSubmitting(false);
+
+    // Save instantly to state and cookies so Profile view is pre-filled immediately
+    const optimisticUser = {
+      ...(user || {}),
+      ...payload,
+    };
+    if (setUser) setUser(optimisticUser);
+    setClientUserCookie(optimisticUser);
+    window.dispatchEvent(new CustomEvent('profileUpdate', { detail: optimisticUser }));
+
+    // Persist to MongoDB in the background
     try {
       if (email) {
         const res = await axios.post(
@@ -190,8 +234,7 @@ export default function OnboardModalContent({ onClose }) {
 
         if (res.data?.success && res.data?.profile) {
           const updatedUser = {
-            ...(user || {}),
-            ...payload,
+            ...optimisticUser,
             ...res.data.profile,
           };
           if (setUser) setUser(updatedUser);
@@ -201,16 +244,6 @@ export default function OnboardModalContent({ onClose }) {
       }
     } catch (err) {
       console.warn('[Onboarding] Profile save fallback (saved locally):', err?.message);
-      const fallbackUser = {
-        ...(user || {}),
-        ...payload,
-      };
-      if (setUser) setUser(fallbackUser);
-      setClientUserCookie(fallbackUser);
-      window.dispatchEvent(new CustomEvent('profileUpdate', { detail: fallbackUser }));
-    } finally {
-      setIsSubmitting(false);
-      setCurrentStep(6);
     }
   };
 
@@ -550,56 +583,91 @@ export default function OnboardModalContent({ onClose }) {
                     />
                   </div>
 
-                  <div>
+                  {/* Industry Type Custom Dropdown */}
+                  <div className="relative">
                     <label className="block text-[11.5px] sm:text-[12.5px] font-medium text-gray-700 mb-1">
                       Industry Type
                     </label>
-                    <div className="relative flex items-center">
-                      <div className="absolute left-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:chart-2-linear" className="w-4 h-4" />
+                    <div
+                      onClick={() => setOpenDropdown(openDropdown === 'industry' ? null : 'industry')}
+                      className={`w-full px-3 py-2 bg-white border rounded-[10px] text-[12.5px] flex items-center justify-between cursor-pointer transition-all ${
+                        openDropdown === 'industry' ? 'border-[#EC5137] ring-1 ring-[#EC5137]' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-gray-800">
+                        <Icon icon="solar:chart-2-linear" className="w-4 h-4 text-gray-400" />
+                        <span className="truncate">{industryType || 'Select Industry'}</span>
                       </div>
-                      <select
-                        value={industryType}
-                        onChange={(e) => setIndustryType(e.target.value)}
-                        className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-[10px] text-[12.5px] text-gray-800 focus:outline-none focus:border-[#EC5137] appearance-none cursor-pointer"
-                      >
-                        <option value="Software Development">Software Development</option>
-                        <option value="Design & Creative">Design & Creative</option>
-                        <option value="Marketing & Sales">Marketing & Sales</option>
-                        <option value="Education">Education</option>
-                        <option value="Architecture & 3D">Architecture & 3D</option>
-                      </select>
-                      <div className="absolute right-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:alt-arrow-down-linear" className="w-4 h-4" />
-                      </div>
+                      <Icon
+                        icon="solar:alt-arrow-down-linear"
+                        className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === 'industry' ? 'rotate-180 text-[#EC5137]' : ''}`}
+                      />
                     </div>
+
+                    {openDropdown === 'industry' && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-gray-100 rounded-[12px] shadow-[0_10px_30px_rgba(0,0,0,0.1)] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[180px] overflow-y-auto">
+                        {['Software Development', 'Design & Creative', 'Marketing & Sales', 'Education', 'Architecture & 3D'].map((opt) => (
+                          <div
+                            key={opt}
+                            onClick={() => {
+                              setIndustryType(opt);
+                              setOpenDropdown(null);
+                            }}
+                            className={`px-3.5 py-2 text-[12.5px] cursor-pointer flex items-center justify-between transition-colors ${
+                              industryType === opt ? 'bg-orange-50/70 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <span>{opt}</span>
+                            {industryType === opt && <Icon icon="lucide:check" className="w-3.5 h-3.5 text-[#EC5137]" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Row 2: Years of Experience + Business Gmail */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                  <div>
+                  {/* Years of Experience Custom Dropdown */}
+                  <div className="relative">
                     <label className="block text-[11.5px] sm:text-[12.5px] font-medium text-gray-700 mb-1">
                       Years of Experience
                     </label>
-                    <div className="relative flex items-center">
-                      <div className="absolute left-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:case-minimalistic-linear" className="w-4 h-4" />
+                    <div
+                      onClick={() => setOpenDropdown(openDropdown === 'experience' ? null : 'experience')}
+                      className={`w-full px-3 py-2 bg-white border rounded-[10px] text-[12.5px] flex items-center justify-between cursor-pointer transition-all ${
+                        openDropdown === 'experience' ? 'border-[#EC5137] ring-1 ring-[#EC5137]' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-gray-800">
+                        <Icon icon="solar:case-minimalistic-linear" className="w-4 h-4 text-gray-400" />
+                        <span className="truncate">{yearsOfExperience || 'Select Experience'}</span>
                       </div>
-                      <select
-                        value={yearsOfExperience}
-                        onChange={(e) => setYearsOfExperience(e.target.value)}
-                        className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-[10px] text-[12.5px] text-gray-800 focus:outline-none focus:border-[#EC5137] appearance-none cursor-pointer"
-                      >
-                        <option value="1 Year">1 Year</option>
-                        <option value="2 Years">2 Years</option>
-                        <option value="3-5 Years">3-5 Years</option>
-                        <option value="5+ Years">5+ Years</option>
-                      </select>
-                      <div className="absolute right-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:alt-arrow-down-linear" className="w-4 h-4" />
-                      </div>
+                      <Icon
+                        icon="solar:alt-arrow-down-linear"
+                        className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === 'experience' ? 'rotate-180 text-[#EC5137]' : ''}`}
+                      />
                     </div>
+
+                    {openDropdown === 'experience' && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-gray-100 rounded-[12px] shadow-[0_10px_30px_rgba(0,0,0,0.1)] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[180px] overflow-y-auto">
+                        {['Fresher / < 1 Year', '1 Year', '2 Years', '3 Years', '4 Years', '5+ Years', '8+ Years', '10+ Years'].map((opt) => (
+                          <div
+                            key={opt}
+                            onClick={() => {
+                              setYearsOfExperience(opt);
+                              setOpenDropdown(null);
+                            }}
+                            className={`px-3.5 py-2 text-[12.5px] cursor-pointer flex items-center justify-between transition-colors ${
+                              yearsOfExperience === opt ? 'bg-orange-50/70 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <span>{opt}</span>
+                            {yearsOfExperience === opt && <Icon icon="lucide:check" className="w-3.5 h-3.5 text-[#EC5137]" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -641,55 +709,91 @@ export default function OnboardModalContent({ onClose }) {
                     />
                   </div>
 
-                  <div>
+                  {/* Industry Type Custom Dropdown */}
+                  <div className="relative">
                     <label className="block text-[11.5px] sm:text-[12.5px] font-medium text-gray-700 mb-1">
                       Industry Type
                     </label>
-                    <div className="relative flex items-center">
-                      <div className="absolute left-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:chart-2-linear" className="w-4 h-4" />
+                    <div
+                      onClick={() => setOpenDropdown(openDropdown === 'industry' ? null : 'industry')}
+                      className={`w-full px-3 py-2 bg-white border rounded-[10px] text-[12.5px] flex items-center justify-between cursor-pointer transition-all ${
+                        openDropdown === 'industry' ? 'border-[#EC5137] ring-1 ring-[#EC5137]' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-gray-800">
+                        <Icon icon="solar:chart-2-linear" className="w-4 h-4 text-gray-400" />
+                        <span className="truncate">{industryType || 'Select Industry'}</span>
                       </div>
-                      <select
-                        value={industryType}
-                        onChange={(e) => setIndustryType(e.target.value)}
-                        className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-[10px] text-[12.5px] text-gray-800 focus:outline-none focus:border-[#EC5137] appearance-none cursor-pointer"
-                      >
-                        <option value="Software Development">Software Development</option>
-                        <option value="Design & Creative">Design & Creative</option>
-                        <option value="Marketing & Advertising">Marketing & Advertising</option>
-                        <option value="Digital Media">Digital Media</option>
-                      </select>
-                      <div className="absolute right-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:alt-arrow-down-linear" className="w-4 h-4" />
-                      </div>
+                      <Icon
+                        icon="solar:alt-arrow-down-linear"
+                        className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === 'industry' ? 'rotate-180 text-[#EC5137]' : ''}`}
+                      />
                     </div>
+
+                    {openDropdown === 'industry' && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-gray-100 rounded-[12px] shadow-[0_10px_30px_rgba(0,0,0,0.1)] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[180px] overflow-y-auto">
+                        {['Software Development', 'Design & Creative', 'Marketing & Advertising', 'Digital Media'].map((opt) => (
+                          <div
+                            key={opt}
+                            onClick={() => {
+                              setIndustryType(opt);
+                              setOpenDropdown(null);
+                            }}
+                            className={`px-3.5 py-2 text-[12.5px] cursor-pointer flex items-center justify-between transition-colors ${
+                              industryType === opt ? 'bg-orange-50/70 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <span>{opt}</span>
+                            {industryType === opt && <Icon icon="lucide:check" className="w-3.5 h-3.5 text-[#EC5137]" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Row 2: Team Size + Business Gmail */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                  <div>
+                  {/* Team Size Custom Dropdown */}
+                  <div className="relative">
                     <label className="block text-[11.5px] sm:text-[12.5px] font-medium text-gray-700 mb-1">
                       Team Size
                     </label>
-                    <div className="relative flex items-center">
-                      <div className="absolute left-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:users-group-rounded-linear" className="w-4 h-4" />
+                    <div
+                      onClick={() => setOpenDropdown(openDropdown === 'teamSize' ? null : 'teamSize')}
+                      className={`w-full px-3 py-2 bg-white border rounded-[10px] text-[12.5px] flex items-center justify-between cursor-pointer transition-all ${
+                        openDropdown === 'teamSize' ? 'border-[#EC5137] ring-1 ring-[#EC5137]' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-gray-800">
+                        <Icon icon="solar:users-group-rounded-linear" className="w-4 h-4 text-gray-400" />
+                        <span className="truncate">{teamSize || 'Select Team Size'}</span>
                       </div>
-                      <select
-                        value={teamSize}
-                        onChange={(e) => setTeamSize(e.target.value)}
-                        className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-[10px] text-[12.5px] text-gray-800 focus:outline-none focus:border-[#EC5137] appearance-none cursor-pointer"
-                      >
-                        <option value="1 - 10 Peoples">1 - 10 Peoples</option>
-                        <option value="10 - 25 Peoples">10 - 25 Peoples</option>
-                        <option value="40 - 50 Peoples">40 - 50 Peoples</option>
-                        <option value="50+ Peoples">50+ Peoples</option>
-                      </select>
-                      <div className="absolute right-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:alt-arrow-down-linear" className="w-4 h-4" />
-                      </div>
+                      <Icon
+                        icon="solar:alt-arrow-down-linear"
+                        className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === 'teamSize' ? 'rotate-180 text-[#EC5137]' : ''}`}
+                      />
                     </div>
+
+                    {openDropdown === 'teamSize' && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-gray-100 rounded-[12px] shadow-[0_10px_30px_rgba(0,0,0,0.1)] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[180px] overflow-y-auto">
+                        {['1 - 10 Peoples', '10 - 25 Peoples', '40 - 50 Peoples', '50+ Peoples'].map((opt) => (
+                          <div
+                            key={opt}
+                            onClick={() => {
+                              setTeamSize(opt);
+                              setOpenDropdown(null);
+                            }}
+                            className={`px-3.5 py-2 text-[12.5px] cursor-pointer flex items-center justify-between transition-colors ${
+                              teamSize === opt ? 'bg-orange-50/70 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <span>{opt}</span>
+                            {teamSize === opt && <Icon icon="lucide:check" className="w-3.5 h-3.5 text-[#EC5137]" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -731,55 +835,91 @@ export default function OnboardModalContent({ onClose }) {
                     />
                   </div>
 
-                  <div>
+                  {/* Industry Type Custom Dropdown */}
+                  <div className="relative">
                     <label className="block text-[11.5px] sm:text-[12.5px] font-medium text-gray-700 mb-1">
                       Industry Type
                     </label>
-                    <div className="relative flex items-center">
-                      <div className="absolute left-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:chart-2-linear" className="w-4 h-4" />
+                    <div
+                      onClick={() => setOpenDropdown(openDropdown === 'industry' ? null : 'industry')}
+                      className={`w-full px-3 py-2 bg-white border rounded-[10px] text-[12.5px] flex items-center justify-between cursor-pointer transition-all ${
+                        openDropdown === 'industry' ? 'border-[#EC5137] ring-1 ring-[#EC5137]' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-gray-800">
+                        <Icon icon="solar:chart-2-linear" className="w-4 h-4 text-gray-400" />
+                        <span className="truncate">{industryType || 'Select Industry'}</span>
                       </div>
-                      <select
-                        value={industryType}
-                        onChange={(e) => setIndustryType(e.target.value)}
-                        className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-[10px] text-[12.5px] text-gray-800 focus:outline-none focus:border-[#EC5137] appearance-none cursor-pointer"
-                      >
-                        <option value="Software Development">Software Development</option>
-                        <option value="Manufacturing">Manufacturing</option>
-                        <option value="Retail & E-commerce">Retail & E-commerce</option>
-                        <option value="Finance & Banking">Finance & Banking</option>
-                      </select>
-                      <div className="absolute right-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:alt-arrow-down-linear" className="w-4 h-4" />
-                      </div>
+                      <Icon
+                        icon="solar:alt-arrow-down-linear"
+                        className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === 'industry' ? 'rotate-180 text-[#EC5137]' : ''}`}
+                      />
                     </div>
+
+                    {openDropdown === 'industry' && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-gray-100 rounded-[12px] shadow-[0_10px_30px_rgba(0,0,0,0.1)] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[180px] overflow-y-auto">
+                        {['Software Development', 'Manufacturing', 'Retail & E-commerce', 'Finance & Banking'].map((opt) => (
+                          <div
+                            key={opt}
+                            onClick={() => {
+                              setIndustryType(opt);
+                              setOpenDropdown(null);
+                            }}
+                            className={`px-3.5 py-2 text-[12.5px] cursor-pointer flex items-center justify-between transition-colors ${
+                              industryType === opt ? 'bg-orange-50/70 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <span>{opt}</span>
+                            {industryType === opt && <Icon icon="lucide:check" className="w-3.5 h-3.5 text-[#EC5137]" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Row 2: Company Size + Business Gmail */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                  <div>
+                  {/* Company Size Custom Dropdown */}
+                  <div className="relative">
                     <label className="block text-[11.5px] sm:text-[12.5px] font-medium text-gray-700 mb-1">
                       Company Size
                     </label>
-                    <div className="relative flex items-center">
-                      <div className="absolute left-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:buildings-2-linear" className="w-4 h-4" />
+                    <div
+                      onClick={() => setOpenDropdown(openDropdown === 'companySize' ? null : 'companySize')}
+                      className={`w-full px-3 py-2 bg-white border rounded-[10px] text-[12.5px] flex items-center justify-between cursor-pointer transition-all ${
+                        openDropdown === 'companySize' ? 'border-[#EC5137] ring-1 ring-[#EC5137]' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-gray-800">
+                        <Icon icon="solar:buildings-2-linear" className="w-4 h-4 text-gray-400" />
+                        <span className="truncate">{companySize || 'Select Company Size'}</span>
                       </div>
-                      <select
-                        value={companySize}
-                        onChange={(e) => setCompanySize(e.target.value)}
-                        className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-[10px] text-[12.5px] text-gray-800 focus:outline-none focus:border-[#EC5137] appearance-none cursor-pointer"
-                      >
-                        <option value="10 - 50 Peoples">10 - 50 Peoples</option>
-                        <option value="50 - 100 Peoples">50 - 100 Peoples</option>
-                        <option value="100 - 120 Peoples">100 - 120 Peoples</option>
-                        <option value="120+ Peoples">120+ Peoples</option>
-                      </select>
-                      <div className="absolute right-3 flex items-center pointer-events-none text-gray-400">
-                        <Icon icon="solar:alt-arrow-down-linear" className="w-4 h-4" />
-                      </div>
+                      <Icon
+                        icon="solar:alt-arrow-down-linear"
+                        className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === 'companySize' ? 'rotate-180 text-[#EC5137]' : ''}`}
+                      />
                     </div>
+
+                    {openDropdown === 'companySize' && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-gray-100 rounded-[12px] shadow-[0_10px_30px_rgba(0,0,0,0.1)] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[180px] overflow-y-auto">
+                        {['10 - 50 Peoples', '50 - 100 Peoples', '100 - 120 Peoples', '120+ Peoples'].map((opt) => (
+                          <div
+                            key={opt}
+                            onClick={() => {
+                              setCompanySize(opt);
+                              setOpenDropdown(null);
+                            }}
+                            className={`px-3.5 py-2 text-[12.5px] cursor-pointer flex items-center justify-between transition-colors ${
+                              companySize === opt ? 'bg-orange-50/70 text-[#EC5137] font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <span>{opt}</span>
+                            {companySize === opt && <Icon icon="lucide:check" className="w-3.5 h-3.5 text-[#EC5137]" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>

@@ -1458,7 +1458,7 @@ const Sound = ({
                     position: 'fixed',
                     left: `${anchorPos.left}px`,
                     top: `${anchorPos.top}px`,
-                    transform: `translateX(calc(-100% + ${isTablet ? '22px' : '1.5vw'})) translateY(calc(-4% + ${addTextBelowIcons ? '0.8vw' : '0vw'}))`,
+                    transform: `translateX(calc(-100% + ${isTablet ? '20px' : '1.5vw'})) translateY(calc(-6% + ${addTextBelowIcons ? '0.8vw' : '0vw'}))`,
                     zIndex: 90
                 };
             }

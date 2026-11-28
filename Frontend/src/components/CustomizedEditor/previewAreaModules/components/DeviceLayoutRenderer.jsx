@@ -266,6 +266,7 @@ const DeviceLayoutRenderer = ({
                                     isMobile={isMobile}
                                     isLandscape={isLandscape}
                                     isMobileLandscape={isMobileLandscape}
+                                    layoutColors={layoutColors}
                                 >
                                     <TurnJsBookRenderer
                                         {...bookRendererProps}

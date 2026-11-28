@@ -51,9 +51,9 @@ const TabletLayoutSound = ({
             <div
                 className={`absolute w-[18cqw] ${isOnlyOneActive ? 'h-[13.5cqw]' : 'h-[16cqw]'} z-[150] pointer-events-auto origin-top`}
                 style={{
-                    top: '1.4cqh',
-                    left: '46.6%',
-                    transform: 'translateX(-88%)'
+                    top: '2.5cqh',
+                    left: '50%',
+                    transform: 'translateX(-100%)'
                 }}
                 onClick={(e) => e.stopPropagation()}
             >

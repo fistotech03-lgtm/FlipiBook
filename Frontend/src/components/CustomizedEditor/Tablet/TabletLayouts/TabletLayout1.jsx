@@ -57,7 +57,7 @@ const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
     );
 });
 
-const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, settings, showTOC, setShowTOCMemo, showThumbnailBar, setShowThumbnailBarMemo, onPageClick, showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showGalleryPopup, setShowGalleryPopupMemo, currentBook, activeLayout, handleFullScreen, currentZoom = 1, setCurrentZoom, handleZoomIn, handleZoomOut, handleDownload, searchQuery, setSearchQuery, handleQuickSearch, bookName, isAutoFlipping, setIsPlaying }) => {
+const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, settings, showTOC, setShowTOCMemo, showThumbnailBar, setShowThumbnailBarMemo, onPageClick, showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showGalleryPopup, setShowGalleryPopupMemo, currentBook, activeLayout, handleFullScreen, currentZoom = 1, setCurrentZoom, handleZoomIn, handleZoomOut, handleDownload, searchQuery, setSearchQuery, handleQuickSearch, bookName, isAutoFlipping, setIsPlaying, layoutColors: propLayoutColors }) => {
     const scrollRef = useRef(null);
     const sliderRef = useRef(null);
 
@@ -99,8 +99,21 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
         }
     }
 
-    const layoutColors = settings?.Layouts?.layoutColors || settings?.layoutColors;
-    const layoutColorsArray = Array.isArray(layoutColors) ? layoutColors : (layoutColors?.[activeLayout] || []);
+    const layoutColors = propLayoutColors || settings?.Layouts?.layoutColors || settings?.layoutColors;
+    const layoutColorsArray = Array.isArray(layoutColors) ? layoutColors : (layoutColors?.[activeLayout || 1] || []);
+    const toolbarP = layoutColors?.toolbarColor?.primary;
+    const toolbarS = layoutColors?.toolbarColor?.secondary;
+    const popupP = layoutColors?.popupColor?.primary;
+    const popupS = layoutColors?.popupColor?.secondary;
+
+    const hexToRgb = (hex) => {
+        if (!hex || !hex.startsWith('#')) return '87, 92, 156';
+        const h = hex.replace('#', '');
+        const r = parseInt(h.length === 3 ? h.charAt(0) + h.charAt(0) : h.substring(0, 2), 16);
+        const g = parseInt(h.length === 3 ? h.charAt(1) + h.charAt(1) : h.substring(2, 4), 16);
+        const b = parseInt(h.length === 3 ? h.charAt(2) + h.charAt(2) : h.substring(4, 6), 16);
+        return `${r}, ${g}, ${b}`;
+    };
 
     const getLayoutColor = (id, defaultColor) => {
         if (layoutColorsArray && layoutColorsArray.length > 0) {
@@ -109,21 +122,53 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
                 return colorObj.hex;
             }
         }
+        if (toolbarP && ['toolbar-bg', 'bottom-toolbar-bg', 'page-number-bg'].includes(id)) return toolbarP;
+        if (toolbarS && ['toolbar-text-main', 'toolbar-icon', 'reset-text', 'page-number-text'].includes(id)) return toolbarS;
+        if (popupP && ['toc-bg', 'dropdown-bg', 'thumbnail-outer-v2', 'thumbnail-inner-v2', 'toc-overlay'].includes(id)) return popupP;
+        if (popupS && ['toc-text', 'dropdown-text', 'dropdown-icon', 'toc-icon'].includes(id)) return popupS;
         return `var(--${id}, ${defaultColor})`;
     };
 
+    const getLayoutColorRgba = (id, defaultRgb, defaultOpacity) => {
+        let hex = null;
+        let opacity = defaultOpacity !== undefined ? defaultOpacity : 1;
+
+        if (layoutColorsArray && layoutColorsArray.length > 0) {
+            const colorObj = layoutColorsArray.find(c => c && c.id === id);
+            if (colorObj) {
+                if (colorObj.hex) hex = colorObj.hex;
+                if (colorObj.opacity !== undefined) opacity = colorObj.opacity / 100;
+            }
+        }
+        if (!hex) {
+            if (toolbarP && ['toolbar-bg', 'bottom-toolbar-bg', 'page-number-bg'].includes(id)) hex = toolbarP;
+            else if (toolbarS && ['toolbar-text-main', 'toolbar-icon', 'reset-text', 'page-number-text'].includes(id)) hex = toolbarS;
+            else if (popupP && ['toc-bg', 'dropdown-bg', 'thumbnail-outer-v2', 'thumbnail-inner-v2', 'toc-overlay'].includes(id)) hex = popupP;
+            else if (popupS && ['toc-text', 'dropdown-text', 'dropdown-icon', 'toc-icon'].includes(id)) hex = popupS;
+        }
+
+        if (hex) {
+            return `rgba(${hexToRgb(hex)}, ${opacity})`;
+        }
+        return `rgba(var(--${id}-rgb, ${defaultRgb}), var(--${id}-opacity, ${opacity}))`;
+    };
+
     const getLayoutColorAlpha = (id, defaultRgb, alpha) => {
+        let hex = null;
         if (layoutColorsArray && layoutColorsArray.length > 0) {
             const colorObj = layoutColorsArray.find(c => c && c.id === id);
             if (colorObj && colorObj.hex) {
-                const hex = colorObj.hex.replace('#', '');
-                const r = parseInt(hex.length === 3 ? hex.charAt(0) + hex.charAt(0) : hex.substring(0, 2), 16);
-                const g = parseInt(hex.length === 3 ? hex.charAt(1) + hex.charAt(1) : hex.substring(2, 4), 16);
-                const b = parseInt(hex.length === 3 ? hex.charAt(2) + hex.charAt(2) : hex.substring(4, 6), 16);
-                if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
-                    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                }
+                hex = colorObj.hex;
             }
+        }
+        if (!hex) {
+            if (toolbarP && ['toolbar-bg', 'bottom-toolbar-bg', 'page-number-bg'].includes(id)) hex = toolbarP;
+            else if (toolbarS && ['toolbar-text-main', 'toolbar-icon', 'reset-text', 'page-number-text'].includes(id)) hex = toolbarS;
+            else if (popupP && ['toc-bg', 'dropdown-bg', 'thumbnail-outer-v2', 'thumbnail-inner-v2', 'toc-overlay'].includes(id)) hex = popupP;
+            else if (popupS && ['toc-text', 'dropdown-text', 'dropdown-icon', 'toc-icon'].includes(id)) hex = popupS;
+        }
+        if (hex) {
+            return `rgba(${hexToRgb(hex)}, ${alpha})`;
         }
         return `rgba(var(--${id}-rgb, ${defaultRgb}), ${alpha})`;
     };
@@ -299,7 +344,7 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
         >
             <div id="tablet-download-portal" className="absolute inset-0 z-[60] pointer-events-none"></div>
             {/* Top Bar */}
-            <div className="w-full h-[8%] flex items-center justify-between px-[2cqw] flex-shrink-0 z-10 shadow-md" style={{ backgroundColor: getLayoutColor('toolbar-bg', '#5C5898'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+            <div className="w-full h-[8%] flex items-center justify-between px-[2cqw] flex-shrink-0 z-10 shadow-md" style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', 1), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
                 {/* Search Bar */}
                 {(settings?.interaction?.search ?? true) ? (
                     <div className="relative z-50 w-[25cqw] h-full flex items-center">
@@ -640,6 +685,7 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
                     onClose={() => setShowTOCMemo?.(false)}
                     onNavigate={(pageIndex) => bookRef?.current?.pageFlip()?.turnToPage(pageIndex)}
                     settings={settings}
+                    layoutColors={layoutColors}
                 />
             )}
 
@@ -648,7 +694,7 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
             <div id="tablet-profile-portal" className="absolute inset-0 z-50 pointer-events-none"></div>
 
             {/* Bottom Bar */}
-            <div className="w-full h-[8%] flex items-center justify-between px-[2cqw] flex-shrink-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]" style={{ backgroundColor: getLayoutColor('bottom-toolbar-bg', 'var(--toolbar-bg, #5C5898)'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+            <div className="w-full h-[8%] flex items-center justify-between px-[2cqw] flex-shrink-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]" style={{ backgroundColor: getLayoutColorRgba('bottom-toolbar-bg', '87, 92, 156', 1), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
 
                 {/* Left Icons */}
                 <div className="flex items-center gap-[1.5cqw]">

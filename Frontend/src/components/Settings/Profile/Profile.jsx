@@ -363,7 +363,16 @@ const Profile = () => {
             contact3Label: p.contact3Label !== undefined ? p.contact3Label : (user.contact3Label || 'Contact 3'),
             contactCount: p.contactCount !== undefined ? p.contactCount : (user.contactCount || 2),
             displayName: p.displayName || p.name || user.displayName || '',
-            profileType: p.profileType || user.profileType || '',
+            profileType: (() => {
+              const pt = p.profileType || p.accountType || user.profileType || user.accountType || '';
+              if (!pt) return '';
+              const lower = pt.toLowerCase();
+              if (lower === 'individual') return 'Individual';
+              if (lower === 'freelancer') return 'Freelancer';
+              if (lower === 'agency') return 'Agency';
+              if (lower === 'company') return 'Company';
+              return pt;
+            })(),
             professionalTitle: p.professionalTitle || p.title || user.professionalTitle || user.title || '',
             address1: p.address1 !== undefined ? p.address1 : (user.address1 || ''),
             address2: p.address2 !== undefined ? p.address2 : (user.address2 || ''),
@@ -372,7 +381,13 @@ const Profile = () => {
             pincode: p.pincode !== undefined ? p.pincode : (user.pincode || ''),
             country: p.country !== undefined ? p.country : (user.country || 'INDIA'),
             companyName: p.companyName !== undefined ? p.companyName : (user.companyName || ''),
+            businessName: p.businessName !== undefined ? p.businessName : (p.companyName || user.businessName || user.companyName || ''),
+            agencyName: p.agencyName !== undefined ? p.agencyName : (p.companyName || user.agencyName || user.companyName || ''),
             industryType: p.industryType !== undefined ? p.industryType : (user.industryType || user.industry || ''),
+            experience: p.experience !== undefined ? p.experience : (p.experienceOrTeamSize || user.experience || ''),
+            teamSize: p.teamSize !== undefined ? p.teamSize : (p.experienceOrTeamSize || user.teamSize || ''),
+            companySize: p.companySize !== undefined ? p.companySize : (p.experienceOrTeamSize || user.companySize || ''),
+            businessEmail: p.businessEmail || p.companyEmail || user.businessEmail || user.companyEmail || '',
             companyEmail: p.companyEmail !== undefined ? p.companyEmail : (user.companyEmail || ''),
             website: p.website !== undefined ? p.website : (user.website || ''),
             email: p.emailId || effectiveEmail,

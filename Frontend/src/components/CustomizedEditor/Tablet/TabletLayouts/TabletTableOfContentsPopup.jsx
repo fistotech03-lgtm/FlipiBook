@@ -37,6 +37,9 @@ const TabletTableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage,
         if (layoutColorsArray && layoutColorsArray.length > 0) {
             const colorObj = layoutColorsArray.find(c => c && c.id === id);
             if (colorObj && colorObj.hex) {
+                if (colorObj.opacity !== undefined && colorObj.opacity < 100) {
+                    return `rgba(${hexToRgb(colorObj.hex)}, ${colorObj.opacity / 100})`;
+                }
                 return colorObj.hex;
             }
         }
@@ -90,6 +93,16 @@ const TabletTableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage,
         }
         return `rgba(var(--${id}-rgb, ${defaultRgb}), ${alpha})`;
     };
+    const getLayoutOpacity = (id, defaultOpacity = 1) => {
+        if (layoutColorsArray && layoutColorsArray.length > 0) {
+            const colorObj = layoutColorsArray.find(c => c && c.id === id);
+            if (colorObj && colorObj.opacity !== undefined) {
+                return colorObj.opacity / 100;
+            }
+        }
+        return defaultOpacity;
+    };
+
     const speakText = (text) => {
         if ('speechSynthesis' in window && text) {
             window.speechSynthesis.cancel();
@@ -443,7 +456,7 @@ const TabletTableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage,
                         <Icon
                             icon="lucide:search"
                             className={isLayout5 ? "absolute left-[1.2cqw] top-1/2 -translate-y-1/2 w-[1.2cqw] h-[1.2cqw]" : (isLayout4 || isLayout6 || isLayout6) ? "absolute left-[2.8cqw] top-1/2 -translate-y-1/2 w-[1.4cqw] h-[1.4cqw]" : isLayout3 ? "flex-shrink-0 w-[1.1cqw] h-[1.1cqw] ml-[0.2cqw]" : isLayout2 ? "absolute left-[0.8cqw] top-1/2 -translate-y-1/2 w-[1.1cqw] h-[1.1cqw] text-white/70" : "absolute left-[3.2cqw] top-1/2 -translate-y-1/2 w-[1.5cqw] h-[1.5cqw]"}
-                            style={isLayout6 ? { color: getLayoutColor('toolbar-text-main', '#FFFFFF'), opacity: 0.6 } : { color: getLayoutColor('toc-text', '#FFFFFF'), opacity: 0.6 }}
+                            style={isLayout6 ? { color: getLayoutColor('toolbar-text-main', '#FFFFFF'), opacity: 0.6 } : { color: getLayoutColor('toc-text', '#FFFFFF'), opacity: getLayoutOpacity('toc-text', 1) * 0.6 }}
                         />
                         {(isLayout3 || isLayout4 || isLayout5 || isLayout6 || isLayout6) && (
                             <style>{`
@@ -472,7 +485,7 @@ const TabletTableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage,
                                     ? { color: getLayoutColor('toc-text', '#555555'), backgroundColor: (isLayout5 || isLayout6 || isLayout6) ? getLayoutColorAlpha('toc-text', '85,85,85', 0.05) : undefined, borderColor: (isLayout4 || isLayout5 || isLayout6 || isLayout6) ? getLayoutColorAlpha('toc-text', '85,85,85', 0.2) : undefined }
                                     : isLayout2
                                         ? { backgroundColor: 'rgba(255, 255, 255, 0.15)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.1)' }
-                                        : { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.2)', color: getLayoutColor('toc-text', '#FFFFFF') }
+                                        : { backgroundColor: getLayoutColorAlpha('toc-text', '255, 255, 255', getLayoutOpacity('toc-text', 1) * 0.15), borderColor: getLayoutColorAlpha('toc-text', '255, 255, 255', getLayoutOpacity('toc-text', 1) * 0.25), color: getLayoutColor('toc-text', '#FFFFFF') }
                             }
                         />
                     </div>
@@ -531,7 +544,7 @@ const TabletTableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage,
                             </React.Fragment>
                         ))
                     ) : (
-                        <div className={isLayout6 ? "flex flex-col items-center justify-center py-[10cqw] select-none font-bold" : isLayout5 ? "flex flex-col items-center justify-center py-[4cqw] select-none font-medium" : isLayout4 ? "flex flex-col items-center justify-center py-[10cqw] select-none font-medium" : isLayout3 ? "flex flex-col items-center justify-center py-[2cqw] select-none font-medium" : isLayout2 ? "flex flex-col items-center justify-center py-[2cqw] opacity-70 select-none text-white font-bold tracking-wide" : "flex flex-col items-center justify-center py-[4cqw] opacity-60 select-none text-white font-semibold"} style={isLayout6 ? { color: getLayoutColor('toolbar-text-main', '#FFFFFF'), opacity: 0.6 } : (isLayout3 || isLayout4 || isLayout5) ? { color: getLayoutColor('toc-text', '#555555'), opacity: 0.7 } : {}}>
+                        <div className={isLayout6 ? "flex flex-col items-center justify-center py-[10cqw] select-none font-bold" : isLayout5 ? "flex flex-col items-center justify-center py-[4cqw] select-none font-medium" : isLayout4 ? "flex flex-col items-center justify-center py-[10cqw] select-none font-medium" : isLayout3 ? "flex flex-col items-center justify-center py-[2cqw] select-none font-medium" : isLayout2 ? "flex flex-col items-center justify-center py-[2cqw] opacity-70 select-none text-white font-bold tracking-wide" : "flex flex-col items-center justify-center py-[4cqw] select-none font-semibold"} style={isLayout6 ? { color: getLayoutColor('toolbar-text-main', '#FFFFFF'), opacity: 0.6 } : (isLayout3 || isLayout4 || isLayout5) ? { color: getLayoutColor('toc-text', '#555555'), opacity: 0.7 } : { color: getLayoutColor('toc-text', '#FFFFFF'), opacity: getLayoutOpacity('toc-text', 1) * 0.7 }}>
                             {isLayout6 && (
                                 <Icon icon="fluent:text-bullet-list-24-filled" className="w-[4cqw] h-[4cqw] mb-[2cqw] opacity-40" />
                             )}

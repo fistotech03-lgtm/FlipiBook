@@ -4,6 +4,7 @@ import ShareModal from '../../../ShareModal';
 import TabletTableOfContentsPopup from './TabletTableOfContentsPopup';
 import TabletGalleryPopup from './TabletGalleryPopup';
 import { AnimatePresence, motion } from 'framer-motion';
+import BrandLogo from '../../common/BrandLogo';
 
 const getLayoutColor = (id, defaultColor) => `var(--${id}, ${defaultColor})`;
 
@@ -77,6 +78,7 @@ const TabletLayout7 = ({
     currentBook,
     activeLayout,
     settings,
+    logoSettings,
     layoutColors,
     showSoundPopup,
     setShowSoundPopupMemo,
@@ -207,6 +209,16 @@ const TabletLayout7 = ({
                 {/* Title (Center Absolute) */}
                 <div className="absolute left-1/2 -translate-x-1/2 font-bold text-[1.6cqw] tracking-wide filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)] pointer-events-auto" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
                     {/* bookName hidden */}
+                </div>
+
+                {/* Right: Brand Logo */}
+                <div className="pointer-events-auto flex items-center ml-auto">
+                    <BrandLogo
+                        logoSettings={logoSettings}
+                        settings={settings}
+                        isTablet={true}
+                        theme="gray"
+                    />
                 </div>
             </div>
 

@@ -511,7 +511,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                         logoSettings={logoSettings}
                         settings={settings}
                         isTablet={isTablet}
-                        className={`${isTablet ? 'h-[1.8vw]' : 'h-[2.2vw]'}`}
+                        theme="gray"
                     />
                 </div>
             </div>

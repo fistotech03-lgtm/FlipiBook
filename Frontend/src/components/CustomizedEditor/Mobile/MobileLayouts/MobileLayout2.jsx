@@ -411,7 +411,6 @@ const MobileLayout2 = (props) => {
                                 <MenuBtn icon="ph:eye-fill" label="View Notes" onClick={() => setShowNotesViewer(true)} />
                                 <MenuBtn icon="ph:bookmark-simple-bold" label="Add Bookmark" onClick={() => setShowAddBookmarkPopup(true)} />
                                 <MenuBtn icon="ph:bookmark-simple-fill" label="View Bookmarks" onClick={() => setShowViewBookmarkPopup(true)} />
-                                <MenuBtn icon="ph:user-fill" label="Profile" onClick={() => setShowProfilePopup(true)} />
                                  {(settings?.media?.backgroundAudio ?? true) && (
                                      <MenuBtn icon="ph:music-notes-simple-bold" label="Background Music" onClick={() => setShowSoundPopup(true)} />
                                  )}
@@ -490,7 +489,15 @@ const MobileLayout2 = (props) => {
                     onClose={() => setShowSharePopup(false)}
                     bookName={props.currentBook?.flipbookName || bookName}
                     url={props.currentBook?.shareUrl || window.location.href}
-                    isPublished={props.currentBook?.status === 'Published'}
+                    isPublished={Boolean(
+                        props.currentBook?.isPublished || 
+                        props.currentBook?.published || 
+                        props.currentBook?.is_published || 
+                        props.currentBook?.status?.toLowerCase() === 'published' ||
+                        props.currentBook?.status?.toLowerCase() === 'publish' ||
+                        props.currentBook?.meta?.isPublished
+                    )}
+                    currentBook={props.currentBook}
                     isMobile={true}
                     isLandscape={isLandscape}
                 />
@@ -631,20 +638,6 @@ const MobileLayout2 = (props) => {
                         className="!p-1.5"
                     />
 
-                    <ToolbarIcon
-                        icon="solar:user-bold"
-                        title="Profile"
-                        onClick={() => {
-                            setShowProfilePopup(true);
-                            if (setShowTOC) setShowTOC(false);
-                            setShowRadialThumbnails(false);
-                            setShowNotesMenu(false);
-                            setShowBookmarkMenu(false);
-                            if (setShowThumbnailBar) setShowThumbnailBar(false);
-                        }}
-                        active={showProfilePopup}
-                        className="!p-1.5"
-                    />
                     <ToolbarIcon icon="mage:share-fill" title="Share" onClick={() => handleShare()} className="!p-1.5" />
                     <ToolbarIcon icon="meteor-icons:download" title="Download" onClick={() => handleDownload()} className="!p-1.5" />
                 </div>

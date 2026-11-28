@@ -50,8 +50,9 @@ const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
 import TabletTableOfContentsPopup from './TabletTableOfContentsPopup';
 import TabletLayoutSound from './TabletLayoutSound';
 import ShareModal from '../../../ShareModal';
+import BrandLogo from '../../common/BrandLogo';
 
-const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPageClick, settings, bookName = "Name of the Book", showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showGalleryPopup, setShowGalleryPopupMemo, handleDownload, handleFullScreen, currentBook, activeLayout, searchQuery, setSearchQuery, handleQuickSearch, isAutoFlipping, setIsPlaying, currentZoom = 1, setCurrentZoom, handleZoomIn, handleZoomOut, resetZoom: propResetZoom }) => {
+const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPageClick, settings, logoSettings, bookName = "Name of the Book", showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showGalleryPopup, setShowGalleryPopupMemo, handleDownload, handleFullScreen, currentBook, activeLayout, searchQuery, setSearchQuery, handleQuickSearch, isAutoFlipping, setIsPlaying, currentZoom = 1, setCurrentZoom, handleZoomIn, handleZoomOut, resetZoom: propResetZoom }) => {
   const [localZoom, setLocalZoom] = useState(1);
   const activeZoom = currentZoom !== undefined ? currentZoom : localZoom;
 
@@ -587,8 +588,14 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
             )}
         </div>
 
-        {/* Right: Empty spacer */}
-        <div className="flex-1"></div>
+        {/* Right: Brand Logo */}
+        <div className="flex-1 flex justify-end items-center pr-[1cqw]">
+          <BrandLogo
+            logoSettings={logoSettings}
+            settings={settings}
+            isTablet={true}
+          />
+        </div>
       </div>
 
       {showTOC && (

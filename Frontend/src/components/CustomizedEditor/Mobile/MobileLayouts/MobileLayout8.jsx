@@ -335,7 +335,6 @@ const MobileLayout8 = ({
                                 <MenuBtn icon="ep:menu" label="Thumbnails" onClick={() => { setShowThumbnailBar(prev => !prev); setShowMoreMenu(false); }} />
                                 <MenuBtn icon="material-symbols-light:add-notes" label="Add Notes" onClick={() => { setShowLocalNotesMenu(prev => !prev); setShowLocalBookmarkMenu(false); setShowMoreMenu(false); }} />
                                 <MenuBtn icon="mingcute:bookmark-fill" label="Bookmarks" onClick={() => { setShowLocalBookmarkMenu(prev => !prev); setShowLocalNotesMenu(false); setShowMoreMenu(false); }} />
-                                <MenuBtn icon="solar:user-bold" label="Profile" onClick={() => { setShowProfilePopup(true); setShowMoreMenu(false); setShowLocalNotesMenu(false); setShowLocalBookmarkMenu(false); }} />
                                 {(settings?.media?.backgroundAudio ?? true) && (
                                     <MenuBtn icon="solar:music-notes-bold" label="BG Music" onClick={() => { setShowSoundPopup(true); setShowMoreMenu(false); }} />
                                 )}
@@ -376,11 +375,6 @@ const MobileLayout8 = ({
                                         icon="material-symbols:photo-library-rounded"
                                         label="Gallery"
                                         onClick={() => { setShowThumbnailBar(prev => !prev); setShowDotMenu(false); }}
-                                    />
-                                    <MenuBtn
-                                        icon="lucide:user"
-                                        label="Profile"
-                                        onClick={() => { setShowProfilePopup(true); setShowDotMenu(false); }}
                                     />
                                 </div>
                             </div>
@@ -596,7 +590,15 @@ const MobileLayout8 = ({
                     onClose={() => setShowSharePopup(false)}
                     bookName={bookName}
                     url={window.location.href}
-                    isPublished={false}
+                    isPublished={Boolean(
+                        props.currentBook?.isPublished || 
+                        props.currentBook?.published || 
+                        props.currentBook?.is_published || 
+                        props.currentBook?.status?.toLowerCase() === 'published' ||
+                        props.currentBook?.status?.toLowerCase() === 'publish' ||
+                        props.currentBook?.meta?.isPublished
+                    )}
+                    currentBook={props.currentBook}
                     isMobile={true}
                     isLandscape={isLandscape}
                 />

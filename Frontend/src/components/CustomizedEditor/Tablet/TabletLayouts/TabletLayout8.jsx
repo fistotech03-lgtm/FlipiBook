@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import TabletTableOfContentsPopup from './TabletTableOfContentsPopup';
 import TabletProfilePopup from './TabletProfilePopup';
 import ShareModal from '../../../ShareModal';
+import BrandLogo from '../../common/BrandLogo';
 
 const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
     const cleanHtml = (html || '')
@@ -541,8 +542,15 @@ const TabletLayout8 = ({
 
                 </div>
 
-                {/* Right spacer for balance (optional, or just logo area if needed) */}
-                <div className="flex-1 pointer-events-none"></div>
+                {/* Right: Brand Logo */}
+                <div className="flex-1 flex justify-end items-center pointer-events-auto pr-[1cqw]">
+                    <BrandLogo
+                        logoSettings={logoSettings}
+                        settings={settings}
+                        isTablet={true}
+                        theme="gray"
+                    />
+                </div>
             </div>
 
             {/* Main Content Area */}

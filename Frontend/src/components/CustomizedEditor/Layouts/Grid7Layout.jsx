@@ -665,6 +665,7 @@ const Grid7Layout = ({
                         logoSettings={logoSettings}
                         settings={settings}
                         isTablet={isTablet}
+                        theme="gray"
                     />
                 </div>
             </div>

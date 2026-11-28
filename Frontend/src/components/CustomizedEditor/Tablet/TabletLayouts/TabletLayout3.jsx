@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Icon } from '@iconify/react';
 import TabletTableOfContentsPopup from './TabletTableOfContentsPopup';
 import ShareModal from '../../../ShareModal';
+import BrandLogo from '../../common/BrandLogo';
 
 const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
     const cleanHtml = (html || '')
@@ -65,7 +66,7 @@ const getLayoutColorAlpha = (id, defaultRgb, alpha) => {
     return `rgba(var(--${id}-rgb, ${defaultRgb}), ${alpha})`;
 };
 
-const TabletLayout3 = ({ children, bookRef, currentPage, pages, offset = 0, onPageClick, settings, bookName = "Name of the Book", showTOC, setShowTOCMemo, showThumbnailBar, setShowThumbnailBarMemo, showGalleryPopup, setShowGalleryPopupMemo, showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showExportPopup, setShowExportPopupMemo, currentBook, activeLayout, handleFullScreen }) => {
+const TabletLayout3 = ({ children, bookRef, currentPage, pages, offset = 0, onPageClick, settings, logoSettings, bookName = "Name of the Book", showTOC, setShowTOCMemo, showThumbnailBar, setShowThumbnailBarMemo, showGalleryPopup, setShowGalleryPopupMemo, showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showExportPopup, setShowExportPopupMemo, currentBook, activeLayout, handleFullScreen }) => {
     const textFont = settings?.navigation?.addTextToIconsSettings?.font || settings?.addTextToIconsSettings?.font || settings?.toolbar?.textProperties?.font || 'Arial';
     const totalPages = Array.isArray(pages) ? pages.length : pages || 12;
     const displayPage = currentPage === 0 ? 1 : (currentPage || 1);
@@ -367,8 +368,14 @@ const TabletLayout3 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                     )}
                 </div>
 
-                {/* Right: Book Name */}
-                <div className="flex-none font-semibold text-[1.2cqw] truncate max-w-[20cqw]" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF'), opacity: 'var(--toolbar-text-main-opacity, 1)' }}>{/* {bookName} */}</div>
+                {/* Right: Brand Logo */}
+                <div className="flex-none flex items-center ml-[1cqw]">
+                    <BrandLogo
+                        logoSettings={logoSettings}
+                        settings={settings}
+                        isTablet={true}
+                    />
+                </div>
             </div>
 
             {/* Thumbnail Bar */}

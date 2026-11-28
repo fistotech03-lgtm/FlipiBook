@@ -2,6 +2,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import ShareModal from '../../../ShareModal';
 import TabletTableOfContentsPopup from './TabletTableOfContentsPopup';
+import BrandLogo from '../../common/BrandLogo';
 
 const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
     if (!html) return <div className="w-full h-full bg-white flex items-center justify-center text-gray-300">Empty</div>;
@@ -52,6 +53,7 @@ const TabletLayout6 = ({
     currentBook,
     activeLayout,
     settings,
+    logoSettings,
     showTOC,
     setShowTOCMemo,
     showThumbnailBar,
@@ -443,8 +445,15 @@ const TabletLayout6 = ({
                     <div className="text-white font-bold text-[1.8cqw] tracking-wide filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
                         {/* bookName hidden */}
                     </div>
-                    {/* Spacer to keep title centered */}
-                    <div className="w-[20cqw]"></div>
+                    {/* Right: Brand Logo */}
+                    <div className="w-[20cqw] flex justify-end items-center pointer-events-auto">
+                        <BrandLogo
+                            logoSettings={logoSettings}
+                            settings={settings}
+                            isTablet={true}
+                            theme="gray"
+                        />
+                    </div>
                 </div>
             )}
 

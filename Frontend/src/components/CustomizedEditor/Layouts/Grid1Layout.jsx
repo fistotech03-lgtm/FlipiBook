@@ -1303,15 +1303,6 @@ const Grid1Layout = React.memo((props) => {
                         <div className={(settings?.viewing?.zoom ?? true) ? '' : 'invisible pointer-events-none hidden-but-taking-space'} style={{ display: (settings?.viewing?.zoom ?? true) ? 'contents' : 'block' }}>
                             <div style={{ visibility: (settings?.viewing?.zoom ?? true) ? 'visible' : 'hidden' }}>
                                 <div className={`flex items-center ${isMobileLandscape ? 'gap-[0.1vw]' : 'gap-[0.4vw]'}`}>
-                                    {renderDockBtn(
-                                        <Icon icon="ph:magnifying-glass-minus" className={`${isTablet ? 'w-[1vw] h-[1vw]' : (isSidebarOpen ? 'w-[1.05vw] h-[1.05vw]' : 'w-[1.2vw] h-[1.2vw]')}`} />,
-                                        'Zoom Out',
-                                        (e) => { e.stopPropagation(); zoomOut(); },
-                                        { color: getLayoutColor('toolbar-icon', '#FFFFFF'), opacity: 'var(--toolbar-icon-opacity, 1)' },
-                                        '',
-                                        false,
-                                        true
-                                    )}
                                     <div 
                                         ref={zoomSliderRef}
                                         className={`${isMobileLandscape ? 'w-[2vw]' : 'w-[6vw]'} flex items-center h-[1vw] relative cursor-pointer`}
@@ -1344,15 +1335,12 @@ const Grid1Layout = React.memo((props) => {
                                             }}
                                         />
                                     </div>
-                                    {renderDockBtn(
-                                        <Icon icon="ph:magnifying-glass-plus" className={`${isTablet ? 'w-[1vw] h-[1vw]' : (isSidebarOpen ? 'w-[1.05vw] h-[1.05vw]' : 'w-[1.2vw] h-[1.2vw]')}`} />,
-                                        'Zoom In',
-                                        (e) => { e.stopPropagation(); zoomIn(); },
-                                        { color: getLayoutColor('toolbar-icon', '#FFFFFF'), opacity: 'var(--toolbar-icon-opacity, 1)' },
-                                        '',
-                                        false,
-                                        true
-                                    )}
+                                    <span
+                                        className={`${isMobileLandscape ? 'text-[0.65vw]' : isTablet ? 'text-[0.7vw]' : 'text-[0.75vw]'} font-semibold min-w-[2.5vw] text-center whitespace-nowrap select-none`}
+                                        style={{ color: getLayoutColor('toolbar-icon', '#FFFFFF') }}
+                                    >
+                                        {Math.round((dimWidth / initialWidth) * 100)}%
+                                    </span>
                                 </div>
                             </div>
                         </div>

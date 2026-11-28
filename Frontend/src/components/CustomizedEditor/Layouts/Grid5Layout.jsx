@@ -632,7 +632,7 @@ const Grid5Layout = ({
                         logoSettings={logoSettings}
                         settings={settings}
                         isTablet={isTablet}
-                        className={`${isTablet ? 'h-[1.6vw]' : 'h-[2.2vw]'}`}
+                        theme="gray"
                     />
                 </div>
             </div>

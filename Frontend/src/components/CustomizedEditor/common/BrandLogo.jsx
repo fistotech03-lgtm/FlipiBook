@@ -14,6 +14,7 @@ const BrandLogo = ({
     style = {},
     logoObjectFit = 'contain',
     logoCropStyle = {},
+    theme = 'light',
     onClick
 }) => {
     // Check if logo is enabled in settings
@@ -72,9 +73,66 @@ const BrandLogo = ({
     }
 
     // Predefined "YOUR LOGO" Placeholder Box
+    const [autoTheme, setAutoTheme] = React.useState(theme);
+    const boxRef = React.useRef(null);
+
+    React.useEffect(() => {
+        const updateAutoTheme = () => {
+            if (!boxRef.current) return;
+            let el = boxRef.current.parentElement;
+            let bg = 'transparent';
+            while (el && el !== document.body) {
+                const style = window.getComputedStyle(el);
+                if (style && style.backgroundColor && style.backgroundColor !== 'transparent' && style.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+                    bg = style.backgroundColor;
+                    break;
+                }
+                el = el.parentElement;
+            }
+
+            // Also check CSS variables on root / documentElement
+            if (bg === 'transparent') {
+                const rootBg = getComputedStyle(document.documentElement).getPropertyValue('--toolbar-bg').trim();
+                if (rootBg) bg = rootBg;
+            }
+
+            if (bg !== 'transparent') {
+                let r = 255, g = 255, b = 255;
+                if (bg.startsWith('#')) {
+                    let hex = bg.replace('#', '').trim();
+                    if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+                    if (hex.length === 6) {
+                        r = parseInt(hex.substring(0, 2), 16);
+                        g = parseInt(hex.substring(2, 4), 16);
+                        b = parseInt(hex.substring(4, 6), 16);
+                    }
+                } else if (bg.startsWith('rgb')) {
+                    const match = bg.match(/\d+/g);
+                    if (match && match.length >= 3) {
+                        r = parseInt(match[0], 10);
+                        g = parseInt(match[1], 10);
+                        b = parseInt(match[2], 10);
+                    }
+                }
+                const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+                setAutoTheme(lum > 0.6 ? 'gray' : 'light');
+            }
+        };
+
+        updateAutoTheme();
+        const timer = setTimeout(updateAutoTheme, 50);
+        return () => clearTimeout(timer);
+    });
+
+    const isDarkTheme = autoTheme === 'dark' || autoTheme === 'gray';
+    const borderClass = isDarkTheme ? 'border-gray-400/50' : 'border-white/40';
+    const bgClass = isDarkTheme ? 'bg-black/5 hover:bg-black/10' : 'bg-white/15';
+    const textClass = isDarkTheme ? 'text-gray-600' : 'text-white/75';
+
     return (
         <div
-            className={`flex items-center justify-center gap-[0.35vw] px-[0.7vw] py-[0.35vh] rounded-[0.3vw] border border-dashed border-white/20 bg-white/5 text-white/50 select-none transition-all ${className ? '' : (isTablet ? 'h-[1.6vw]' : 'h-[2vw]')}`}
+            ref={boxRef}
+            className={`flex items-center justify-center gap-[0.35vw] px-[0.8vw] rounded-[0.3vw] border border-dashed ${borderClass} ${bgClass} ${textClass} select-none transition-all ${className ? '' : (isTablet ? 'h-[2vw]' : 'h-[2.5vw]')}`}
             style={{
                 backdropFilter: 'blur(4px)',
                 ...style
@@ -84,10 +142,10 @@ const BrandLogo = ({
         >
             <Icon
                 icon="lucide:image"
-                className={`${isTablet ? 'w-[0.75vw] h-[0.75vw]' : 'w-[0.9vw] h-[0.9vw]'} opacity-50 text-white`}
+                className={`${isTablet ? 'w-[0.85vw] h-[0.85vw]' : 'w-[1.05vw] h-[1.05vw]'} ${textClass}`}
             />
             <span
-                className={`${isTablet ? 'text-[0.55vw]' : 'text-[0.68vw]'} font-semibold tracking-wider uppercase text-white/50 whitespace-nowrap`}
+                className={`${isTablet ? 'text-[0.62vw]' : 'text-[0.75vw]'} font-semibold tracking-wider uppercase ${textClass} whitespace-nowrap`}
             >
                 YOUR LOGO
             </span>

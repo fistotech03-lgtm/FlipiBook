@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import TabletTableOfContentsPopup from './TabletTableOfContentsPopup';
 import TabletProfilePopup from './TabletProfilePopup';
 import ShareModal from '../../../ShareModal';
+import BrandLogo from '../../common/BrandLogo';
 
 const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
     const cleanHtml = (html || '')
@@ -231,14 +232,11 @@ const TabletLayout4 = ({
                 style={{ backgroundColor: getLayoutColor('toolbar-bg', '#555555') }}
             >
                 <div className="flex items-center w-[25cqw]">
-                    {settings?.brandingProfile?.logo && logoSettings?.src && (
-                        <img
-                            src={logoSettings.src}
-                            alt="Logo"
-                            className="h-[3.5cqh] w-auto object-contain"
-                            style={{ opacity: (logoSettings.opacity ?? 100) / 100 }}
-                        />
-                    )}
+                    <BrandLogo
+                        logoSettings={logoSettings}
+                        settings={settings}
+                        isTablet={true}
+                    />
                 </div>
 
                 <div className="flex-1 text-center truncate px-[2cqw]">

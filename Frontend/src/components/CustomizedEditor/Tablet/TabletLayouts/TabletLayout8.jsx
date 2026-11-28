@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import TabletTableOfContentsPopup from './TabletTableOfContentsPopup';
 import TabletProfilePopup from './TabletProfilePopup';
 import ShareModal from '../../../ShareModal';
+import BrandLogo from '../../common/BrandLogo';
 
 const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
     const cleanHtml = (html || '')
@@ -74,15 +75,51 @@ const getLayoutColorRgba = (tokenId, defaultRgb, defaultOpacity) => {
     return `rgba(var(--${tokenId}-rgb, ${defaultRgb}), var(--${tokenId}-opacity, ${defaultOpacity}))`;
 };
 
-const ToolbarBtn = ({ icon, label, onClick, bg, color }) => (
-    <button
-        onClick={onClick}
-        className="flex items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95 shadow-sm"
-        title={label}
-        style={{ backgroundColor: bg || '#555555', color: color || 'white', width: '3cqw', height: '3cqw' }}
-    >
-        <Icon icon={icon} className="w-[1.6cqw] h-[1.6cqw]" />
-    </button>
+const ToolbarBtn = ({ id, icon, label, onClick, bg, color, addTextBelowIcons = false, textFont, textColor }) => (
+    <div className="relative group flex flex-col items-center justify-start">
+        <button
+            id={id}
+            onClick={onClick}
+            className="flex items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95 shadow-sm"
+            style={{ backgroundColor: bg || '#555555', color: color || 'white', width: '3cqw', height: '3cqw' }}
+        >
+            <Icon icon={icon} className="w-[1.6cqw] h-[1.6cqw]" />
+        </button>
+        {label && (
+            <span
+                className={`text-[0.8cqw] font-semibold leading-tight text-center whitespace-nowrap mt-[0.2cqw] ${
+                    addTextBelowIcons ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}
+                style={{ color: textColor || bg || '#555555', fontFamily: textFont }}
+            >
+                {label}
+            </span>
+        )}
+        {!addTextBelowIcons && label && (
+            <div
+                className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]"
+                style={{
+                    background: 'rgba(10, 10, 12, 0.65)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#ffffff',
+                    padding: '0.3cqw 0.8cqw',
+                    borderRadius: '0.4cqw',
+                    fontSize: '0.85cqw',
+                    fontWeight: 600,
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
+                    fontFamily: textFont
+                }}
+            >
+                {label}
+                <div
+                    className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]"
+                    style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }}
+                />
+            </div>
+        )}
+    </div>
 );
 
 const TabletLayout8 = ({
@@ -215,6 +252,8 @@ const TabletLayout8 = ({
     const totalPages = pagesCount;
     const primaryColor = getLayoutColor('toolbar-bg', '#555555');
     const secondaryColor = '#FFFFFF';
+    const addTextBelowIcons = settings?.toolbar?.addTextBelowIcons ?? false;
+    const textFont = settings?.navigation?.addTextToIconsSettings?.font || settings?.addTextToIconsSettings?.font || settings?.toolbar?.textProperties?.font || 'Arial';
 
     return (
         <div className="flex flex-col w-full h-full min-h-0 overflow-hidden font-sans relative" style={{ ...backgroundStyle, backgroundColor: 'transparent', containerType: 'size' }}>
@@ -228,7 +267,7 @@ const TabletLayout8 = ({
             )}
 
             {/* Top Bar (Floating) */}
-            <div className="absolute top-[2cqh] left-[2cqw] right-[2cqw] flex items-center justify-between z-[200] pointer-events-none">
+            <div className="absolute top-[3.7cqh] left-[2cqw] right-[2cqw] flex items-center justify-between z-[200] pointer-events-none">
 
                 {/* Left: Search Bar */}
                 <div className="w-[22cqw] pointer-events-auto">
@@ -335,113 +374,187 @@ const TabletLayout8 = ({
                 </div>
 
                 {/* Center: Tools Container */}
-                <div className="absolute left-[58%] -translate-x-1/2 flex items-center gap-[1.5cqw] pointer-events-auto">
+                <div className="absolute left-[58%] -translate-x-1/2 flex items-center gap-[1.2cqw] pointer-events-auto">
                     
                     {/* Block 1: Navigation & Media */}
-                    <div className="flex items-center gap-[1.5cqw]">
+                    <div className="flex items-center gap-[1.2cqw]">
                         {(settings?.navigation?.tableOfContents ?? true) && (
                             <ToolbarBtn 
+                                id="layout8-tablet-toc-btn"
                                 icon="fluent:text-bullet-list-24-filled" 
+                                label="TOC"
                                 onClick={() => setShowTOCMemo(!showTOC)} 
                                 bg={showTOC ? secondaryColor : primaryColor}
                                 color={showTOC ? primaryColor : secondaryColor}
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
                         )}
                         {(settings?.navigation?.pageThumbnails ?? true) && (
                             <ToolbarBtn 
+                                id="layout8-tablet-thumbnails-btn"
                                 icon="ph:squares-four-fill" 
+                                label="Thumbnails"
                                 onClick={() => setShowThumbnailBarMemo(!showThumbnailBar)} 
                                 bg={showThumbnailBar ? secondaryColor : primaryColor}
                                 color={showThumbnailBar ? primaryColor : secondaryColor}
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
                         )}
-                        <ToolbarBtn icon={isAutoFlipping ? 'ph:pause-fill' : 'ph:play-fill'} onClick={() => setIsPlaying?.(!isAutoFlipping)} bg={primaryColor} />
-                        {(settings?.interaction?.gallery ?? true) && (
-                            <ToolbarBtn icon="clarity:image-gallery-solid" onClick={() => setShowGalleryPopupMemo(!showGalleryPopup)} bg={primaryColor} />
-                        )}
-                        {(settings?.media?.backgroundAudio ?? true) && (
+                        {(settings?.media?.autoFlip ?? true) && (
                             <ToolbarBtn 
-                                icon={isMuted ? "solar:music-notes-bold-duotone" : "solar:music-notes-bold"} 
-                                onClick={(e) => { e.stopPropagation(); setShowSoundPopupMemo?.(!showSoundPopup); }} 
-                                bg={showSoundPopup ? secondaryColor : primaryColor}
-                                color={showSoundPopup ? primaryColor : secondaryColor}
+                                icon={isAutoFlipping ? 'ph:pause-fill' : 'ph:play-fill'} 
+                                label={isAutoFlipping ? 'Pause' : 'Play'}
+                                onClick={() => setIsPlaying?.(!isAutoFlipping)} 
+                                bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
                         )}
+                        {(settings?.toolbar?.gallery ?? settings?.interaction?.gallery ?? true) && (
+                            <ToolbarBtn 
+                                icon="clarity:image-gallery-solid" 
+                                label="Gallery"
+                                onClick={() => setShowGalleryPopupMemo(!showGalleryPopup)} 
+                                bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
+                            />
+                        )}
+                        <div className="relative" id="layout8-sound-icon-anchor">
+                            {(settings?.audio?.backgroundAudio ?? settings?.audio?.audio ?? settings?.media?.backgroundAudio ?? settings?.media?.audio ?? true) && (
+                                <ToolbarBtn 
+                                    id="layout8-tablet-sound-btn"
+                                    icon={isMuted ? "solar:music-notes-bold-duotone" : "solar:music-notes-bold"} 
+                                    label="Sound"
+                                    onClick={(e) => { e.stopPropagation(); setShowSoundPopupMemo?.(!showSoundPopup); }} 
+                                    bg={showSoundPopup ? secondaryColor : primaryColor}
+                                    color={showSoundPopup ? primaryColor : secondaryColor}
+                                    addTextBelowIcons={addTextBelowIcons}
+                                    textFont={textFont}
+                                    textColor={primaryColor}
+                                />
+                            )}
+                        </div>
                     </div>
 
                     {/* Divider */}
-                    <div className="w-[1.5px] h-[2cqw] rounded-full mx-[0.5cqw]" style={{ backgroundColor: 'rgba(255,255,255,0.4)' }}></div>
+                    {(settings?.viewing?.zoom ?? settings?.toolbar?.zoom ?? true) && (
+                        <div className="w-[1.5px] h-[2cqw] rounded-full mx-[0.1cqw]" style={{ backgroundColor: 'rgba(255,255,255,0.4)' }}></div>
+                    )}
 
                     {/* Block 2: Zoom */}
-                    {(settings?.viewing?.zoom ?? true) && (
-                        <div className="flex items-center gap-[1.5cqw]">
+                    {(settings?.viewing?.zoom ?? settings?.toolbar?.zoom ?? true) && (
+                        <div className="flex items-center gap-[1.2cqw]">
                             <ToolbarBtn 
                                 icon="ph:magnifying-glass-minus-bold" 
+                                label="Zoom Out"
                                 onClick={() => setCurrentZoom?.(Math.max(0.5, (currentZoom || 1) - 0.1))} 
                                 bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
                             <span className="text-[1.4cqw] font-bold min-w-[3.5cqw] text-center whitespace-nowrap" style={{ color: secondaryColor, textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                                 {Math.round((currentZoom || 1) * 100)}%
                             </span>
                             <ToolbarBtn 
                                 icon="ph:magnifying-glass-plus-bold" 
+                                label="Zoom In"
                                 onClick={() => setCurrentZoom?.(Math.min(3, (currentZoom || 1) + 0.1))} 
                                 bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
-                            <button
-                                onClick={() => setCurrentZoom?.(1)}
-                                className="px-[1.2cqw] py-[0.6cqh] rounded-full shadow-sm text-[1.3cqw] font-bold transition-transform hover:scale-105 active:scale-95"
-                                style={{ backgroundColor: secondaryColor, color: primaryColor }}
-                            >
-                                Reset
-                            </button>
+                            <div className="flex flex-col items-center justify-center">
+                                <button
+                                    onClick={() => setCurrentZoom?.(1)}
+                                    className="px-[1.2cqw] py-[0.6cqh] rounded-full shadow-sm text-[1.3cqw] font-bold transition-transform hover:scale-105 active:scale-95"
+                                    style={{ backgroundColor: secondaryColor, color: primaryColor }}
+                                >
+                                    Reset
+                                </button>
+                                {addTextBelowIcons && (
+                                    <span className="text-[0.8cqw] font-semibold leading-tight text-center whitespace-nowrap mt-[0.2cqw] opacity-0 pointer-events-none">
+                                        Reset
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     )}
 
                     {/* Divider */}
-                    <div className="w-[1.5px] h-[2cqw] rounded-full mx-[0.5cqw]" style={{ backgroundColor: 'rgba(255,255,255,0.4)' }}></div>
+                    {((settings?.interaction?.share ?? settings?.shareExport?.share ?? true) || (settings?.interaction?.download ?? settings?.shareExport?.download ?? true) || (settings?.interaction?.fullScreen ?? settings?.viewing?.fullScreen ?? true)) && (
+                        <div className="w-[1.5px] h-[2cqw] rounded-full mx-[0.1cqw]" style={{ backgroundColor: 'rgba(255,255,255,0.4)' }}></div>
+                    )}
 
                     {/* Block 3: Actions */}
-                    <div className="flex items-center gap-[1.5cqw]">
+                    <div className="flex items-center gap-[1.2cqw]">
 
-                        {(settings?.shareExport?.share ?? true) && (
-                            <ToolbarBtn icon="mage:share-fill" onClick={() => {
-                                setShowTOCMemo?.(false);
-                                setShowThumbnailBarMemo?.(false);
-                                setShowGalleryPopupMemo?.(false);
-                                setShowSoundPopupMemo?.(false);
-                                setShowProfilePopup?.(false);
-                                setShowExportPopupMemo?.(false);
-                                setIsShareOpen(true);
-                            }} bg={primaryColor} />
+                        {(settings?.interaction?.share ?? settings?.shareExport?.share ?? true) && (
+                            <ToolbarBtn 
+                                icon="mage:share-fill" 
+                                label="Share"
+                                onClick={() => {
+                                    setShowTOCMemo?.(false);
+                                    setShowThumbnailBarMemo?.(false);
+                                    setShowGalleryPopupMemo?.(false);
+                                    setShowSoundPopupMemo?.(false);
+                                    setShowProfilePopup?.(false);
+                                    setShowExportPopupMemo?.(false);
+                                    setIsShareOpen(true);
+                                }} 
+                                bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
+                            />
                         )}
-                        {(settings?.shareExport?.download ?? true) && (
-                            <ToolbarBtn icon="meteor-icons:download" onClick={() => setShowExportPopupMemo?.(true)} bg={primaryColor} />
+                        {(settings?.interaction?.download ?? settings?.shareExport?.download ?? true) && (
+                            <ToolbarBtn 
+                                icon="meteor-icons:download" 
+                                label="Download"
+                                onClick={() => setShowExportPopupMemo?.(true)} 
+                                bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
+                            />
                         )}
-                        {(settings?.viewing?.fullScreen ?? true) && (
-                            <ToolbarBtn icon={isFullscreen ? "mingcute:fullscreen-exit-fill" : "lucide:fullscreen"} onClick={handleFullScreen} bg={primaryColor} />
+                        {(settings?.interaction?.fullScreen ?? settings?.viewing?.fullScreen ?? true) && (
+                            <ToolbarBtn 
+                                icon={isFullscreen ? "mingcute:fullscreen-exit-fill" : "lucide:fullscreen"} 
+                                label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                                onClick={handleFullScreen} 
+                                bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
+                            />
                         )}
                     </div>
 
                 </div>
 
-                {/* Right spacer for balance (optional, or just logo area if needed) */}
-                <div className="flex-1 pointer-events-none"></div>
+                {/* Right: Brand Logo */}
+                <div className="flex-1 flex justify-end items-center pointer-events-auto pr-[1cqw]">
+                    <BrandLogo
+                        logoSettings={logoSettings}
+                        settings={settings}
+                        isTablet={true}
+                        theme="gray"
+                    />
+                </div>
             </div>
 
             {/* Main Content Area */}
             <div className="flex-1 flex items-center justify-center relative p-[4cqw] pt-[8cqh] pb-[10cqh]">
-
-                {/* Popups */}
-                {showTOC && (
-                    <TabletTableOfContentsPopup
-                        variant="layout8"
-                        onClose={() => setShowTOCMemo?.(false)} 
-                        onNavigate={onPageClick} 
-                        settings={settings}
-                        layoutColors={settings?.layoutColors}
-                    />
-                )}
 
                 {showProfilePopup && (
                     <TabletProfilePopup
@@ -477,71 +590,113 @@ const TabletLayout8 = ({
                 <div className="flex items-center justify-center gap-[1.5cqw] pointer-events-auto shrink-0">
                     
                     {/* First Page */}
-                    <ToolbarBtn 
-                        icon="ph:skip-back-fill" 
-                        onClick={() => onPageClick(0)} 
-                        bg={primaryColor} 
-                    />
+                    {(settings?.navigation?.startEndNav ?? true) && (
+                        <ToolbarBtn 
+                            icon="ph:skip-back-fill" 
+                            label="First"
+                            onClick={() => onPageClick(0)} 
+                            bg={primaryColor} 
+                            addTextBelowIcons={addTextBelowIcons}
+                            textFont={textFont}
+                            textColor={primaryColor}
+                        />
+                    )}
                     
                     {/* Previous Page */}
-                    <ToolbarBtn 
-                        icon="ph:caret-left-fill" 
-                        onClick={() => bookRef?.current?.pageFlip()?.flipPrev()} 
-                        bg={primaryColor} 
-                    />
+                    {(settings?.navigation?.nextPrevButtons ?? true) && (
+                        <ToolbarBtn 
+                            icon="ph:caret-left-fill" 
+                            label="Prev"
+                            onClick={() => bookRef?.current?.pageFlip()?.flipPrev()} 
+                            bg={primaryColor} 
+                            addTextBelowIcons={addTextBelowIcons}
+                            textFont={textFont}
+                            textColor={primaryColor}
+                        />
+                    )}
                     
                     {/* Page Indicator Pill */}
                     {(settings?.navigation?.pageQuickAccess ?? true) && (
-                        <div 
-                            className="px-[2cqw] py-[0.8cqh] rounded-full shadow-md flex items-center justify-center min-w-[12cqw]"
-                            style={{ backgroundColor: primaryColor }}
-                        >
-                            <span className="text-[1.4cqw] font-semibold flex items-center text-white">
-                                Page - 
-                                <input 
-                                    type="text" autoComplete="off" spellCheck="false" autoCorrect="off"
-                                    value={inputPage}
-                                    onChange={(e) => setInputPage(e.target.value)}
-                                    onBlur={() => {
-                                        let p = parseInt(inputPage);
-                                        if (isNaN(p) || p < 1) p = 1;
-                                        if (p > totalPages) p = totalPages;
-                                        setInputPage(p);
-                                        if (p - 1 !== currentPage) {
-                                            onPageClick(p - 1);
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.target.blur();
-                                        }
-                                    }}
-                                    className="mx-[0.5cqw] w-[3cqw] text-center bg-transparent outline-none border-none text-white placeholder-white/70"
-                                /> 
-                                / {totalPages}
-                            </span>
+                        <div className="flex flex-col items-center justify-center">
+                            <div 
+                                className="px-[2cqw] py-[0.8cqh] rounded-full shadow-md flex items-center justify-center min-w-[12cqw]"
+                                style={{ backgroundColor: primaryColor }}
+                            >
+                                <span className="text-[1.4cqw] font-semibold flex items-center text-white">
+                                    Page - 
+                                    <input 
+                                        type="text" autoComplete="off" spellCheck="false" autoCorrect="off"
+                                        value={inputPage}
+                                        onChange={(e) => setInputPage(e.target.value)}
+                                        onBlur={() => {
+                                            let p = parseInt(inputPage);
+                                            if (isNaN(p) || p < 1) p = 1;
+                                            if (p > totalPages) p = totalPages;
+                                            setInputPage(p);
+                                            if (p - 1 !== currentPage) {
+                                                onPageClick(p - 1);
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.target.blur();
+                                            }
+                                        }}
+                                        className="mx-[0.5cqw] w-[3cqw] text-center bg-transparent outline-none border-none text-white placeholder-white/70"
+                                    /> 
+                                    / {totalPages}
+                                </span>
+                            </div>
+                            {addTextBelowIcons && (
+                                <span className="text-[0.8cqw] font-semibold leading-tight text-center whitespace-nowrap mt-[0.2cqw] opacity-0 pointer-events-none">
+                                    Page
+                                </span>
+                            )}
                         </div>
                     )}
                     
                     {/* Next Page */}
-                    <ToolbarBtn 
-                        icon="ph:caret-right-fill" 
-                        onClick={() => bookRef?.current?.pageFlip()?.flipNext()} 
-                        bg={primaryColor} 
-                    />
+                    {(settings?.navigation?.nextPrevButtons ?? true) && (
+                        <ToolbarBtn 
+                            icon="ph:caret-right-fill" 
+                            label="Next"
+                            onClick={() => bookRef?.current?.pageFlip()?.flipNext()} 
+                            bg={primaryColor} 
+                            addTextBelowIcons={addTextBelowIcons}
+                            textFont={textFont}
+                            textColor={primaryColor}
+                        />
+                    )}
                     
                     {/* Last Page */}
-                    <ToolbarBtn 
-                        icon="ph:skip-forward-fill" 
-                        onClick={() => onPageClick(pagesCount - 1)} 
-                        bg={primaryColor} 
-                    />
+                    {(settings?.navigation?.startEndNav ?? true) && (
+                        <ToolbarBtn 
+                            icon="ph:skip-forward-fill" 
+                            label="Last"
+                            onClick={() => onPageClick(pagesCount - 1)} 
+                            bg={primaryColor} 
+                            addTextBelowIcons={addTextBelowIcons}
+                            textFont={textFont}
+                            textColor={primaryColor}
+                        />
+                    )}
                     
                 </div>
 
                 {/* Right Spacer for balance */}
                 <div className="flex-1 pointer-events-none"></div>
             </div>
+
+            {/* Popups at root level for accurate coordinate alignment */}
+            {showTOC && (
+                <TabletTableOfContentsPopup
+                    variant="layout8"
+                    onClose={() => setShowTOCMemo?.(false)} 
+                    onNavigate={onPageClick} 
+                    settings={settings}
+                    layoutColors={settings?.layoutColors}
+                />
+            )}
 
             {/* Thumbnail Bar */}
             {showThumbnailBar && (
@@ -553,43 +708,53 @@ const TabletLayout8 = ({
                     />
                     <div
                         id="layout8-thumb-panel"
-                        className="absolute w-max max-w-[70cqw] z-[150] pointer-events-auto"
+                        className="absolute w-[68cqw] h-[16cqw] z-[150] pointer-events-auto flex flex-col"
                         style={{
-                            top: '5cqw',
-                            left: '53%',
-                            transform: 'translateX(-50%)'
+                            top: '2.5cqh',
+                            left: '50%',
+                            transform: 'translateX(-55.0%)'
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Connector Tab for Thumbnail Icon */}
-                        <div className="absolute bottom-[98%] w-[5cqw] h-[3.4cqw] z-0" style={{ left: '25%', transform: 'translateX(-50%)' }}>
-                            <svg width="100%" height="100%" viewBox="0 0 113 67" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path
-                                    d="M24.8182 33.0909C24.8182 14.8153 39.6335 0 57.9091 0C76.1847 0 91 14.8153 91 33.0909V41.7377C91.0109 60.2573 94.967 66.6391 113 67H0C18.7515 67 24.8182 52.7213 24.8182 41.7377V33.0909Z"
-                                    fill={getLayoutColor('dropdown-bg', '#5C5898')}
-                                    fillOpacity="1"
-                                />
+                        {/* SVG Background Layer */}
+                        <div className="absolute inset-0 z-0 pointer-events-none drop-shadow-2xl">
+                            <svg width="100%" height="100%" viewBox="0 0 780 195" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                                <defs>
+                                    <clipPath id="tablet-thumb-shape-clip" clipPathUnits="objectBoundingBox">
+                                        <path transform="scale(0.00128205, 0.005128205)" d="M0 87C0 75.9543 8.95431 67 20 67H760C771.046 67 780 75.9543 780 87V175C780 186.046 771.046 195 760 195H20C8.9543 195 0 186.046 0 175V87Z" />
+                                        <path transform="scale(0.00128205, 0.005128205) translate(235.54, 67) scale(0.85, 0.9) translate(-361.9, -67)" d="M328.818 33.0909C328.818 14.8153 343.633 0 361.909 0C380.185 0 395 14.8153 395 33.0909V41.7377C395.011 60.2573 398.967 66.6391 417 67H304C322.752 67 328.818 52.7213 328.818 41.7377V33.0909Z" />
+                                    </clipPath>
+                                </defs>
+                                <path d="M0 87C0 75.9543 8.95431 67 20 67H760C771.046 67 780 75.9543 780 87V175C780 186.046 771.046 195 760 195H20C8.9543 195 0 186.046 0 175V87Z" fill={getLayoutColor('dropdown-bg', primaryColor)} />
+                                <path transform="translate(235.54, 67) scale(0.85, 0.9) translate(-361.9, -67)" d="M328.818 33.0909C328.818 14.8153 343.633 0 361.909 0C380.185 0 395 14.8153 395 33.0909V41.7377C395.011 60.2573 398.967 66.6391 417 67H304C322.752 67 328.818 52.7213 328.818 41.7377V33.0909Z" fill={getLayoutColor('dropdown-bg', primaryColor)} />
                             </svg>
                         </div>
 
+                        {/* Content Layer */}
                         <div
-                            className="w-full h-[12cqw] rounded-[1.2cqw] flex items-center relative px-[1cqw] shadow-2xl backdrop-blur-md"
-                            style={{ backgroundColor: getLayoutColor('dropdown-bg', '#5C5898') }}
+                            className="relative z-10 w-full h-full flex items-center pt-[5.6cqw] pb-[0.4cqw] px-[1.5cqw]"
+                            style={{ 
+                                clipPath: 'url(#tablet-thumb-shape-clip)', 
+                                WebkitClipPath: 'url(#tablet-thumb-shape-clip)' 
+                            }}
                         >
-                            {canScrollLeft && (
+                            {/* Left Arrow */}
+                            {spreads.length > 5 && (
                                 <button
-                                    className="w-[4cqw] h-[8cqw] flex items-center justify-center hover:scale-110 transition-all shrink-0 z-10"
-                                    onClick={(e) => { e.stopPropagation(); scroll('left'); }}
+                                    onClick={() => scroll('left')}
+                                    className={`z-10 transition-opacity p-[0.5cqw] ${canScrollLeft ? 'opacity-100 hover:opacity-80 cursor-pointer' : 'opacity-30 cursor-default'}`}
+                                    disabled={!canScrollLeft}
                                     style={{ color: getLayoutColor('dropdown-text', '#FFFFFF') }}
                                 >
-                                    <Icon icon="lucide:arrow-left" className="w-[2cqw] h-[2cqw]" />
+                                    <Icon icon="lucide:arrow-left" className="w-[1.6cqw] h-[1.6cqw]" />
                                 </button>
                             )}
 
+                            {/* Scrollable thumbnail row - Showing Double Spreads */}
                             <div
                                 ref={scrollRef}
                                 onScroll={checkScroll}
-                                className="flex-1 flex gap-[1.5cqw] px-[1cqw] items-center overflow-x-auto custom-scrollbar h-full py-[0.5cqw]"
+                                className="flex-1 flex gap-[1.2cqw] px-[0.8cqw] items-center overflow-x-auto h-full"
                                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                             >
                                 {spreads.map((spread, idx) => {
@@ -598,7 +763,6 @@ const TabletLayout8 = ({
                                     return (
                                         <div
                                             key={idx}
-                                            className="flex-shrink-0 flex flex-col items-center cursor-pointer group py-[0.5cqw]"
                                             onClick={() => {
                                                 if (bookRef?.current?.pageFlip) {
                                                     bookRef.current.pageFlip().turnToPage(spread.indices[0]);
@@ -607,37 +771,34 @@ const TabletLayout8 = ({
                                                 }
                                                 setShowThumbnailBarMemo(false);
                                             }}
+                                            className="flex-shrink-0 flex flex-col items-center cursor-pointer group py-[0.2cqw]"
                                         >
                                             <div
-                                                className="rounded-[0.5cqw] overflow-hidden transition-all duration-300 bg-white shadow-lg flex flex-col items-center px-[0.3cqw] pt-[0.3cqw] pb-[0.2cqw]"
+                                                className="rounded-[0.5cqw] overflow-hidden transition-all duration-300 bg-white shadow-lg flex flex-col items-center justify-center px-[0.3cqw] pt-[0.3cqw] pb-[0.2cqw]"
                                                 style={{
-                                                    width: '9cqw',
-                                                    height: '7cqw',
-                                                    border: isSelected ? `0.2cqw solid ${getLayoutColor('dropdown-bg', '#5C5898')}` : 'none',
+                                                    border: isSelected ? `0.18cqw solid ${getLayoutColor('dropdown-bg', primaryColor)}` : 'none',
                                                     transform: isSelected ? 'scale(1.04)' : 'scale(1)'
                                                 }}
                                             >
-                                                <div className="flex w-full flex-1 gap-[0.1cqw] items-center justify-center overflow-hidden">
+                                                {/* Pages Spread container */}
+                                                <div className="flex w-full gap-0 items-center justify-center overflow-hidden bg-gray-50 rounded-[0.1cqw]" style={{ height: '5.5cqw' }}>
                                                     {spread.pages.map((page, pIdx) => (
-                                                        <div key={`${idx}-${pIdx}`} className="w-[48%] h-[85%] overflow-hidden bg-white shadow-sm flex items-center justify-center rounded-[0.1cqw]">
+                                                        <div key={`${idx}-${pIdx}`} className="bg-white overflow-hidden relative flex items-center justify-center border-0" style={{ width: '4cqw', height: '100%' }}>
                                                             <PageThumbnail
-                                                                html={page.html || page.content}
+                                                                html={page.html || page.content || ''}
                                                                 index={spread.indices[pIdx]}
-                                                                scale={0.06}
+                                                                scale={0.07}
                                                             />
                                                         </div>
                                                     ))}
                                                     {spread.pages.length === 1 && idx === spreads.length - 1 && (
-                                                        <div className="w-[48%] h-[85%] bg-gray-50 rounded-[0.1cqw]" />
+                                                        <div className="bg-gray-50" style={{ width: '4cqw', height: '100%' }} />
                                                     )}
                                                 </div>
 
-                                                <div className="w-full text-center mt-auto pb-[0.1cqw]">
-                                                    <span 
-                                                        className="text-[0.9cqw] font-medium"
-                                                        style={{ color: isSelected ? getLayoutColor('dropdown-bg', '#5C5898') : '#666666' }}
-                                                    >
-                                                        Page {spread.indices[0] + 1}{spread.indices.length > 1 ? `-${spread.indices[1] + 1}` : ''}
+                                                <div className="w-full flex justify-center py-[0.1cqw] mt-[0.2cqw]">
+                                                    <span className="text-[0.8cqw] font-bold tracking-tight text-[#555555]">
+                                                        {spread.label}
                                                     </span>
                                                 </div>
                                             </div>
@@ -646,13 +807,15 @@ const TabletLayout8 = ({
                                 })}
                             </div>
 
-                            {canScrollRight && (
+                            {/* Right Arrow */}
+                            {spreads.length > 5 && (
                                 <button
-                                    className="w-[4cqw] h-[8cqw] flex items-center justify-center hover:scale-110 transition-all shrink-0 z-10"
-                                    onClick={(e) => { e.stopPropagation(); scroll('right'); }}
+                                    onClick={() => scroll('right')}
+                                    className={`z-10 transition-opacity p-[0.5cqw] ${canScrollRight ? 'opacity-100 hover:opacity-80 cursor-pointer' : 'opacity-30 cursor-default'}`}
+                                    disabled={!canScrollRight}
                                     style={{ color: getLayoutColor('dropdown-text', '#FFFFFF') }}
                                 >
-                                    <Icon icon="lucide:arrow-right" className="w-[2cqw] h-[2cqw]" />
+                                    <Icon icon="lucide:arrow-right" className="w-[1.6cqw] h-[1.6cqw]" />
                                 </button>
                             )}
                         </div>

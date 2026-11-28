@@ -3,10 +3,54 @@ import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import QRCode from 'react-qr-code';
 
-const FlipbookSharePopup = ({ onClose, bookName = "Flipbook Name", url = "https://flipbook/page", popupSettings, isMobile = false, isLandscape = false, isPublished = true }) => {
+const FlipbookSharePopup = ({ onClose, bookName = "Flipbook Name", url = "https://flipbook/page", popupSettings, isMobile = false, isLandscape = false, isPublished: propIsPublished, currentBook, activeLayout = '1' }) => {
+    const isPublished = propIsPublished !== undefined
+        ? propIsPublished
+        : Boolean(
+            currentBook?.isPublished ||
+            currentBook?.published ||
+            currentBook?.is_published ||
+            currentBook?.status?.toLowerCase() === 'published' ||
+            currentBook?.status?.toLowerCase() === 'publish' ||
+            currentBook?.meta?.isPublished
+        );
+
+    // Resolve unified share URL exactly matching ShareModal across Desktop, Tablet & Mobile
+    const resolvedShareUrl = React.useMemo(() => {
+        const shareIdVal = 
+            currentBook?.Customized_Settings?.Visibility?.shareId || 
+            currentBook?.Visibility?.shareId || 
+            currentBook?.share?.shareId || 
+            currentBook?.shareId;
+
+        let pubUrl = '';
+        if (shareIdVal && typeof window !== 'undefined') {
+            pubUrl = `${window.location.origin}/share/${shareIdVal}`;
+        } else if (url && !url.includes('/editor/customized_editor')) {
+            pubUrl = url;
+        } else if (typeof window !== 'undefined') {
+            pubUrl = `${window.location.origin}/share`;
+        }
+
+        if (activeLayout) {
+            try {
+                const urlObj = new URL(pubUrl);
+                urlObj.searchParams.set('layout', activeLayout);
+                pubUrl = urlObj.toString();
+            } catch (e) {
+                pubUrl += pubUrl.includes('?') ? `&layout=${activeLayout}` : `?layout=${activeLayout}`;
+            }
+        }
+        return pubUrl;
+    }, [currentBook, url, activeLayout]);
+
     const [shareCurrentPage, setShareCurrentPage] = useState(false);
-    const [localUrl, setLocalUrl] = useState(url);
+    const [localUrl, setLocalUrl] = useState(resolvedShareUrl);
     const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        setLocalUrl(resolvedShareUrl);
+    }, [resolvedShareUrl]);
 
     // Download states
     const [downloadFormat, setDownloadFormat] = useState('JPG');

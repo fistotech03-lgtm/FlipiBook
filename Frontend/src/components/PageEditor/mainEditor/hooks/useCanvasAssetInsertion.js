@@ -8,6 +8,7 @@ import { getSupabaseBaseUrl, resolveUploadsPath } from '../../../../utils/assets
 import { getTopLevelFrames } from '../utils/frameHierarchyUtils';
 import { optimizeImageForWeb, shouldOptimizeImage } from '../../../../utils/imageOptimizer';
 import { startInFlightActivity, endInFlightActivity } from '../../../../utils/storage/saveLockManager';
+import { parseAndSanitizeSvg } from '../../utils/svgVectorImport';
 
 const VIRTUAL_FOLDERS = new Set(['recent book', 'recent', 'all books', 'all flipbooks', 'favorites', 'trash']);
 
@@ -1040,9 +1041,75 @@ export const useCanvasAssetInsertion = ({
 
       if (updatePageHtml) updatePageHtml(targetPageIndex, svg.outerHTML);
     });
+    const handleUploadSvgEvent = (e) => {
+      const { svgText, fileName, pageIndex, dropPoint } = e.detail || {};
+      const targetPageIndex = pageIndex !== undefined ? pageIndex : activePageIndex;
+      const container = document.querySelector(`.page-svg-container[data-page-index="${targetPageIndex}"]`);
+      const targetSvg = container?.querySelector('svg');
+      if (!targetSvg || !svgText) return;
+
+      const rootFrames = getTopLevelFrames(targetSvg);
+      const rootFrame = rootFrames[0] || targetSvg.querySelector('[data-type="frame"]') || targetSvg;
+
+      let pX = 0, pY = 0, pWidth = baseWidth || 210, pHeight = baseHeight || 297;
+      try {
+        const vbAttr = targetSvg.getAttribute('viewBox');
+        if (vbAttr) {
+          const vb = vbAttr.split(/[\s,]+/).map(Number);
+          if (vb.length === 4 && vb.every((n) => !isNaN(n)) && vb[2] > 0 && vb[3] > 0) {
+            [pX, pY, pWidth, pHeight] = vb;
+          }
+        }
+      } catch { /* ignore */ }
+
+      const maxDim = Math.min(pWidth * 0.4, 80);
+      const newId = `group-${Math.random().toString(36).substr(2, 9)}`;
+      const parsed = parseAndSanitizeSvg(svgText, newId, maxDim);
+      if (!parsed) return;
+
+      const { displayWidth, displayHeight, children } = parsed;
+
+      const cx = dropPoint && typeof dropPoint.x === 'number' ? dropPoint.x : (pX + pWidth / 2);
+      const cy = dropPoint && typeof dropPoint.y === 'number' ? dropPoint.y : (pY + pHeight / 2);
+      const cleanName = (fileName || 'SVG').replace(/\.svg$/i, '');
+
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.id = newId;
+      g.setAttribute('data-type', 'group');
+      g.setAttribute('data-is-svg-vector', 'true');
+      g.setAttribute('data-name', cleanName);
+      g.setAttribute('transform', `translate(${cx - displayWidth / 2}, ${cy - displayHeight / 2})`);
+
+      children.forEach((child) => {
+        g.appendChild(document.importNode(child, true));
+      });
+
+      rootFrame.appendChild(g);
+
+      if (saveModifiedPageHtml) {
+        saveModifiedPageHtml(targetPageIndex, targetSvg);
+      } else if (updatePageHtml) {
+        updatePageHtml(targetPageIndex, targetSvg.outerHTML);
+      }
+
+      if (setSelectedLayerId) setSelectedLayerId(newId);
+      if (selectedLayerIdRef) selectedLayerIdRef.current = newId;
+      if (setMultiSelectedIds) setMultiSelectedIds(new Set([newId]));
+      if (multiSelectedIdsRef) multiSelectedIdsRef.current = new Set([newId]);
+      if (setActiveMainTool) setActiveMainTool('select');
+
+      setTimeout(() => {
+        const el = document.getElementById(newId);
+        if (el && typeof drawOverlayHighlight === 'function') {
+          drawOverlayHighlight(el, 'selected');
+        }
+      }, 50);
+    };
+
     window.addEventListener('add-image-to-editor', handleAddImage);
     window.addEventListener('upload-video-to-editor', handleUploadVideo);
     window.addEventListener('upload-image-to-editor', handleUploadImageEvent);
+    window.addEventListener('upload-svg-to-editor', handleUploadSvgEvent);
 
     return () => {
       window.removeEventListener('add-icon-to-editor', handleAddIcon);
@@ -1050,6 +1117,7 @@ export const useCanvasAssetInsertion = ({
       window.removeEventListener('add-image-to-editor', handleAddImage);
       window.removeEventListener('upload-video-to-editor', handleUploadVideo);
       window.removeEventListener('upload-image-to-editor', handleUploadImageEvent);
+      window.removeEventListener('upload-svg-to-editor', handleUploadSvgEvent);
     };
   }, [activePageIndex, pages, updatePageHtml, setSelectedLayerId, selectedLayerIdRef, setMultiSelectedIds, multiSelectedIdsRef, setActiveMainTool, setActiveTopTool, drawOverlayHighlight, baseWidth, baseHeight, insertImageIntoPage, user, folderName, flipbookName, flipbookVId, v_id]);
 

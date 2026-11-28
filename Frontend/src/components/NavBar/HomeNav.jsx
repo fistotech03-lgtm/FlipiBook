@@ -563,6 +563,7 @@ export default function HomeNav() {
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
       <NotificationDrawer 
         isOpen={isNotificationOpen} 
+        onOpen={() => setIsNotificationOpen(true)}
         onClose={() => setIsNotificationOpen(false)} 
         onUnreadCountChange={setUnreadNotifCount}
       />

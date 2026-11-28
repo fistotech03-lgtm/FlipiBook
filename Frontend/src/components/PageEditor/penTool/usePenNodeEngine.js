@@ -30,6 +30,38 @@ import { updateShapeMaskTransform } from '../LeftActionMenu/Elements/utils/shape
 import { hasCustomImageInShape } from '../LeftActionMenu/Elements/utils/imageFramingUtils';
 import { safeSerializeSvg } from '../utils/editorUtils';
 
+/**
+ * Imported SVGs often repeat the start point before "Z" (or contain zero-length segments). Paper.js
+ * only merges an EXACT match, and imported coordinates are rounded after transforming, so a second
+ * node sits on top of the first — dragging one leaves a kink. Merge nodes closer than `tol`.
+ */
+const mergeDuplicateNodes = (item, tol = 0.05) => {
+  if (!item) return item;
+  const contours = item.children && item.children.length ? item.children : [item];
+  contours.forEach((path) => {
+    const segs = path.segments;
+    if (!segs || segs.length < 2) return;
+    for (let i = segs.length - 2; i >= 0; i--) {
+      const a = segs[i];
+      const b = segs[i + 1];
+      if (a.point.getDistance(b.point) < tol && a.handleOut.isZero() && b.handleIn.isZero()) {
+        a.handleOut = b.handleOut;
+        b.remove();
+      }
+    }
+    if (path.closed && segs.length > 2) {
+      const first = segs[0];
+      const last = segs[segs.length - 1];
+      if (first.point.getDistance(last.point) < tol) {
+        first.handleIn = last.handleIn.isZero() ? first.handleIn : last.handleIn;
+        last.remove();
+      }
+    }
+  });
+  return item;
+};
+
+
 
 /**
  * Hook for managing Pen Tool drawing (Vectra session, bezier curves, pencil)
@@ -105,10 +137,11 @@ export const usePenNodeEngine = ({
     if (!paperScopeRef.current || !d) return null;
     paperScopeRef.current.activate();
     const mCount = (d.match(/M/gi) || []).length;
-    if (mCount > 1) {
-      return new paperScopeRef.current.CompoundPath(d);
-    }
-    return new paperScopeRef.current.Path(d);
+    const item = mCount > 1
+      ? new paperScopeRef.current.CompoundPath(d)
+      : new paperScopeRef.current.Path(d);
+    mergeDuplicateNodes(item);
+    return item;
   }, []);
 
   const convertPaperSegmentToVectraNode = useCallback((seg) => {
@@ -120,7 +153,7 @@ export const usePenNodeEngine = ({
       node.in = { x: seg.handleIn.x, y: seg.handleIn.y };
     }
     if (hasOut) {
-      node.out = { x: seg.handleOut.y, y: seg.handleOut.y };
+      node.out = { x: seg.handleOut.x, y: seg.handleOut.y };
     }
 
     if (seg.nodeType) {

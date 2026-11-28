@@ -94,17 +94,25 @@ export const FrameVectorThumbnail = ({ frameId }) => {
           <text x="30" y="64" fill="#000000" fontSize="5.5" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">SCAN ME</text>
         </svg>
       );
+    case 'frame-covered':
+      return (
+        <svg viewBox="0 0 60 60" className="w-full h-full p-[0.2vw]">
+          <rect x="4" y="4" width="52" height="52" rx="5" fill="#ffffff" stroke="#000000" strokeWidth="2.8" />
+          <MiniQRMatrix x="12" y="12" size="36" />
+        </svg>
+      );
   }
 };
 
-// Explicit default order of the 6 frame elements matching switch (frameId)
+// Explicit default order of the 7 frame elements matching switch (frameId)
 export const QR_FRAME_IDS = [
   'frame-none',
   'frame-bottom-bar',
   'frame-top-bubble',
   'frame-curved-arrow',
   'frame-phone',
-  'frame-simple-text'
+  'frame-simple-text',
+  'frame-covered'
 ];
 
 export const QR_ITEMS = QR_FRAME_IDS.map((frameId) => {
@@ -136,7 +144,7 @@ export const QR_ITEMS = QR_FRAME_IDS.map((frameId) => {
           text: frame.defaultText,
           textColor: defaultTextColor,
           fontFamily: defaultFontFamily,
-          url: ''
+          url: 'https://flipibook.com'
         },
         cx,
         cy
@@ -148,7 +156,7 @@ export const QR_ITEMS = QR_FRAME_IDS.map((frameId) => {
           text: frame.defaultText,
           textColor: defaultTextColor,
           fontFamily: defaultFontFamily,
-          url: ''
+          url: 'https://flipibook.com'
         },
         isDrag
       )

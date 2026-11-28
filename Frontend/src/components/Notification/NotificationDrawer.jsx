@@ -1,23 +1,177 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import axios from 'axios';
+import { io } from 'socket.io-client';
 import { X } from 'lucide-react';
 import { Icon } from '@iconify/react';
-import { initialNotifications } from './notificationData';
+import { useAuth } from '../../context/AuthContext';
+import { resolveUploadsPath } from '../../utils/assets/assetUtils';
+import notificationSound from '../../assets/Notification/Notification.mp3';
+
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
+
+const formatRelativeTime = (dateValue) => {
+  if (!dateValue) return '';
+  const ts = new Date(dateValue).getTime();
+  if (Number.isNaN(ts)) return '';
+  const diffSec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (diffSec < 60) return 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return new Date(ts).toLocaleDateString();
+};
+
+const isTodayDate = (dateValue) => {
+  if (!dateValue) return true;
+  const d = new Date(dateValue);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+};
 
 export default function NotificationDrawer({
   isOpen,
   onClose,
+  onOpen,
   notifications: externalNotifications,
   onUnreadCountChange,
 }) {
-  const [notifications, setNotifications] = useState(initialNotifications);
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'unread'
+  const { user } = useAuth();
+  const userEmail = (user?.emailId || user?.email || '').trim().toLowerCase();
 
-  // Sync external notifications if passed
+  const [notifications, setNotifications] = useState([]);
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'unread'
+  const [toastNotification, setToastNotification] = useState(null);
+  const [isToastVisible, setIsToastVisible] = useState(false);
+  const playedIdsRef = useRef(new Set());
+  const toastTimerRef = useRef(null);
+  const toastClearTimerRef = useRef(null);
+
+  const mapNotificationDoc = useCallback((n) => ({
+    id: n._id,
+    type: n.type,
+    title: n.title,
+    detail: n.detail || '',
+    time: formatRelativeTime(n.createdAt),
+    timestamp: n.createdAt ? new Date(n.createdAt).getTime() : Date.now(),
+    unread: !n.isRead,
+    avatar: n.actorPicture ? resolveUploadsPath(n.actorPicture) : null,
+    group: isTodayDate(n.createdAt) ? 'Today' : 'Earlier',
+    bookId: n.bookId || '',
+    bookUrl: n.bookUrl || '',
+  }), []);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!userEmail) {
+      setNotifications([]);
+      return;
+    }
+    try {
+      const res = await axios.get(`${BACKEND_URL}/api/notifications`, {
+        params: { email: userEmail },
+        withCredentials: true,
+      });
+      if (res.data?.success && Array.isArray(res.data.notifications)) {
+        setNotifications(res.data.notifications.map(mapNotificationDoc));
+      }
+    } catch (err) {
+      console.warn('[NotificationDrawer] Failed to fetch notifications:', err?.message);
+    }
+  }, [userEmail, mapNotificationDoc]);
+
   useEffect(() => {
     if (externalNotifications && Array.isArray(externalNotifications)) {
       setNotifications(externalNotifications);
+      return;
     }
-  }, [externalNotifications]);
+    fetchNotifications();
+  }, [externalNotifications, fetchNotifications]);
+
+  // Real-time Socket.IO subscription for instant notifications
+  useEffect(() => {
+    if (!userEmail || externalNotifications) return;
+
+    const socket = io(BACKEND_URL || undefined, {
+      path: '/socket.io',
+      auth: { email: userEmail },
+      withCredentials: true,
+      transports: ['polling', 'websocket'],
+    });
+
+    const handleNewNotification = (doc) => {
+      if (!doc || !doc._id) return;
+      const mapped = mapNotificationDoc(doc);
+      if (!playedIdsRef.current.has(mapped.id)) {
+        playedIdsRef.current.add(mapped.id);
+        try {
+          const audio = new Audio(notificationSound);
+          audio.volume = 0.7;
+          audio.play().catch(() => {});
+        } catch {
+          // Ignore browser autoplay restrictions
+        }
+
+        // Show floating rounded notification card below navbar when drawer is closed
+        if (!isOpen) {
+          if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+          if (toastClearTimerRef.current) clearTimeout(toastClearTimerRef.current);
+          setToastNotification(mapped);
+          setIsToastVisible(false);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              setIsToastVisible(true);
+            });
+          });
+          toastTimerRef.current = setTimeout(() => {
+            setIsToastVisible(false);
+            toastClearTimerRef.current = setTimeout(() => {
+              setToastNotification(null);
+            }, 320);
+          }, 4500);
+        }
+      }
+      setNotifications((prev) => {
+        if (prev.some((item) => item.id === mapped.id)) return prev;
+        return [mapped, ...prev];
+      });
+    };
+
+    socket.on('notification:new', handleNewNotification);
+
+    return () => {
+      socket.off('notification:new', handleNewNotification);
+      socket.disconnect();
+    };
+  }, [userEmail, externalNotifications, mapNotificationDoc, isOpen]);
+
+  // Hide floating toast card if drawer opens, and clean up timers on unmount
+  useEffect(() => {
+    if (isOpen && toastNotification) {
+      setIsToastVisible(false);
+      setToastNotification(null);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (toastClearTimerRef.current) clearTimeout(toastClearTimerRef.current);
+    }
+  }, [isOpen, toastNotification]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (toastClearTimerRef.current) clearTimeout(toastClearTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && !externalNotifications) {
+      fetchNotifications();
+    }
+  }, [isOpen, externalNotifications, fetchNotifications]);
 
   // Compute unread counts
   const unreadCount = useMemo(() => {
@@ -56,14 +210,44 @@ export default function NotificationDrawer({
     };
   }, [isOpen]);
 
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = async () => {
     setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+    if (!userEmail || externalNotifications) return;
+    try {
+      await axios.patch(
+        `${BACKEND_URL}/api/notifications/read-all`,
+        { email: userEmail },
+        { withCredentials: true }
+      );
+    } catch (err) {
+      console.warn('[NotificationDrawer] Failed to mark all as read:', err?.message);
+    }
   };
 
-  const handleItemClick = (id) => {
+  const handleItemClick = async (id) => {
+    const clicked = notifications.find((n) => n.id === id);
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, unread: false } : item))
     );
+    if (userEmail && !externalNotifications && clicked?.unread) {
+      try {
+        await axios.patch(
+          `${BACKEND_URL}/api/notifications/${id}/read`,
+          { email: userEmail },
+          { withCredentials: true }
+        );
+      } catch (err) {
+        console.warn('[NotificationDrawer] Failed to mark notification as read:', err?.message);
+      }
+    }
+
+    if (clicked?.type === 'book_published') {
+      const targetUrl = clicked.bookUrl || (clicked.bookId ? `/share/${clicked.bookId}` : '');
+      if (targetUrl) {
+        if (onClose) onClose();
+        window.open(targetUrl, '_blank', 'noopener,noreferrer');
+      }
+    }
   };
 
   const filteredNotifications = useMemo(() => {
@@ -89,6 +273,22 @@ export default function NotificationDrawer({
           alt={item.title}
           className="w-[2.4vw] h-[2.4vw] min-w-[34px] min-h-[34px] rounded-full object-cover shrink-0 border border-gray-100 shadow-xs"
         />
+      );
+    }
+
+    if (item.type === 'book_published') {
+      return (
+        <div className="w-[2.4vw] h-[2.4vw] min-w-[34px] min-h-[34px] rounded-[0.6vw] bg-[#FFF2EE] flex items-center justify-center shrink-0">
+          <Icon icon="lucide:book-open" className="w-[1.2vw] h-[1.2vw] min-w-[17px] min-h-[17px] text-[#EC5137]" />
+        </div>
+      );
+    }
+
+    if (item.type === 'new_follower' || item.type === 'follow') {
+      return (
+        <div className="w-[2.4vw] h-[2.4vw] min-w-[34px] min-h-[34px] rounded-[0.6vw] bg-[#EFF6FF] flex items-center justify-center shrink-0">
+          <Icon icon="lucide:user-plus" className="w-[1.2vw] h-[1.2vw] min-w-[17px] min-h-[17px] text-[#2563EB]" />
+        </div>
       );
     }
 
@@ -155,8 +355,86 @@ export default function NotificationDrawer({
     </div>
   );
 
+  const dismissToastSmoothly = () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    if (toastClearTimerRef.current) clearTimeout(toastClearTimerRef.current);
+    setIsToastVisible(false);
+    toastClearTimerRef.current = setTimeout(() => {
+      setToastNotification(null);
+    }, 320);
+  };
+
+  const handleToastCardClick = () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    if (toastClearTimerRef.current) clearTimeout(toastClearTimerRef.current);
+    setIsToastVisible(false);
+    setToastNotification(null);
+    if (onOpen) onOpen();
+  };
+
   return (
     <>
+      {/* Floating Rounded Notification Toast Card (Top-Right below Navbar) */}
+      {toastNotification && !isOpen && (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={handleToastCardClick}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') handleToastCardClick();
+          }}
+          className={`fixed top-[8vh] right-[1.4vw] z-[95] w-[23vw] min-w-[280px] max-w-[400px] bg-white rounded-[1.1vw] border border-gray-200/90 shadow-[0_0.8vw_2vw_rgba(0,0,0,0.14)] px-[0.9vw] py-[1.1vh] flex items-center gap-[0.7vw] cursor-pointer hover:bg-gray-50/90 transition-all duration-300 ease-out transform ${
+            isToastVisible
+              ? 'opacity-100 translate-y-0 scale-100'
+              : 'opacity-0 -translate-y-[1.2vh] scale-95 pointer-events-none'
+          }`}
+        >
+          {toastNotification.avatar ? (
+            <img
+              src={toastNotification.avatar}
+              alt={toastNotification.title}
+              className="w-[2.4vw] h-[2.4vw] min-w-[34px] min-h-[34px] rounded-full object-cover shrink-0 border border-gray-100 shadow-xs"
+            />
+          ) : toastNotification.type === 'book_published' ? (
+            <div className="w-[2.4vw] h-[2.4vw] min-w-[34px] min-h-[34px] rounded-full bg-[#FFF2EE] flex items-center justify-center shrink-0">
+              <Icon icon="lucide:book-open" className="w-[1.15vw] h-[1.15vw] min-w-[16px] min-h-[16px] text-[#EC5137]" />
+            </div>
+          ) : (
+            <div className="w-[2.4vw] h-[2.4vw] min-w-[34px] min-h-[34px] rounded-full bg-[#EFF6FF] flex items-center justify-center shrink-0">
+              <Icon icon="lucide:user-plus" className="w-[1.15vw] h-[1.15vw] min-w-[16px] min-h-[16px] text-[#2563EB]" />
+            </div>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <p className="text-[clamp(12px,0.85vw,15px)] font-semibold text-gray-900 leading-snug line-clamp-1">
+              {toastNotification.title}
+            </p>
+            {toastNotification.detail ? (
+              <p className="text-[clamp(11px,0.75vw,13px)] text-gray-500 truncate mt-[0.2vh]">
+                {toastNotification.detail}
+              </p>
+            ) : (
+              <p className="text-[clamp(10px,0.7vw,12px)] text-gray-400 mt-[0.2vh]">Just now</p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-[0.4vw] shrink-0">
+            <span className="w-[0.45vw] h-[0.45vw] min-w-[6px] min-h-[6px] rounded-full bg-[#1877F2]" />
+            <button
+              type="button"
+              aria-label="Dismiss notification"
+              onClick={(e) => {
+                e.stopPropagation();
+                dismissToastSmoothly();
+              }}
+              className="p-[0.25vw] rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+            >
+              <X className="w-[0.95vw] h-[0.95vw] min-w-[14px] min-h-[14px]" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Backdrop overlay - positioned below navbar so navbar remains uncovered */}
       <div
         onClick={onClose}

@@ -15,6 +15,7 @@ module.exports = {
   Lead: require('./Lead'),
   AdminUser: require('./AdminUser'),
   AdminRole: require('./AdminRole'),
-  AccountDeletionLog: require('./AccountDeletionLog')
+  AccountDeletionLog: require('./AccountDeletionLog'),
+  Notification: require('./Notification')
 };
 

@@ -225,15 +225,15 @@ const TableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage, setti
                 <>
                     <div className="fixed inset-0 z-[2000] pointer-events-auto bg-transparent" onClick={onClose} />
                     <div
-                        className={`absolute top-[105px] left-[15px] z-[2100] pointer-events-auto origin-top-left`}
+                        className={`absolute top-[96px] left-[18px] z-[2100] pointer-events-auto origin-top-left`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className={`relative w-[150px] min-h-[160px] h-fit max-h-[60vh] flex flex-col group`}>
-                            {/* SVG Background (Knob on left for TOC) */}
+                            {/* SVG Background (Connector knob at top-left matching first toolbar icon) */}
                             <div className="absolute inset-0 z-0 pointer-events-none drop-shadow-xl">
-                                <svg width="100%" height="100%" viewBox="0 0 250 600" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                                <svg width="100%" height="100%" viewBox="0 0 150 360" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
                                     <path
-                                        d="M0 35C0 15 15 0 35 0C55 0 70 15 70 35V100C70 120 75 135 90 135H230C241.05 135 250 143.95 250 155V580C250 591.05 241.05 600 230 600H20C8.95 600 0 591.05 0 580V35Z"
+                                        d="M32 16C32 7.16344 24.8366 0 16 0C7.16344 0 0 7.16344 0 16V344C0 352.837 7.16344 360 16 360H134C142.837 360 150 352.837 150 344V44C150 35.1634 142.837 28 134 28H44C37.3726 28 32 22.6274 32 16Z"
                                         fill={getLayoutColor('toc-bg', '#555555')}
                                         fillOpacity={getLayoutOpacity('toc-bg', '0.95')}
                                     />
@@ -241,7 +241,7 @@ const TableOfContentsPopup = ({ onClose, onNavigate: onNavigateEditorPage, setti
                             </div>
 
                             {/* Content Layer */}
-                            <div className="relative z-10 flex flex-col flex-1 pt-[70px] px-[8px] pb-[12px]">
+                            <div className="relative z-10 flex flex-col flex-1 pt-[36px] px-[8px] pb-[12px]">
                                 {/* Search Bar */}
                                 {addSearch && (
                                     <div className="relative mb-[10px]">

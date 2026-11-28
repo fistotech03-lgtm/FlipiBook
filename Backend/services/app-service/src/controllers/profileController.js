@@ -404,6 +404,17 @@ const followCreator = async (req, res) => {
       Profile.updateOne({ emailId: cEmail }, { $addToSet: { followers: uEmail } })
     ]);
 
+    const notifServiceUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://127.0.0.1:5010';
+    fetch(`${notifServiceUrl}/api/notifications/internal/new-follower`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        followerEmail: uEmail,
+        targetEmail: cEmail
+      }),
+      signal: AbortSignal.timeout(3000)
+    }).catch(() => {});
+
     return res.json({ success: true, message: 'Followed creator successfully' });
   } catch (error) {
     console.error('[profileController] followCreator error:', error);

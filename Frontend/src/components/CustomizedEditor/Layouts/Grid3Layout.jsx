@@ -791,7 +791,6 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                                     logoSettings={logoSettings}
                                     settings={settings}
                                     isTablet={isTablet}
-                                    className={`${isMobileLandscape ? 'h-[1.8vw]' : 'h-[1.5vw]'}`}
                                     onClick={() => setShowProfilePopup(true)}
                                 />
                             </div>

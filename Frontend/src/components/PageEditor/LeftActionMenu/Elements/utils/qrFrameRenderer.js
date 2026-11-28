@@ -99,6 +99,14 @@ export const QR_FRAMES = [
     defaultText: 'SCAN ME',
     description: 'Border box with clean text below',
     ratio: 312 / 270
+  },
+  {
+    id: 'frame-covered',
+    name: '7. Frame',
+    shortName: 'Frame',
+    defaultText: '',
+    description: 'QR code inside a clean covered border frame',
+    ratio: 1
   }
 ];
 
@@ -451,7 +459,8 @@ export function generatePureVectorQRSvg({
   fontWeight = '600',
   textColor = '#FFFFFF',
   frameBgColor = '#FFFFFF',
-  arrowColor = '#000000'
+  arrowColor = '#000000',
+  frameCorner = 'rounded'
 }) {
   let effectiveFrame = frame;
   if (frame === 'frame-badge') effectiveFrame = 'frame-bottom-bar';
@@ -459,7 +468,7 @@ export function generatePureVectorQRSvg({
   else if (frame === 'frame-polaroid') effectiveFrame = 'frame-simple-text';
   else if (frame === 'frame-elegant') effectiveFrame = 'frame-top-header';
 
-  const isLightBgFrame = (effectiveFrame === 'frame-curved-arrow' || effectiveFrame === 'frame-simple-text');
+  const isLightBgFrame = (effectiveFrame === 'frame-curved-arrow' || effectiveFrame === 'frame-simple-text' || effectiveFrame === 'frame-covered');
   let effectiveTextColor = textColor;
   if (!effectiveTextColor) {
     effectiveTextColor = isLightBgFrame ? (arrowColor || '#000000') : '#FFFFFF';
@@ -545,6 +554,16 @@ export function generatePureVectorQRSvg({
     const boxH = qrRenderSize + pad * 2;
     totalW = boxW + bw * 2;
     totalH = bw * 2 + boxH + gap + pointerH + bannerH;
+    qrX = bw + pad;
+    qrY = bw + pad;
+  } else if (effectiveFrame === 'frame-covered') {
+    const bw = 7;
+    const pad = 4;
+    qrRenderSize = 236;
+    const boxW = qrRenderSize + pad * 2;
+    const boxH = qrRenderSize + pad * 2;
+    totalW = boxW + bw * 2;
+    totalH = boxH + bw * 2;
     qrX = bw + pad;
     qrY = bw + pad;
   } else if (effectiveFrame === 'frame-simple-text') {
@@ -828,9 +847,17 @@ export function generatePureVectorQRSvg({
         frameElements.push(`<text x="${totalW / 2}" y="${startY + i * lineGap}" fill="${textColor || '#FFFFFF'}" font-family="${safeFontFamily}, sans-serif" font-size="${phoneFontSize}" font-weight="${safeFontWeight}" text-anchor="middle" dominant-baseline="central">${escapeXml(l)}</text>`);
       });
     }
+  } else if (effectiveFrame === 'frame-covered') {
+    const bw = 7;
+    const radius = frameCorner === 'sharp' ? 0 : 14;
+    if (!isTransparentColor(frameBgColor)) {
+      frameElements.push(`<path d="${getSvgPathRoundRect(0, 0, totalW, totalH, radius)}" fill="${frameBgColor}" />`);
+    }
+    const boxFill = !isTransparentColor(frameBgColor) ? frameBgColor : 'none';
+    frameElements.push(`<path d="${getSvgPathRoundRect(bw / 2, bw / 2, totalW - bw, totalH - bw, radius)}" fill="${boxFill}" stroke="${arrowColor || '#000000'}" stroke-width="${bw}" />`);
   } else if (effectiveFrame === 'frame-simple-text') {
     const bw = 7;
-    const radius = 14;
+    const radius = frameCorner === 'sharp' ? 0 : 14;
     const boxH = qrRenderSize + 18 * 2;
     const isMultiLine = labelText.length > 17;
     const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];
@@ -1365,6 +1392,7 @@ export async function renderQRWithFrame({
   textColor = '#FFFFFF',
   frameBgColor = '#FFFFFF',
   arrowColor = '#000000',
+  frameCorner = 'rounded',
   dropShadow = false,
   scale = 2
 }) {
@@ -1377,7 +1405,7 @@ export async function renderQRWithFrame({
 
   // Smart text color fallback: curved arrow and simple text are on light card backgrounds,
   // so text must be dark (arrowColor or #000000) rather than invisible white.
-  const isLightBgFrame = (effectiveFrame === 'frame-curved-arrow' || effectiveFrame === 'frame-simple-text');
+  const isLightBgFrame = (effectiveFrame === 'frame-curved-arrow' || effectiveFrame === 'frame-simple-text' || effectiveFrame === 'frame-covered');
   let effectiveTextColor = textColor;
   if (!effectiveTextColor) {
     effectiveTextColor = isLightBgFrame ? (arrowColor || '#000000') : '#FFFFFF';
@@ -1414,7 +1442,7 @@ export async function renderQRWithFrame({
   const cacheKey = JSON.stringify({
     url: qrEncodedPayload, frame: effectiveFrame, text, logoSrc, logoSize, logoRadius, logoBg, logoBgColor, logoAspect: resolvedLogoAspect,
     qrColor, backdrop, patternStyle, eyeFrame, eyeBall,
-    fontFamily, fontSize, fontWeight, textColor: effectiveTextColor, frameBgColor, arrowColor, dropShadow
+    fontFamily, fontSize, fontWeight, textColor: effectiveTextColor, frameBgColor, arrowColor, frameCorner, dropShadow
   });
   if (qrImageCache.has(cacheKey)) {
     return qrImageCache.get(cacheKey);
@@ -1442,7 +1470,8 @@ export async function renderQRWithFrame({
       fontWeight,
       textColor: effectiveTextColor,
       frameBgColor,
-      arrowColor
+      arrowColor,
+      frameCorner
     });
 
     if (vectorResult?.dataUrl) {
@@ -1550,6 +1579,16 @@ export async function renderQRWithFrame({
     const boxH = qrRenderSize + pad * 2;
     totalW = boxW + bw * 2;
     totalH = bw * 2 + boxH + gap + pointerH + bannerH;
+    qrX = bw + pad;
+    qrY = bw + pad;
+  } else if (effectiveFrame === 'frame-covered') {
+    const bw = 7;
+    const pad = 4;
+    qrRenderSize = 236;
+    const boxW = qrRenderSize + pad * 2;
+    const boxH = qrRenderSize + pad * 2;
+    totalW = boxW + bw * 2;
+    totalH = boxH + bw * 2;
     qrX = bw + pad;
     qrY = bw + pad;
   } else if (effectiveFrame === 'frame-simple-text') {
@@ -1894,9 +1933,18 @@ export async function renderQRWithFrame({
       });
     }
 
+  } else if (effectiveFrame === 'frame-covered') {
+    const bw = 7;
+    const radius = frameCorner === 'sharp' ? 0 : 14;
+    drawRoundRect(ctx, bw / 2, bw / 2, totalW - bw, totalH - bw, radius);
+    ctx.fillStyle = frameBgColor || '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = arrowColor || '#000000';
+    ctx.lineWidth = bw;
+    ctx.stroke();
   } else if (effectiveFrame === 'frame-simple-text') {
     const bw = 7;
-    const radius = 14;
+    const radius = frameCorner === 'sharp' ? 0 : 14;
     const boxH = qrRenderSize + 18 * 2;
     const isMultiLine = labelText.length > 17;
     const lines = isMultiLine ? splitTextIntoLines(labelText) : [labelText];

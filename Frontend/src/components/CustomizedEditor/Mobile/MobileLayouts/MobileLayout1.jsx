@@ -15,15 +15,131 @@ import TableOfContentsPopup from '../../popups/TableOfContentsPopup';
 
 
 
-const getLayoutColor = (id, defaultColor) => {
+const hexToRgb = (hex) => {
+    if (!hex || !hex.startsWith('#')) return '87, 92, 156';
+    const h = hex.replace('#', '');
+    const r = parseInt(h.length === 3 ? h.charAt(0) + h.charAt(0) : h.substring(0, 2), 16);
+    const g = parseInt(h.length === 3 ? h.charAt(1) + h.charAt(1) : h.substring(2, 4), 16);
+    const b = parseInt(h.length === 3 ? h.charAt(2) + h.charAt(2) : h.substring(4, 6), 16);
+    return `${r}, ${g}, ${b}`;
+};
+
+const getLayoutColor = (id, defaultColor, layoutColors, activeLayout = 1) => {
+    const layoutColorsArray = Array.isArray(layoutColors) ? layoutColors : (layoutColors?.[activeLayout] || []);
+    const toolbarP = layoutColors?.toolbarColor?.primary;
+    const toolbarS = layoutColors?.toolbarColor?.secondary;
+    const popupP = layoutColors?.popupColor?.primary;
+    const popupS = layoutColors?.popupColor?.secondary;
+
+    if (layoutColorsArray && layoutColorsArray.length > 0) {
+        const colorObj = layoutColorsArray.find(c => c && c.id === id);
+        if (colorObj && colorObj.hex) {
+            if (colorObj.opacity !== undefined && colorObj.opacity < 100) {
+                return `rgba(${hexToRgb(colorObj.hex)}, ${colorObj.opacity / 100})`;
+            }
+            return colorObj.hex;
+        }
+    }
+    if (toolbarP && ['toolbar-bg', 'bottom-toolbar-bg', 'page-number-bg'].includes(id)) {
+        const pOpacity = layoutColors?.toolbarColor?.primaryOpacity ?? layoutColors?.toolbarColor?.opacity;
+        if (pOpacity !== undefined && pOpacity < 100) {
+            return `rgba(${hexToRgb(toolbarP)}, ${pOpacity / 100})`;
+        }
+        return toolbarP;
+    }
+    if (toolbarS && ['toolbar-text-main', 'toolbar-icon', 'reset-text', 'page-number-text'].includes(id)) {
+        const sOpacity = layoutColors?.toolbarColor?.secondaryOpacity;
+        if (sOpacity !== undefined && sOpacity < 100) {
+            return `rgba(${hexToRgb(toolbarS)}, ${sOpacity / 100})`;
+        }
+        return toolbarS;
+    }
+    if (popupP && ['toc-bg', 'dropdown-bg', 'thumbnail-outer-v2', 'thumbnail-inner-v2', 'toc-overlay'].includes(id)) {
+        const popPOpacity = layoutColors?.popupColor?.primaryOpacity ?? layoutColors?.popupColor?.opacity;
+        if (popPOpacity !== undefined && popPOpacity < 100) {
+            return `rgba(${hexToRgb(popupP)}, ${popPOpacity / 100})`;
+        }
+        return popupP;
+    }
+    if (popupS && ['toc-text', 'dropdown-text', 'dropdown-icon', 'toc-icon'].includes(id)) {
+        const popSOpacity = layoutColors?.popupColor?.secondaryOpacity;
+        if (popSOpacity !== undefined && popSOpacity < 100) {
+            return `rgba(${hexToRgb(popupS)}, ${popSOpacity / 100})`;
+        }
+        return popupS;
+    }
     return `var(--${id}, ${defaultColor})`;
 };
 
-const getLayoutColorRgba = (id, defaultRgb, defaultOpacity) => {
-    return `rgba(var(--${id}-rgb, ${defaultRgb}), var(--${id}-opacity, ${defaultOpacity}))`;
+const getLayoutColorRgba = (id, defaultRgb, defaultOpacity, layoutColors, activeLayout = 1) => {
+    const layoutColorsArray = Array.isArray(layoutColors) ? layoutColors : (layoutColors?.[activeLayout] || []);
+    const toolbarP = layoutColors?.toolbarColor?.primary;
+    const toolbarS = layoutColors?.toolbarColor?.secondary;
+    const popupP = layoutColors?.popupColor?.primary;
+    const popupS = layoutColors?.popupColor?.secondary;
+
+    let hex = null;
+    let opacity = defaultOpacity !== undefined ? defaultOpacity : 1;
+
+    if (layoutColorsArray && layoutColorsArray.length > 0) {
+        const colorObj = layoutColorsArray.find(c => c && c.id === id);
+        if (colorObj) {
+            if (colorObj.hex) hex = colorObj.hex;
+            if (colorObj.opacity !== undefined) opacity = colorObj.opacity / 100;
+        }
+    }
+    if (!hex) {
+        if (toolbarP && ['toolbar-bg', 'bottom-toolbar-bg', 'page-number-bg'].includes(id)) {
+            hex = toolbarP;
+            const pOpacity = layoutColors?.toolbarColor?.primaryOpacity ?? layoutColors?.toolbarColor?.opacity;
+            if (pOpacity !== undefined) opacity = pOpacity / 100;
+        }
+        else if (toolbarS && ['toolbar-text-main', 'toolbar-icon', 'reset-text', 'page-number-text'].includes(id)) {
+            hex = toolbarS;
+            const sOpacity = layoutColors?.toolbarColor?.secondaryOpacity;
+            if (sOpacity !== undefined) opacity = sOpacity / 100;
+        }
+        else if (popupP && ['toc-bg', 'dropdown-bg', 'thumbnail-outer-v2', 'thumbnail-inner-v2', 'toc-overlay'].includes(id)) {
+            hex = popupP;
+            const popPOpacity = layoutColors?.popupColor?.primaryOpacity ?? layoutColors?.popupColor?.opacity;
+            if (popPOpacity !== undefined) opacity = popPOpacity / 100;
+        }
+        else if (popupS && ['toc-text', 'dropdown-text', 'dropdown-icon', 'toc-icon'].includes(id)) {
+            hex = popupS;
+            const popSOpacity = layoutColors?.popupColor?.secondaryOpacity;
+            if (popSOpacity !== undefined) opacity = popSOpacity / 100;
+        }
+    }
+
+    if (hex) {
+        return `rgba(${hexToRgb(hex)}, ${opacity})`;
+    }
+    return `rgba(var(--${id}-rgb, ${defaultRgb}), var(--${id}-opacity, ${opacity}))`;
 };
 
-const getLayoutColorAlpha = (id, defaultRgb, alpha) => {
+const getLayoutColorAlpha = (id, defaultRgb, alpha, layoutColors, activeLayout = 1) => {
+    const layoutColorsArray = Array.isArray(layoutColors) ? layoutColors : (layoutColors?.[activeLayout] || []);
+    const toolbarP = layoutColors?.toolbarColor?.primary;
+    const toolbarS = layoutColors?.toolbarColor?.secondary;
+    const popupP = layoutColors?.popupColor?.primary;
+    const popupS = layoutColors?.popupColor?.secondary;
+
+    let hex = null;
+    if (layoutColorsArray && layoutColorsArray.length > 0) {
+        const colorObj = layoutColorsArray.find(c => c && c.id === id);
+        if (colorObj && colorObj.hex) {
+            hex = colorObj.hex;
+        }
+    }
+    if (!hex) {
+        if (toolbarP && ['toolbar-bg', 'bottom-toolbar-bg', 'page-number-bg'].includes(id)) hex = toolbarP;
+        else if (toolbarS && ['toolbar-text-main', 'toolbar-icon', 'reset-text', 'page-number-text'].includes(id)) hex = toolbarS;
+        else if (popupP && ['toc-bg', 'dropdown-bg', 'thumbnail-outer-v2', 'thumbnail-inner-v2', 'toc-overlay'].includes(id)) hex = popupP;
+        else if (popupS && ['toc-text', 'dropdown-text', 'dropdown-icon', 'toc-icon'].includes(id)) hex = popupS;
+    }
+    if (hex) {
+        return `rgba(${hexToRgb(hex)}, ${alpha})`;
+    }
     return `rgba(var(--${id}-rgb, ${defaultRgb}), ${alpha})`;
 };
 
@@ -97,10 +213,10 @@ const MenuBtn = ({ icon, label, onClick }) => (
 
 const MobileLayout1 = (props) => {
     const {
+        activeLayout,
         children,
         settings,
         bookName,
-        activeLayout,
         currentZoom,
         setCurrentZoom,
         handleZoomIn,
@@ -176,7 +292,9 @@ const MobileLayout1 = (props) => {
     const [showLocalBookmarkMenu, setShowLocalBookmarkMenu] = useState(false);
     const [showDotMenu, setShowDotMenu] = useState(false);
     const dotBtnRef = useRef(null);
-    const [hoveredIdx, setHoveredIdx] = useState(null);
+    const resolveColor = (id, def) => getLayoutColor(id, def, layoutColors, activeLayout);
+    const resolveColorRgba = (id, defRgb, defOp) => getLayoutColorRgba(id, defRgb, defOp, layoutColors, activeLayout);
+    const resolveColorAlpha = (id, defRgb, a) => getLayoutColorAlpha(id, defRgb, a, layoutColors, activeLayout);
 
     const spreads = useMemo(() => {
         const result = [];
@@ -202,7 +320,8 @@ const MobileLayout1 = (props) => {
 
     const checkScroll = () => {
         if (scrollRef.current) {
-            const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+            const {
+        activeLayout, scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
             setCanScrollLeft(scrollLeft > 5);
             setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5);
             setIsOverflowing(scrollWidth > clientWidth);
@@ -461,9 +580,6 @@ const MobileLayout1 = (props) => {
                                     <MenuBtn icon="clarity:image-gallery-solid" label="Gallery" onClick={() => { closeAllPopups(); props.setShowGalleryPopup?.(true); }} />
                                 )}
                                 <MenuBtn icon="ep:menu" label="Thumbnails" onClick={() => { const wasOpen = showThumbnailBar; closeAllPopups(); if (!wasOpen) setShowThumbnailBar(true); }} />
-                                {profileSettings?.enabled !== false && (
-                                    <MenuBtn icon="solar:user-bold" label="Profile" onClick={() => { closeAllPopups(); setShowProfilePopup(true); }} />
-                                )}
                                 {(settings?.media?.backgroundAudio ?? true) && (
                                     <MenuBtn icon="solar:music-notes-bold" label="BG Music" onClick={() => { closeAllPopups(); setShowSoundPopup(true); }} />
                                 )}
@@ -532,7 +648,15 @@ const MobileLayout1 = (props) => {
                     onClose={() => setShowSharePopup(false)}
                     bookName={props.currentBook?.flipbookName || bookName}
                     url={props.currentBook?.shareUrl || window.location.href}
-                    isPublished={props.currentBook?.status === 'Published'}
+                    isPublished={Boolean(
+                        props.currentBook?.isPublished || 
+                        props.currentBook?.published || 
+                        props.currentBook?.is_published || 
+                        props.currentBook?.status?.toLowerCase() === 'published' ||
+                        props.currentBook?.status?.toLowerCase() === 'publish' ||
+                        props.currentBook?.meta?.isPublished
+                    )}
+                    currentBook={props.currentBook}
                     isMobile={true}
                     isLandscape={isLandscape}
                 />
@@ -548,14 +672,14 @@ const MobileLayout1 = (props) => {
             <div className="absolute inset-0 z-0" style={props.backgroundStyle} />
             <div className="flex flex-col h-full w-full z-10 relative pointer-events-none">
                 <div className="pointer-events-auto flex flex-col h-full w-full">
-            {/* Notch Spacer - fills the area near the hardware notch with a status bar color */}
-            {!isPhysicalMobile && <div className="h-10 w-full shrink-0 z-50 bg-[#0B0F4E]" />}
+            {/* Notch Spacer - fills the area near the hardware notch with the toolbar color */}
+            {!isPhysicalMobile && <div className="h-10 w-full shrink-0 z-50" style={{ backgroundColor: resolveColorRgba('toolbar-bg', '87, 92, 156', 1) }} />}
             {/* Search Area */}
-            <div className="flex flex-col z-50 pt-0" style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', 1) }}>
+            <div className="flex flex-col z-50 pt-0" style={{ backgroundColor: resolveColorRgba('toolbar-bg', '87, 92, 156', 1) }}>
                 {/* Row 1: Book Name & Logo (Only when search is visible) */}
                 {settings?.interaction?.search !== false && !isPdfProject && (
                     <div className="flex items-center justify-between px-6 pt-6 pb-1">
-                        <span className="text-[16px] font-light opacity-90 truncate flex-1 mt-[-15px]" style={{ fontFamily: "'Poppins', sans-serif", color: getLayoutColor('toolbar-text-main', '#575C9C') }}>{/* bookName hidden */}</span>
+                        <span className="text-[16px] font-light opacity-90 truncate flex-1 mt-[-15px]" style={{ fontFamily: "'Poppins', sans-serif", color: resolveColor('toolbar-text-main', '#FFFFFF') }}>{/* bookName hidden */}</span>
                         {settings?.brandingProfile?.logo && logoSettings?.src && (
                             <img
                                 src={logoSettings.src}
@@ -571,7 +695,7 @@ const MobileLayout1 = (props) => {
                 <div className={`px-5 ${settings?.interaction?.search !== false && !isPdfProject ? 'pt-6 pb-6' : 'pt-5 pb-5'} flex items-center justify-end gap-4`}>
                     {!(settings?.interaction?.search !== false && !isPdfProject) && (
                         <>
-                            <span className="text-[16px] font-light opacity-90 truncate flex-1" style={{ fontFamily: "'Poppins', sans-serif", color: getLayoutColor('toolbar-text-main', '#575C9C') }}>{/* bookName hidden */}</span>
+                            <span className="text-[16px] font-light opacity-90 truncate flex-1" style={{ fontFamily: "'Poppins', sans-serif", color: resolveColor('toolbar-text-main', '#FFFFFF') }}>{/* bookName hidden */}</span>
                             {settings?.brandingProfile?.logo && logoSettings?.src && (
                                 <img
                                     src={logoSettings.src}
@@ -583,13 +707,13 @@ const MobileLayout1 = (props) => {
                         </>
                     )}
                     {settings?.interaction?.search !== false && !isPdfProject && (
-                    <div className="flex-1 rounded-full h-9 px-4 flex items-center gap-2 relative" style={{ backgroundColor: getLayoutColor('toolbar-search-bg', 'rgba(255,255,255,0.1)') }}>
-                        <Icon icon="ph:magnifying-glass" className="w-[18px] h-[18px]" style={{ color: getLayoutColor('toolbar-search-icon', '#FFFFFF') }} />
+                    <div className="flex-1 rounded-full h-9 px-4 flex items-center gap-2 relative" style={{ backgroundColor: resolveColor('toolbar-search-bg', 'rgba(255,255,255,0.1)') }}>
+                        <Icon icon="ph:magnifying-glass" className="w-[18px] h-[18px]" style={{ color: resolveColor('toolbar-search-icon', '#FFFFFF') }} />
                         <input
                             type="text" autoComplete="off" spellCheck="false" autoCorrect="off"
                             placeholder="Quick Search.."
                             className="bg-transparent placeholder-current text-[13px] outline-none w-full font-medium"
-                            style={{ color: getLayoutColor('toolbar-search-text', '#FFFFFF') }}
+                            style={{ color: resolveColor('toolbar-search-text', '#FFFFFF') }}
                             value={localSearchQuery}
                             onChange={(e) => {
                                 const val = e.target.value;
@@ -654,7 +778,7 @@ const MobileLayout1 = (props) => {
                     <button
                         onClick={(e) => { e.stopPropagation(); const wasOpen = showMoreMenu; closeAllPopups(); if (!wasOpen) setShowMoreMenu(true); }}
                         className="active:scale-90 transition-transform"
-                        style={{ color: getLayoutColor('toolbar-icon', '#575C9C') }}
+                        style={{ color: resolveColor('toolbar-icon', '#FFFFFF') }}
                     >
                         <Icon icon="ph:list" className="w-7 h-7" />
                     </button>
@@ -670,7 +794,7 @@ const MobileLayout1 = (props) => {
                 <div className="flex-1 relative overflow-hidden flex flex-col" style={{ backgroundColor: "transparent" }}>
                     {/* Zoom/Reset Box */}
                     <div className="absolute top-3 right-2.5 z-[70] flex items-center gap-2 px-2 py-1.5 rounded-lg backdrop-blur-md border border-white/10"
-                        style={{ backgroundColor: getLayoutColorAlpha('toolbar-bg', '87, 92, 156', 0.45) }}>
+                        style={{ backgroundColor: resolveColorAlpha('toolbar-bg', '87, 92, 156', 0.45) }}>
                         <button
                             onClick={() => handleZoomOut?.()}
                             className="text-white/90 hover:text-white active:scale-90 transition-all flex items-center justify-center"
@@ -689,7 +813,7 @@ const MobileLayout1 = (props) => {
                         <button
                             onClick={() => setCurrentZoom?.(0.85)}
                             className="bg-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-[4px] active:scale-95 transition-all ml-0.5"
-                            style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}
+                            style={{ color: resolveColor('toolbar-bg', '#575C9C') }}
                         >
                             Reset
                         </button>
@@ -698,7 +822,7 @@ const MobileLayout1 = (props) => {
                     {/* Navigation Arrows inside the main container */}
                     <button
                         className="absolute left-[2%] top-1/2 -translate-y-1/2 z-20 flex items-center justify-center p-1 active:scale-90 transition-transform"
-                        style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}
+                        style={{ color: resolveColor('toolbar-bg', '#575C9C') }}
                         onClick={() => { closeAllPopups(); bookRef.current?.pageFlip()?.flipPrev(); }}
                     >
                         <Icon icon="ph:caret-left-light" strokeWidth="4" className="w-8 h-8 opacity-80" />
@@ -706,7 +830,7 @@ const MobileLayout1 = (props) => {
 
                     <button
                         className="absolute right-[2%] top-1/2 -translate-y-1/2 z-20 flex items-center justify-center p-1 active:scale-90 transition-transform"
-                        style={{ color: getLayoutColor('toolbar-bg', '#575C9C') }}
+                        style={{ color: resolveColor('toolbar-bg', '#575C9C') }}
                         onClick={() => { closeAllPopups(); bookRef.current?.pageFlip()?.flipNext(); }}
                     >
                         <Icon icon="ph:caret-right-light" strokeWidth="4" className="w-8 h-8 opacity-80" />
@@ -723,8 +847,8 @@ const MobileLayout1 = (props) => {
             </div>
 
             {/* Footer Navigation */}
-            <footer className="z-[60] flex flex-col pt-8 pb-10 relative mb-[-20px]" style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', 1) }}>
-                <div className="flex items-center justify-center gap-6 mb-3" style={{ color: getLayoutColor('toolbar-icon', '#575C9C') }}>
+            <footer className="z-[60] flex flex-col pt-8 pb-10 relative mb-[-20px]" style={{ backgroundColor: resolveColorRgba('toolbar-bg', '87, 92, 156', 1) }}>
+                <div className="flex items-center justify-center gap-6 mb-3" style={{ color: resolveColor('toolbar-icon', '#FFFFFF') }}>
                     <button onClick={() => { closeAllPopups(); onPageClick(0); }} className="active:scale-90 transition-transform">
                         <Icon icon="ph:skip-back-bold" className="w-4 h-4" />
                     </button>
@@ -749,7 +873,7 @@ const MobileLayout1 = (props) => {
                     <div ref={progressRef} className="h-[3px] w-full bg-white/20 rounded-full cursor-pointer relative overflow-hidden" onClick={handleProgressClick}>
                         <div
                             className="absolute left-0 top-0 h-full rounded-full transition-all duration-300"
-                            style={{ width: `${Math.max(1, progressPercentage)}%`, backgroundColor: getLayoutColor('toolbar-icon', '#FFFFFF') }}
+                            style={{ width: `${Math.max(1, progressPercentage)}%`, backgroundColor: resolveColor('toolbar-icon', '#FFFFFF') }}
                         />
                     </div>
                 </div>

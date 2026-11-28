@@ -132,7 +132,7 @@ router.get('/published', async (req, res) => {
       const p = (resolvedEmail && profileByEmail[resolvedEmail]) || (bookUserId && profileByUserId[bookUserId]) || (u.userID && profileByUserId[u.userID]) || {};
 
       const authorName = p.displayName || p.name || u.displayName || u.name || (resolvedEmail ? resolvedEmail.split('@')[0] : 'Creator');
-      const city = p.city || p.state || u.city || u.state || (p.country && p.country !== 'INDIA' ? p.country : '') || 'Coimbatore';
+      const city = p.city || p.state || u.city || u.state || (p.country && p.country !== 'INDIA' ? p.country : '') || '';
       const rawPic = (p.picture && p.picture !== 'color_only' && p.picture !== 'null') ? p.picture : ((u.picture && u.picture !== 'color_only' && u.picture !== 'null') ? u.picture : null);
       const authorPicture = rawPic || null;
       const authorBgColor = p.avatarBgColor || u.avatarBgColor || '#E8D4C8';
@@ -179,7 +179,9 @@ router.get('/published', async (req, res) => {
         authorName,
         city,
         authorPicture,
-        authorBgColor
+        authorBgColor,
+        views: Number(book.viewsCount ?? book.views ?? 0),
+        rating: Number(book.averageRating ?? book.rating ?? 0)
       };
     });
 
@@ -380,7 +382,7 @@ router.get('/creator', async (req, res) => {
         authorName: profile.displayName || profile.name || user?.displayName || user?.name || normalizedEmail.split('@')[0],
         authorPicture: (profile.picture && profile.picture !== 'color_only' && profile.picture !== 'null') ? profile.picture : ((user?.picture && user?.picture !== 'color_only' && user?.picture !== 'null') ? user.picture : null),
         authorBgColor: profile.avatarBgColor || user?.avatarBgColor || '#E8D4C8',
-        city: profile.city || profile.state || user?.city || 'Coimbatore'
+        city: profile.city || profile.state || user?.city || ''
       };
     });
 
@@ -607,6 +609,21 @@ router.post('/toggle-follow', async (req, res) => {
     }
 
     await Promise.all([targetProfile.save(), currentProfile.save()]);
+
+    if (isFollowing) {
+      const notifServiceUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://127.0.0.1:5010';
+      fetch(`${notifServiceUrl}/api/notifications/internal/new-follower`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          followerEmail: normalizedCurrent,
+          followerName: currentProfile.displayName || currentProfile.name || '',
+          followerPicture: currentProfile.picture || null,
+          targetEmail: normalizedTarget
+        }),
+        signal: AbortSignal.timeout(3000)
+      }).catch(() => {});
+    }
 
     return res.status(200).json({
       success: true,

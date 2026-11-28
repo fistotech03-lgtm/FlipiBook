@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react";
 /** Interaction editor — 3D Viewer: pick / upload the 3D model. */
 const ThreeDViewerAction = ({
   activePageIndex,
+  interactionType = "3d-viewer",
   item,
   openDropdownId,
   resolvedValue,
@@ -33,7 +34,7 @@ const ThreeDViewerAction = ({
     >
       <span className="text-[0.8vw] text-gray-900 font-medium tracking-wide">
         {fileMeta
-          ? "3D Model Preview"
+          ? (interactionType === "ar-view" ? "AR Model Preview" : "3D Model Preview")
           : "Upload 3D Model"}
       </span>
 
@@ -90,7 +91,7 @@ const ThreeDViewerAction = ({
               targetIdx,
               item.id,
               {
-                "data-interaction": "3d-viewer",
+                "data-interaction": interactionType,
                 "data-interaction-value":
                   storedVal,
                 "data-interaction-config":
@@ -135,7 +136,7 @@ const ThreeDViewerAction = ({
                   className="w-[6vw] h-[11vh] rounded-[0.6vw] flex flex-col items-center justify-center relative overflow-hidden shadow-sm flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setActive3DGalleryItem(item);
+                    setActive3DGalleryItem({ ...item, _interactionType: interactionType });
                   }}
                 >
                   <div
@@ -393,9 +394,10 @@ const ThreeDViewerAction = ({
                               setOpenDropdownId(
                                 null,
                               );
-                              setActive3DGalleryItem(
-                                item,
-                              );
+                              setActive3DGalleryItem({
+                                ...item,
+                                _interactionType: interactionType,
+                              });
                             }}
                           >
                             <Icon
@@ -432,7 +434,7 @@ const ThreeDViewerAction = ({
                                   item.id,
                                   {
                                     "data-interaction":
-                                      "3d-viewer",
+                                      interactionType,
                                     "data-interaction-value":
                                       "",
                                   },
@@ -462,7 +464,13 @@ const ThreeDViewerAction = ({
                       fileMeta &&
                       fileMeta.data
                     ) {
-                      setCurrent3DItem(item);
+                      const itemWithType = item && typeof item.getAttribute === "function"
+                        ? item
+                        : { ...item, "data-interaction": interactionType, _interactionType: interactionType };
+                      if (item && typeof item.setAttribute === "function") {
+                        item.setAttribute("data-interaction", interactionType);
+                      }
+                      setCurrent3DItem(itemWithType);
                       setIs3DModalOpen(true);
                     }
                   }}
@@ -472,7 +480,7 @@ const ThreeDViewerAction = ({
                     className="text-black text-[1.3vw]"
                   />
                   <span className="text-[0.9vw] font-medium text-black tracking-wide">
-                    Edit Popup View
+                    {interactionType === "ar-view" ? "AR Popup View" : "Edit Popup View"}
                   </span>
                 </button>
               </div>

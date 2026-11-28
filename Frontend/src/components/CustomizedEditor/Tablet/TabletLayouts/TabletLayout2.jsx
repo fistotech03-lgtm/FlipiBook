@@ -50,10 +50,45 @@ const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
 import TabletTableOfContentsPopup from './TabletTableOfContentsPopup';
 import TabletLayoutSound from './TabletLayoutSound';
 import ShareModal from '../../../ShareModal';
+import BrandLogo from '../../common/BrandLogo';
 
-const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPageClick, settings, bookName = "Name of the Book", showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showGalleryPopup, setShowGalleryPopupMemo, handleDownload, currentBook, activeLayout, searchQuery, setSearchQuery, handleQuickSearch, isAutoFlipping, setIsPlaying }) => {
+const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPageClick, settings, logoSettings, bookName = "Name of the Book", showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showGalleryPopup, setShowGalleryPopupMemo, handleDownload, handleFullScreen, currentBook, activeLayout, searchQuery, setSearchQuery, handleQuickSearch, isAutoFlipping, setIsPlaying, currentZoom = 1, setCurrentZoom, handleZoomIn, handleZoomOut, resetZoom: propResetZoom }) => {
+  const [localZoom, setLocalZoom] = useState(1);
+  const activeZoom = currentZoom !== undefined ? currentZoom : localZoom;
+
+  const zoomIn = () => {
+    if (handleZoomIn) {
+      handleZoomIn();
+    } else if (setCurrentZoom) {
+      setCurrentZoom(prev => Math.min(prev + 0.1, 2));
+    } else {
+      setLocalZoom(prev => Math.min(prev + 0.1, 2));
+    }
+  };
+
+  const zoomOut = () => {
+    if (handleZoomOut) {
+      handleZoomOut();
+    } else if (setCurrentZoom) {
+      setCurrentZoom(prev => Math.max(prev - 0.1, 0.5));
+    } else {
+      setLocalZoom(prev => Math.max(prev - 0.1, 0.5));
+    }
+  };
+
+  const resetZoom = () => {
+    if (propResetZoom) {
+      propResetZoom();
+    } else if (setCurrentZoom) {
+      setCurrentZoom(1);
+    } else {
+      setLocalZoom(1);
+    }
+  };
   const [inputPage, setInputPage] = useState(currentPage === 0 ? 1 : (currentPage || 1));
   const [showTOC, setShowTOC] = useState(false);
+
+  const textFont = settings?.navigation?.addTextToIconsSettings?.font || settings?.addTextToIconsSettings?.font || settings?.toolbar?.textProperties?.font || 'Arial';
 
   useEffect(() => {
       if (settings?.navigation?.tableOfContents === false) {
@@ -209,6 +244,7 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
         
         {/* Left: Search Bar */}
         <div className="flex-1 flex justify-start h-full items-center relative">
+          {(settings?.interaction?.search ?? true) && (
           <div className="relative w-[22cqw] h-[55%] rounded-[1.5cqw] flex items-center px-[1cqw] group border border-transparent transition-all duration-300 z-20" style={{ backgroundColor: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
             <style>{`
                 #quick-search-tablet-${activeLayout}::placeholder {
@@ -274,6 +310,7 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
               style={{ color: getLayoutColor('toolbar-bg', '#555555') }}
             />
           </div>
+          )}
 
           {/* Detached Recommendations Dropdown with extended top height behind search bar */}
           {recommendations.length > 0 && (
@@ -322,44 +359,81 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
 
         {/* Center: Icons */}
         <div className="flex-none flex items-center gap-[2cqw] absolute left-1/2 -translate-x-1/2" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
-            <button 
-              className="hover:text-gray-200 transition-colors"
-              onClick={() => {
-                setShowSoundPopupMemo?.(false);
-                setShowProfilePopupMemo?.(false);
-                setShowTOC(!showTOC);
-              }}
-            >
-              <Icon icon="fluent:text-bullet-list-24-filled" className="w-[1.6cqw] h-[1.6cqw]" />
-            </button>
-            <button 
-              className="hover:text-gray-200 transition-colors"
-              onClick={(e) => {
+            {/* TOC */}
+            {(settings?.navigation?.tableOfContents ?? true) && (
+              <button 
+                className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
+                onClick={() => {
+                  setShowSoundPopupMemo?.(false);
+                  setShowProfilePopupMemo?.(false);
+                  setShowTOC(!showTOC);
+                }}
+              >
+                <Icon icon="fluent:text-bullet-list-24-filled" className="w-[1.6cqw] h-[1.6cqw]" />
+                {settings?.toolbar?.addTextBelowIcons && (
+                  <span className="text-[0.8cqw] font-medium leading-tight mt-[0.2cqw] whitespace-nowrap" style={{ fontFamily: textFont }}>TOC</span>
+                )}
+                {!settings?.toolbar?.addTextBelowIcons && (
+                  <div className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)', fontFamily: textFont }}>
+                    TOC
+                    <div className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }} />
+                  </div>
+                )}
+              </button>
+            )}
+            {/* Thumbnails */}
+            {(settings?.navigation?.pageThumbnails ?? true) && (
+              <button 
+                className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setActivePopup(activePopup === 'thumbnails' ? null : 'thumbnails');
+                    setShowTOC(false);
+                    setShowSoundPopupMemo?.(false);
+                    setShowProfilePopupMemo?.(false);
+                }}
+              >
+                <Icon icon="ph:squares-four-fill" className="w-[1.6cqw] h-[1.6cqw]" />
+                {settings?.toolbar?.addTextBelowIcons && (
+                  <span className="text-[0.8cqw] font-medium leading-tight mt-[0.2cqw] whitespace-nowrap" style={{ fontFamily: textFont }}>Thumbnails</span>
+                )}
+                {!settings?.toolbar?.addTextBelowIcons && (
+                  <div className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)', fontFamily: textFont }}>
+                    Thumbnails
+                    <div className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }} />
+                  </div>
+                )}
+              </button>
+            )}
+            {/* Gallery */}
+            {(settings?.toolbar?.gallery ?? settings?.interaction?.gallery ?? true) && (
+              <button 
+                className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
+                onClick={(e) => {
                   e.stopPropagation();
-                  setActivePopup(activePopup === 'thumbnails' ? null : 'thumbnails');
                   setShowTOC(false);
                   setShowSoundPopupMemo?.(false);
                   setShowProfilePopupMemo?.(false);
-              }}
-            >
-              <Icon icon="ph:squares-four-fill" className="w-[1.6cqw] h-[1.6cqw]" />
-            </button>
-            <button 
-              className="hover:text-gray-200 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowTOC(false);
-                setShowSoundPopupMemo?.(false);
-                setShowProfilePopupMemo?.(false);
-                setShowGalleryPopupMemo?.(!showGalleryPopup);
-              }}
-              style={{ opacity: showGalleryPopup ? 0.7 : 1 }}
-            >
-              <Icon icon="clarity:image-gallery-solid" className="w-[1.6cqw] h-[1.6cqw]" />
-            </button>
-            {(settings?.media?.backgroundAudio ?? true) && (
+                  setShowGalleryPopupMemo?.(!showGalleryPopup);
+                }}
+                style={{ opacity: showGalleryPopup ? 0.7 : 1 }}
+              >
+                <Icon icon="clarity:image-gallery-solid" className="w-[1.6cqw] h-[1.6cqw]" />
+                {settings?.toolbar?.addTextBelowIcons && (
+                  <span className="text-[0.8cqw] font-medium leading-tight mt-[0.2cqw] whitespace-nowrap" style={{ fontFamily: textFont }}>Gallery</span>
+                )}
+                {!settings?.toolbar?.addTextBelowIcons && (
+                  <div className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)', fontFamily: textFont }}>
+                    Gallery
+                    <div className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }} />
+                  </div>
+                )}
+              </button>
+            )}
+            {/* Sound */}
+            {(settings?.audio?.backgroundAudio ?? settings?.audio?.audio ?? settings?.media?.backgroundAudio ?? settings?.media?.audio ?? true) && (
               <button 
-                className="hover:text-gray-200 transition-colors relative"
+                className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowTOC(false);
@@ -369,11 +443,21 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                 style={{ opacity: showSoundPopup ? 0.7 : 1 }}
               >
                 <Icon icon="solar:music-notes-bold" className="w-[1.6cqw] h-[1.6cqw]" />
+                {settings?.toolbar?.addTextBelowIcons && (
+                  <span className="text-[0.8cqw] font-medium leading-tight mt-[0.2cqw] whitespace-nowrap" style={{ fontFamily: textFont }}>Sound</span>
+                )}
+                {!settings?.toolbar?.addTextBelowIcons && (
+                  <div className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)', fontFamily: textFont }}>
+                    Sound
+                    <div className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }} />
+                  </div>
+                )}
               </button>
             )}
+            {/* First Page */}
             {(settings?.navigation?.startEndNav ?? true) && (
               <button 
-                className="hover:text-gray-200 transition-colors"
+                className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowTOC(false);
@@ -381,23 +465,44 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                   setShowProfilePopupMemo?.(false);
                   if (onPageClick) onPageClick(0);
                 }}
-                title="First Page"
               >
                 <Icon icon="ph:skip-back" className="w-[1.6cqw] h-[1.6cqw]" />
+                {settings?.toolbar?.addTextBelowIcons && (
+                  <span className="text-[0.8cqw] font-medium leading-tight mt-[0.2cqw] whitespace-nowrap" style={{ fontFamily: textFont }}>First</span>
+                )}
+                {!settings?.toolbar?.addTextBelowIcons && (
+                  <div className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)', fontFamily: textFont }}>
+                    First
+                    <div className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }} />
+                  </div>
+                )}
               </button>
             )}
-            <button 
-              className="hover:text-gray-200 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsPlaying?.(!isAutoFlipping);
-              }}
-            >
-              <Icon icon={isAutoFlipping ? "ph:pause-fill" : "ph:play-fill"} className="w-[1.8cqw] h-[1.8cqw]" />
-            </button>
+            {/* Auto Flip */}
+            {(settings?.media?.autoFlip ?? true) && (
+              <button 
+                className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsPlaying?.(!isAutoFlipping);
+                }}
+              >
+                <Icon icon={isAutoFlipping ? "ph:pause-fill" : "ph:play-fill"} className="w-[1.8cqw] h-[1.8cqw]" />
+                {settings?.toolbar?.addTextBelowIcons && (
+                  <span className="text-[0.8cqw] font-medium leading-tight mt-[0.2cqw] whitespace-nowrap" style={{ fontFamily: textFont }}>{isAutoFlipping ? 'Pause' : 'Play'}</span>
+                )}
+                {!settings?.toolbar?.addTextBelowIcons && (
+                  <div className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)', fontFamily: textFont }}>
+                    {isAutoFlipping ? 'Pause' : 'Play'}
+                    <div className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }} />
+                  </div>
+                )}
+              </button>
+            )}
+            {/* Last Page */}
             {(settings?.navigation?.startEndNav ?? true) && (
               <button 
-                className="hover:text-gray-200 transition-colors"
+                className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowTOC(false);
@@ -406,41 +511,91 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                   const total = Array.isArray(pages) ? pages.length : (pages || 12);
                   if (onPageClick) onPageClick(total - 1);
                 }}
-                title="Last Page"
               >
                 <Icon icon="ph:skip-forward" className="w-[1.6cqw] h-[1.6cqw]" />
+                {settings?.toolbar?.addTextBelowIcons && (
+                  <span className="text-[0.8cqw] font-medium leading-tight mt-[0.2cqw] whitespace-nowrap" style={{ fontFamily: textFont }}>Last</span>
+                )}
+                {!settings?.toolbar?.addTextBelowIcons && (
+                  <div className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)', fontFamily: textFont }}>
+                    Last
+                    <div className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }} />
+                  </div>
+                )}
               </button>
             )}
 
-            <button 
-              className="hover:text-gray-200 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowTOC(false);
-                setShowSoundPopupMemo?.(false);
-                setShowProfilePopupMemo?.(false);
-                setIsShareOpen(true);
-              }}
-            >
-              <Icon icon="mage:share-fill" className="w-[1.6cqw] h-[1.6cqw]" />
-            </button>
-            <button className="hover:text-gray-200 transition-colors" onClick={() => {
-              if (handleDownload) {
-                setShowTOC(false);
-                setShowSoundPopupMemo?.(false);
-                setShowProfilePopupMemo?.(false);
-                handleDownload();
-              }
-            }}>
-              <Icon icon="meteor-icons:download" className="w-[1.6cqw] h-[1.6cqw]" />
-            </button>
-            <button className="hover:text-gray-200 transition-colors">
-              <Icon icon="lucide:fullscreen" className="w-[1.6cqw] h-[1.6cqw]" />
-            </button>
+            {/* Share */}
+            {(settings?.interaction?.share ?? settings?.shareExport?.share ?? true) && (
+              <button 
+                className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTOC(false);
+                  setShowSoundPopupMemo?.(false);
+                  setShowProfilePopupMemo?.(false);
+                  setIsShareOpen(true);
+                }}
+              >
+                <Icon icon="mage:share-fill" className="w-[1.6cqw] h-[1.6cqw]" />
+                {settings?.toolbar?.addTextBelowIcons && (
+                  <span className="text-[0.8cqw] font-medium leading-tight mt-[0.2cqw] whitespace-nowrap" style={{ fontFamily: textFont }}>Share</span>
+                )}
+                {!settings?.toolbar?.addTextBelowIcons && (
+                  <div className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)', fontFamily: textFont }}>
+                    Share
+                    <div className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }} />
+                  </div>
+                )}
+              </button>
+            )}
+            {/* Download */}
+            {(settings?.interaction?.download ?? settings?.shareExport?.download ?? true) && (
+              <button className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center" onClick={() => {
+                if (handleDownload) {
+                  setShowTOC(false);
+                  setShowSoundPopupMemo?.(false);
+                  setShowProfilePopupMemo?.(false);
+                  handleDownload();
+                }
+              }}>
+                <Icon icon="meteor-icons:download" className="w-[1.6cqw] h-[1.6cqw]" />
+                {settings?.toolbar?.addTextBelowIcons && (
+                  <span className="text-[0.8cqw] font-medium leading-tight mt-[0.2cqw] whitespace-nowrap" style={{ fontFamily: textFont }}>Download</span>
+                )}
+                {!settings?.toolbar?.addTextBelowIcons && (
+                  <div className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)', fontFamily: textFont }}>
+                    Download
+                    <div className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }} />
+                  </div>
+                )}
+              </button>
+            )}
+            {/* Fullscreen */}
+            {(settings?.interaction?.fullScreen ?? settings?.viewing?.fullScreen ?? true) && (
+              <button className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center" onClick={() => handleFullScreen?.()}>
+                <Icon icon="lucide:fullscreen" className="w-[1.6cqw] h-[1.6cqw]" />
+                {settings?.toolbar?.addTextBelowIcons && (
+                  <span className="text-[0.8cqw] font-medium leading-tight mt-[0.2cqw] whitespace-nowrap" style={{ fontFamily: textFont }}>Fullscreen</span>
+                )}
+                {!settings?.toolbar?.addTextBelowIcons && (
+                  <div className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)', fontFamily: textFont }}>
+                    Fullscreen
+                    <div className="absolute bottom-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-b-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderBottomColor: 'rgba(10, 10, 12, 0.65)' }} />
+                  </div>
+                )}
+              </button>
+            )}
         </div>
 
-        {/* Right: Empty spacer */}
-        <div className="flex-1"></div>
+        {/* Right: Brand Logo */}
+        <div className="flex-1 flex justify-end items-center pr-[1cqw]">
+          <BrandLogo
+            logoSettings={logoSettings}
+            settings={settings}
+            isTablet={true}
+          />
+        </div>
       </div>
 
       {showTOC && (
@@ -460,22 +615,28 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
       <div className="flex-1 min-h-0 w-full relative flex items-center justify-center overflow-hidden">
         
         {/* Left Chevron */}
-        <button 
-          onClick={() => bookRef?.current?.pageFlip()?.flipPrev()}
-          className={`absolute left-[3cqw] flex items-center justify-center transition-colors z-10 ${
-            (!currentPage || currentPage === 0) 
-              ? 'opacity-30' 
-              : 'hover:opacity-80'
-          }`}
-          style={{ color: getLayoutColor('toolbar-bg', '#625FA2') }}
-        >
-          <Icon icon="lucide:chevron-left" className="w-[4cqw] h-[4cqw]" strokeWidth={1.5} />
-        </button>
+        {(settings?.navigation?.nextPrevButtons ?? true) && (
+          <button 
+            onClick={() => bookRef?.current?.pageFlip()?.flipPrev()}
+            className={`absolute left-[3cqw] flex items-center justify-center transition-colors z-10 ${
+              (!currentPage || currentPage === 0) 
+                ? 'opacity-30' 
+                : 'hover:opacity-80'
+            }`}
+            style={{ color: getLayoutColor('toolbar-bg', '#625FA2') }}
+          >
+            <Icon icon="lucide:chevron-left" className="w-[4cqw] h-[4cqw]" strokeWidth={1.5} />
+          </button>
+        )}
 
         {/* The Book */}
         <div className="absolute inset-0 w-full h-full flex items-center justify-center z-0">
            <div 
-              style={{ translate: `${offset}px 0`, transition: 'translate 0.85s cubic-bezier(0.45, 0, 0.2, 1), transform 0.5s ease-out' }} 
+              style={{ 
+                translate: `${offset}px 0`, 
+                transform: `scale(${activeZoom})`,
+                transition: 'translate 0.85s cubic-bezier(0.45, 0, 0.2, 1), transform 0.3s ease-out' 
+              }} 
               className="flex items-center justify-center w-full h-full"
            >
              {children ? (
@@ -490,31 +651,35 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
         </div>
 
         {/* Right Chevron */}
-        <button 
-          onClick={() => bookRef?.current?.pageFlip()?.flipNext()}
-          className={`absolute right-[3cqw] flex items-center justify-center transition-colors z-10 ${
-            (currentPage >= totalPages - 1)
-              ? 'opacity-30'
-              : 'hover:opacity-80'
-          }`}
-          style={{ color: getLayoutColor('toolbar-bg', '#625FA2') }}
-        >
-          <Icon icon="lucide:chevron-right" className="w-[4cqw] h-[4cqw]" strokeWidth={1.5} />
-        </button>
+        {(settings?.navigation?.nextPrevButtons ?? true) && (
+          <button 
+            onClick={() => bookRef?.current?.pageFlip()?.flipNext()}
+            className={`absolute right-[3cqw] flex items-center justify-center transition-colors z-10 ${
+              (currentPage >= totalPages - 1)
+                ? 'opacity-30'
+                : 'hover:opacity-80'
+            }`}
+            style={{ color: getLayoutColor('toolbar-bg', '#625FA2') }}
+          >
+            <Icon icon="lucide:chevron-right" className="w-[4cqw] h-[4cqw]" strokeWidth={1.5} />
+          </button>
+        )}
 
         {/* Page Indicator Pill (Bottom Right) */}
-        <div className="absolute bottom-[3cqw] right-[3cqw] px-[2cqw] py-[0.8cqw] rounded-[0.8cqw] shadow-sm font-bold text-[1.2cqw] flex items-center justify-center z-10" style={{ backgroundColor: getLayoutColor('toolbar-text-main', '#FFFFFF'), color: getLayoutColor('toolbar-bg', '#625FA2') }}>
-          Page 
-          <input 
-            type="text" 
-            value={inputPage}
-            onChange={(e) => setInputPage(e.target.value)}
-            onKeyDown={handlePageInputSubmit}
-            onBlur={handlePageInputSubmit}
-            className="w-[2.5cqw] text-center bg-transparent outline-none mx-[0.2cqw]"
-          /> 
-          / {totalPages}
-        </div>
+        {(settings?.navigation?.pageQuickAccess ?? true) && (
+          <div className="absolute bottom-[3cqw] right-[3cqw] px-[2cqw] py-[0.8cqw] rounded-[0.8cqw] shadow-sm font-bold text-[1.2cqw] flex items-center justify-center z-10" style={{ backgroundColor: getLayoutColor('toolbar-text-main', '#FFFFFF'), color: getLayoutColor('toolbar-bg', '#625FA2') }}>
+            Page 
+            <input 
+              type="text" 
+              value={inputPage}
+              onChange={(e) => setInputPage(e.target.value)}
+              onKeyDown={handlePageInputSubmit}
+              onBlur={handlePageInputSubmit}
+              className="w-[2.5cqw] text-center bg-transparent outline-none mx-[0.2cqw]"
+            /> 
+            / {totalPages}
+          </div>
+        )}
       </div>
 
       {/* Bottom Bar */}
@@ -537,20 +702,24 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
         </div>
 
         {/* Right Zoom Controls */}
-        <div className="flex items-center gap-[1cqw]">
-            <div className="flex items-center gap-[1.2cqw] px-[1.2cqw] py-[0.5cqw] rounded-[0.5cqw]" style={{ backgroundColor: getLayoutColorAlpha('toolbar-text-main', '255, 255, 255', 0.1) }}>
-                <button className="transition-colors hover:opacity-80" style={{ color: getLayoutColorAlpha('toolbar-text-main', '255, 255, 255', 0.8) }}>
-                    <Icon icon="ph:magnifying-glass-minus-bold" className="w-[1.2cqw] h-[1.2cqw]" />
-                </button>
-                <span className="text-[1.1cqw] font-bold" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>100%</span>
-                <button className="transition-colors hover:opacity-80" style={{ color: getLayoutColorAlpha('toolbar-text-main', '255, 255, 255', 0.8) }}>
-                    <Icon icon="ph:magnifying-glass-plus-bold" className="w-[1.2cqw] h-[1.2cqw]" />
-                </button>
-            </div>
-            <button className="transition-colors hover:opacity-80 px-[1.5cqw] py-[0.5cqw] rounded-[0.5cqw] text-[1.1cqw] font-bold" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF'), backgroundColor: getLayoutColorAlpha('toolbar-text-main', '255, 255, 255', 0.2) }}>
-                Reset
-            </button>
-        </div>
+        {(settings?.viewing?.zoom ?? true) && (
+          <div className="flex items-center gap-[1cqw]">
+              <div className="flex items-center gap-[1.2cqw] px-[1.2cqw] py-[0.5cqw] rounded-[0.5cqw]" style={{ backgroundColor: getLayoutColorAlpha('toolbar-text-main', '255, 255, 255', 0.1) }}>
+                  <button onClick={zoomOut} className="transition-colors hover:opacity-80" style={{ color: getLayoutColorAlpha('toolbar-text-main', '255, 255, 255', 0.8) }}>
+                      <Icon icon="ph:magnifying-glass-minus-bold" className="w-[1.2cqw] h-[1.2cqw]" />
+                  </button>
+                  <span className="text-[1.1cqw] font-bold" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+                    {Math.round((activeZoom || 1) * 100)}%
+                  </span>
+                  <button onClick={zoomIn} className="transition-colors hover:opacity-80" style={{ color: getLayoutColorAlpha('toolbar-text-main', '255, 255, 255', 0.8) }}>
+                      <Icon icon="ph:magnifying-glass-plus-bold" className="w-[1.2cqw] h-[1.2cqw]" />
+                  </button>
+              </div>
+              <button onClick={resetZoom} className="transition-colors hover:opacity-80 px-[1.5cqw] py-[0.5cqw] rounded-[0.5cqw] text-[1.1cqw] font-bold" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF'), backgroundColor: getLayoutColorAlpha('toolbar-text-main', '255, 255, 255', 0.2) }}>
+                  Reset
+              </button>
+          </div>
+        )}
 
       </div>
 

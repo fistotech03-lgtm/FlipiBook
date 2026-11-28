@@ -736,7 +736,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                     </div>
 
                     {/* Center Area: One Long Cluster of Icons (Grouped) */}
-                    <div className={`${isMobileLandscape ? 'flex flex-1 justify-end pr-[2vw]' : isTablet ? `flex flex-1 justify-center ${isPdfProject ? 'pr-0' : 'pr-[12vw]'}` : `flex flex-1 justify-center ${isPdfProject ? 'pr-0' : 'pr-[13vw]'}`} items-center ${isMobileLandscape ? 'gap-[1vw]' : isTablet ? 'gap-[0.8vw]' : 'gap-[1.2vw]'}`}>
+                    <div className={`${isMobileLandscape ? 'flex flex-1 justify-end pr-[2vw]' : isTablet ? `flex flex-1 justify-center ${isPdfProject ? 'pr-0' : (isSidebarOpen ? 'pr-[2vw]' : 'pr-[12vw]')}` : `flex flex-1 justify-center ${isPdfProject ? 'pr-0' : (isSidebarOpen ? 'pr-[2vw]' : 'pr-[13vw]')}`} items-center ${isMobileLandscape ? 'gap-[1vw]' : isTablet ? 'gap-[0.8vw]' : (isSidebarOpen ? 'gap-[0.8vw]' : 'gap-[1.2vw]')}`}>
                         {/* Tools Group - 5 Icons */}
                         <div className="contents">
                             {(settings?.navigation?.tableOfContents ?? true) && renderToolbarBtn(
@@ -845,7 +845,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                     </div>
 
                     {/* Right Section: Brand Logo Container */}
-                    <div className="flex items-center">
+                    <div className="flex items-center shrink-0">
                         <BrandLogo
                             logoSettings={logoSettings}
                             settings={settings}

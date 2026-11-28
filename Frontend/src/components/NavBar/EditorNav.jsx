@@ -792,6 +792,7 @@ const EditorNavbar = ({
       {/* Render Notification Drawer */}
       <NotificationDrawer
         isOpen={isNotificationOpen}
+        onOpen={() => setIsNotificationOpen(true)}
         onClose={() => setIsNotificationOpen(false)}
         onUnreadCountChange={setUnreadNotifCount}
       />

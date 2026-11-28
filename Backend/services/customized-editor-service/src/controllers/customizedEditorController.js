@@ -1861,6 +1861,110 @@ const addLeadNote = async (req, res) => {
   }
 };
 
+const updateLeadNote = async (req, res) => {
+  try {
+    const userQuery = getUserQuery(req);
+    const { leadId, noteId } = req.params;
+    const { text } = req.body;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ success: false, message: 'Note text required' });
+    }
+
+    const leadQuery = mongoose.Types.ObjectId.isValid(leadId)
+      ? { $or: [{ leadId }, { _id: leadId }] }
+      : { leadId };
+
+    const noteMatch = mongoose.Types.ObjectId.isValid(noteId)
+      ? { $or: [{ 'internalNotes.noteId': noteId }, { 'internalNotes._id': noteId }] }
+      : { 'internalNotes.noteId': noteId };
+
+    const updated = await Lead.findOneAndUpdate(
+      { ...userQuery, ...leadQuery, ...noteMatch },
+      { $set: { 'internalNotes.$.text': text.trim() } },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Lead or note not found' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Note updated successfully', lead: updated });
+  } catch (err) {
+    console.error('[Customized Editor] Error updating lead note:', err);
+    return res.status(500).json({ success: false, message: 'Failed to update note', error: err.message });
+  }
+};
+
+const deleteLeadNote = async (req, res) => {
+  try {
+    const userQuery = getUserQuery(req);
+    const { leadId, noteId } = req.params;
+
+    const leadQuery = mongoose.Types.ObjectId.isValid(leadId)
+      ? { $or: [{ leadId }, { _id: leadId }] }
+      : { leadId };
+
+    const pullCondition = mongoose.Types.ObjectId.isValid(noteId)
+      ? { $or: [{ noteId }, { _id: noteId }] }
+      : { noteId };
+
+    const updated = await Lead.findOneAndUpdate(
+      { ...userQuery, ...leadQuery },
+      { $pull: { internalNotes: pullCondition } },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Lead not found or unauthorized' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Note deleted successfully', lead: updated });
+  } catch (err) {
+    console.error('[Customized Editor] Error deleting lead note:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete note', error: err.message });
+  }
+};
+
+const addLeadActivity = async (req, res) => {
+  try {
+    const userQuery = getUserQuery(req);
+    const { leadId } = req.params;
+    const { title, subtitle, timestamp } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, message: 'Activity title required' });
+    }
+
+    const leadQuery = mongoose.Types.ObjectId.isValid(leadId)
+      ? { $or: [{ leadId }, { _id: leadId }] }
+      : { leadId };
+
+    const updated = await Lead.findOneAndUpdate(
+      { ...userQuery, ...leadQuery },
+      {
+        $push: {
+          timeline: {
+            title: title.trim(),
+            subtitle: subtitle || '',
+            timestamp: timestamp ? new Date(timestamp) : new Date()
+          }
+        }
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Lead not found or unauthorized' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Activity added successfully', lead: updated });
+  } catch (err) {
+    console.error('[Customized Editor] Error adding lead activity:', err);
+    return res.status(500).json({ success: false, message: 'Failed to add activity', error: err.message });
+  }
+};
+
 /**
  * POST /verify-credential
  * Public verification of password or access key for protected flipbooks
@@ -3101,6 +3205,9 @@ module.exports = {
   getLeads,
   updateLeadStatus,
   addLeadNote,
+  updateLeadNote,
+  deleteLeadNote,
+  addLeadActivity,
   deleteLead,
   verifyCredential,
   sendVisibilityOtp,

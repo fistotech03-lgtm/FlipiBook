@@ -969,35 +969,7 @@ const RightSidebar = ({
       )}
 
       <div className={`flex-1 flex flex-col overflow-hidden bg-white ${pages[activePageIndex]?.isHidden ? 'opacity-50 pointer-events-none' : ''}`}>
-        {is3DModalOpen ? (
-          <CustomScrollbar
-            color="#d1d5db"
-            hoverColor="#9ca3af"
-            width="0.12vw"
-            className="flex-1 flex flex-col"
-          >
-            <Model3DEditor
-              onClose={() => setIs3DModalOpen(false)}
-              shadowStrength={shadowStrength} setShadowStrength={setShadowStrength}
-              shadowSoftness={shadowSoftness} setShadowSoftness={setShadowSoftness}
-              autoRotate={autoRotate} setAutoRotate={setAutoRotate}
-              autoRotateSpeed={autoRotateSpeed} setAutoRotateSpeed={setAutoRotateSpeed}
-              lockMaxZoom={lockMaxZoom} setLockMaxZoom={setLockMaxZoom}
-              maxZoom={maxZoom} setMaxZoom={setMaxZoom}
-              bgType={bgType} setBgType={setBgType}
-              bgColor={bgColor} setBgColor={setBgColor}
-              customBg={customBg} setCustomBg={setCustomBg}
-              enableAR={enableAR} setEnableAR={setEnableAR}
-              qrText={qrText} setQrText={setQrText} qrColor={qrColor} setQrColor={setQrColor} qrBgType={qrBgType} setQrBgType={setQrBgType} qrBgColor={qrBgColor} setQrBgColor={setQrBgColor} qrLevel={qrLevel} setQrLevel={setQrLevel} qrDotType={qrDotType} setQrDotType={setQrDotType} qrCornerSquareType={qrCornerSquareType} setQrCornerSquareType={setQrCornerSquareType} qrCornerDotType={qrCornerDotType} setQrCornerDotType={setQrCornerDotType} qrLogo={qrLogo} setQrLogo={setQrLogo}
-              topText={topText} setTopText={setTopText} bottomText={bottomText} setBottomText={setBottomText}
-              dataUrl={preview3DDataUrl}
-              vId={current3DVId}
-              hotspots={hotspots}
-              activeHotspotId={activeHotspotId}
-              onHotspotClick={onHotspotClick}
-            />
-          </CustomScrollbar>
-        ) : activeTopTool === 'editor' ? (
+        {activeTopTool === 'editor' ? (
           activeMainTool === 'upload' ? (
             <UploadProperties
               activePageIndex={activePageIndex}

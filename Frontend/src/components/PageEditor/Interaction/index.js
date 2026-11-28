@@ -4,6 +4,6 @@ export { default as HotspotCustomizationPopup } from './HotspotCustomizationPopu
 export { default as HotspotPresetPopup } from './HotspotPresetPopup';
 export { default as PopupTemplateSelection, TEMPLATES as POPUP_TEMPLATES } from './PopupTemplateSelection';
 export { default as TooltipCustomization } from './TooltipCustomization';
-export { default as Interaction3DPreview } from './Interaction3DPreview';
+export { default as Interaction3DPreview } from './3d/Interaction3DPreview';
 export * from './hotspotSvgUtils';
 export * from './interactionValidation';

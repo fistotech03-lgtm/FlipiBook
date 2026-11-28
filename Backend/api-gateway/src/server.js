@@ -25,6 +25,7 @@ const THREED_EDITOR_SERVICE_URL = process.env.THREED_EDITOR_SERVICE_URL || 'http
 const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL || 'http://127.0.0.1:5007';
 const APP_SERVICE_URL = process.env.APP_SERVICE_URL || 'http://127.0.0.1:5008';
 const ADMIN_USER_SERVICE_URL = process.env.ADMIN_USER_SERVICE_URL || 'http://127.0.0.1:5009';
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://127.0.0.1:5010';
 
 // ============================================================================
 // 1. CORS & ORIGIN VALIDATION
@@ -606,12 +607,30 @@ app.use('/api/admin', createServiceProxy({
   unavailableMessage: 'Admin Service unavailable. Please ensure admin-user-service is running.'
 }));
 
+// Notification Service (port 5010) - user notifications & Socket.IO real-time channel
+app.use('/api/notifications', createServiceProxy({
+  target: `${NOTIFICATION_SERVICE_URL}/api/notifications`,
+  serviceName: 'notification-service',
+  unavailableMessage: 'Notification Service unavailable. Please ensure notification-service is running.'
+}));
+
+const socketProxy = createProxyMiddleware({
+  target: NOTIFICATION_SERVICE_URL,
+  pathFilter: '/socket.io',
+  changeOrigin: true,
+  ws: true,
+  xfwd: true,
+  cookieDomainRewrite: '',
+  cookiePathRewrite: '/'
+});
+app.use(socketProxy);
+
 // ============================================================================
 // 6. SERVER STARTUP & PROCESS ERROR HANDLERS
 // ============================================================================
 
 // Start HTTP gateway and log active route mappings
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Running on http://localhost:${PORT}`);
   console.log(`[API Gateway] Routing /api/auth -> ${AUTH_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/flipbook -> ${MYFLIPIBOOK_SERVICE_URL}`);
@@ -629,6 +648,13 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API Gateway] Routing /api/user -> ${APP_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/forum -> ${APP_SERVICE_URL}`);
   console.log(`[API Gateway] Routing /api/admin -> ${ADMIN_USER_SERVICE_URL}`);
+  console.log(`[API Gateway] Routing /api/notifications -> ${NOTIFICATION_SERVICE_URL}`);
+});
+
+server.on('upgrade', (req, socket, head) => {
+  if (req.url && req.url.startsWith('/socket.io')) {
+    socketProxy.upgrade(req, socket, head);
+  }
 });
 
 // Log uncaught process-level errors without crashing silently

@@ -50,8 +50,9 @@ const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
 import TabletTableOfContentsPopup from './TabletTableOfContentsPopup';
 import TabletLayoutSound from './TabletLayoutSound';
 import ShareModal from '../../../ShareModal';
+import BrandLogo from '../../common/BrandLogo';
 
-const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPageClick, settings, bookName = "Name of the Book", showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showGalleryPopup, setShowGalleryPopupMemo, handleDownload, handleFullScreen, currentBook, activeLayout, searchQuery, setSearchQuery, handleQuickSearch, isAutoFlipping, setIsPlaying, currentZoom = 1, setCurrentZoom, handleZoomIn, handleZoomOut, resetZoom: propResetZoom }) => {
+const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPageClick, settings, logoSettings, bookName = "Name of the Book", showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showGalleryPopup, setShowGalleryPopupMemo, handleDownload, handleFullScreen, currentBook, activeLayout, searchQuery, setSearchQuery, handleQuickSearch, isAutoFlipping, setIsPlaying, currentZoom = 1, setCurrentZoom, handleZoomIn, handleZoomOut, resetZoom: propResetZoom }) => {
   const [localZoom, setLocalZoom] = useState(1);
   const activeZoom = currentZoom !== undefined ? currentZoom : localZoom;
 
@@ -358,6 +359,7 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
 
         {/* Center: Icons */}
         <div className="flex-none flex items-center gap-[2cqw] absolute left-1/2 -translate-x-1/2" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+            {/* TOC */}
             {(settings?.navigation?.tableOfContents ?? true) && (
               <button 
                 className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
@@ -379,6 +381,7 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                 )}
               </button>
             )}
+            {/* Thumbnails */}
             {(settings?.navigation?.pageThumbnails ?? true) && (
               <button 
                 className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
@@ -402,7 +405,8 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                 )}
               </button>
             )}
-            {(settings?.interaction?.gallery ?? true) && (
+            {/* Gallery */}
+            {(settings?.toolbar?.gallery ?? settings?.interaction?.gallery ?? true) && (
               <button 
                 className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
                 onClick={(e) => {
@@ -426,7 +430,8 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                 )}
               </button>
             )}
-            {(settings?.media?.backgroundAudio ?? settings?.media?.audio ?? true) && (
+            {/* Sound */}
+            {(settings?.audio?.backgroundAudio ?? settings?.audio?.audio ?? settings?.media?.backgroundAudio ?? settings?.media?.audio ?? true) && (
               <button 
                 className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
                 onClick={(e) => {
@@ -449,6 +454,7 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                 )}
               </button>
             )}
+            {/* First Page */}
             {(settings?.navigation?.startEndNav ?? true) && (
               <button 
                 className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
@@ -472,6 +478,7 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                 )}
               </button>
             )}
+            {/* Auto Flip */}
             {(settings?.media?.autoFlip ?? true) && (
               <button 
                 className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
@@ -492,6 +499,7 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                 )}
               </button>
             )}
+            {/* Last Page */}
             {(settings?.navigation?.startEndNav ?? true) && (
               <button 
                 className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
@@ -517,7 +525,8 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
               </button>
             )}
 
-            {(settings?.shareExport?.share ?? true) && (
+            {/* Share */}
+            {(settings?.interaction?.share ?? settings?.shareExport?.share ?? true) && (
               <button 
                 className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center"
                 onClick={(e) => {
@@ -540,7 +549,8 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                 )}
               </button>
             )}
-            {(settings?.shareExport?.download ?? true) && (
+            {/* Download */}
+            {(settings?.interaction?.download ?? settings?.shareExport?.download ?? true) && (
               <button className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center" onClick={() => {
                 if (handleDownload) {
                   setShowTOC(false);
@@ -561,7 +571,8 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
                 )}
               </button>
             )}
-            {(settings?.viewing?.fullScreen ?? true) && (
+            {/* Fullscreen */}
+            {(settings?.interaction?.fullScreen ?? settings?.viewing?.fullScreen ?? true) && (
               <button className="hover:text-gray-200 transition-colors relative group flex flex-col items-center justify-center" onClick={() => handleFullScreen?.()}>
                 <Icon icon="lucide:fullscreen" className="w-[1.6cqw] h-[1.6cqw]" />
                 {settings?.toolbar?.addTextBelowIcons && (
@@ -577,8 +588,14 @@ const TabletLayout2 = ({ children, bookRef, currentPage, pages, offset = 0, onPa
             )}
         </div>
 
-        {/* Right: Empty spacer */}
-        <div className="flex-1"></div>
+        {/* Right: Brand Logo */}
+        <div className="flex-1 flex justify-end items-center pr-[1cqw]">
+          <BrandLogo
+            logoSettings={logoSettings}
+            settings={settings}
+            isTablet={true}
+          />
+        </div>
       </div>
 
       {showTOC && (

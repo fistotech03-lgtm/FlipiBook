@@ -816,6 +816,7 @@ if (e.target.closest('.overflow-y-auto') || e.target.closest('.overflow-x-auto')
                         logoSettings={logoSettings}
                         settings={settings}
                         isTablet={isTablet}
+                        theme="gray"
                     />
                 </div>
             </div>

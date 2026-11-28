@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Icon } from '@iconify/react';
 import TabletTableOfContentsPopup from './TabletTableOfContentsPopup';
 import ShareModal from '../../../ShareModal';
+import BrandLogo from '../../common/BrandLogo';
 
 const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
     const cleanHtml = (html || '')
@@ -57,7 +58,7 @@ const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
     );
 });
 
-const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, settings, showTOC, setShowTOCMemo, showThumbnailBar, setShowThumbnailBarMemo, onPageClick, showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showGalleryPopup, setShowGalleryPopupMemo, currentBook, activeLayout, handleFullScreen, currentZoom = 1, setCurrentZoom, handleZoomIn, handleZoomOut, handleDownload, searchQuery, setSearchQuery, handleQuickSearch, bookName, isAutoFlipping, setIsPlaying }) => {
+const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, settings, logoSettings, showTOC, setShowTOCMemo, showThumbnailBar, setShowThumbnailBarMemo, onPageClick, showSoundPopup, setShowSoundPopupMemo, showProfilePopup, setShowProfilePopupMemo, showGalleryPopup, setShowGalleryPopupMemo, currentBook, activeLayout, handleFullScreen, currentZoom = 1, setCurrentZoom, handleZoomIn, handleZoomOut, handleDownload, searchQuery, setSearchQuery, handleQuickSearch, bookName, isAutoFlipping, setIsPlaying, layoutColors: propLayoutColors }) => {
     const scrollRef = useRef(null);
     const sliderRef = useRef(null);
 
@@ -99,31 +100,119 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
         }
     }
 
-    const layoutColors = settings?.Layouts?.layoutColors || settings?.layoutColors;
-    const layoutColorsArray = Array.isArray(layoutColors) ? layoutColors : (layoutColors?.[activeLayout] || []);
+    const layoutColors = propLayoutColors || settings?.Layouts?.layoutColors || settings?.layoutColors;
+    const layoutColorsArray = Array.isArray(layoutColors) ? layoutColors : (layoutColors?.[activeLayout || 1] || []);
+    const toolbarP = layoutColors?.toolbarColor?.primary;
+    const toolbarS = layoutColors?.toolbarColor?.secondary;
+    const popupP = layoutColors?.popupColor?.primary;
+    const popupS = layoutColors?.popupColor?.secondary;
+
+    const hexToRgb = (hex) => {
+        if (!hex || !hex.startsWith('#')) return '87, 92, 156';
+        const h = hex.replace('#', '');
+        const r = parseInt(h.length === 3 ? h.charAt(0) + h.charAt(0) : h.substring(0, 2), 16);
+        const g = parseInt(h.length === 3 ? h.charAt(1) + h.charAt(1) : h.substring(2, 4), 16);
+        const b = parseInt(h.length === 3 ? h.charAt(2) + h.charAt(2) : h.substring(4, 6), 16);
+        return `${r}, ${g}, ${b}`;
+    };
 
     const getLayoutColor = (id, defaultColor) => {
         if (layoutColorsArray && layoutColorsArray.length > 0) {
             const colorObj = layoutColorsArray.find(c => c && c.id === id);
             if (colorObj && colorObj.hex) {
+                if (colorObj.opacity !== undefined && colorObj.opacity < 100) {
+                    return `rgba(${hexToRgb(colorObj.hex)}, ${colorObj.opacity / 100})`;
+                }
                 return colorObj.hex;
             }
+        }
+        if (toolbarP && ['toolbar-bg', 'bottom-toolbar-bg', 'page-number-bg'].includes(id)) {
+            const pOpacity = layoutColors?.toolbarColor?.primaryOpacity ?? layoutColors?.toolbarColor?.opacity;
+            if (pOpacity !== undefined && pOpacity < 100) {
+                return `rgba(${hexToRgb(toolbarP)}, ${pOpacity / 100})`;
+            }
+            return toolbarP;
+        }
+        if (toolbarS && ['toolbar-text-main', 'toolbar-icon', 'reset-text', 'page-number-text'].includes(id)) {
+            const sOpacity = layoutColors?.toolbarColor?.secondaryOpacity;
+            if (sOpacity !== undefined && sOpacity < 100) {
+                return `rgba(${hexToRgb(toolbarS)}, ${sOpacity / 100})`;
+            }
+            return toolbarS;
+        }
+        if (popupP && ['toc-bg', 'dropdown-bg', 'thumbnail-outer-v2', 'thumbnail-inner-v2', 'toc-overlay'].includes(id)) {
+            const popPOpacity = layoutColors?.popupColor?.primaryOpacity ?? layoutColors?.popupColor?.opacity;
+            if (popPOpacity !== undefined && popPOpacity < 100) {
+                return `rgba(${hexToRgb(popupP)}, ${popPOpacity / 100})`;
+            }
+            return popupP;
+        }
+        if (popupS && ['toc-text', 'dropdown-text', 'dropdown-icon', 'toc-icon'].includes(id)) {
+            const popSOpacity = layoutColors?.popupColor?.secondaryOpacity;
+            if (popSOpacity !== undefined && popSOpacity < 100) {
+                return `rgba(${hexToRgb(popupS)}, ${popSOpacity / 100})`;
+            }
+            return popupS;
         }
         return `var(--${id}, ${defaultColor})`;
     };
 
+    const getLayoutColorRgba = (id, defaultRgb, defaultOpacity) => {
+        let hex = null;
+        let opacity = defaultOpacity !== undefined ? defaultOpacity : 1;
+
+        if (layoutColorsArray && layoutColorsArray.length > 0) {
+            const colorObj = layoutColorsArray.find(c => c && c.id === id);
+            if (colorObj) {
+                if (colorObj.hex) hex = colorObj.hex;
+                if (colorObj.opacity !== undefined) opacity = colorObj.opacity / 100;
+            }
+        }
+        if (!hex) {
+            if (toolbarP && ['toolbar-bg', 'bottom-toolbar-bg', 'page-number-bg'].includes(id)) {
+                hex = toolbarP;
+                const pOpacity = layoutColors?.toolbarColor?.primaryOpacity ?? layoutColors?.toolbarColor?.opacity;
+                if (pOpacity !== undefined) opacity = pOpacity / 100;
+            }
+            else if (toolbarS && ['toolbar-text-main', 'toolbar-icon', 'reset-text', 'page-number-text'].includes(id)) {
+                hex = toolbarS;
+                const sOpacity = layoutColors?.toolbarColor?.secondaryOpacity;
+                if (sOpacity !== undefined) opacity = sOpacity / 100;
+            }
+            else if (popupP && ['toc-bg', 'dropdown-bg', 'thumbnail-outer-v2', 'thumbnail-inner-v2', 'toc-overlay'].includes(id)) {
+                hex = popupP;
+                const popPOpacity = layoutColors?.popupColor?.primaryOpacity ?? layoutColors?.popupColor?.opacity;
+                if (popPOpacity !== undefined) opacity = popPOpacity / 100;
+            }
+            else if (popupS && ['toc-text', 'dropdown-text', 'dropdown-icon', 'toc-icon'].includes(id)) {
+                hex = popupS;
+                const popSOpacity = layoutColors?.popupColor?.secondaryOpacity;
+                if (popSOpacity !== undefined) opacity = popSOpacity / 100;
+            }
+        }
+
+        if (hex) {
+            return `rgba(${hexToRgb(hex)}, ${opacity})`;
+        }
+        return `rgba(var(--${id}-rgb, ${defaultRgb}), var(--${id}-opacity, ${opacity}))`;
+    };
+
     const getLayoutColorAlpha = (id, defaultRgb, alpha) => {
+        let hex = null;
         if (layoutColorsArray && layoutColorsArray.length > 0) {
             const colorObj = layoutColorsArray.find(c => c && c.id === id);
             if (colorObj && colorObj.hex) {
-                const hex = colorObj.hex.replace('#', '');
-                const r = parseInt(hex.length === 3 ? hex.charAt(0) + hex.charAt(0) : hex.substring(0, 2), 16);
-                const g = parseInt(hex.length === 3 ? hex.charAt(1) + hex.charAt(1) : hex.substring(2, 4), 16);
-                const b = parseInt(hex.length === 3 ? hex.charAt(2) + hex.charAt(2) : hex.substring(4, 6), 16);
-                if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
-                    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                }
+                hex = colorObj.hex;
             }
+        }
+        if (!hex) {
+            if (toolbarP && ['toolbar-bg', 'bottom-toolbar-bg', 'page-number-bg'].includes(id)) hex = toolbarP;
+            else if (toolbarS && ['toolbar-text-main', 'toolbar-icon', 'reset-text', 'page-number-text'].includes(id)) hex = toolbarS;
+            else if (popupP && ['toc-bg', 'dropdown-bg', 'thumbnail-outer-v2', 'thumbnail-inner-v2', 'toc-overlay'].includes(id)) hex = popupP;
+            else if (popupS && ['toc-text', 'dropdown-text', 'dropdown-icon', 'toc-icon'].includes(id)) hex = popupS;
+        }
+        if (hex) {
+            return `rgba(${hexToRgb(hex)}, ${alpha})`;
         }
         return `rgba(var(--${id}-rgb, ${defaultRgb}), ${alpha})`;
     };
@@ -299,7 +388,7 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
         >
             <div id="tablet-download-portal" className="absolute inset-0 z-[60] pointer-events-none"></div>
             {/* Top Bar */}
-            <div className="w-full h-[8%] flex items-center justify-between px-[2cqw] flex-shrink-0 z-10 shadow-md" style={{ backgroundColor: getLayoutColor('toolbar-bg', '#5C5898'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+            <div className="w-full h-[8%] flex items-center justify-between px-[2cqw] flex-shrink-0 z-10 shadow-md" style={{ backgroundColor: getLayoutColorRgba('toolbar-bg', '87, 92, 156', 1), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
                 {/* Search Bar */}
                 {(settings?.interaction?.search ?? true) ? (
                     <div className="relative z-50 w-[25cqw] h-full flex items-center">
@@ -406,8 +495,14 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
                     {/* bookName hidden */}
                 </div>
 
-                {/* Empty space for balance */}
-                <div className="w-[25cqw]"></div>
+                {/* Logo Area */}
+                <div className="w-[25cqw] flex justify-end items-center">
+                    <BrandLogo
+                        logoSettings={logoSettings}
+                        settings={settings}
+                        isTablet={true}
+                    />
+                </div>
             </div>
 
             {/* Middle Content Area */}
@@ -640,6 +735,7 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
                     onClose={() => setShowTOCMemo?.(false)}
                     onNavigate={(pageIndex) => bookRef?.current?.pageFlip()?.turnToPage(pageIndex)}
                     settings={settings}
+                    layoutColors={layoutColors}
                 />
             )}
 
@@ -648,7 +744,7 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
             <div id="tablet-profile-portal" className="absolute inset-0 z-50 pointer-events-none"></div>
 
             {/* Bottom Bar */}
-            <div className="w-full h-[8%] flex items-center justify-between px-[2cqw] flex-shrink-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]" style={{ backgroundColor: getLayoutColor('bottom-toolbar-bg', 'var(--toolbar-bg, #5C5898)'), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
+            <div className="w-full h-[8%] flex items-center justify-between px-[2cqw] flex-shrink-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]" style={{ backgroundColor: getLayoutColorRgba('bottom-toolbar-bg', '87, 92, 156', 1), color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}>
 
                 {/* Left Icons */}
                 <div className="flex items-center gap-[1.5cqw]">
@@ -827,18 +923,7 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
 
                     {/* Zoom Section */}
                     {(settings?.viewing?.zoom ?? true) && (
-                        <div className="flex items-center gap-[0.5cqw] ml-[1cqw]">
-                            <button
-                                className="hover:text-gray-200 transition-colors relative group"
-                                onClick={(e) => { e.stopPropagation(); handleZoomOut?.(); }}
-                            >
-                                <Icon icon="ph:magnifying-glass-minus" className="w-[1.6cqw] h-[1.6cqw]" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }} />
-                                <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
-                                    Zoom Out
-                                    <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
-                                </div>
-                            </button>
-
+                        <div className={`flex items-center gap-[0.5cqw] ml-[1cqw] ${!settings?.toolbar?.addTextBelowIcons ? 'translate-y-[0.8vh]' : ''}`}>
                             <div
                                 ref={sliderRef}
                                 className="w-[6cqw] h-[1cqw] flex items-center relative cursor-pointer"
@@ -872,16 +957,12 @@ const TabletLayout1 = ({ children, bookRef, currentPage, pages, offset = 0, sett
                                 />
                             </div>
 
-                            <button
-                                className="hover:text-gray-200 transition-colors relative group"
-                                onClick={(e) => { e.stopPropagation(); handleZoomIn?.(); }}
+                            <span
+                                className="text-[1.1cqw] font-semibold min-w-[2.8cqw] text-center whitespace-nowrap select-none"
+                                style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }}
                             >
-                                <Icon icon="ph:magnifying-glass-plus" className="w-[1.6cqw] h-[1.6cqw]" style={{ color: getLayoutColor('toolbar-text-main', '#FFFFFF') }} />
-                                <div className="absolute bottom-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]" style={{ background: 'rgba(10, 10, 12, 0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', padding: '0.3cqw 0.8cqw', borderRadius: '0.4cqw', fontSize: '0.85cqw', fontWeight: 600, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)' }}>
-                                    Zoom In
-                                    <div className="absolute top-[100%] left-1/2 -translate-x-1/2 w-0 h-0 border-solid border-l-transparent border-r-transparent border-t-[0.4cqw] border-l-[0.4cqw] border-r-[0.4cqw]" style={{ borderTopColor: 'rgba(10, 10, 12, 0.65)' }} />
-                                </div>
-                            </button>
+                                {Math.round((currentZoom || 1) * 100)}%
+                            </span>
                         </div>
                     )}
 

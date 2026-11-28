@@ -242,6 +242,13 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
       contact3CountryCode: user?.contact3CountryCode || '+91',
       contact3Label: user?.contact3Label || 'Contact 3',
       contactCount: user?.contactCount !== undefined ? user.contactCount : 2,
+      experience: user?.experience || user?.experienceOrTeamSize || '',
+      teamSize: user?.teamSize || user?.experienceOrTeamSize || '',
+      companySize: user?.companySize || user?.experienceOrTeamSize || '',
+      businessName: user?.businessName || user?.companyName || user?.agencyName || '',
+      companyName: user?.companyName || user?.businessName || '',
+      businessEmail: user?.businessEmail || user?.companyEmail || '',
+      companyEmail: user?.companyEmail || user?.businessEmail || '',
       services: initialServices,
       skills: initialServices,
       visibilitySettings: {
@@ -327,8 +334,24 @@ const EditProfile = ({ user, setUser, onActionReady, onPreviewChange }) => {
   useEffect(() => {
     if (prevUserKeyRef.current !== userKey) {
       prevUserKeyRef.current = userKey;
+      const nextServices = Array.isArray(user?.services)
+        ? user.services
+        : (Array.isArray(user?.skills) ? user.skills : []);
+
       setEditedUser({
         ...user,
+        email: user?.emailId || user?.email || '',
+        emailId: user?.emailId || user?.email || '',
+        profileType: user?.profileType || (user?.accountType ? user.accountType.charAt(0).toUpperCase() + user.accountType.slice(1) : ''),
+        experience: user?.experience || user?.experienceOrTeamSize || '',
+        teamSize: user?.teamSize || user?.experienceOrTeamSize || '',
+        companySize: user?.companySize || user?.experienceOrTeamSize || '',
+        businessEmail: user?.businessEmail || user?.companyEmail || '',
+        companyEmail: user?.companyEmail || user?.businessEmail || '',
+        businessName: user?.businessName || user?.companyName || user?.agencyName || '',
+        companyName: user?.companyName || user?.businessName || '',
+        services: nextServices,
+        skills: nextServices,
         contact1: user?.contact1 !== undefined ? user.contact1 : (user?.mobile || ''),
         contact1CountryCode: user?.contact1CountryCode || user?.countryCode || '+91',
         contact1Label: user?.contact1Label || 'Contact 1',

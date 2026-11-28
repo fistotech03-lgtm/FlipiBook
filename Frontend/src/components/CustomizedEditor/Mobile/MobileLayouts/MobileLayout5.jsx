@@ -487,7 +487,15 @@ const MobileLayout5 = (props) => {
                     onClose={() => setShowSharePopup(false)}
                     bookName={props.currentBook?.flipbookName || bookName}
                     url={props.currentBook?.shareUrl || window.location.href}
-                    isPublished={props.currentBook?.status === 'Published'}
+                    isPublished={Boolean(
+                        props.currentBook?.isPublished || 
+                        props.currentBook?.published || 
+                        props.currentBook?.is_published || 
+                        props.currentBook?.status?.toLowerCase() === 'published' ||
+                        props.currentBook?.status?.toLowerCase() === 'publish' ||
+                        props.currentBook?.meta?.isPublished
+                    )}
+                    currentBook={props.currentBook}
                     isMobile={true}
                     isLandscape={isLandscape}
                 />}
@@ -868,13 +876,6 @@ const MobileLayout5 = (props) => {
                                     <Icon icon="solar:music-notes-bold" className="w-[18px] h-[18px]" />
                                 </button>
                             )}
-                            <div className="relative">
-                                <button onClick={(e) => { e.stopPropagation(); setShowProfilePopup(!showProfilePopup); }} className="text-white opacity-90 hover:opacity-100 hover:scale-110 active:scale-90 transition-all">
-                                    <Icon icon="solar:user-bold" className="w-[18px] h-[18px]" />
-                                </button>
-                                <AnimatePresence>
-                                </AnimatePresence>
-                            </div>
                             <button onClick={(e) => {
                                 e.stopPropagation();
                                 handleShare();

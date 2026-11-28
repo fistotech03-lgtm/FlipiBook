@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import TabletTableOfContentsPopup from './TabletTableOfContentsPopup';
 import TabletProfilePopup from './TabletProfilePopup';
 import ShareModal from '../../../ShareModal';
+import BrandLogo from '../../common/BrandLogo';
 
 const PageThumbnail = React.memo(({ html, index, scale = 0.15 }) => {
     const cleanHtml = (html || '')
@@ -74,8 +75,8 @@ const getLayoutColorRgba = (tokenId, defaultRgb, defaultOpacity) => {
     return `rgba(var(--${tokenId}-rgb, ${defaultRgb}), var(--${tokenId}-opacity, ${defaultOpacity}))`;
 };
 
-const ToolbarBtn = ({ id, icon, label, onClick, bg, color }) => (
-    <div className="relative group flex items-center justify-center">
+const ToolbarBtn = ({ id, icon, label, onClick, bg, color, addTextBelowIcons = false, textFont, textColor }) => (
+    <div className="relative group flex flex-col items-center justify-start">
         <button
             id={id}
             onClick={onClick}
@@ -85,6 +86,16 @@ const ToolbarBtn = ({ id, icon, label, onClick, bg, color }) => (
             <Icon icon={icon} className="w-[1.6cqw] h-[1.6cqw]" />
         </button>
         {label && (
+            <span
+                className={`text-[0.8cqw] font-semibold leading-tight text-center whitespace-nowrap mt-[0.2cqw] ${
+                    addTextBelowIcons ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}
+                style={{ color: textColor || bg || '#555555', fontFamily: textFont }}
+            >
+                {label}
+            </span>
+        )}
+        {!addTextBelowIcons && label && (
             <div
                 className="absolute top-[calc(100%+0.8cqw)] left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap pointer-events-none z-[9999]"
                 style={{
@@ -97,7 +108,8 @@ const ToolbarBtn = ({ id, icon, label, onClick, bg, color }) => (
                     borderRadius: '0.4cqw',
                     fontSize: '0.85cqw',
                     fontWeight: 600,
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)'
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
+                    fontFamily: textFont
                 }}
             >
                 {label}
@@ -240,6 +252,8 @@ const TabletLayout8 = ({
     const totalPages = pagesCount;
     const primaryColor = getLayoutColor('toolbar-bg', '#555555');
     const secondaryColor = '#FFFFFF';
+    const addTextBelowIcons = settings?.toolbar?.addTextBelowIcons ?? false;
+    const textFont = settings?.navigation?.addTextToIconsSettings?.font || settings?.addTextToIconsSettings?.font || settings?.toolbar?.textProperties?.font || 'Arial';
 
     return (
         <div className="flex flex-col w-full h-full min-h-0 overflow-hidden font-sans relative" style={{ ...backgroundStyle, backgroundColor: 'transparent', containerType: 'size' }}>
@@ -253,7 +267,7 @@ const TabletLayout8 = ({
             )}
 
             {/* Top Bar (Floating) */}
-            <div className="absolute top-[2cqh] left-[2cqw] right-[2cqw] flex items-center justify-between z-[200] pointer-events-none">
+            <div className="absolute top-[3.7cqh] left-[2cqw] right-[2cqw] flex items-center justify-between z-[200] pointer-events-none">
 
                 {/* Left: Search Bar */}
                 <div className="w-[22cqw] pointer-events-auto">
@@ -360,10 +374,10 @@ const TabletLayout8 = ({
                 </div>
 
                 {/* Center: Tools Container */}
-                <div className="absolute left-[58%] -translate-x-1/2 flex items-center gap-[1.5cqw] pointer-events-auto">
+                <div className="absolute left-[58%] -translate-x-1/2 flex items-center gap-[1.2cqw] pointer-events-auto">
                     
                     {/* Block 1: Navigation & Media */}
-                    <div className="flex items-center gap-[1.5cqw]">
+                    <div className="flex items-center gap-[1.2cqw]">
                         {(settings?.navigation?.tableOfContents ?? true) && (
                             <ToolbarBtn 
                                 id="layout8-tablet-toc-btn"
@@ -372,6 +386,9 @@ const TabletLayout8 = ({
                                 onClick={() => setShowTOCMemo(!showTOC)} 
                                 bg={showTOC ? secondaryColor : primaryColor}
                                 color={showTOC ? primaryColor : secondaryColor}
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
                         )}
                         {(settings?.navigation?.pageThumbnails ?? true) && (
@@ -382,24 +399,35 @@ const TabletLayout8 = ({
                                 onClick={() => setShowThumbnailBarMemo(!showThumbnailBar)} 
                                 bg={showThumbnailBar ? secondaryColor : primaryColor}
                                 color={showThumbnailBar ? primaryColor : secondaryColor}
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
                         )}
-                        <ToolbarBtn 
-                            icon={isAutoFlipping ? 'ph:pause-fill' : 'ph:play-fill'} 
-                            label={isAutoFlipping ? 'Pause' : 'Auto Play'}
-                            onClick={() => setIsPlaying?.(!isAutoFlipping)} 
-                            bg={primaryColor} 
-                        />
-                        {(settings?.interaction?.gallery ?? true) && (
+                        {(settings?.media?.autoFlip ?? true) && (
+                            <ToolbarBtn 
+                                icon={isAutoFlipping ? 'ph:pause-fill' : 'ph:play-fill'} 
+                                label={isAutoFlipping ? 'Pause' : 'Play'}
+                                onClick={() => setIsPlaying?.(!isAutoFlipping)} 
+                                bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
+                            />
+                        )}
+                        {(settings?.toolbar?.gallery ?? settings?.interaction?.gallery ?? true) && (
                             <ToolbarBtn 
                                 icon="clarity:image-gallery-solid" 
                                 label="Gallery"
                                 onClick={() => setShowGalleryPopupMemo(!showGalleryPopup)} 
                                 bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
                         )}
                         <div className="relative" id="layout8-sound-icon-anchor">
-                            {(settings?.media?.backgroundAudio ?? true) && (
+                            {(settings?.audio?.backgroundAudio ?? settings?.audio?.audio ?? settings?.media?.backgroundAudio ?? settings?.media?.audio ?? true) && (
                                 <ToolbarBtn 
                                     id="layout8-tablet-sound-btn"
                                     icon={isMuted ? "solar:music-notes-bold-duotone" : "solar:music-notes-bold"} 
@@ -407,22 +435,30 @@ const TabletLayout8 = ({
                                     onClick={(e) => { e.stopPropagation(); setShowSoundPopupMemo?.(!showSoundPopup); }} 
                                     bg={showSoundPopup ? secondaryColor : primaryColor}
                                     color={showSoundPopup ? primaryColor : secondaryColor}
+                                    addTextBelowIcons={addTextBelowIcons}
+                                    textFont={textFont}
+                                    textColor={primaryColor}
                                 />
                             )}
                         </div>
                     </div>
 
                     {/* Divider */}
-                    <div className="w-[1.5px] h-[2cqw] rounded-full mx-[0.5cqw]" style={{ backgroundColor: 'rgba(255,255,255,0.4)' }}></div>
+                    {(settings?.viewing?.zoom ?? settings?.toolbar?.zoom ?? true) && (
+                        <div className="w-[1.5px] h-[2cqw] rounded-full mx-[0.1cqw]" style={{ backgroundColor: 'rgba(255,255,255,0.4)' }}></div>
+                    )}
 
                     {/* Block 2: Zoom */}
-                    {(settings?.viewing?.zoom ?? true) && (
-                        <div className="flex items-center gap-[1.5cqw]">
+                    {(settings?.viewing?.zoom ?? settings?.toolbar?.zoom ?? true) && (
+                        <div className="flex items-center gap-[1.2cqw]">
                             <ToolbarBtn 
                                 icon="ph:magnifying-glass-minus-bold" 
                                 label="Zoom Out"
                                 onClick={() => setCurrentZoom?.(Math.max(0.5, (currentZoom || 1) - 0.1))} 
                                 bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
                             <span className="text-[1.4cqw] font-bold min-w-[3.5cqw] text-center whitespace-nowrap" style={{ color: secondaryColor, textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                                 {Math.round((currentZoom || 1) * 100)}%
@@ -432,24 +468,36 @@ const TabletLayout8 = ({
                                 label="Zoom In"
                                 onClick={() => setCurrentZoom?.(Math.min(3, (currentZoom || 1) + 0.1))} 
                                 bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
-                            <button
-                                onClick={() => setCurrentZoom?.(1)}
-                                className="px-[1.2cqw] py-[0.6cqh] rounded-full shadow-sm text-[1.3cqw] font-bold transition-transform hover:scale-105 active:scale-95"
-                                style={{ backgroundColor: secondaryColor, color: primaryColor }}
-                            >
-                                Reset
-                            </button>
+                            <div className="flex flex-col items-center justify-center">
+                                <button
+                                    onClick={() => setCurrentZoom?.(1)}
+                                    className="px-[1.2cqw] py-[0.6cqh] rounded-full shadow-sm text-[1.3cqw] font-bold transition-transform hover:scale-105 active:scale-95"
+                                    style={{ backgroundColor: secondaryColor, color: primaryColor }}
+                                >
+                                    Reset
+                                </button>
+                                {addTextBelowIcons && (
+                                    <span className="text-[0.8cqw] font-semibold leading-tight text-center whitespace-nowrap mt-[0.2cqw] opacity-0 pointer-events-none">
+                                        Reset
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     )}
 
                     {/* Divider */}
-                    <div className="w-[1.5px] h-[2cqw] rounded-full mx-[0.5cqw]" style={{ backgroundColor: 'rgba(255,255,255,0.4)' }}></div>
+                    {((settings?.interaction?.share ?? settings?.shareExport?.share ?? true) || (settings?.interaction?.download ?? settings?.shareExport?.download ?? true) || (settings?.interaction?.fullScreen ?? settings?.viewing?.fullScreen ?? true)) && (
+                        <div className="w-[1.5px] h-[2cqw] rounded-full mx-[0.1cqw]" style={{ backgroundColor: 'rgba(255,255,255,0.4)' }}></div>
+                    )}
 
                     {/* Block 3: Actions */}
-                    <div className="flex items-center gap-[1.5cqw]">
+                    <div className="flex items-center gap-[1.2cqw]">
 
-                        {(settings?.shareExport?.share ?? true) && (
+                        {(settings?.interaction?.share ?? settings?.shareExport?.share ?? true) && (
                             <ToolbarBtn 
                                 icon="mage:share-fill" 
                                 label="Share"
@@ -463,30 +511,46 @@ const TabletLayout8 = ({
                                     setIsShareOpen(true);
                                 }} 
                                 bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
                         )}
-                        {(settings?.shareExport?.download ?? true) && (
+                        {(settings?.interaction?.download ?? settings?.shareExport?.download ?? true) && (
                             <ToolbarBtn 
                                 icon="meteor-icons:download" 
                                 label="Download"
                                 onClick={() => setShowExportPopupMemo?.(true)} 
                                 bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
                         )}
-                        {(settings?.viewing?.fullScreen ?? true) && (
+                        {(settings?.interaction?.fullScreen ?? settings?.viewing?.fullScreen ?? true) && (
                             <ToolbarBtn 
                                 icon={isFullscreen ? "mingcute:fullscreen-exit-fill" : "lucide:fullscreen"} 
                                 label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                                 onClick={handleFullScreen} 
                                 bg={primaryColor} 
+                                addTextBelowIcons={addTextBelowIcons}
+                                textFont={textFont}
+                                textColor={primaryColor}
                             />
                         )}
                     </div>
 
                 </div>
 
-                {/* Right spacer for balance (optional, or just logo area if needed) */}
-                <div className="flex-1 pointer-events-none"></div>
+                {/* Right: Brand Logo */}
+                <div className="flex-1 flex justify-end items-center pointer-events-auto pr-[1cqw]">
+                    <BrandLogo
+                        logoSettings={logoSettings}
+                        settings={settings}
+                        isTablet={true}
+                        theme="gray"
+                    />
+                </div>
             </div>
 
             {/* Main Content Area */}
@@ -526,65 +590,96 @@ const TabletLayout8 = ({
                 <div className="flex items-center justify-center gap-[1.5cqw] pointer-events-auto shrink-0">
                     
                     {/* First Page */}
-                    <ToolbarBtn 
-                        icon="ph:skip-back-fill" 
-                        onClick={() => onPageClick(0)} 
-                        bg={primaryColor} 
-                    />
+                    {(settings?.navigation?.startEndNav ?? true) && (
+                        <ToolbarBtn 
+                            icon="ph:skip-back-fill" 
+                            label="First"
+                            onClick={() => onPageClick(0)} 
+                            bg={primaryColor} 
+                            addTextBelowIcons={addTextBelowIcons}
+                            textFont={textFont}
+                            textColor={primaryColor}
+                        />
+                    )}
                     
                     {/* Previous Page */}
-                    <ToolbarBtn 
-                        icon="ph:caret-left-fill" 
-                        onClick={() => bookRef?.current?.pageFlip()?.flipPrev()} 
-                        bg={primaryColor} 
-                    />
+                    {(settings?.navigation?.nextPrevButtons ?? true) && (
+                        <ToolbarBtn 
+                            icon="ph:caret-left-fill" 
+                            label="Prev"
+                            onClick={() => bookRef?.current?.pageFlip()?.flipPrev()} 
+                            bg={primaryColor} 
+                            addTextBelowIcons={addTextBelowIcons}
+                            textFont={textFont}
+                            textColor={primaryColor}
+                        />
+                    )}
                     
                     {/* Page Indicator Pill */}
                     {(settings?.navigation?.pageQuickAccess ?? true) && (
-                        <div 
-                            className="px-[2cqw] py-[0.8cqh] rounded-full shadow-md flex items-center justify-center min-w-[12cqw]"
-                            style={{ backgroundColor: primaryColor }}
-                        >
-                            <span className="text-[1.4cqw] font-semibold flex items-center text-white">
-                                Page - 
-                                <input 
-                                    type="text" autoComplete="off" spellCheck="false" autoCorrect="off"
-                                    value={inputPage}
-                                    onChange={(e) => setInputPage(e.target.value)}
-                                    onBlur={() => {
-                                        let p = parseInt(inputPage);
-                                        if (isNaN(p) || p < 1) p = 1;
-                                        if (p > totalPages) p = totalPages;
-                                        setInputPage(p);
-                                        if (p - 1 !== currentPage) {
-                                            onPageClick(p - 1);
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.target.blur();
-                                        }
-                                    }}
-                                    className="mx-[0.5cqw] w-[3cqw] text-center bg-transparent outline-none border-none text-white placeholder-white/70"
-                                /> 
-                                / {totalPages}
-                            </span>
+                        <div className="flex flex-col items-center justify-center">
+                            <div 
+                                className="px-[2cqw] py-[0.8cqh] rounded-full shadow-md flex items-center justify-center min-w-[12cqw]"
+                                style={{ backgroundColor: primaryColor }}
+                            >
+                                <span className="text-[1.4cqw] font-semibold flex items-center text-white">
+                                    Page - 
+                                    <input 
+                                        type="text" autoComplete="off" spellCheck="false" autoCorrect="off"
+                                        value={inputPage}
+                                        onChange={(e) => setInputPage(e.target.value)}
+                                        onBlur={() => {
+                                            let p = parseInt(inputPage);
+                                            if (isNaN(p) || p < 1) p = 1;
+                                            if (p > totalPages) p = totalPages;
+                                            setInputPage(p);
+                                            if (p - 1 !== currentPage) {
+                                                onPageClick(p - 1);
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.target.blur();
+                                            }
+                                        }}
+                                        className="mx-[0.5cqw] w-[3cqw] text-center bg-transparent outline-none border-none text-white placeholder-white/70"
+                                    /> 
+                                    / {totalPages}
+                                </span>
+                            </div>
+                            {addTextBelowIcons && (
+                                <span className="text-[0.8cqw] font-semibold leading-tight text-center whitespace-nowrap mt-[0.2cqw] opacity-0 pointer-events-none">
+                                    Page
+                                </span>
+                            )}
                         </div>
                     )}
                     
                     {/* Next Page */}
-                    <ToolbarBtn 
-                        icon="ph:caret-right-fill" 
-                        onClick={() => bookRef?.current?.pageFlip()?.flipNext()} 
-                        bg={primaryColor} 
-                    />
+                    {(settings?.navigation?.nextPrevButtons ?? true) && (
+                        <ToolbarBtn 
+                            icon="ph:caret-right-fill" 
+                            label="Next"
+                            onClick={() => bookRef?.current?.pageFlip()?.flipNext()} 
+                            bg={primaryColor} 
+                            addTextBelowIcons={addTextBelowIcons}
+                            textFont={textFont}
+                            textColor={primaryColor}
+                        />
+                    )}
                     
                     {/* Last Page */}
-                    <ToolbarBtn 
-                        icon="ph:skip-forward-fill" 
-                        onClick={() => onPageClick(pagesCount - 1)} 
-                        bg={primaryColor} 
-                    />
+                    {(settings?.navigation?.startEndNav ?? true) && (
+                        <ToolbarBtn 
+                            icon="ph:skip-forward-fill" 
+                            label="Last"
+                            onClick={() => onPageClick(pagesCount - 1)} 
+                            bg={primaryColor} 
+                            addTextBelowIcons={addTextBelowIcons}
+                            textFont={textFont}
+                            textColor={primaryColor}
+                        />
+                    )}
                     
                 </div>
 
@@ -615,7 +710,7 @@ const TabletLayout8 = ({
                         id="layout8-thumb-panel"
                         className="absolute w-[68cqw] h-[16cqw] z-[150] pointer-events-auto flex flex-col"
                         style={{
-                            top: '0.8cqh',
+                            top: '2.5cqh',
                             left: '50%',
                             transform: 'translateX(-55.0%)'
                         }}

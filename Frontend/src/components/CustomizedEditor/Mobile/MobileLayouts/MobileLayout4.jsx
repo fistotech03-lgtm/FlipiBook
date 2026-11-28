@@ -260,7 +260,15 @@ const MobileLayout4 = (props) => {
                     onClose={() => setShowSharePopup(false)}
                     bookName={props.currentBook?.flipbookName || bookName}
                     url={props.currentBook?.shareUrl || window.location.href}
-                    isPublished={props.currentBook?.status === 'Published'}
+                    isPublished={Boolean(
+                        props.currentBook?.isPublished || 
+                        props.currentBook?.published || 
+                        props.currentBook?.is_published || 
+                        props.currentBook?.status?.toLowerCase() === 'published' ||
+                        props.currentBook?.status?.toLowerCase() === 'publish' ||
+                        props.currentBook?.meta?.isPublished
+                    )}
+                    currentBook={props.currentBook}
                     isMobile={true}
                     isLandscape={isLandscape}
                 />

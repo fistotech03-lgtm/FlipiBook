@@ -266,6 +266,7 @@ const DeviceLayoutRenderer = ({
                                     isMobile={isMobile}
                                     isLandscape={isLandscape}
                                     isMobileLandscape={isMobileLandscape}
+                                    layoutColors={layoutColors}
                                 >
                                     <TurnJsBookRenderer
                                         {...bookRendererProps}
@@ -281,6 +282,9 @@ const DeviceLayoutRenderer = ({
                                     offset={isSinglePage ? 0 : offset}
                                     onPageClick={onPageClick}
                                     settings={settings}
+                                    logoSettings={logoSettings}
+                                    logoObjectFit={logoObjectFit}
+                                    logoCropStyle={logoCropStyle}
                                     showSoundPopup={showSoundPopup}
                                     setShowSoundPopupMemo={setShowSoundPopup}
                                     showProfilePopup={showProfilePopup}
@@ -310,6 +314,9 @@ const DeviceLayoutRenderer = ({
                                     offset={isSinglePage ? 0 : offset}
                                     onPageClick={onPageClick}
                                     settings={settings}
+                                    logoSettings={logoSettings}
+                                    logoObjectFit={logoObjectFit}
+                                    logoCropStyle={logoCropStyle}
                                     bookName={bookName}
                                     showTOC={showTOC}
                                     setShowTOCMemo={setShowTOC}
@@ -341,6 +348,9 @@ const DeviceLayoutRenderer = ({
                             ) : activeDevice === 'Tablet' && Number(activeLayout) === 6 ? (
                                 <TabletLayout6
                                     settings={settings}
+                                    logoSettings={logoSettings}
+                                    logoObjectFit={logoObjectFit}
+                                    logoCropStyle={logoCropStyle}
                                     bookName={bookName}
                                     searchQuery={searchQuery}
                                     setSearchQuery={setSearchQuery}
@@ -398,6 +408,9 @@ const DeviceLayoutRenderer = ({
                                     backgroundSettings={layoutBackgroundSettings}
                                     backgroundStyle={layoutBackgroundStyle}
                                     settings={settings}
+                                    logoSettings={logoSettings}
+                                    logoObjectFit={logoObjectFit}
+                                    logoCropStyle={logoCropStyle}
                                     bookName={bookName}
                                     searchQuery={searchQuery}
                                     setSearchQuery={setSearchQuery}
@@ -940,6 +953,9 @@ const DeviceLayoutRenderer = ({
                                 activeDevice === 'Tablet' ? (
                                     <TabletLayout7
                                         settings={settings}
+                                        logoSettings={logoSettings}
+                                        logoObjectFit={logoObjectFit}
+                                        logoCropStyle={logoCropStyle}
                                         bookName={bookName}
                                         searchQuery={searchQuery}
                                         setSearchQuery={setSearchQuery}

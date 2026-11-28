@@ -542,7 +542,6 @@ const Grid4Layout = ({
                         logoSettings={logoSettings}
                         settings={settings}
                         isTablet={isTablet}
-                        className="h-[2vw]"
                     />
                 </div>
 

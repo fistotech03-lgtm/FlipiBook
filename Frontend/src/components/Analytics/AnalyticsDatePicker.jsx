@@ -31,9 +31,10 @@ const AnalyticsDatePicker = forwardRef(function AnalyticsDatePicker({
   startDate = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
   endDate = new Date(),
   onChange,
-  className = ''
+  className = '',
+  defaultOpen = false
 }, ref) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const containerRef = useRef(null);
   const presetsScrollRef = useRef(null);
 

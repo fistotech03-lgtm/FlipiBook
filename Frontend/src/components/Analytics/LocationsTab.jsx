@@ -208,7 +208,7 @@ export default function LocationsTab({ timeline = [], analyticsData = {}, summar
         };
       });
     }
-    return DEFAULT_LOCATION_DATA;
+    return [];
   }, [rawCountries, rawTotalViews, avgTimeStr, activeTimeline, analyticsData?.countryDailyViews]);
 
   const maxReaders = useMemo(() => {

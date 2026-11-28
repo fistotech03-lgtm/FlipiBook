@@ -6,10 +6,14 @@ const adminBookRoutes = require('./adminBookRoutes');
 const adminForumRoutes = require('./adminForumRoutes');
 const editor3dRoutes = require('../3d_editor/routes');
 const adminRoleManagementRoutes = require('./adminRoleManagementRoutes');
+const adminAuthRoutes = require('./adminAuthRoutes');
 
 const router = express.Router();
 
-// Enforce admin privileges across all admin routes
+// Public Admin Auth Sub-module (login / logout)
+router.use('/auth', adminAuthRoutes);
+
+// Enforce admin privileges across all protected admin routes below
 router.use(verifyAdmin);
 
 // Sub-modules

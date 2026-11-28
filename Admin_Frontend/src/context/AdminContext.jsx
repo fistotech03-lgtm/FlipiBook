@@ -10,15 +10,60 @@ export const useAdmin = () => {
 };
 
 export const AdminProvider = ({ children }) => {
-  const [adminUser, setAdminUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('flipibook_admin_user');
-      if (saved) return JSON.parse(saved);
-    } catch (_) {}
-    return null;
-  });
+  const [adminUser, setAdminUser] = useState(null);
 
   const [toasts, setToasts] = useState([]);
+  const [isValidatingSession, setIsValidatingSession] = useState(true);
+
+  // Validate active session against Backend on mount
+  useEffect(() => {
+    let isMounted = true;
+
+    const verifyCurrentSession = async () => {
+      try {
+        const res = await axios.get('/api/admin/auth/me', { withCredentials: true });
+        if (res.data?.success && res.data.user) {
+          const userData = res.data.user;
+          const isSuper =
+            Boolean(userData.isSuperAdmin) ||
+            String(userData.role || '').toLowerCase().includes('super') ||
+            String(userData.designation || '').toLowerCase().includes('super') ||
+            String(userData.userId || userData.userID || '').toLowerCase().includes('admin') ||
+            String(userData.email || userData.emailId || '').toLowerCase() === 'adminflipibook2026@gmail.com' ||
+            String(userData.email || userData.emailId || '').toLowerCase() === 'admin@flipibook.com';
+
+          const verifiedAdmin = {
+            name: userData.name || (isSuper ? 'Super Administrator' : 'Staff Member'),
+            email: userData.emailId || userData.email || '',
+            userId: userData.userID || userData.userId || '',
+            designation: isSuper ? 'Super Admin' : (userData.designation || 'Staff'),
+            role: isSuper ? 'Super Admin' : (userData.role || 'Staff'),
+            roleId: userData.roleId || '',
+            permissions: userData.permissions || [],
+            avatar: userData.picture || userData.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+            initials: (userData.name || 'Admin').slice(0, 2).toUpperCase()
+          };
+
+          if (isMounted) {
+            setAdminUser(verifiedAdmin);
+            window.dispatchEvent(new Event('flipibook_permissions_updated'));
+          }
+        }
+      } catch (err) {
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          if (isMounted) {
+            setAdminUser(null);
+            try { localStorage.removeItem('flipibook_admin_user'); } catch (_) { }
+          }
+        }
+      } finally {
+        if (isMounted) setIsValidatingSession(false);
+      }
+    };
+
+    verifyCurrentSession();
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     window.__CURRENT_ADMIN__ = adminUser;
@@ -38,18 +83,13 @@ export const AdminProvider = ({ children }) => {
 
   const login = async (userIdOrEmail, password) => {
     const cleanId = String(userIdOrEmail || '').trim();
-    const cleanIdLower = cleanId.toLowerCase();
-
-    // Check for Super Admin credentials
-    const isSuperAdmin =
-      (cleanIdLower === 'admin' || cleanIdLower === 'super admin' || cleanIdLower === 'admin@flipibook.com') &&
-      password === 'Admin@123';
 
     try {
       const res = await axios.post(
-        '/api/auth/login',
+        '/api/admin/auth/login',
         {
           userId: cleanId,
+          email: cleanId,
           emailId: cleanId,
           password
         },
@@ -59,52 +99,55 @@ export const AdminProvider = ({ children }) => {
       if (res.data?.success) {
         const userData = res.data.user || {};
         const isSuper =
-          String(userData.userId || cleanId).toLowerCase() === 'admin' ||
-          String(userData.emailId || cleanId).toLowerCase() === 'admin@flipibook.com';
+          Boolean(userData.isSuperAdmin) ||
+          String(userData.role || '').toLowerCase().includes('super') ||
+          String(userData.designation || '').toLowerCase().includes('super') ||
+          String(userData.userId || userData.userID || cleanId).toLowerCase().includes('admin') ||
+          String(userData.email || userData.emailId || cleanId).toLowerCase() === 'adminflipibook2026@gmail.com' ||
+          String(userData.email || userData.emailId || cleanId).toLowerCase() === 'admin@flipibook.com';
+
+        const defaultFullPermissions = [
+          { id: 'dashboard', name: 'Dashboard', enabled: true },
+          { id: 'threed_editor_assets', name: '3D Editor Assets', enabled: true },
+          { id: 'user_management', name: 'User Management', enabled: true },
+          { id: 'template_management', name: 'Template Management', enabled: true },
+          { id: 'management_role_access', name: 'Management - Role Access', enabled: true },
+          { id: 'management_user', name: 'Management - User', enabled: true }
+        ];
+
+        const permissions = isSuper
+          ? defaultFullPermissions
+          : (Array.isArray(userData.permissions) && userData.permissions.length > 0
+            ? userData.permissions
+            : defaultFullPermissions);
 
         const newAdmin = {
           name: userData.name || (isSuper ? 'Super Administrator' : 'Staff Member'),
           email: userData.emailId || userData.email || cleanId,
           userId: userData.userID || userData.userId || cleanId,
-          designation: userData.designation || (isSuper ? 'Admin' : 'Staff'),
-          role: isSuper ? 'Super Admin' : (userData.role || userData.designation || 'Staff'),
+          designation: isSuper ? 'Super Admin' : (userData.designation || 'Staff'),
+          role: isSuper ? 'Super Admin' : (userData.role || 'Staff'),
           roleId: userData.roleId || '',
-          permissions: userData.permissions || [],
+          permissions: permissions,
           avatar: userData.picture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
           initials: (userData.name || 'Admin').slice(0, 2).toUpperCase()
         };
-        localStorage.setItem('flipibook_admin_user', JSON.stringify(newAdmin));
         setAdminUser(newAdmin);
         window.dispatchEvent(new Event('flipibook_permissions_updated'));
         return { success: true, user: newAdmin };
       }
       return { success: false, message: res.data?.message || 'Login failed' };
     } catch (err) {
-      // Direct handling for Super Admin credentials
-      if (isSuperAdmin) {
-        const superAdminUser = {
-          name: 'Super Administrator',
-          email: 'admin@flipibook.com',
-          userId: 'Admin',
-          role: 'Super Admin',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-          initials: 'SA'
-        };
-        localStorage.setItem('flipibook_admin_user', JSON.stringify(superAdminUser));
-        setAdminUser(superAdminUser);
-        return { success: true, user: superAdminUser };
-      }
-
       throw err;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('flipibook_admin_user');
+    try { localStorage.removeItem('flipibook_admin_user'); } catch (_) { }
     setAdminUser(null);
     try {
-      axios.post('/api/auth/logout', {}, { withCredentials: true }).catch(() => {});
-    } catch (_) {}
+      axios.post('/api/admin/auth/logout', {}, { withCredentials: true }).catch(() => { });
+    } catch (_) { }
   };
 
   return (
@@ -112,6 +155,7 @@ export const AdminProvider = ({ children }) => {
       value={{
         adminUser,
         setAdminUser,
+        isValidatingSession,
         login,
         logout,
         showToast
@@ -124,13 +168,12 @@ export const AdminProvider = ({ children }) => {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`pointer-events-auto px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium flex items-center gap-3 transition-all transform animate-in fade-in slide-in-from-bottom-3 duration-200 ${
-              toast.type === 'success'
-                ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-200'
-                : toast.type === 'error'
+            className={`pointer-events-auto px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium flex items-center gap-3 transition-all transform animate-in fade-in slide-in-from-bottom-3 duration-200 ${toast.type === 'success'
+              ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-200'
+              : toast.type === 'error'
                 ? 'bg-red-950/90 border-red-500/40 text-red-200'
                 : 'bg-stone-900/90 border-stone-700 text-stone-200'
-            }`}
+              }`}
           >
             <span>{toast.message}</span>
             <button

@@ -1,6 +1,5 @@
 const Flipbook = require('../../../../shared/models/Flipbook');
 const backupService = require('../../../../shared/backupService');
-const { recordAdminLog } = require('../middlewares/adminAuthMiddleware');
 
 /**
  * 1. List All Flipbooks across the platform
@@ -119,15 +118,6 @@ const moderateFlipbook = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Flipbook not found' });
     }
 
-    await recordAdminLog({
-      adminEmail: req.admin?.emailId || 'admin@flipibook.com',
-      adminName: req.admin?.name || 'Administrator',
-      action: 'MODERATE_FLIPBOOK',
-      targetType: 'flipbook',
-      targetId: id,
-      details: { updateFields, flipbookName: book.flipbookName, userEmail: book.userEmail }
-    });
-
     res.json({
       success: true,
       message: 'Flipbook moderation status updated',
@@ -157,15 +147,6 @@ const deleteFlipbook = async (req, res) => {
       req,
       user: req.admin,
       reason: 'ADMIN_DELETE'
-    });
-
-    await recordAdminLog({
-      adminEmail: req.admin?.emailId || 'admin@flipibook.com',
-      adminName: req.admin?.name || 'Administrator',
-      action: 'DELETE_FLIPBOOK',
-      targetType: 'flipbook',
-      targetId: id,
-      details: { flipbookName: book.flipbookName, userEmail: book.userEmail }
     });
 
     res.json({

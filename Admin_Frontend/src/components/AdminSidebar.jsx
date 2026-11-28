@@ -35,8 +35,11 @@ export default function AdminSidebar() {
   const canView3DAssets = permissions?.threed_editor_assets !== false;
   const canViewUsers = permissions?.user_management !== false;
   const canViewTemplates = permissions?.template_management !== false;
-  // Always keep Management accessible if user has access to it or is configuring role access
-  const canViewManagement = permissions?.management !== false;
+  // Sub-permissions for Management modules
+  const canViewRoleAccess = permissions?.management_role_access !== false;
+  const canViewManagementUsers = permissions?.management_user !== false;
+  // Show Management accordion if at least one sub-page or legacy management is permitted
+  const canViewManagement = permissions?.management !== false && (canViewRoleAccess || canViewManagementUsers);
 
   return (
     <aside className="w-[16.5vw] bg-[#161c28] h-screen flex flex-col justify-between py-[1.8vw] px-[1.1vw] select-none text-white flex-shrink-0">
@@ -179,31 +182,35 @@ export default function AdminSidebar() {
               {/* Sub-items */}
               {managementOpen && (
                 <div className="pl-[2.1vw] pr-[0.4vw] py-[0.2vw] space-y-[0.3vw] mt-[0.2vw]">
-                  <NavLink
-                    to="/management/role-access"
-                    className={({ isActive }) =>
-                      `flex items-center gap-[0.6vw] px-[0.75vw] py-[0.55vw] rounded-[0.45vw] text-[0.82vw] font-medium transition cursor-pointer ${isActive
-                        ? 'bg-[#374151]/80 text-white font-semibold'
-                        : 'text-[#9ca3af] hover:text-white hover:bg-[#1e2636]'
-                      }`
-                    }
-                  >
-                    <span className="w-[0.4vw] h-[0.4vw] rounded-full bg-gray-400"></span>
-                    <span>Role Access</span>
-                  </NavLink>
+                  {canViewRoleAccess && (
+                    <NavLink
+                      to="/management/role-access"
+                      className={({ isActive }) =>
+                        `flex items-center gap-[0.6vw] px-[0.75vw] py-[0.55vw] rounded-[0.45vw] text-[0.82vw] font-medium transition cursor-pointer ${isActive
+                          ? 'bg-[#374151]/80 text-white font-semibold'
+                          : 'text-[#9ca3af] hover:text-white hover:bg-[#1e2636]'
+                        }`
+                      }
+                    >
+                      <span className="w-[0.4vw] h-[0.4vw] rounded-full bg-gray-400"></span>
+                      <span>Role Access</span>
+                    </NavLink>
+                  )}
 
-                  <NavLink
-                    to="/management/users"
-                    className={({ isActive }) =>
-                      `flex items-center gap-[0.6vw] px-[0.75vw] py-[0.55vw] rounded-[0.45vw] text-[0.82vw] font-medium transition cursor-pointer ${isActive
-                        ? 'bg-[#374151]/80 text-white font-semibold'
-                        : 'text-[#9ca3af] hover:text-white hover:bg-[#1e2636]'
-                      }`
-                    }
-                  >
-                    <span className="w-[0.4vw] h-[0.4vw] rounded-full bg-gray-400"></span>
-                    <span>User Management</span>
-                  </NavLink>
+                  {canViewManagementUsers && (
+                    <NavLink
+                      to="/management/users"
+                      className={({ isActive }) =>
+                        `flex items-center gap-[0.6vw] px-[0.75vw] py-[0.55vw] rounded-[0.45vw] text-[0.82vw] font-medium transition cursor-pointer ${isActive
+                          ? 'bg-[#374151]/80 text-white font-semibold'
+                          : 'text-[#9ca3af] hover:text-white hover:bg-[#1e2636]'
+                        }`
+                      }
+                    >
+                      <span className="w-[0.4vw] h-[0.4vw] rounded-full bg-gray-400"></span>
+                      <span>User Management</span>
+                    </NavLink>
+                  )}
                 </div>
               )}
             </div>

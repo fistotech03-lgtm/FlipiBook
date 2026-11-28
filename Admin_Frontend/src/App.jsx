@@ -14,8 +14,16 @@ import ThreeDAssetsPage from './pages/ThreeDAssetsPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 
 function ProtectedLayout() {
-  const { adminUser } = useAdmin();
+  const { adminUser, isValidatingSession } = useAdmin();
   const location = useLocation();
+
+  if (isValidatingSession) {
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!adminUser) {
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -46,7 +54,15 @@ function ProtectedLayout() {
 }
 
 export default function App() {
-  const { adminUser } = useAdmin();
+  const { adminUser, isValidatingSession } = useAdmin();
+
+  if (isValidatingSession) {
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <Routes>

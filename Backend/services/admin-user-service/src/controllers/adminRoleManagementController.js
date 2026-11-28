@@ -150,6 +150,7 @@ const updateRolePermissions = async (req, res) => {
 
       if (adminUser) {
         adminUser.Access = accessList;
+        adminUser.markModified('Access');
         await adminUser.save();
         return res.status(200).json({ success: true, user: adminUser });
       }
@@ -162,6 +163,7 @@ const updateRolePermissions = async (req, res) => {
     if (userMatch) {
       // Update individual user's Access in AdminUser
       userMatch.Access = accessList;
+      userMatch.markModified('Access');
       await userMatch.save();
 
       return res.status(200).json({ success: true, user: userMatch });
@@ -180,10 +182,17 @@ const updateRolePermissions = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Sync all members under this designation
+    // Sync all members under this designation (match by role name, designation string, or roleId)
     if (updatedRole) {
+      const roleIdStr = updatedRole._id ? updatedRole._id.toString() : '';
       await AdminUser.updateMany(
-        { designation: cleanTarget },
+        {
+          $or: [
+            { designation: cleanTarget },
+            { designation: new RegExp(`^${cleanTarget}$`, 'i') },
+            ...(roleIdStr ? [{ designation: roleIdStr }] : [])
+          ]
+        },
         { $set: { Access: accessList } }
       ).catch(() => { });
     }
@@ -203,9 +212,9 @@ const getAdminUsers = async (req, res) => {
 
     // Auto-normalize existing documents:
     // 1. Move lowercase userid -> userId, e_mailid -> email
-    // 2. Remove legacy duplicate fields ($unset userid and e_mailid)
+    // 2. Remove legacy duplicate fields ($unset userid, e_mailid, isDeleted)
     try {
-      const allUsers = await AdminUser.find({ isDeleted: { $ne: true } });
+      const allUsers = await AdminUser.find({});
       for (const u of allUsers) {
         const uid = u.userId || u.userid;
         const uEmail = u.email || u.e_mailid;
@@ -214,18 +223,17 @@ const getAdminUsers = async (req, res) => {
         if (uid) updateFields.userId = uid;
         if (uEmail) updateFields.email = uEmail;
 
-        if (Object.keys(updateFields).length > 0) {
-          await AdminUser.collection.updateOne(
-            { _id: u._id },
-            {
-              $set: updateFields,
-              $unset: {
-                userid: "",
-                e_mailid: ""
-              }
+        await AdminUser.collection.updateOne(
+          { _id: u._id },
+          {
+            ...(Object.keys(updateFields).length > 0 ? { $set: updateFields } : {}),
+            $unset: {
+              userid: "",
+              e_mailid: "",
+              isDeleted: ""
             }
-          );
-        }
+          }
+        );
       }
     } catch (normErr) {
       console.warn('[getAdminUsers normalize error]:', normErr.message);
@@ -233,7 +241,7 @@ const getAdminUsers = async (req, res) => {
 
     let users = [];
     try {
-      users = await AdminUser.find({ isDeleted: { $ne: true } }).sort({ createdAt: 1 }).lean();
+      users = await AdminUser.find({}).sort({ createdAt: 1 }).lean();
     } catch (dbErr) {
       console.error('[getAdminUsers DB query error]:', dbErr.message);
     }
@@ -242,7 +250,7 @@ const getAdminUsers = async (req, res) => {
     let allRoles = [];
     try {
       allRoles = await AdminRole.find().lean();
-    } catch (_) {}
+    } catch (_) { }
     const roleMap = new Map();
     allRoles.forEach((r) => {
       if (r._id) roleMap.set(r._id.toString(), r.Role || r.roleName || '');
@@ -290,7 +298,8 @@ const createAdminUser = async (req, res) => {
       { "3D Editor Assets": 0 },
       { "User Management": 0 },
       { "Template Management": 0 },
-      { "Management": 0 }
+      { "Management - Role Access": 0 },
+      { "Management - User": 0 }
     ];
 
     const effectiveAccess = Array.isArray(Access) && Access.length > 0
@@ -321,7 +330,7 @@ const updateAdminUser = async (req, res) => {
     const { id } = req.params;
     const { name, email, e_mailid, designation, password, status, Access, permissions } = req.body;
 
-    const user = await AdminUser.findOne(buildAdminUserQuery(id, { isDeleted: false }));
+    const user = await AdminUser.findOne(buildAdminUserQuery(id));
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -385,11 +394,8 @@ const updateAdminUserPassword = async (req, res) => {
 const deleteAdminUser = async (req, res) => {
   try {
     const { id } = req.params;
-    await AdminUser.findOneAndUpdate(
-      buildAdminUserQuery(id),
-      { $set: { isDeleted: true } }
-    );
-    return res.status(200).json({ success: true, message: 'User marked as deleted' });
+    await AdminUser.findOneAndDelete(buildAdminUserQuery(id));
+    return res.status(200).json({ success: true, message: 'User deleted successfully' });
   } catch (err) {
     console.error('[deleteAdminUser error]:', err);
     return res.status(500).json({ success: false, message: err.message });

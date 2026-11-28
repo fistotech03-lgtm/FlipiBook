@@ -208,6 +208,12 @@ export const delete3DMaterial = async (id) => {
   return res.data;
 };
 
+// ── Admin Current Session / Profile ──────────────────────────────────────────
+export const getAdminProfile = async () => {
+  const res = await api.get('/api/auth/verify');
+  return res.data;
+};
+
 // ── Admin Roles & Management Staff (Stored in MongoDB) ────────────────────
 export const getAdminRoles = async () => {
   const res = await api.get('/api/admin/roles');

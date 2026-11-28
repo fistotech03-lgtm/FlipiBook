@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
+import { getStoredRoles, getStoredUsers } from '../services/adminStorage';
 
 export default function ProfileModal({ isOpen, onClose, user }) {
   const navigate = useNavigate();
@@ -30,126 +31,140 @@ export default function ProfileModal({ isOpen, onClose, user }) {
     }
   };
 
+  const storedUsers = getStoredUsers();
+  const storedRoles = getStoredRoles();
+
+  // Find freshest user data matching logged-in user
+  const currentUserId = user?.userId || user?.id || user?.userID;
+  const matchedUser = storedUsers.find(
+    (u) =>
+      (currentUserId && String(u.userId).toLowerCase() === String(currentUserId).toLowerCase()) ||
+      (user?.email && String(u.email).toLowerCase() === String(user.email).toLowerCase())
+  );
+
+  const effectiveUser = matchedUser || user;
+
   const avatarUrl =
+    effectiveUser?.avatar ||
     user?.avatar ||
     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80';
-  const name = user?.name || 'Super Administrator';
-  const designation = user?.designation || user?.role || 'Super Admin';
-  const userId = user?.userId || user?.id || 'ADM-89024';
-  const email = user?.email || 'admin@flipibook.com';
+
+  const name = effectiveUser?.name || user?.name || 'Super Administrator';
+
+  // Resolve designation: resolve MongoDB ObjectId to real role name or fallback to Super Admin
+  const rawRole = String(effectiveUser?.designation || effectiveUser?.role || user?.role || user?.designation || '').trim();
+  let resolvedDesignation = rawRole;
+  if (/^[0-9a-fA-F]{24}$/.test(rawRole)) {
+    const foundRole = storedRoles.find((r) => String(r.id) === rawRole || String(r._id) === rawRole);
+    resolvedDesignation = foundRole ? (foundRole.name || foundRole.Role || foundRole.designation) : 'Super Admin';
+  }
+  if (!resolvedDesignation || resolvedDesignation.toLowerCase() === 'admin') {
+    resolvedDesignation = 'Super Admin';
+  }
+
+  const userId = effectiveUser?.userId || user?.userId || (user?.id && !/^[0-9a-fA-F]{24}$/.test(user.id) ? user.id : 'FLIP_ADMIN01');
+  const email = effectiveUser?.email || user?.email || 'admin@flipibook.com';
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[26vw] bg-white rounded-[1.2vw] shadow-2xl border border-gray-100 overflow-hidden transform transition-all animate-in zoom-in-95 duration-200 select-none"
+        className="w-full max-w-[370px] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-in zoom-in-95 duration-200 select-none relative p-7 sm:p-8"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Top Decorative Banner */}
-        <div className="relative h-[6.5vw] bg-linear-to-r from-[#1e293b] via-[#334155] to-[#1e293b] p-[1.2vw] flex items-start justify-between">
-          <span className="text-white/80 text-[0.72vw] font-bold tracking-wider uppercase">
-            Admin Profile Overview
-          </span>
-          {/* Top-Right Close Button */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex items-center gap-[0.3vw] px-[0.65vw] py-[0.3vw] rounded-full bg-white/10 hover:bg-white/20 text-white text-[0.72vw] font-semibold cursor-pointer transition"
-            title="Close"
+        {/* Top-Right Close Button */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 w-7 h-7 rounded-full bg-slate-100 hover:bg-red-50 text-slate-400 hover:text-[#EC5137] flex items-center justify-center cursor-pointer transition"
+          title="Close"
+        >
+          <svg
+            className="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            <span className="text-[0.75vw]">✕</span>
-            <span>Close</span>
-          </button>
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        {/* Profile Header Section */}
+        <div className="flex flex-col items-center mt-1">
+          <div className="relative">
+            <img
+              src={avatarUrl}
+              alt={name}
+              className="w-20 h-20 rounded-full object-cover border-[3px] border-white shadow-lg ring-2 ring-slate-100"
+            />
+            <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-xs"></span>
+          </div>
+
+          {/* Name */}
+          <h2 className="text-xl font-semibold text-neutral-900 mt-3.5 leading-tight">
+            {name}
+          </h2>
+
+          {/* Designation badge */}
+          {resolvedDesignation && (
+            <div className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-[#EC5137]/10 text-[#EC5137] border border-[#EC5137]/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#EC5137]"></span>
+              <span>{resolvedDesignation}</span>
+            </div>
+          )}
         </div>
 
-        {/* Profile Card Body */}
-        <div className="px-[1.8vw] pb-[1.8vw] pt-0 relative">
-          {/* Centered Avatar floating over banner */}
-          <div className="flex flex-col items-center -mt-[3.2vw]">
-            <div className="relative">
-              <img
-                src={avatarUrl}
-                alt={name}
-                className="w-[6vw] h-[6vw] rounded-full object-cover border-[0.25vw] border-white shadow-xl ring-2 ring-gray-100"
-              />
-              <span className="absolute bottom-[0.3vw] right-[0.3vw] w-[1vw] h-[1vw] bg-emerald-500 border-2 border-white rounded-full shadow-xs"></span>
-            </div>
-
-            {/* Name & Designation */}
-            <h2 className="text-[1.25vw] font-bold text-[#111827] mt-[0.8vw] leading-tight">
-              {name}
-            </h2>
-            <div className="mt-[0.3vw] inline-flex items-center gap-[0.4vw] px-[0.85vw] py-[0.2vw] rounded-full text-[0.75vw] font-bold bg-blue-50 text-blue-600 border border-blue-200/80">
-              <span className="w-[0.4vw] h-[0.4vw] rounded-full bg-blue-600"></span>
-              <span>{designation}</span>
+        {/* Details Section */}
+        <div className="mt-6 space-y-3.5 text-left">
+          {/* User ID Field */}
+          <div>
+            <label className="block text-xs font-semibold text-neutral-600 mb-1">
+              User ID <span className="text-[#EC5137]">*</span>
+            </label>
+            <div className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50/90 border border-slate-200 text-sm font-semibold text-neutral-800 font-mono tracking-wider">
+              {userId}
             </div>
           </div>
 
-          {/* Details Section */}
-          <div className="mt-[1.5vw] space-y-[0.8vw]">
-            {/* User ID */}
-            <div className="flex items-center justify-between p-[0.9vw] rounded-[0.7vw] bg-[#f8fafc] border border-gray-100 hover:border-gray-200 transition">
-              <div className="flex items-center gap-[0.7vw]">
-                <div className="w-[2vw] h-[2vw] rounded-[0.45vw] bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <svg className="w-[1vw] h-[1vw]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="16" rx="3"></rect>
-                    <line x1="7" y1="8" x2="17" y2="8"></line>
-                    <line x1="7" y1="12" x2="13" y2="12"></line>
-                  </svg>
-                </div>
-                <span className="text-[0.78vw] font-semibold text-gray-500">
-                  User ID
-                </span>
-              </div>
-              <span className="text-[0.85vw] font-bold text-[#1e293b] font-mono tracking-wide">
-                {userId}
-              </span>
-            </div>
-
-            {/* Email / Mail-Id */}
-            <div className="flex items-center justify-between p-[0.9vw] rounded-[0.7vw] bg-[#f8fafc] border border-gray-100 hover:border-gray-200 transition">
-              <div className="flex items-center gap-[0.7vw]">
-                <div className="w-[2vw] h-[2vw] rounded-[0.45vw] bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <svg className="w-[1vw] h-[1vw]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                    <polyline points="22,6 12,13 2,6"></polyline>
-                  </svg>
-                </div>
-                <span className="text-[0.78vw] font-semibold text-gray-500">
-                  Mail ID
-                </span>
-              </div>
-              <span className="text-[0.82vw] font-semibold text-[#1e293b] truncate max-w-[13vw]">
-                {email}
-              </span>
+          {/* Email / Mail ID Field */}
+          <div>
+            <label className="block text-xs font-semibold text-neutral-600 mb-1">
+              Mail ID <span className="text-[#EC5137]">*</span>
+            </label>
+            <div className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50/90 border border-slate-200 text-sm font-semibold text-neutral-800 truncate">
+              {email}
             </div>
           </div>
+        </div>
 
-          {/* Modal Bottom Log-out Button */}
-          <div className="mt-[1.6vw]">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="w-full py-[0.7vw] rounded-[0.6vw] bg-red-600 hover:bg-red-700 text-white text-[0.82vw] font-bold transition duration-150 cursor-pointer shadow-xs flex items-center justify-center gap-[0.5vw]"
+        {/* Modal Bottom Log-out Button */}
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full py-2.5 px-4 rounded-xl bg-[#EC5137] hover:bg-[#d9442b] active:bg-[#c63a23] text-white text-sm font-semibold transition duration-150 cursor-pointer shadow-md shadow-[#EC5137]/25 flex items-center justify-center gap-2"
+          >
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <svg
-                className="w-[1vw] h-[1vw]"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-              <span>Log-out</span>
-            </button>
-          </div>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>Log-out</span>
+          </button>
         </div>
       </div>
     </div>

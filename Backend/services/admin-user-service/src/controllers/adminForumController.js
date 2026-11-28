@@ -1,5 +1,4 @@
 const ForumPost = require('../../../../shared/models/ForumPost');
-const { recordAdminLog } = require('../middlewares/adminAuthMiddleware');
 const crypto = require('crypto');
 const nanoid = (n = 8) => crypto.randomBytes(Math.ceil(n / 2)).toString('hex').slice(0, n);
 
@@ -121,15 +120,6 @@ const replyToDiscussion = async (req, res) => {
     post.status = status;
     await post.save();
 
-    await recordAdminLog({
-      adminEmail: adminAuthor.email,
-      adminName: adminAuthor.name,
-      action: 'ADMIN_FORUM_REPLY',
-      targetType: 'forum_post',
-      targetId: id,
-      details: { postTitle: post.title, updatedStatus: status }
-    });
-
     res.json({
       success: true,
       message: 'Official response submitted and status updated',
@@ -175,15 +165,6 @@ const updateDiscussionStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Discussion post not found' });
     }
 
-    await recordAdminLog({
-      adminEmail: req.admin?.emailId || 'admin@flipibook.com',
-      adminName: req.admin?.name || 'Administrator',
-      action: 'UPDATE_FORUM_STATUS',
-      targetType: 'forum_post',
-      targetId: id,
-      details: { newStatus: status, title: post.title }
-    });
-
     res.json({ success: true, message: 'Discussion status updated', post });
   } catch (error) {
     console.error('[AdminForumController - updateDiscussionStatus] Error:', error);
@@ -214,15 +195,6 @@ const toggleDiscussionFlags = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Discussion post not found' });
     }
 
-    await recordAdminLog({
-      adminEmail: req.admin?.emailId || 'admin@flipibook.com',
-      adminName: req.admin?.name || 'Administrator',
-      action: 'TOGGLE_FORUM_FLAGS',
-      targetType: 'forum_post',
-      targetId: id,
-      details: updateFields
-    });
-
     res.json({ success: true, message: 'Discussion flags updated', post });
   } catch (error) {
     console.error('[AdminForumController - toggleDiscussionFlags] Error:', error);
@@ -242,15 +214,6 @@ const deleteDiscussion = async (req, res) => {
     if (!post) {
       return res.status(404).json({ success: false, message: 'Discussion post not found' });
     }
-
-    await recordAdminLog({
-      adminEmail: req.admin?.emailId || 'admin@flipibook.com',
-      adminName: req.admin?.name || 'Administrator',
-      action: 'DELETE_FORUM_DISCUSSION',
-      targetType: 'forum_post',
-      targetId: id,
-      details: { title: post.title, moduleId: post.moduleId }
-    });
 
     res.json({ success: true, message: 'Discussion post deleted successfully', id });
   } catch (error) {

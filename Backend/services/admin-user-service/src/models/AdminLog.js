@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const adminLogSchema = new mongoose.Schema(
   {
+    sessionId: {
+      type: String,
+      default: '',
+      index: true
+    },
     userId: {
       type: String, // e.g. FLIPI0001 or Admin ID
       default: '',
@@ -71,11 +76,6 @@ const adminLogSchema = new mongoose.Schema(
       enum: ['SUCCESSFUL_LOGIN', 'FAILED_LOGIN', 'LOGOUT', 'NEW_DEVICE_LOGIN'],
       default: 'SUCCESSFUL_LOGIN',
       index: true
-    },
-    loginMethod: {
-      type: String,
-      enum: ['EMAIL_PASSWORD', 'GOOGLE', 'TOKEN_AUTH', 'OTP', 'OTHER'],
-      default: 'EMAIL_PASSWORD'
     }
   },
   {

@@ -3,7 +3,6 @@ const User = require('../../../../shared/models/User');
 const Profile = require('../../../../shared/models/Profile');
 const Flipbook = require('../../../../shared/models/Flipbook');
 const backupService = require('../../../../shared/backupService');
-const { recordAdminLog } = require('../middlewares/adminAuthMiddleware');
 
 /**
  * 1. List All Users (with Search, Filtering, Pagination)
@@ -227,15 +226,6 @@ const updateUserRole = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    await recordAdminLog({
-      adminEmail: req.admin?.emailId || 'admin@flipibook.com',
-      adminName: req.admin?.name || 'Administrator',
-      action: 'UPDATE_USER_ROLE',
-      targetType: 'user',
-      targetId: id,
-      details: { updatedRole: role, userEmail: user.emailId }
-    });
-
     res.json({
       success: true,
       message: `User role successfully updated to ${role}`,
@@ -276,15 +266,6 @@ const updateUserStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    await recordAdminLog({
-      adminEmail: req.admin?.emailId || 'admin@flipibook.com',
-      adminName: req.admin?.name || 'Administrator',
-      action: 'UPDATE_USER_STATUS',
-      targetType: 'user',
-      targetId: id,
-      details: { status, reason, userEmail: user.emailId }
-    });
-
     res.json({
       success: true,
       message: `User status set to ${status}`,
@@ -314,15 +295,6 @@ const deleteUser = async (req, res) => {
       req,
       user: req.admin,
       reason: 'ADMIN_DELETE'
-    });
-
-    await recordAdminLog({
-      adminEmail: req.admin?.emailId || 'admin@flipibook.com',
-      adminName: req.admin?.name || 'Administrator',
-      action: 'DELETE_USER',
-      targetType: 'user',
-      targetId: id,
-      details: { deletedEmail: user.emailId, name: user.name }
     });
 
     res.json({

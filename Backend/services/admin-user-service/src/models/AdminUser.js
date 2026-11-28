@@ -49,12 +49,9 @@ const adminUserSchema = new mongoose.Schema(
         { "3D Editor Assets": 0 },
         { "User Management": 0 },
         { "Template Management": 0 },
-        { "Management": 0 }
+        { "Management - Role Access": 0 },
+        { "Management - User": 0 }
       ]
-    },
-    isDeleted: {
-      type: Boolean,
-      default: false
     }
   },
   {

@@ -60,6 +60,14 @@ export default function ManagementUserPage() {
   const [inlinePasswordVal, setInlinePasswordVal] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [isDesignationOpen, setIsDesignationOpen] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
+
+  const togglePasswordVisibility = (userId) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
+  };
 
   const handleSaveInlinePassword = async (userId) => {
     if (!inlinePasswordVal.trim()) {
@@ -253,7 +261,7 @@ export default function ManagementUserPage() {
     setNewUser({
       name: userToEdit.name || '',
       email: userToEdit.email || '',
-      password: '',
+      password: userToEdit.password || '',
       roleId: isSuperAdmin ? 'Admin' : (userToEdit.roleId || userToEdit.designation || ''),
       designation: userToEdit.designation || '',
       createdDate: userToEdit.createdDate || '',
@@ -515,7 +523,27 @@ export default function ManagementUserPage() {
 
                   {/* Password Column */}
                   <td className="py-[0.55vw] px-[1vw] text-[#4b5563] whitespace-nowrap font-mono text-[0.75vw]">
-                    {u.password || ''}
+                    <div className="flex items-center gap-[0.5vw]">
+                      <span>
+                        {visiblePasswords[u.userId]
+                          ? (u.password || '')
+                          : (u.password ? '•'.repeat(Math.min(Math.max(u.password.length, 8), 12)) : '')}
+                      </span>
+                      {u.password && (
+                        <button
+                          type="button"
+                          onClick={() => togglePasswordVisibility(u.userId)}
+                          className="text-gray-400 hover:text-gray-600 transition cursor-pointer p-[0.15vw] rounded hover:bg-gray-100"
+                          title={visiblePasswords[u.userId] ? 'Hide password' : 'Show password'}
+                        >
+                          {visiblePasswords[u.userId] ? (
+                            <EyeOff className="w-[0.85vw] h-[0.85vw]" />
+                          ) : (
+                            <Eye className="w-[0.85vw] h-[0.85vw]" />
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </td>
 
                   {/* Created Date */}
@@ -602,9 +630,6 @@ export default function ManagementUserPage() {
                   {editingUser ? 'Update administrative credentials and assigned role' : 'Create administrative credentials and assign roles'}
                 </p>
               </div>
-              <span className="text-[0.72vw] font-mono font-semibold px-[0.7vw] py-[0.25vw] rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
-                {editingUser ? editingUser.userId : nextUserId}
-              </span>
             </div>
 
             {/* Modal Form */}
@@ -641,7 +666,7 @@ export default function ManagementUserPage() {
               {/* 3. Password */}
               <div className="space-y-[0.35vw]">
                 <label className="block text-[#334155] font-semibold text-[0.8vw]">
-                  Password {editingUser ? <span className="text-gray-400 font-normal">(Leave blank to keep current)</span> : <span className="text-red-500">*</span>}
+                  Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -651,7 +676,7 @@ export default function ManagementUserPage() {
                       setNewUser({ ...newUser, password: e.target.value });
                       if (passwordError) setPasswordError('');
                     }}
-                    placeholder={editingUser ? 'Enter new password' : 'Enter password (8-16 characters)'}
+                    placeholder={editingUser ? 'Enter password' : 'Enter password (8-16 characters)'}
                     className={`w-full bg-[#f8fafc] border ${passwordError ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-500'} text-[#1e293b] text-[0.82vw] rounded-[0.55vw] pl-[1vw] pr-[2.5vw] py-[0.55vw] focus:outline-none focus:ring-1 focus:bg-white transition`}
                   />
                   <button

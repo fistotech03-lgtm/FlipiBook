@@ -1,7 +1,7 @@
 const User = require('../../../../shared/models/User');
 const AdminUser = require('../models/AdminUser');
-const AdminLog = require('../models/AdminLog');
 const { verifyToken } = require('../utils/jwtHelper');
+const { verifyAdminSessionToken } = require('../utils/adminSessionHelper');
 
 /**
  * Middleware: Verify Admin Access
@@ -15,7 +15,11 @@ const verifyAdmin = async (req, res, next) => {
         ? req.headers.authorization.split(' ')[1]
         : null);
 
-    let decoded = verifyToken(token);
+    // Check for HS256 admin session token in HttpOnly cookies
+    const adminSessionToken = req.cookies?.adminSessionToken;
+    const adminSessionDecoded = verifyAdminSessionToken(adminSessionToken);
+
+    let decoded = verifyToken(token) || adminSessionDecoded;
     let email = decoded?.emailId || decoded?.email;
 
     // Header fallback (from API gateway or admin-frontend)
@@ -23,14 +27,7 @@ const verifyAdmin = async (req, res, next) => {
       email = req.headers['x-user-email'] || req.headers['x-admin-email'] || req.query?.adminEmail;
     }
 
-    const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
-
     if (!email) {
-      // In local development without credentials, grant default local admin access
-      if (isDev) {
-        req.admin = { emailId: 'admin@flipibook.com', role: 'admin', name: 'Dev Admin' };
-        return next();
-      }
       return res.status(401).json({
         success: false,
         message: 'Authentication required: Admin credentials missing.'
@@ -43,16 +40,10 @@ const verifyAdmin = async (req, res, next) => {
     });
 
     const adminStaff = await AdminUser.findOne({
-      $or: [{ email: cleanEmail }, { userId: decoded?.userId || email }],
-      isDeleted: { $ne: true }
+      $or: [{ email: cleanEmail }, { userId: decoded?.userId || email }]
     });
 
     if (!user && !adminStaff) {
-      // If user doesn't exist yet but is running in development mode
-      if (isDev) {
-        req.admin = { emailId: cleanEmail, role: 'admin', name: 'Dev Admin' };
-        return next();
-      }
       return res.status(403).json({
         success: false,
         message: 'Access denied: Admin user not found.'
@@ -60,17 +51,6 @@ const verifyAdmin = async (req, res, next) => {
     }
 
     if (user && user.role !== 'admin' && user.role !== 'moderator' && user.role !== 'staff' && !user.isAdmin && !adminStaff) {
-      if (isDev) {
-        // In local development, attach dev admin context to req without altering User document
-        req.admin = {
-          id: user._id,
-          userID: user.userID,
-          emailId: user.emailId || cleanEmail,
-          name: user.name || 'Administrator',
-          role: 'admin'
-        };
-        return next();
-      }
       return res.status(403).json({
         success: false,
         message: 'Access denied: Administrator privileges required.'
@@ -82,7 +62,8 @@ const verifyAdmin = async (req, res, next) => {
       userID: user?.userID || adminStaff?.userId,
       emailId: user?.emailId || adminStaff?.email || cleanEmail,
       name: user?.name || adminStaff?.name || 'Administrator',
-      role: adminStaff?.designation || user?.role || 'admin'
+      role: adminStaff?.designation || user?.role || 'admin',
+      sessionId: adminSessionDecoded?.sessionId || decoded?.sessionId || ''
     };
 
     next();
@@ -92,34 +73,6 @@ const verifyAdmin = async (req, res, next) => {
   }
 };
 
-/**
- * Helper to record administrative audit logs
- */
-const recordAdminLog = async ({
-  adminEmail,
-  adminName = 'Admin',
-  action,
-  targetType,
-  targetId = '',
-  details = {},
-  ipAddress = ''
-}) => {
-  try {
-    await AdminLog.create({
-      adminEmail: (adminEmail || 'admin@flipibook.com').toLowerCase(),
-      adminName,
-      action,
-      targetType,
-      targetId: String(targetId),
-      details,
-      ipAddress
-    });
-  } catch (err) {
-    console.error('[recordAdminLog Error]:', err.message);
-  }
-};
-
 module.exports = {
-  verifyAdmin,
-  recordAdminLog
+  verifyAdmin
 };

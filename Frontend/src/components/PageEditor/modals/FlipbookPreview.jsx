@@ -42,7 +42,7 @@ const AttachedCurve = ({ position }) => {
   );
 };
 
-import Interaction3DPreview from '../Interaction/Interaction3DPreview';
+import Interaction3DPreview from '../Interaction/3d/Interaction3DPreview';
 
 const parseInitialSettings = (inputSettings, v_id, isPublishedPreview) => {
   let cachedLogo = null;

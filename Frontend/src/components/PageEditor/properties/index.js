@@ -16,7 +16,7 @@ export { default as ElementTableProperties } from '../LeftActionMenu/Elements/pr
 export { default as ElementQRCodeProperties } from '../LeftActionMenu/Elements/properties/ElementQRCodeProperties';
 export { default as ImageProperties, default as ImageEditor } from './ImageProperties';
 export { default as GifProperties, default as GifEditor } from './GifProperties';
-export { default as Model3DEditor, CustomQRCode } from '../Interaction/Model3DEditor';
+export { default as Model3DEditor, CustomQRCode } from '../Interaction/3d/Model3DEditor';
 export { default as PenToolProperties } from './PenToolProperties';
 export { default as GroupProperties } from './GroupProperties';
 export {

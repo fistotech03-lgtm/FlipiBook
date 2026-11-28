@@ -142,8 +142,9 @@ const ThreeDGalleryModal = ({
         bottomText: galleryModelName,
       });
       if (updateElementAttribute) {
+        const interactionType = currentItem?._interactionType || (currentItem?.["data-interaction"] === "ar-view" ? "ar-view" : "3d-viewer");
         updateElementAttribute(targetIdx, currentItem.id, {
-          "data-interaction": "3d-viewer",
+          "data-interaction": interactionType,
           "data-interaction-value": storedVal,
           "data-interaction-config": defaultConfig,
         });

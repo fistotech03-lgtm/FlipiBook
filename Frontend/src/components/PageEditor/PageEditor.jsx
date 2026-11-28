@@ -25,7 +25,7 @@ const FlipbookPreview = React.lazy(() => import("./modals/FlipbookPreview"));
 import AlertModal from "../AlertModal";
 import PdfProcessingLoader from "../PdfProcessingLoader";
 import PopupTemplateSelection from "./Interaction/PopupTemplateSelection";
-import Model3DPreviewModal from "./Interaction/Interaction3DPreview";
+import Interaction3DSettingsModal from "./Interaction/3d/Interaction3DSettingsModal";
 import PasswordProtectModal from "./modals/PasswordProtectModal";
 import pageCacheManager from "./utils/PageCacheManager";
 import { useToast } from "../CustomToast";
@@ -643,6 +643,10 @@ const PageEditor = () => {
     setShadowStrength,
     shadowSoftness,
     setShadowSoftness,
+    lightIntensity,
+    setLightIntensity,
+    addShadow,
+    setAddShadow,
     autoRotate,
     setAutoRotate,
     autoRotateSpeed,
@@ -651,6 +655,34 @@ const PageEditor = () => {
     setLockMaxZoom,
     maxZoom,
     setMaxZoom,
+    limitHorizontalRotation,
+    setLimitHorizontalRotation,
+    leftRotationLimit,
+    setLeftRotationLimit,
+    rightRotationLimit,
+    setRightRotationLimit,
+    limitVerticalRotation,
+    setLimitVerticalRotation,
+    upperViewLimit,
+    setUpperViewLimit,
+    lowerViewLimit,
+    setLowerViewLimit,
+    limitZoom,
+    setLimitZoom,
+    limitZoomIn,
+    setLimitZoomIn,
+    limitZoomOut,
+    setLimitZoomOut,
+    enablePan,
+    setEnablePan,
+    initialRotation,
+    setInitialRotation,
+    modelScale,
+    setModelScale,
+    arHorizontalSurface,
+    setArHorizontalSurface,
+    arVerticalSurface,
+    setArVerticalSurface,
     bgType,
     setBgType,
     bgColor,
@@ -2234,50 +2266,98 @@ const PageEditor = () => {
             )}
         </div>
 
-        {/* Dark Overlay for 3D Preview Modal */}
-        {is3DModalOpen && (
-          <div className="absolute top-0 left-0 bottom-0 right-[24vw] z-[90] bg-black/60 pointer-events-none transition-all duration-300"></div>
-        )}
-
-        {/* 3D Preview Modal */}
-        {is3DModalOpen && (
-          <div className="absolute top-0 left-0 bottom-0 right-[24vw] z-[100] flex p-[2vw]">
-            <Model3DPreviewModal
-              isOpen={is3DModalOpen}
-              dataUrl={preview3DDataUrl}
-              shadowStrength={shadowStrength}
-              shadowSoftness={shadowSoftness}
-              autoRotate={autoRotate}
-              autoRotateSpeed={autoRotateSpeed}
-              lockMaxZoom={lockMaxZoom}
-              maxZoom={maxZoom}
-              bgType={bgType}
-              bgColor={bgColor}
-              customBg={customBg}
-              enableAR={enableAR}
-              setBgColor={setBgColor}
-              qrText={qrText}
-              qrColor={qrColor}
-              qrBgType={qrBgType}
-              qrBgColor={qrBgColor}
-              qrLevel={qrLevel}
-              qrDotType={qrDotType}
-              qrCornerSquareType={qrCornerSquareType}
-              qrCornerDotType={qrCornerDotType}
-              qrLogo={qrLogo}
-              topText={topText}
-              bottomText={bottomText}
-              vId={current3DVId}
-              hotspots={current3DHotspots}
-              activeHotspotId={active3DHotspotId}
-              onHotspotClick={(hs) =>
-                setActive3DHotspotId((prev) =>
-                  prev === hs?.id ? null : hs?.id || null,
-                )
-              }
-            />
-          </div>
-        )}
+        {/* Unified 3D Settings & Preview Modal */}
+        <Interaction3DSettingsModal
+          isOpen={is3DModalOpen}
+          onClose={() => setIs3DModalOpen(false)}
+          isARInteraction={
+            (current3DItem?.getAttribute?.("data-interaction") ||
+              current3DItem?.["data-interaction"]) === "ar-view"
+          }
+          dataUrl={preview3DDataUrl}
+          vId={current3DVId}
+          hotspots={current3DHotspots}
+          activeHotspotId={active3DHotspotId}
+          onHotspotClick={(hs) =>
+            setActive3DHotspotId((prev) =>
+              prev === hs?.id ? null : hs?.id || null,
+            )
+          }
+          shadowStrength={shadowStrength}
+          setShadowStrength={setShadowStrength}
+          shadowSoftness={shadowSoftness}
+          setShadowSoftness={setShadowSoftness}
+          lightIntensity={lightIntensity}
+          setLightIntensity={setLightIntensity}
+          addShadow={addShadow}
+          setAddShadow={setAddShadow}
+          autoRotate={autoRotate}
+          setAutoRotate={setAutoRotate}
+          autoRotateSpeed={autoRotateSpeed}
+          setAutoRotateSpeed={setAutoRotateSpeed}
+          lockMaxZoom={lockMaxZoom}
+          setLockMaxZoom={setLockMaxZoom}
+          maxZoom={maxZoom}
+          setMaxZoom={setMaxZoom}
+          limitHorizontalRotation={limitHorizontalRotation}
+          setLimitHorizontalRotation={setLimitHorizontalRotation}
+          leftRotationLimit={leftRotationLimit}
+          setLeftRotationLimit={setLeftRotationLimit}
+          rightRotationLimit={rightRotationLimit}
+          setRightRotationLimit={setRightRotationLimit}
+          limitVerticalRotation={limitVerticalRotation}
+          setLimitVerticalRotation={setLimitVerticalRotation}
+          upperViewLimit={upperViewLimit}
+          setUpperViewLimit={setUpperViewLimit}
+          lowerViewLimit={lowerViewLimit}
+          setLowerViewLimit={setLowerViewLimit}
+          limitZoom={limitZoom}
+          setLimitZoom={setLimitZoom}
+          limitZoomIn={limitZoomIn}
+          setLimitZoomIn={setLimitZoomIn}
+          limitZoomOut={limitZoomOut}
+          setLimitZoomOut={setLimitZoomOut}
+          enablePan={enablePan}
+          setEnablePan={setEnablePan}
+          initialRotation={initialRotation}
+          setInitialRotation={setInitialRotation}
+          modelScale={modelScale}
+          setModelScale={setModelScale}
+          arHorizontalSurface={arHorizontalSurface}
+          setArHorizontalSurface={setArHorizontalSurface}
+          arVerticalSurface={arVerticalSurface}
+          setArVerticalSurface={setArVerticalSurface}
+          bgType={bgType}
+          setBgType={setBgType}
+          bgColor={bgColor}
+          setBgColor={setBgColor}
+          customBg={customBg}
+          setCustomBg={setCustomBg}
+          enableAR={enableAR}
+          setEnableAR={setEnableAR}
+          qrText={qrText}
+          setQrText={setQrText}
+          qrColor={qrColor}
+          setQrColor={setQrColor}
+          qrBgType={qrBgType}
+          setQrBgType={setQrBgType}
+          qrBgColor={qrBgColor}
+          setQrBgColor={setQrBgColor}
+          qrLevel={qrLevel}
+          setQrLevel={setQrLevel}
+          qrDotType={qrDotType}
+          setQrDotType={setQrDotType}
+          qrCornerSquareType={qrCornerSquareType}
+          setQrCornerSquareType={setQrCornerSquareType}
+          qrCornerDotType={qrCornerDotType}
+          setQrCornerDotType={setQrCornerDotType}
+          qrLogo={qrLogo}
+          setQrLogo={setQrLogo}
+          topText={topText}
+          setTopText={setTopText}
+          bottomText={bottomText}
+          setBottomText={setBottomText}
+        />
 
         <RightSidebar
           isDoublePage={isDoublePage}
@@ -2311,6 +2391,10 @@ const PageEditor = () => {
           setShadowStrength={setShadowStrength}
           shadowSoftness={shadowSoftness}
           setShadowSoftness={setShadowSoftness}
+          lightIntensity={lightIntensity}
+          setLightIntensity={setLightIntensity}
+          addShadow={addShadow}
+          setAddShadow={setAddShadow}
           autoRotate={autoRotate}
           setAutoRotate={setAutoRotate}
           autoRotateSpeed={autoRotateSpeed}
@@ -2319,6 +2403,34 @@ const PageEditor = () => {
           setLockMaxZoom={setLockMaxZoom}
           maxZoom={maxZoom}
           setMaxZoom={setMaxZoom}
+          limitHorizontalRotation={limitHorizontalRotation}
+          setLimitHorizontalRotation={setLimitHorizontalRotation}
+          leftRotationLimit={leftRotationLimit}
+          setLeftRotationLimit={setLeftRotationLimit}
+          rightRotationLimit={rightRotationLimit}
+          setRightRotationLimit={setRightRotationLimit}
+          limitVerticalRotation={limitVerticalRotation}
+          setLimitVerticalRotation={setLimitVerticalRotation}
+          upperViewLimit={upperViewLimit}
+          setUpperViewLimit={setUpperViewLimit}
+          lowerViewLimit={lowerViewLimit}
+          setLowerViewLimit={setLowerViewLimit}
+          limitZoom={limitZoom}
+          setLimitZoom={setLimitZoom}
+          limitZoomIn={limitZoomIn}
+          setLimitZoomIn={setLimitZoomIn}
+          limitZoomOut={limitZoomOut}
+          setLimitZoomOut={setLimitZoomOut}
+          enablePan={enablePan}
+          setEnablePan={setEnablePan}
+          initialRotation={initialRotation}
+          setInitialRotation={setInitialRotation}
+          modelScale={modelScale}
+          setModelScale={setModelScale}
+          arHorizontalSurface={arHorizontalSurface}
+          setArHorizontalSurface={setArHorizontalSurface}
+          arVerticalSurface={arVerticalSurface}
+          setArVerticalSurface={setArVerticalSurface}
           bgType={bgType}
           setBgType={setBgType}
           bgColor={bgColor}
